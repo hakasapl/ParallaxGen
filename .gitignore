@@ -1,0 +1,9 @@
+# output dirs
+build
+install
+
+#vcpkg
+vcpkg_installed
+
+# VS code
+.vs

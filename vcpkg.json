@@ -1,0 +1,10 @@
+{
+  "dependencies": [
+    {
+      "name": "rsm-bsa",
+      "features": [
+        "xmem"
+      ]
+    }
+  ]
+}
