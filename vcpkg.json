@@ -5,6 +5,8 @@
       "features": [
         "xmem"
       ]
-    }
+    },
+    "spdlog",
+    "cli11"
   ]
 }

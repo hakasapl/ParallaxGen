@@ -22,6 +22,17 @@ file(GLOB_RECURSE DATA data/*)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
+# Pass build type to compiler
+if(CMAKE_BUILD_TYPE)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE BUILD_TYPE=${CMAKE_BUILD_TYPE})
+endif()
+
 # Add Packages
 find_package(bsa REQUIRED CONFIG)
-target_link_libraries(${PROJECT_NAME} PUBLIC bsa::bsa)
+target_link_libraries(${PROJECT_NAME} PRIVATE bsa::bsa)
+
+find_package(spdlog REQUIRED CONFIG)
+target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32>)
+
+find_package(CLI11 REQUIRED CONFIG)
+target_link_libraries(${PROJECT_NAME} PRIVATE CLI11::CLI11)
