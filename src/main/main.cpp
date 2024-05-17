@@ -8,6 +8,7 @@
 
 #include "CLI/CLI.hpp"
 #include "spdlog/spdlog.h"
+#include "bethesdaDataFolder.h"
 
 using namespace std;
 namespace fs = std::filesystem;
