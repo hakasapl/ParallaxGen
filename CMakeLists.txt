@@ -16,11 +16,12 @@ set(PROJECT_URI "com.github.hakasapl.ParallaxGen")
 # Initialize Project
 project(${PROJECT_NAME})
 
-# Find Files
-file(GLOB_RECURSE SOURCES src/main/*.cpp src/main/*.h)
-file(GLOB_RECURSE DATA data/*)
+# Include other Directories
+include_directories("src/BethesdaDataFolder")
+include_directories("src/BethesdaGame")
 
-add_executable(${PROJECT_NAME} ${SOURCES})
+# Add Executables
+add_executable(${PROJECT_NAME} src/main/main.cpp "src/BethesdaGame/BethesdaGame.h" "src/BethesdaGame/BethesdaGame.cpp")
 
 # Pass build type to compiler
 if(CMAKE_BUILD_TYPE)
@@ -32,7 +33,10 @@ find_package(bsa REQUIRED CONFIG)
 target_link_libraries(${PROJECT_NAME} PRIVATE bsa::bsa)
 
 find_package(spdlog REQUIRED CONFIG)
-target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32>)
+target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog)
 
 find_package(CLI11 REQUIRED CONFIG)
 target_link_libraries(${PROJECT_NAME} PRIVATE CLI11::CLI11)
+
+find_package(Boost REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE Boost)
