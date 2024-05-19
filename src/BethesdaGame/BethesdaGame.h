@@ -7,7 +7,7 @@
 
 class BethesdaGame {
 public:
-	enum GameType {
+	enum class GameType {
 		SKYRIM_SE,
 		SKYRIM_VR,
 		SKYRIM,
@@ -15,7 +15,7 @@ public:
 		FO4_VR
 	};
 
-	enum StoreType {
+	enum class StoreType {
 		STEAM,
 		WINDOWS_STORE,
 		EPIC_GAMES_STORE,
@@ -27,11 +27,11 @@ private:
 	std::filesystem::path game_path;
 
 	inline static const std::unordered_map<BethesdaGame::GameType, int> steam_game_ids = {
-		{SKYRIM_SE, 489830},
-		{SKYRIM_VR, 611670},
-		{SKYRIM, 72850},
-		{FO4, 377160},
-		{FO4_VR, 611880}
+		{BethesdaGame::GameType::SKYRIM_SE, 489830},
+		{BethesdaGame::GameType::SKYRIM_VR, 611670},
+		{BethesdaGame::GameType::SKYRIM, 72850},
+		{BethesdaGame::GameType::FO4, 377160},
+		{BethesdaGame::GameType::FO4_VR, 611880}
 	};
 
 public:

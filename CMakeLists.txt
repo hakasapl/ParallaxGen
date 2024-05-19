@@ -17,11 +17,11 @@ set(PROJECT_URI "com.github.hakasapl.ParallaxGen")
 project(${PROJECT_NAME})
 
 # Include other Directories
-include_directories("src/BethesdaDataFolder")
+include_directories("src/BethesdaDirectoryIterator")
 include_directories("src/BethesdaGame")
 
 # Add Executables
-add_executable(${PROJECT_NAME} src/main/main.cpp "src/BethesdaGame/BethesdaGame.h" "src/BethesdaGame/BethesdaGame.cpp")
+add_executable(${PROJECT_NAME} src/main/main.cpp "src/BethesdaGame/BethesdaGame.h" "src/BethesdaGame/BethesdaGame.cpp" "src/BethesdaDirectoryIterator/BethesdaDirectoryIterator.h" "src/BethesdaDirectoryIterator/BethesdaDirectoryIterator.cpp")
 
 # Pass build type to compiler
 if(CMAKE_BUILD_TYPE)
@@ -39,4 +39,3 @@ find_package(CLI11 REQUIRED CONFIG)
 target_link_libraries(${PROJECT_NAME} PRIVATE CLI11::CLI11)
 
 find_package(Boost REQUIRED)
-target_link_libraries(${PROJECT_NAME} PRIVATE Boost)
