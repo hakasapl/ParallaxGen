@@ -1,6 +1,8 @@
 {
   "dependencies": [
+    "boost-algorithm",
     "boost-property-tree",
+    "boost-range",
     "cli11",
     {
       "name": "rsm-bsa",
@@ -9,6 +11,6 @@
       ]
     },
     "spdlog",
-    "boost-algorithm"
+    "boost-container"
   ]
 }

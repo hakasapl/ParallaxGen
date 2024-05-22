@@ -25,6 +25,7 @@ public:
 private:
 	GameType game_type;
 	std::filesystem::path game_path;
+	std::filesystem::path game_data_path;
 
 	inline static const std::unordered_map<BethesdaGame::GameType, int> steam_game_ids = {
 		{BethesdaGame::GameType::SKYRIM_SE, 489830},
@@ -39,6 +40,7 @@ public:
 
 	GameType getGameType() const;
 	std::filesystem::path getGamePath() const;
+	std::filesystem::path getGameDataPath() const;
 	std::filesystem::path findGamePathFromSteam() const;
 
 private:

@@ -21,6 +21,8 @@ BethesdaGame::BethesdaGame(GameType game_type, string game_path) {
 		// If the game path is not empty, use the provided game path
 		this->game_path = game_path;
 	}
+
+	this->game_data_path = this->game_path / "Data";
 }
 
 BethesdaGame::GameType BethesdaGame::getGameType() const {
@@ -31,6 +33,10 @@ fs::path BethesdaGame::getGamePath() const {
 	// Get the game path from the registry
 	// If the game is not found, return an empty string
 	return this->game_path;
+}
+
+fs::path BethesdaGame::getGameDataPath() const {
+	return this->game_data_path;
 }
 
 fs::path BethesdaGame::findGamePathFromSteam() const {

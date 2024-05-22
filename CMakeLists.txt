@@ -19,9 +19,10 @@ project(${PROJECT_NAME})
 # Include other Directories
 include_directories("src/BethesdaDirectoryIterator")
 include_directories("src/BethesdaGame")
+include_directories("src/main")
 
 # Add Executables
-add_executable(${PROJECT_NAME} src/main/main.cpp "src/BethesdaGame/BethesdaGame.h" "src/BethesdaGame/BethesdaGame.cpp" "src/BethesdaDirectoryIterator/BethesdaDirectoryIterator.h" "src/BethesdaDirectoryIterator/BethesdaDirectoryIterator.cpp")
+add_executable(${PROJECT_NAME} "src/main/main.cpp" "src/main/main.h" "src/BethesdaGame/BethesdaGame.h" "src/BethesdaGame/BethesdaGame.cpp" "src/BethesdaDirectoryIterator/BethesdaDirectoryIterator.h" "src/BethesdaDirectoryIterator/BethesdaDirectoryIterator.cpp"  "src/main/main.h")
 
 # Pass build type to compiler
 if(CMAKE_BUILD_TYPE)

@@ -1,3 +1,5 @@
+#include "main.h"
+
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -9,8 +11,17 @@
 #include "CLI/CLI.hpp"
 #include "spdlog/spdlog.h"
 
+#include "BethesdaGame.h"
+#include "BethesdaDirectoryIterator.h"
+
 using namespace std;
 namespace fs = std::filesystem;
+
+void exitWithUserInput(int exit_code) {
+	cout << "Press ENTER to exit...";
+	cin.get();
+    exit(exit_code);
+}
 
 static int processArguments(int argc, char** argv, bool& debug_mode) {
     CLI::App app{ "ParallaxGen: Generate parallax meshes for your parallax textures" };
@@ -43,9 +54,9 @@ int main(int argc, char** argv) {
     cout << "Press ENTER to start mesh generation...";
     cin.get();
 
-
+	BethesdaGame bg = BethesdaGame(BethesdaGame::GameType::SKYRIM_SE, "");
+	BethesdaDirectoryIterator bdi = BethesdaDirectoryIterator(bg);
 
     // Close Console
-    cout << "Press ENTER to close...";
-    cin.get();
+	exitWithUserInput(0);
 }

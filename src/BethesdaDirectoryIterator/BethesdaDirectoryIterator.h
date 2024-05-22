@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <windows.h>
 #include <boost/property_tree/ptree.hpp>
+#include <boost/container/vector.hpp>
 #include <array>
 
 #include "BethesdaGame.h"
@@ -48,22 +49,36 @@ public:
 	};
 
 public:
-	BethesdaDirectoryIterator(const std::string path, BethesdaGame::GameType game_type);
+	BethesdaDirectoryIterator(BethesdaGame bg);
 
-private:
 	void populateFileMap();
 
+	// BSA functions
+	/**
+	*
+	*/
+	std::vector<std::string> getBSAPriorityList();
+	std::vector<std::string> getPluginLoadOrder(bool trim_extension);
+
+private:
 	// BSA list building functions
-	std::vector<std::string> buildBSAList();
-	std::vector<std::string> buildESPPriorityList();
 	std::vector<std::string> getBSAFilesFromINIs();
-	bool readINIFile(boost::property_tree::ptree& pt, const std::filesystem::path& ini_path);
-	static void findBSAFiles(std::vector<std::string>& bsa_list, const std::filesystem::path& directory, const std::string& prefix);
+	std::vector<std::string> getBSAFilesInDirectory();
+	std::vector<std::string> findBSAFilesFromPluginName(const std::vector<std::string>& bsa_file_list, const std::string& plugin_prefix);
+	boost::property_tree::ptree getINIProperties();
 
 	// Folder finding methods
 	std::filesystem::path getGameDocumentPath();
 	std::filesystem::path getGameAppdataPath();
 	static std::filesystem::path getSystemPath(const GUID& folder_id);
+
+	// Helpers
+	static boost::property_tree::ptree readINIFile(const std::filesystem::path& ini_path, bool required);
+	static std::ifstream openFileHandle(const std::filesystem::path& file_path, bool required);
+	static void mergePropertyTrees(boost::property_tree::ptree& pt1, const boost::property_tree::ptree& pt2);
+
+	template <typename T>
+	static void concatenateVectorsWithoutDuplicates(std::vector<T>& vec1, const std::vector<T>& vec2);
 };
 
 #endif
