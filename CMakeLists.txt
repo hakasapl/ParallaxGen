@@ -17,12 +17,20 @@ set(PROJECT_URI "com.github.hakasapl.ParallaxGen")
 project(${PROJECT_NAME})
 
 # Include other Directories
-include_directories("src/BethesdaDirectoryIterator")
-include_directories("src/BethesdaGame")
-include_directories("src/main")
+include_directories("include")
 
 # Add Executables
-add_executable(${PROJECT_NAME} "src/main/main.cpp" "src/main/main.h" "src/BethesdaGame/BethesdaGame.h" "src/BethesdaGame/BethesdaGame.cpp" "src/BethesdaDirectoryIterator/BethesdaDirectoryIterator.h" "src/BethesdaDirectoryIterator/BethesdaDirectoryIterator.cpp"  "src/main/main.h")
+set(SOURCES
+    "src/main/main.cpp"
+    "include/BethesdaGame/BethesdaGame.hpp"
+    "src/BethesdaGame/BethesdaGame.cpp"
+    "include/BethesdaDirectoryIterator/BethesdaDirectoryIterator.hpp"
+    "src/BethesdaDirectoryIterator/BethesdaDirectoryIterator.cpp"
+    "include/ParallaxGenUtil/ParallaxGenUtil.hpp"
+    "src/ParallaxGenUtil/ParallaxGenUtil.cpp"
+)
+
+add_executable(${PROJECT_NAME} ${SOURCES})
 
 # Pass build type to compiler
 if(CMAKE_BUILD_TYPE)

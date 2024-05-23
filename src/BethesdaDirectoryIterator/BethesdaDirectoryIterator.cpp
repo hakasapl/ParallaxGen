@@ -1,17 +1,17 @@
-#include "BethesdaDirectoryIterator.h"
+#include "BethesdaDirectoryIterator/BethesdaDirectoryIterator.hpp"
 
+#include <windows.h>
 #include <knownfolders.h>
-#include <shlobj.h>
 #include <iostream>
-#include <boost/property_tree/ini_parser.hpp>
+#include <fstream>
 #include <boost/algorithm/string.hpp>
-#include <unordered_set>
+#include <spdlog/spdlog.h>
+#include <string>
 
-#include "spdlog/spdlog.h"
-
-#include "main.h"
+#include "ParallaxGenUtil/ParallaxGenUtil.hpp"
 
 using namespace std;
+using namespace ParallaxGenUtil;
 namespace fs = filesystem;
 
 BethesdaDirectoryIterator::BethesdaDirectoryIterator(BethesdaGame bg)
@@ -173,6 +173,7 @@ vector<string> BethesdaDirectoryIterator::findBSAFilesFromPluginName(const vecto
 			// skip any BSAs that may start with the prefix but belong to a different plugin
 			string after_prefix = bsa.substr(plugin_prefix.length());
 
+			// todo: Is this actually how the game handles BSA files? Example: 3DNPC0.bsa, 3DNPC1.bsa, 3DNPC2.bsa are loaded, but 3DNPC - Textures.bsa is also loaded, whats the logic there?
 			if (after_prefix.starts_with(" ") && !after_prefix.starts_with(" -")) {
 				continue;
 			}
@@ -200,7 +201,7 @@ boost::property_tree::ptree BethesdaDirectoryIterator::getINIProperties()
 	boost::property_tree::ptree pt_ini = readINIFile(ini_path, true);
 	boost::property_tree::ptree pt_custom_ini = readINIFile(custom_ini_path, false);
 
-	BethesdaDirectoryIterator::mergePropertyTrees(pt_ini, pt_custom_ini);
+	mergePropertyTrees(pt_ini, pt_custom_ini);
 
 	return pt_ini;
 }
@@ -210,84 +211,14 @@ boost::property_tree::ptree BethesdaDirectoryIterator::getINIProperties()
 //
 fs::path BethesdaDirectoryIterator::getGameDocumentPath()
 {
-	fs::path doc_path = BethesdaDirectoryIterator::getSystemPath(FOLDERID_Documents) / "My Games";
+	fs::path doc_path = getSystemPath(FOLDERID_Documents) / "My Games";
 	doc_path /= BethesdaDirectoryIterator::gamePathNames.at(this->game_type);
 	return doc_path;
 }
 
 fs::path BethesdaDirectoryIterator::getGameAppdataPath()
 {
-	fs::path appdata_path = BethesdaDirectoryIterator::getSystemPath(FOLDERID_LocalAppData);
+	fs::path appdata_path = getSystemPath(FOLDERID_LocalAppData);
 	appdata_path /= BethesdaDirectoryIterator::gamePathNames.at(this->game_type);
 	return appdata_path;
-}
-
-fs::path BethesdaDirectoryIterator::getSystemPath(const GUID& folder_id)
-{
-	PWSTR path = NULL;
-	HRESULT result = SHGetKnownFolderPath(folder_id, 0, NULL, &path);
-	if (SUCCEEDED(result)) {
-		wstring appDataPath(path);
-		CoTaskMemFree(path);  // Free the memory allocated for the path
-
-		return fs::path(path);
-	}
-	else {
-		// Handle error
-		spdlog::critical("Unable to locate system folder. Exiting.");
-		exitWithUserInput(1);
-	}
-}
-
-//
-// Helper Methods
-//
-void BethesdaDirectoryIterator::mergePropertyTrees(boost::property_tree::ptree& pt1, const boost::property_tree::ptree& pt2) {
-	for (const auto& kv : pt2) {
-		const auto& key = kv.first;
-		const auto& value = kv.second;
-
-		// Check if the value is a subtree or a single value
-		if (value.empty()) {
-			pt1.put(key, value.data()); // Overwrite single value
-		}
-		else {
-			mergePropertyTrees(pt1.put_child(key, boost::property_tree::ptree()), value); // Recurse for subtrees
-		}
-	}
-}
-
-boost::property_tree::ptree BethesdaDirectoryIterator::readINIFile(const fs::path& ini_path, bool required = false)
-{
-	boost::property_tree::ptree pt_out;
-
-	// open ini file handle
-	ifstream f = openFileHandle(ini_path, required);
-	read_ini(f, pt_out);
-	f.close();
-
-	return pt_out;
-}
-
-ifstream BethesdaDirectoryIterator::openFileHandle(const fs::path& file_path, bool required = false) {
-	ifstream file(file_path);
-	if (!file.is_open()) {
-		if (required) {
-			throw runtime_error("Unable to open file: " + file_path.string());
-		}
-	}
-
-	return file;
-}
-
-template <typename T>
-void BethesdaDirectoryIterator::concatenateVectorsWithoutDuplicates(std::vector<T>& vec1, const std::vector<T>& vec2) {
-	unordered_set<T> set(vec1.begin(), vec1.end());
-
-	for (const auto& element : vec2) {
-		if (set.find(element) == set.end()) {
-			vec1.push_back(element);
-			set.insert(element);
-		}
-	}
 }

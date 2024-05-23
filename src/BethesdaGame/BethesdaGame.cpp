@@ -1,6 +1,6 @@
 #include <windows.h>
 
-#include "BethesdaGame.h"
+#include "BethesdaGame/BethesdaGame.hpp"
 
 using namespace std;
 namespace fs = std::filesystem;

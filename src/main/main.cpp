@@ -1,5 +1,3 @@
-#include "main.h"
-
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -7,21 +5,16 @@
 #include <cstdio>
 #include <filesystem>
 #include <tuple>
+#include <CLI/CLI.hpp>
+#include <spdlog/spdlog.h>
 
-#include "CLI/CLI.hpp"
-#include "spdlog/spdlog.h"
-
-#include "BethesdaGame.h"
-#include "BethesdaDirectoryIterator.h"
+#include "BethesdaGame/BethesdaGame.hpp"
+#include "BethesdaDirectoryIterator/BethesdaDirectoryIterator.hpp"
+#include "ParallaxGenUtil/ParallaxGenUtil.hpp"
 
 using namespace std;
+using namespace ParallaxGenUtil;
 namespace fs = std::filesystem;
-
-void exitWithUserInput(int exit_code) {
-	cout << "Press ENTER to exit...";
-	cin.get();
-    exit(exit_code);
-}
 
 static int processArguments(int argc, char** argv, bool& debug_mode) {
     CLI::App app{ "ParallaxGen: Generate parallax meshes for your parallax textures" };

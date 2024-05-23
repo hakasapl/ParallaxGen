@@ -4,12 +4,10 @@
 #include <string>
 #include <filesystem>
 #include <unordered_map>
-#include <windows.h>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/container/vector.hpp>
 #include <array>
+#include <boost/property_tree/ptree.hpp>
 
-#include "BethesdaGame.h"
+#include "BethesdaGame/BethesdaGame.hpp"
 
 class BethesdaDirectoryIterator {
 private:
@@ -54,9 +52,6 @@ public:
 	void populateFileMap();
 
 	// BSA functions
-	/**
-	*
-	*/
 	std::vector<std::string> getBSAPriorityList();
 	std::vector<std::string> getPluginLoadOrder(bool trim_extension);
 
@@ -70,15 +65,6 @@ private:
 	// Folder finding methods
 	std::filesystem::path getGameDocumentPath();
 	std::filesystem::path getGameAppdataPath();
-	static std::filesystem::path getSystemPath(const GUID& folder_id);
-
-	// Helpers
-	static boost::property_tree::ptree readINIFile(const std::filesystem::path& ini_path, bool required);
-	static std::ifstream openFileHandle(const std::filesystem::path& file_path, bool required);
-	static void mergePropertyTrees(boost::property_tree::ptree& pt1, const boost::property_tree::ptree& pt2);
-
-	template <typename T>
-	static void concatenateVectorsWithoutDuplicates(std::vector<T>& vec1, const std::vector<T>& vec2);
 };
 
 #endif
