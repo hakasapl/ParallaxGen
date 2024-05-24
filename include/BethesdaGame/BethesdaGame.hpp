@@ -10,9 +10,7 @@ public:
 	enum class GameType {
 		SKYRIM_SE,
 		SKYRIM_VR,
-		SKYRIM,
-		FO4,
-		FO4_VR
+		SKYRIM
 	};
 
 	enum class StoreType {
@@ -30,9 +28,7 @@ private:
 	inline static const std::unordered_map<BethesdaGame::GameType, int> steam_game_ids = {
 		{BethesdaGame::GameType::SKYRIM_SE, 489830},
 		{BethesdaGame::GameType::SKYRIM_VR, 611670},
-		{BethesdaGame::GameType::SKYRIM, 72850},
-		{BethesdaGame::GameType::FO4, 377160},
-		{BethesdaGame::GameType::FO4_VR, 611880}
+		{BethesdaGame::GameType::SKYRIM, 72850}
 	};
 
 public:

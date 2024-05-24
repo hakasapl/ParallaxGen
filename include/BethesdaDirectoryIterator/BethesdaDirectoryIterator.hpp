@@ -3,15 +3,18 @@
 
 #include <string>
 #include <filesystem>
-#include <unordered_map>
+#include <map>
 #include <array>
+#include <tuple>
 #include <boost/property_tree/ptree.hpp>
+
+#include <bsa/tes4.hpp>
 
 #include "BethesdaGame/BethesdaGame.hpp"
 
 class BethesdaDirectoryIterator {
 private:
-	std::unordered_map<std::filesystem::path, std::string> fileMap;
+	std::map<std::filesystem::path, std::string> fileMap;
 	std::filesystem::path data_dir;
 	BethesdaGame::GameType game_type;
 
@@ -19,25 +22,19 @@ public:
 	static inline const std::unordered_map<BethesdaGame::GameType, std::string> gamePathNames = {
 		{BethesdaGame::GameType::SKYRIM_SE, "Skyrim Special Edition"},
 		{BethesdaGame::GameType::SKYRIM_VR, "Skyrim VR"},
-		{BethesdaGame::GameType::SKYRIM, "Skyrim"},
-		{BethesdaGame::GameType::FO4, "Fallout4"},
-		{BethesdaGame::GameType::FO4_VR, "Fallout4 VR"}
+		{BethesdaGame::GameType::SKYRIM, "Skyrim"}
 	};
 
 	static inline const std::unordered_map<BethesdaGame::GameType, std::string> gameININames = {
 		{BethesdaGame::GameType::SKYRIM_SE, "skyrim.ini"},
 		{BethesdaGame::GameType::SKYRIM_VR, "skyrim.ini"},
-		{BethesdaGame::GameType::SKYRIM, "skyrim.ini"},
-		{BethesdaGame::GameType::FO4, "fallout4.ini"},
-		{BethesdaGame::GameType::FO4_VR, "fallout4.ini"}
+		{BethesdaGame::GameType::SKYRIM, "skyrim.ini"}
 	};
 
 	static inline const std::unordered_map<BethesdaGame::GameType, std::string> gameINICustomNames = {
 		{BethesdaGame::GameType::SKYRIM_SE, "skyrimcustom.ini"},
 		{BethesdaGame::GameType::SKYRIM_VR, "skyrimcustom.ini"},
-		{BethesdaGame::GameType::SKYRIM, "skyrimcustom.ini"},
-		{BethesdaGame::GameType::FO4, "fallout4custom.ini"},
-		{BethesdaGame::GameType::FO4_VR, "fallout4custom.ini"}
+		{BethesdaGame::GameType::SKYRIM, "skyrimcustom.ini"}
 	};
 
 	static inline const std::array<std::string, 3> ini_bsa_fields = {
@@ -52,19 +49,21 @@ public:
 	void populateFileMap();
 
 	// BSA functions
-	std::vector<std::string> getBSAPriorityList();
-	std::vector<std::string> getPluginLoadOrder(bool trim_extension);
+	std::vector<std::string> getBSAPriorityList() const;
+	std::vector<std::string> getPluginLoadOrder(bool trim_extension) const;
 
 private:
 	// BSA list building functions
-	std::vector<std::string> getBSAFilesFromINIs();
-	std::vector<std::string> getBSAFilesInDirectory();
-	std::vector<std::string> findBSAFilesFromPluginName(const std::vector<std::string>& bsa_file_list, const std::string& plugin_prefix);
-	boost::property_tree::ptree getINIProperties();
+	void addLooseFilesToMap();
+	void addBSAToFileMap(const std::string& bsa_name, bsa::tes4::archive& bsa_obj);
+	std::vector<std::string> getBSAFilesFromINIs() const;
+	std::vector<std::string> getBSAFilesInDirectory() const;
+	std::vector<std::string> findBSAFilesFromPluginName(const std::vector<std::string>& bsa_file_list, const std::string& plugin_prefix) const;
+	boost::property_tree::ptree getINIProperties() const;
 
 	// Folder finding methods
-	std::filesystem::path getGameDocumentPath();
-	std::filesystem::path getGameAppdataPath();
+	std::filesystem::path getGameDocumentPath() const;
+	std::filesystem::path getGameAppdataPath() const;
 };
 
 #endif

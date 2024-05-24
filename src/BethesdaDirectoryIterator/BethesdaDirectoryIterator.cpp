@@ -8,6 +8,9 @@
 #include <spdlog/spdlog.h>
 #include <string>
 
+// BSA Includes
+#include <cstdio>
+
 #include "ParallaxGenUtil/ParallaxGenUtil.hpp"
 
 using namespace std;
@@ -31,9 +34,84 @@ void BethesdaDirectoryIterator::populateFileMap()
 {
 	// Get list of BSA files
 	vector<string> bsa_files = getBSAPriorityList();
+
+	// Loop through each BSA file
+	for (string bsa_name : bsa_files) {
+		// add bsa to file map
+		bsa::tes4::archive bsa_obj;
+		fs::path bsa_path = data_dir / bsa_name;
+
+		// skip BSA if it doesn't exist (can happen if it's in the ini but not in the data folder)
+		if (!fs::exists(bsa_path)) {
+			spdlog::warn("Skipping BSA {} because it doesn't exist", bsa_path.string());
+			continue;
+		}
+
+		bsa_obj.read(bsa_path);
+		addBSAToFileMap(bsa_name, bsa_obj);
+	}
+
+	// add loose files to file map
+	addLooseFilesToMap();
 }
 
-vector<string> BethesdaDirectoryIterator::getBSAPriorityList()
+void BethesdaDirectoryIterator::addLooseFilesToMap()
+{
+	for (const auto& entry : fs::recursive_directory_iterator(data_dir)) {
+		if (entry.is_regular_file()) {
+			const fs::path file_path = entry.path();
+			const fs::path relative_path = file_path.lexically_relative(data_dir);
+
+			// check type of file, skip BSAs and ESPs
+			const string file_extension = file_path.extension().string();
+			if (file_extension == ".bsa") {
+				continue;
+			}
+			if (file_extension == ".esp") {
+				continue;
+			}
+			if (file_extension == ".esl") {
+				continue;
+			}
+			if (file_extension == ".esm") {
+				continue;
+			}
+
+			fileMap[relative_path] = "LOOSE_FILES";
+		}
+	}
+}
+
+void BethesdaDirectoryIterator::addBSAToFileMap(const string& bsa_name, bsa::tes4::archive& bsa_obj)
+{
+	spdlog::debug("Reading file tree from {}.", bsa_name);
+
+	// create itereator for bsa
+	auto bsa_iter = bsa_obj.begin();
+	// loop iterator
+	for (auto bsa_iter = bsa_obj.begin(); bsa_iter != bsa_obj.end(); ++bsa_iter) {
+		// get file entry from pointer
+		const auto& file_entry = *bsa_iter;
+
+		// get folder name within the BSA vfs
+		const fs::path folder_name = file_entry.first.name();
+
+		// .second stores the files in the folder
+		const auto file_name = file_entry.second;
+
+		// loop through files in folder
+		for (const auto& entry : file_name) {
+			// get name of file
+			const string_view cur_entry = entry.first.name();
+			const fs::path cur_path = folder_name / cur_entry;
+
+			// add to filemap
+			fileMap[cur_path] = bsa_name;
+		}
+	}
+}
+
+vector<string> BethesdaDirectoryIterator::getBSAPriorityList() const
 {
 	// get bsa files not loaded from esp (also initializes output vector)
 	vector<string> out_bsa_order = getBSAFilesFromINIs();
@@ -68,7 +146,7 @@ vector<string> BethesdaDirectoryIterator::getBSAPriorityList()
 	return out_bsa_order;
 }
 
-vector<string> BethesdaDirectoryIterator::getPluginLoadOrder(bool trim_extension = false)
+vector<string> BethesdaDirectoryIterator::getPluginLoadOrder(bool trim_extension = false) const
 {
 	// initialize output vector. Stores
 	vector<string> output_lo;
@@ -103,7 +181,7 @@ vector<string> BethesdaDirectoryIterator::getPluginLoadOrder(bool trim_extension
 	return output_lo;
 }
 
-vector<string> BethesdaDirectoryIterator::getBSAFilesFromINIs()
+vector<string> BethesdaDirectoryIterator::getBSAFilesFromINIs() const
 {
 	// output vector
 	vector<string> bsa_files;
@@ -140,7 +218,8 @@ vector<string> BethesdaDirectoryIterator::getBSAFilesFromINIs()
 	return bsa_files;
 }
 
-vector<string> BethesdaDirectoryIterator::getBSAFilesInDirectory() {
+vector<string> BethesdaDirectoryIterator::getBSAFilesInDirectory() const
+{
 	vector<string> bsa_files;
 
 	for (const auto& entry : fs::directory_iterator(this->data_dir)) {
@@ -159,7 +238,8 @@ vector<string> BethesdaDirectoryIterator::getBSAFilesInDirectory() {
 	return bsa_files;
 }
 
-vector<string> BethesdaDirectoryIterator::findBSAFilesFromPluginName(const vector<string>& bsa_file_list, const string& plugin_prefix) {
+vector<string> BethesdaDirectoryIterator::findBSAFilesFromPluginName(const vector<string>& bsa_file_list, const string& plugin_prefix) const
+{
 	vector<string> bsa_files_found;
 
 	for (string bsa : bsa_file_list) {
@@ -189,7 +269,7 @@ vector<string> BethesdaDirectoryIterator::findBSAFilesFromPluginName(const vecto
 	return bsa_files_found;
 }
 
-boost::property_tree::ptree BethesdaDirectoryIterator::getINIProperties()
+boost::property_tree::ptree BethesdaDirectoryIterator::getINIProperties() const
 {
 	// get document path
 	fs::path doc_path = getGameDocumentPath();
@@ -209,14 +289,14 @@ boost::property_tree::ptree BethesdaDirectoryIterator::getINIProperties()
 //
 // System Path Methods
 //
-fs::path BethesdaDirectoryIterator::getGameDocumentPath()
+fs::path BethesdaDirectoryIterator::getGameDocumentPath() const
 {
 	fs::path doc_path = getSystemPath(FOLDERID_Documents) / "My Games";
 	doc_path /= BethesdaDirectoryIterator::gamePathNames.at(this->game_type);
 	return doc_path;
 }
 
-fs::path BethesdaDirectoryIterator::getGameAppdataPath()
+fs::path BethesdaDirectoryIterator::getGameAppdataPath() const
 {
 	fs::path appdata_path = getSystemPath(FOLDERID_LocalAppData);
 	appdata_path /= BethesdaDirectoryIterator::gamePathNames.at(this->game_type);
