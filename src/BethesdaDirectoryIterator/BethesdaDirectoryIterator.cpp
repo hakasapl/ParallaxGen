@@ -6,7 +6,8 @@
 #include <fstream>
 #include <boost/algorithm/string.hpp>
 #include <spdlog/spdlog.h>
-#include <string>
+#include <sstream>
+#include <binary_io/binary_io.hpp>
 
 // BSA Includes
 #include <cstdio>
@@ -32,31 +33,65 @@ BethesdaDirectoryIterator::BethesdaDirectoryIterator(BethesdaGame bg)
 
 void BethesdaDirectoryIterator::populateFileMap()
 {
+	// clear map before populating
+	fileMap.clear();
+
 	// Get list of BSA files
 	vector<string> bsa_files = getBSAPriorityList();
 
 	// Loop through each BSA file
 	for (string bsa_name : bsa_files) {
 		// add bsa to file map
-		bsa::tes4::archive bsa_obj;
-		fs::path bsa_path = data_dir / bsa_name;
-
-		// skip BSA if it doesn't exist (can happen if it's in the ini but not in the data folder)
-		if (!fs::exists(bsa_path)) {
-			spdlog::warn("Skipping BSA {} because it doesn't exist", bsa_path.string());
-			continue;
-		}
-
-		bsa_obj.read(bsa_path);
-		addBSAToFileMap(bsa_name, bsa_obj);
+		addBSAToFileMap(bsa_name);
 	}
 
 	// add loose files to file map
 	addLooseFilesToMap();
 }
 
+map<fs::path, shared_ptr<BethesdaDirectoryIterator::BSAFile>> BethesdaDirectoryIterator::getFileMap() const
+{
+	return fileMap;
+}
+
+vector<std::byte> BethesdaDirectoryIterator::getFile(fs::path rel_path) const
+{
+	//todo: iron out this method, error handling, etc
+	// find bsa/loose file to open
+	shared_ptr<BSAFile> bsa_struct = fileMap.at(rel_path);
+	if (bsa_struct == nullptr) {
+		// this is a loose file
+		fs::path file_path = data_dir / rel_path;
+		binary_io::file_istream fis(file_path);
+
+		// create buffer to store bytes
+		vector<std::byte> buffer(fs::file_size(file_path));
+
+		span<std::byte> span(buffer);
+		fis.read_bytes(span);
+
+		return buffer;
+	}
+	else {
+		// this is a bsa archive file
+		bsa::tes4::version bsa_version = bsa_struct->version;
+		bsa::tes4::archive bsa_obj = bsa_struct->archive;
+		const auto file = bsa_obj[rel_path.parent_path().string()][rel_path.filename().string()];
+		if (file) {
+			binary_io::any_ostream aos{ std::in_place_type<binary_io::memory_ostream> };
+			// read file from output stream
+			file->write(aos, bsa_version);
+
+			auto& s = aos.get<binary_io::memory_ostream>();
+			return s.rdbuf();
+		}
+	}
+}
+
 void BethesdaDirectoryIterator::addLooseFilesToMap()
 {
+	spdlog::info("Adding loose files to file map.");
+
 	for (const auto& entry : fs::recursive_directory_iterator(data_dir)) {
 		if (entry.is_regular_file()) {
 			const fs::path file_path = entry.path();
@@ -77,14 +112,28 @@ void BethesdaDirectoryIterator::addLooseFilesToMap()
 				continue;
 			}
 
-			fileMap[relative_path] = "LOOSE_FILES";
+			fileMap[relative_path] = nullptr;
 		}
 	}
 }
 
-void BethesdaDirectoryIterator::addBSAToFileMap(const string& bsa_name, bsa::tes4::archive& bsa_obj)
+void BethesdaDirectoryIterator::addBSAToFileMap(const string& bsa_name)
 {
 	spdlog::debug("Reading file tree from {}.", bsa_name);
+
+	bsa::tes4::archive bsa_obj;
+	fs::path bsa_path = data_dir / bsa_name;
+
+	// skip BSA if it doesn't exist (can happen if it's in the ini but not in the data folder)
+	if (!fs::exists(bsa_path)) {
+		spdlog::warn("Skipping BSA {} because it doesn't exist", bsa_path.string());
+		return;
+	}
+
+	bsa::tes4::version bsa_version = bsa_obj.read(bsa_path);
+	BSAFile bsa_struct = { bsa_path, bsa_version, bsa_obj };
+
+	shared_ptr<BSAFile> bsa_shared_ptr = make_shared<BSAFile>(bsa_struct);
 
 	// create itereator for bsa
 	auto bsa_iter = bsa_obj.begin();
@@ -106,7 +155,7 @@ void BethesdaDirectoryIterator::addBSAToFileMap(const string& bsa_name, bsa::tes
 			const fs::path cur_path = folder_name / cur_entry;
 
 			// add to filemap
-			fileMap[cur_path] = bsa_name;
+			fileMap[cur_path] = bsa_shared_ptr;
 		}
 	}
 }
@@ -190,7 +239,7 @@ vector<string> BethesdaDirectoryIterator::getBSAFilesFromINIs() const
 	boost::property_tree::ptree pt_ini = getINIProperties();
 
 	// loop through each archive field in the INI files
-	for (string field : this->ini_bsa_fields) {
+	for (string field : ini_bsa_fields) {
 		string cur_val;
 
 		try {
@@ -275,8 +324,8 @@ boost::property_tree::ptree BethesdaDirectoryIterator::getINIProperties() const
 	fs::path doc_path = getGameDocumentPath();
 
 	// get ini file paths
-	fs::path ini_path = doc_path / BethesdaDirectoryIterator::gameININames.at(game_type);
-	fs::path custom_ini_path = doc_path / BethesdaDirectoryIterator::gameINICustomNames.at(game_type);
+	fs::path ini_path = doc_path / BethesdaGame::INILocations.at(game_type).ini;
+	fs::path custom_ini_path = doc_path / BethesdaGame::INILocations.at(game_type).ini_custom;
 
 	boost::property_tree::ptree pt_ini = readINIFile(ini_path, true);
 	boost::property_tree::ptree pt_custom_ini = readINIFile(custom_ini_path, false);
@@ -291,14 +340,14 @@ boost::property_tree::ptree BethesdaDirectoryIterator::getINIProperties() const
 //
 fs::path BethesdaDirectoryIterator::getGameDocumentPath() const
 {
-	fs::path doc_path = getSystemPath(FOLDERID_Documents) / "My Games";
-	doc_path /= BethesdaDirectoryIterator::gamePathNames.at(this->game_type);
+	fs::path doc_path = getSystemPath(FOLDERID_Documents);
+	doc_path /= BethesdaGame::DocumentLocations.at(this->game_type);
 	return doc_path;
 }
 
 fs::path BethesdaDirectoryIterator::getGameAppdataPath() const
 {
 	fs::path appdata_path = getSystemPath(FOLDERID_LocalAppData);
-	appdata_path /= BethesdaDirectoryIterator::gamePathNames.at(this->game_type);
+	appdata_path /= BethesdaGame::AppDataLocations.at(this->game_type);
 	return appdata_path;
 }

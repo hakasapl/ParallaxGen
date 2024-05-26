@@ -20,6 +20,29 @@ public:
 		GOG
 	};
 
+	struct ININame {
+		std::filesystem::path ini;
+		std::filesystem::path ini_custom;
+	};
+
+	static inline const std::unordered_map<BethesdaGame::GameType, ININame> INILocations = {
+		{BethesdaGame::GameType::SKYRIM_SE, ININame{"skyrim.ini", "skyrimcustom.ini"}},
+		{BethesdaGame::GameType::SKYRIM_VR, ININame{"skyrim.ini", "skyrimcustom.ini"}},
+		{BethesdaGame::GameType::SKYRIM, ININame{"skyrim.ini", "skyrimcustom.ini"}}
+	};
+
+	static inline const std::unordered_map<BethesdaGame::GameType, std::filesystem::path> DocumentLocations = {
+		{BethesdaGame::GameType::SKYRIM_SE, "My Games/Skyrim Special Edition"},
+		{BethesdaGame::GameType::SKYRIM_VR, "My Games/Skyrim VR"},
+		{BethesdaGame::GameType::SKYRIM, "My Games/Skyrim"}
+	};
+
+	static inline const std::unordered_map<BethesdaGame::GameType, std::filesystem::path> AppDataLocations = {
+		{BethesdaGame::GameType::SKYRIM_SE, "Skyrim Special Edition"},
+		{BethesdaGame::GameType::SKYRIM_VR, "Skyrim VR"},
+		{BethesdaGame::GameType::SKYRIM, "Skyrim"}
+	};
+
 private:
 	GameType game_type;
 	std::filesystem::path game_path;
