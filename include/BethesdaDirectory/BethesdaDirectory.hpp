@@ -50,7 +50,7 @@ public:
 
 	// File functions
 	std::vector<std::byte> getFile(std::filesystem::path rel_path) const;
-	std::vector<std::filesystem::path> findFiles(std::string_view pattern) const;
+	std::vector<std::filesystem::path> findFilesBySuffix(std::string_view suffix) const;
 
 	// BSA functions
 	std::vector<std::string> getBSAPriorityList() const;

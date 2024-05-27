@@ -91,14 +91,15 @@ vector<std::byte> BethesdaDirectory::getFile(fs::path rel_path) const
 	}
 }
 
-vector<fs::path> BethesdaDirectory::findFiles(string_view pattern) const
+vector<fs::path> BethesdaDirectory::findFilesBySuffix(string_view suffix) const
 {
 	// find all keys in fileMap that match pattern
 	vector<fs::path> found_files;
 
 	// loop through filemap and match keys
 	for (const auto& [key, value] : fileMap) {
-		if (key.string().find(pattern) != string::npos) {
+        if (boost::algorithm::ends_with(key.wstring(), suffix)) {
+            // Your code here
 			found_files.push_back(key);
 		}
 	}
