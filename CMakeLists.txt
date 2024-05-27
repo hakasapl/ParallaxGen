@@ -24,10 +24,12 @@ set(SOURCES
     "src/main/main.cpp"
     "include/BethesdaGame/BethesdaGame.hpp"
     "src/BethesdaGame/BethesdaGame.cpp"
-    "include/BethesdaDirectoryIterator/BethesdaDirectoryIterator.hpp"
-    "src/BethesdaDirectoryIterator/BethesdaDirectoryIterator.cpp"
+    "include/BethesdaDirectory/BethesdaDirectory.hpp"
+    "src/BethesdaDirectory/BethesdaDirectory.cpp"
     "include/ParallaxGenUtil/ParallaxGenUtil.hpp"
     "src/ParallaxGenUtil/ParallaxGenUtil.cpp"
+    "include/ParallaxGenDirectory/ParallaxGenDirectory.hpp"
+    "src/ParallaxGenDirectory/ParallaxGenDirectory.cpp"
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})

@@ -9,7 +9,7 @@
 #include <spdlog/spdlog.h>
 
 #include "BethesdaGame/BethesdaGame.hpp"
-#include "BethesdaDirectoryIterator/BethesdaDirectoryIterator.hpp"
+#include "BethesdaDirectory/BethesdaDirectory.hpp"
 #include "ParallaxGenUtil/ParallaxGenUtil.hpp"
 
 using namespace std;
@@ -48,7 +48,18 @@ int main(int argc, char** argv) {
     cin.get();
 
 	BethesdaGame bg = BethesdaGame(BethesdaGame::GameType::SKYRIM_SE, "");
-	BethesdaDirectoryIterator bdi = BethesdaDirectoryIterator(bg);
+	BethesdaDirectory bdi = BethesdaDirectory(bg, true);
+    vector<std::byte> test_cont = bdi.getFile(fs::path("meshes/actors/alduin/alduin.nif"));
+
+    std::ofstream outFile("C:/Games/Steam/steamapps/common/Skyrim Special Edition/Data/test.nif", std::ios::binary);
+    outFile.write(reinterpret_cast<const char*>(test_cont.data()), test_cont.size());
+    outFile.close();
+
+    vector<std::byte> test_cont2 = bdi.getFile(fs::path("Scripts/armoraddon.pex"));
+
+    std::ofstream outFile2("C:/Games/Steam/steamapps/common/Skyrim Special Edition/Data/test.pex", std::ios::binary);
+    outFile2.write(reinterpret_cast<const char*>(test_cont2.data()), test_cont2.size());
+    outFile2.close();
 
     // Close Console
 	exitWithUserInput(0);
