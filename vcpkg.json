@@ -1,16 +1,17 @@
 {
   "dependencies": [
     "boost-algorithm",
+    "boost-container",
     "boost-property-tree",
     "boost-range",
     "cli11",
+    "directxtex",
     {
       "name": "rsm-bsa",
       "features": [
         "xmem"
       ]
     },
-    "spdlog",
-    "boost-container"
+    "spdlog"
   ]
 }
