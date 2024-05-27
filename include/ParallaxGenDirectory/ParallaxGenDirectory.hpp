@@ -15,9 +15,10 @@ private:
 public:
 	ParallaxGenDirectory(BethesdaGame bg);
 
-	std::vector<std::filesystem::path> findHeightMaps() const;
-	std::vector<std::filesystem::path> findComplexMaterialMaps() const;
-	std::vector<std::filesystem::path> findMeshes() const;
+private:
+	void findHeightMaps();
+	void findComplexMaterialMaps();
+	void findMeshes();
 };
 
 #endif

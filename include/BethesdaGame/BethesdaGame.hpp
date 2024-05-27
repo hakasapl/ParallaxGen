@@ -55,7 +55,7 @@ private:
 	};
 
 public:
-	BethesdaGame(GameType game_type, std::string game_path = "");
+	BethesdaGame(GameType game_type, std::filesystem::path game_path = "");
 
 	GameType getGameType() const;
 	std::filesystem::path getGamePath() const;

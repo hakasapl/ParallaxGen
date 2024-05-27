@@ -5,12 +5,10 @@
 using namespace std;
 namespace fs = std::filesystem;
 
-BethesdaGame::BethesdaGame(GameType game_type, string game_path) {
+BethesdaGame::BethesdaGame(GameType game_type, fs::path game_path) {
 	// game_type == SKYRIM_SE: Skyrim Special Edition
 	// game_type == SKYRIM_VR: Skyrim VR
 	// game_type == SKYRIM: Skyrim
-	// game_type == FO4: Fallout 4
-	// game_type == FO4_VR: Fallout 4 VR
 	this->game_type = game_type;
 
 	if (game_path.empty()) {
@@ -20,6 +18,11 @@ BethesdaGame::BethesdaGame(GameType game_type, string game_path) {
 	else {
 		// If the game path is not empty, use the provided game path
 		this->game_path = game_path;
+	}
+
+	if (this->game_path.empty()) {
+		// If the game path is still empty, throw an exception
+		throw runtime_error("Game path not found");
 	}
 
 	this->game_data_path = this->game_path / "Data";
