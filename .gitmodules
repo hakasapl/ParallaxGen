@@ -1,0 +1,3 @@
+[submodule "external/nifly"]
+	path = external/nifly
+	url = https://github.com/ousnius/nifly.git
