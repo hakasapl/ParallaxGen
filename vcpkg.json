@@ -1,9 +1,10 @@
 {
   "dependencies": [
     "boost-algorithm",
+    "boost-asio",
     "boost-container",
+    "boost-iostreams",
     "boost-property-tree",
-    "boost-range",
     "cli11",
     "directxtex",
     {

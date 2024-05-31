@@ -21,6 +21,8 @@ include_directories("include")
 
 # Disables conflicting min/max macros in Windows.h
 add_compile_definitions(NOMINMAX)
+add_compile_definitions(WIN32_LEAN_AND_MEAN)
+add_compile_definitions(NOSOCKETTYPE)
 
 # Add Executables
 set(SOURCES

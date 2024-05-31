@@ -16,6 +16,11 @@ using namespace std;
 using namespace ParallaxGenUtil;
 namespace fs = std::filesystem;
 
+//todo: CLI ARGS (ignore complex parallax etc.)
+//todo: blacklist files that can be defined by mods
+//todo: ability to specify multiple suffixes for height/env map?
+//todo: threads!
+
 static int processArguments(int argc, char** argv, bool& debug_mode) {
     CLI::App app{ "ParallaxGen: Generate parallax meshes for your parallax textures" };
 

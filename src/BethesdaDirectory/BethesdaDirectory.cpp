@@ -60,6 +60,7 @@ vector<std::byte> BethesdaDirectory::getFile(fs::path rel_path) const
 	// find bsa/loose file to open
 	shared_ptr<BSAFile> bsa_struct = fileMap.at(rel_path);
 	if (bsa_struct == nullptr) {
+		return vector<std::byte>();
 		// this is a loose file
 		fs::path file_path = data_dir / rel_path;
 		binary_io::file_istream fis(file_path);
@@ -91,7 +92,8 @@ vector<std::byte> BethesdaDirectory::getFile(fs::path rel_path) const
 	}
 }
 
-vector<fs::path> BethesdaDirectory::findFilesBySuffix(string_view suffix) const
+//todo: reduce these repeated methods
+vector<fs::path> BethesdaDirectory::findFilesBySuffix(string_view suffix, vector<string> path_blocklist) const
 {
 	// find all keys in fileMap that match pattern
 	vector<fs::path> found_files;
@@ -99,8 +101,46 @@ vector<fs::path> BethesdaDirectory::findFilesBySuffix(string_view suffix) const
 	// loop through filemap and match keys
 	for (const auto& [key, value] : fileMap) {
         if (boost::algorithm::ends_with(key.wstring(), suffix)) {
-            // Your code here
+			// check if any component of the path is in the blocklist
+			bool block = false;
+			for (string block_path : path_blocklist) {
+				if (boost::algorithm::contains(key.wstring(), block_path)) {
+					block = true;
+					break;
+				}
+			}
+
+			if (block) {
+				continue;
+			}
+
 			found_files.push_back(key);
+		}
+	}
+
+	return found_files;
+}
+
+map<shared_ptr<BethesdaDirectory::BSAFile>, fs::path, BethesdaDirectory::BSAFileComparator> BethesdaDirectory::findFilesBySuffixKeyedContainer(std::string_view suffix) const
+{
+	map<shared_ptr<BethesdaDirectory::BSAFile>, fs::path, BethesdaDirectory::BSAFileComparator> found_files;
+
+	for (const auto& [key, value] : fileMap) {
+		if (boost::algorithm::ends_with(key.wstring(), suffix)) {
+			found_files[value] = key;
+		}
+	}
+
+	return found_files;
+}
+
+map<fs::path, shared_ptr<BethesdaDirectory::BSAFile>> BethesdaDirectory::findFilesBySuffixKeyedFile(std::string_view suffix) const
+{
+	map<fs::path, shared_ptr<BethesdaDirectory::BSAFile>> found_files;
+
+	for (const auto& [key, value] : fileMap) {
+		if (boost::algorithm::ends_with(key.wstring(), suffix)) {
+			found_files[key] = value;
 		}
 	}
 

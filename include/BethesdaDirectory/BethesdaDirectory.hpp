@@ -20,11 +20,23 @@ public:
 		std::filesystem::path path;
 		bsa::tes4::version version;
 		bsa::tes4::archive archive;
+
+		bool operator<(const BSAFile& other) const {
+			return path < other.path;
+		}
 	};
+
+	struct BSAFileComparator {
+		bool operator()(const std::shared_ptr<BSAFile>& lhs, const std::shared_ptr<BSAFile>& rhs) const {
+			return *lhs < *rhs;
+		}
+	};
+
+protected:
+	std::filesystem::path data_dir;
 
 private:
 	std::map<std::filesystem::path, std::shared_ptr<BSAFile>> fileMap;
-	std::filesystem::path data_dir;
 	bool logging;
 	BethesdaGame::GameType game_type;
 
@@ -50,7 +62,9 @@ public:
 
 	// File functions
 	std::vector<std::byte> getFile(std::filesystem::path rel_path) const;
-	std::vector<std::filesystem::path> findFilesBySuffix(std::string_view suffix) const;
+	std::vector<std::filesystem::path> findFilesBySuffix(std::string_view suffix, std::vector<std::string> parent_blocklist = std::vector<std::string>()) const;
+	std::map<std::shared_ptr<BSAFile>, std::filesystem::path, BSAFileComparator> findFilesBySuffixKeyedContainer(std::string_view suffix) const;
+	std::map<std::filesystem::path, std::shared_ptr<BSAFile>> findFilesBySuffixKeyedFile(std::string_view suffix) const;
 
 	// BSA functions
 	std::vector<std::string> getBSAPriorityList() const;
