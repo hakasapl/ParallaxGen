@@ -14,7 +14,11 @@ set(PROJECT_NAME "ParallaxGen")
 set(PROJECT_URI "com.github.hakasapl.ParallaxGen")
 
 # Initialize Project
-project(${PROJECT_NAME})
+set(PARALLAXGEN_VERSION 0.1.0)
+project(${PROJECT_NAME} VERSION ${PARALLAXGEN_VERSION})
+
+# Define preprocessor macro with the version number
+add_compile_definitions(PARALLAXGEN_VERSION="${PARALLAXGEN_VERSION}")
 
 # Include other Directories
 include_directories("include")
@@ -25,19 +29,22 @@ add_compile_definitions(WIN32_LEAN_AND_MEAN)
 add_compile_definitions(NOSOCKETTYPE)
 
 # Add Executables
+set(HEADERS
+    "include/BethesdaGame/BethesdaGame.hpp"
+    "include/BethesdaDirectory/BethesdaDirectory.hpp"
+    "include/ParallaxGenUtil/ParallaxGenUtil.hpp"
+    "include/ParallaxGenDirectory/ParallaxGenDirectory.hpp"
+)
+
 set(SOURCES
     "src/main/main.cpp"
-    "include/BethesdaGame/BethesdaGame.hpp"
     "src/BethesdaGame/BethesdaGame.cpp"
-    "include/BethesdaDirectory/BethesdaDirectory.hpp"
     "src/BethesdaDirectory/BethesdaDirectory.cpp"
-    "include/ParallaxGenUtil/ParallaxGenUtil.hpp"
     "src/ParallaxGenUtil/ParallaxGenUtil.cpp"
-    "include/ParallaxGenDirectory/ParallaxGenDirectory.hpp"
     "src/ParallaxGenDirectory/ParallaxGenDirectory.cpp"
 )
 
-add_executable(${PROJECT_NAME} ${SOURCES})
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 
 # Pass build type to compiler
 if(CMAKE_BUILD_TYPE)
