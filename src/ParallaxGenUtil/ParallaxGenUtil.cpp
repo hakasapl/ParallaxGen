@@ -1,10 +1,10 @@
 #include "ParallaxGenUtil/ParallaxGenUtil.hpp"
 
 #include <boost/property_tree/ini_parser.hpp>
+#include <boost/algorithm/string.hpp>
 #include <shlobj.h>
 #include <iostream>
 #include <fstream>
-#include <boost/algorithm/string.hpp>
 
 using namespace std;
 namespace fs = filesystem;

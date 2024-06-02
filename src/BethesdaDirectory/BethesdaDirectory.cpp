@@ -1,15 +1,11 @@
-//todo: Figure out includes
-//todo: Add more debug logging
-
 #include "BethesdaDirectory/BethesdaDirectory.hpp"
 
+#include <spdlog/spdlog.h>
 #include <windows.h>
 #include <knownfolders.h>
 #include <iostream>
 #include <fstream>
 #include <boost/algorithm/string.hpp>
-#include <spdlog/spdlog.h>
-#include <sstream>
 #include <binary_io/binary_io.hpp>
 
 // BSA Includes

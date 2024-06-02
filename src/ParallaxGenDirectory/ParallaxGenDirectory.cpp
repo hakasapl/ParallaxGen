@@ -2,11 +2,7 @@
 
 #include <spdlog/spdlog.h>
 #include <DirectXTex.h>
-#include <boost/asio.hpp>
 #include <boost/algorithm/string.hpp>
-#include <thread>
-#include <chrono>
-#include <cmath>
 
 #include "ParallaxGenUtil/ParallaxGenUtil.hpp"
 
@@ -36,8 +32,6 @@ vector<fs::path> ParallaxGenDirectory::findComplexMaterialMaps() const
 
 	// loop through env maps
 	for (fs::path env_map : env_maps) {
-		spdlog::trace("Checking if {} is a complex material map", env_map.string());
-
 		// check if env map is actually a complex material map
 		const vector<std::byte> env_map_data = getFile(env_map);
 
@@ -54,6 +48,7 @@ vector<fs::path> ParallaxGenDirectory::findComplexMaterialMaps() const
 			// if alpha channel is used, there is parallax data
 			// this won't work on complex matterial maps that don't make use of complex parallax
 			// I'm not sure there's a way to check for those other cases
+			spdlog::trace("Adding {} as a complex material map", env_map.string());
 			complexMaterialMaps.push_back(env_map);
 		}
 	}
