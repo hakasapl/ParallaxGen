@@ -16,6 +16,7 @@ private:
 		"decals",
 		"effects",
 		"interface",
+		"loadscreenart",
 		"lod",
 		"magic",
 		"markers",
