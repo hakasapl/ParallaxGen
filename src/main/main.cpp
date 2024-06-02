@@ -1,3 +1,4 @@
+#include <windows.h>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -7,8 +8,11 @@
 #include <tuple>
 #include <CLI/CLI.hpp>
 #include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/sinks/basic_file_sink.h>
 
 #include "BethesdaGame/BethesdaGame.hpp"
+#include "ParallaxGen/ParallaxGen.hpp"
 #include "ParallaxGenUtil/ParallaxGenUtil.hpp"
 #include "ParallaxGenDirectory/ParallaxGenDirectory.hpp"
 
@@ -18,39 +22,57 @@ namespace fs = std::filesystem;
 
 //todo: blacklist files that can be defined by mods
 //todo: ability to specify multiple suffixes for height/env map?
+//todo: return types?
+//todo: ziping
 
-static int processArguments(int argc, char** argv, bool& debug_mode, fs::path& data_dir, string& game_type, bool& ignore_parallax, bool& ignore_complex_material) {
-    CLI::App app{ "ParallaxGen: Generate parallax meshes for your parallax textures" };
+fs::path getExecutablePath() {
+    char buffer[MAX_PATH];
+    GetModuleFileName(NULL, buffer, MAX_PATH);
+    return fs::path(buffer);
+}
 
-    app.add_flag("--debug", debug_mode, "Enable debug output in console");
+void addArguments(CLI::App& app, int& verbosity, fs::path& data_dir, string& game_type, bool& ignore_parallax, bool& ignore_complex_material) {
+    app.add_flag("-v", verbosity, "Verbosity level -v for DEBUG data or -vv for TRACE data (warning: TRACE data is very verbose)");
     app.add_option("-d,--data-dir", data_dir, "Manually specify of Skyrim data directory (ie. <Skyrim SE Directory>/Data)");
     app.add_option("-g,--game-type", game_type, "Specify game type [skyrimse, skyrim, or skyrimvr]");
     app.add_flag("--ignore-parallax", ignore_parallax, "Don't generate any parallax meshes");
     app.add_flag("--ignore-complex-material", ignore_complex_material, "Don't generate any complex material meshes");
-
-    CLI11_PARSE(app, argc, argv);
-    return 0;
 }
 
 int main(int argc, char** argv) {
+    // get program location
+    const fs::path output_dir = getExecutablePath().parent_path();
+
+    // Create loggers
+    auto console_sink = make_shared<spdlog::sinks::stdout_color_sink_mt>();
+    auto basic_sink = make_shared<spdlog::sinks::basic_file_sink_mt>(output_dir.string() + "/ParallaxGen.log", true);
+    vector<spdlog::sink_ptr> sinks{console_sink, basic_sink};
+    auto logger = make_shared<spdlog::logger>("ParallaxGen", sinks.begin(), sinks.end());
+
+    spdlog::register_logger(logger);
+    spdlog::set_default_logger(logger);
+    spdlog::set_level(spdlog::level::info);
+
     spdlog::info("Welcome to ParallaxGen version {}!", PARALLAXGEN_VERSION);
+
+    // print mesh output location
+    fs::path mesh_output_dir = output_dir / "ParallaxGen_Output";
+    spdlog::info("Mesh output directory: {}", mesh_output_dir.string());
 
     //
     // CLI Arguments
     //
-    bool debug_mode = false;
+    int verbosity = 0;
     fs::path data_dir;
     string game_type = "skyrimse";
     bool ignore_parallax = false;
     bool ignore_complex_material = false;
-    processArguments(argc, argv, debug_mode, data_dir, game_type, ignore_parallax, ignore_complex_material);
 
-    // arg validation
-    if (!fs::exists(data_dir) || !fs::is_directory(data_dir)) {
-        spdlog::critical("Data directory does not exist. Please specify a valid directory.");
-        exitWithUserInput(1);
-    }
+    CLI::App app{ "ParallaxGen: Auto convert meshes to parallax meshes" };
+    addArguments(app, verbosity, data_dir, game_type, ignore_parallax, ignore_complex_material);
+    CLI11_PARSE(app, argc, argv);
 
+    // CLI argument validation
     if (game_type != "skyrimse" && game_type != "skyrim" && game_type != "skyrimvr") {
         spdlog::critical("Invalid game type specified. Please specify 'skyrimse', 'skyrim', or 'skyrimvr'");
         exitWithUserInput(1);
@@ -62,12 +84,14 @@ int main(int argc, char** argv) {
     }
 
     // Set logging mode
-    if (debug_mode) {
+    if (verbosity >= 1) {
         spdlog::set_level(spdlog::level::debug);
-        spdlog::debug("Debug mode is ON");
+        spdlog::debug("DEBUG logging enabled");
     }
-    else {
-        spdlog::set_level(spdlog::level::info);
+    
+    if (verbosity >= 2) {
+        spdlog::set_level(spdlog::level::trace);
+        spdlog::trace("TRACE logging enabled");
     }
 
     // Create bethesda game object
@@ -83,14 +107,8 @@ int main(int argc, char** argv) {
     }
 
 	BethesdaGame bg = BethesdaGame(gameType, data_dir);
-
-    // check that we're not in data folder as the PWD
-    if (fs::current_path() == bg.getGameDataPath()) {
-        spdlog::critical("The current working directory is set to the game data folder. This is dangerous because it could potentially overwrite game files. Please run this program from a different directory. (If using MO2 you can set the working directory to an empty 'ParallaxGen_Output' mod)");
-        exitWithUserInput(1);
-    }
-
-    ParallaxGenDirectory pgd = ParallaxGenDirectory(bg, ignore_parallax, ignore_complex_material);
+    ParallaxGenDirectory pgd = ParallaxGenDirectory(bg);
+    ParallaxGen pg = ParallaxGen(mesh_output_dir, &pgd);
 
     // User Input to Continue
     cout << "Press ENTER to start mesh generation...";
@@ -100,10 +118,22 @@ int main(int argc, char** argv) {
     pgd.populateFileMap();
 
     // Build file vectors
-    pgd.buildFileVectors();
+    vector<fs::path> heightMaps;
+    if (!ignore_parallax) {
+        heightMaps = pgd.findHeightMaps();
+    }
+
+    vector<fs::path> complexMaterialMaps;
+    if (!ignore_complex_material) {
+        complexMaterialMaps = pgd.findComplexMaterialMaps();
+    }
+
+    vector<fs::path> meshes = pgd.findMeshes();
 
     // Patch meshes
-    pgd.patchMeshes();
+    pg.patchMeshes(meshes, heightMaps, complexMaterialMaps);
+
+    spdlog::info("ParallaxGen has finished generating meshes.");
 
     // Close Console
 	exitWithUserInput(0);
