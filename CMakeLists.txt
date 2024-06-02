@@ -64,11 +64,14 @@ set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${EXTRN_INSTALL_DIR})
 
 # Function to configure, build, and install the external project
 function(setup_external PACKAGE_NAME PACKAGE_SOURCE_DIR CONF_ARGS)
+    # Split CONF_ARGS into a list of arguments
+    separate_arguments(CONF_ARGS_LIST UNIX_COMMAND "${CONF_ARGS}")
+
     message(STATUS "Setting up external package ${PACKAGE_NAME}...")
     set(PACKAGE_BUILD_DIR ${EXTRN_BUILD_DIR}/${PACKAGE_NAME})
     file(MAKE_DIRECTORY ${PACKAGE_BUILD_DIR})
-    execute_process(COMMAND ${CMAKE_COMMAND} -S ${PACKAGE_SOURCE_DIR} -B ${PACKAGE_BUILD_DIR} -DCMAKE_INSTALL_PREFIX=${EXTRN_INSTALL_DIR} ${CONF_ARGS})
-    execute_process(COMMAND ${CMAKE_COMMAND} --build ${PACKAGE_BUILD_DIR} --target install)
+    execute_process(COMMAND ${CMAKE_COMMAND} -S ${PACKAGE_SOURCE_DIR} -B ${PACKAGE_BUILD_DIR} -DCMAKE_INSTALL_PREFIX=${EXTRN_INSTALL_DIR} ${CONF_ARGS_LIST})
+    execute_process(COMMAND ${CMAKE_COMMAND} --build ${PACKAGE_BUILD_DIR} --target install --config ${CMAKE_BUILD_TYPE})
 endfunction()
 
 # Add Packages
@@ -90,4 +93,13 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Microsoft::DirectXTex
     nifly
     miniz::miniz
+    LZ4::LZ4
+    ZLIB::ZLIB
 )
+# Install the executable and DLLs
+install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION . )
+install(FILES $<TARGET_RUNTIME_DLLS:${PROJECT_NAME}> DESTINATION . )
+
+# manual copy DLLs not caught by TARGET_RUNTIME_DLLS
+install(FILES ${CMAKE_BINARY_DIR}/lz4.dll DESTINATION . )
+install(FILES ${CMAKE_BINARY_DIR}/zlib1.dll DESTINATION . )
