@@ -25,6 +25,9 @@ namespace ParallaxGenUtil
 	// terminals usually auto exit when program ends, this function waits for user input before exiting
 	void exitWithUserInput(const int exit_code);
 
+	// converts fs::path to a lowercase variant (for case-insensitive comparison)
+	void pathLower(std::filesystem::path& path);
+
 	// concatenates two vectors without duplicates
 	template <typename T>
 	void concatenateVectorsWithoutDuplicates(std::vector<T>& vec1, const std::vector<T>& vec2) {

@@ -8,7 +8,7 @@
 using namespace std;
 namespace fs = std::filesystem;
 
-BethesdaGame::BethesdaGame(GameType game_type, fs::path game_path, bool logging) {
+BethesdaGame::BethesdaGame(GameType game_type, const fs::path game_path, bool logging) {
 	this->logging = logging;
 
 	// game_type == SKYRIM_SE: Skyrim Special Edition

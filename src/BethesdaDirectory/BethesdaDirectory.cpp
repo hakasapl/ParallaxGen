@@ -57,6 +57,10 @@ vector<std::byte> BethesdaDirectory::getFile(const fs::path rel_path) const
 	// find bsa/loose file to open
 	shared_ptr<BSAFile> bsa_struct = fileMap.at(rel_path);
 	if (bsa_struct == nullptr) {
+		if (logging) {
+			spdlog::trace("Reading loose file from BethesdaDirectory: {}", rel_path.string());
+		}
+
 		// this is a loose file
 		fs::path file_path = data_dir / rel_path;
 		binary_io::file_istream fis(file_path);
@@ -70,6 +74,10 @@ vector<std::byte> BethesdaDirectory::getFile(const fs::path rel_path) const
 		return buffer;
 	}
 	else {
+		if (logging) {
+			spdlog::trace("Reading BSA file from BethesdaDirectory: {}", rel_path.string());
+		}
+
 		// this is a bsa archive file
 		bsa::tes4::version bsa_version = bsa_struct->version;
 		bsa::tes4::archive bsa_obj = bsa_struct->archive;
@@ -109,6 +117,10 @@ vector<fs::path> BethesdaDirectory::findFilesBySuffix(const string_view suffix, 
 				continue;
 			}
 
+			if (logging) {
+				spdlog::trace("Matched file by suffix: {}", key.string());
+			}
+
 			found_files.push_back(key);
 		}
 	}
@@ -141,7 +153,8 @@ void BethesdaDirectory::addLooseFilesToMap()
 	for (const auto& entry : fs::recursive_directory_iterator(data_dir)) {
 		if (entry.is_regular_file()) {
 			const fs::path file_path = entry.path();
-			const fs::path relative_path = file_path.lexically_relative(data_dir);
+			fs::path relative_path = file_path.lexically_relative(data_dir);
+			pathLower(relative_path);
 
 			// check type of file, skip BSAs and ESPs
 			if (!file_allowed(file_path)) {
@@ -193,7 +206,8 @@ void BethesdaDirectory::addBSAToFileMap(const string& bsa_name)
 		for (const auto& entry : file_name) {
 			// get name of file
 			const string_view cur_entry = entry.first.name();
-			const fs::path cur_path = folder_name / cur_entry;
+			fs::path cur_path = folder_name / cur_entry;
+			pathLower(cur_path);
 
 			// chekc if we should ignore this file
 			if (!file_allowed(cur_path)) {
@@ -227,11 +241,11 @@ vector<string> BethesdaDirectory::getBSAPriorityList() const
 	if(logging) {
 		// log output
 		string bsa_list_str = boost::algorithm::join(out_bsa_order, ",");
-		spdlog::debug("BSA Load Order: {}", bsa_list_str);
+		spdlog::trace("BSA Load Order: {}", bsa_list_str);
 
 		for (string bsa : all_bsa_files) {
 			if (find(out_bsa_order.begin(), out_bsa_order.end(), bsa) == out_bsa_order.end()) {
-				spdlog::warn("BSA file {} not loaded by any plugin.", bsa);
+				spdlog::warn("BSA file {} not loaded by any plugin or INI.", bsa);
 			}
 		}
 	}

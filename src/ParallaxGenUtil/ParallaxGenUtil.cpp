@@ -4,6 +4,7 @@
 #include <shlobj.h>
 #include <iostream>
 #include <fstream>
+#include <boost/algorithm/string.hpp>
 
 using namespace std;
 namespace fs = filesystem;
@@ -68,5 +69,11 @@ namespace ParallaxGenUtil {
 		cout << "Press any key to exit...";
 		cin.get();
 		exit(exit_code);
+	}
+
+	void pathLower(fs::path& path) {
+		wstring path_str = path.wstring();
+		boost::algorithm::to_lower(path_str);
+		path = fs::path(path_str);
 	}
 }

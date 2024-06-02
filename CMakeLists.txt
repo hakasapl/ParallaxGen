@@ -32,6 +32,7 @@ add_compile_definitions(NOSOCKETTYPE)
 set(HEADERS
     "include/BethesdaGame/BethesdaGame.hpp"
     "include/BethesdaDirectory/BethesdaDirectory.hpp"
+    "include/ParallaxGen/ParallaxGen.hpp"
     "include/ParallaxGenUtil/ParallaxGenUtil.hpp"
     "include/ParallaxGenDirectory/ParallaxGenDirectory.hpp"
 )
@@ -40,6 +41,7 @@ set(SOURCES
     "src/main/main.cpp"
     "src/BethesdaGame/BethesdaGame.cpp"
     "src/BethesdaDirectory/BethesdaDirectory.cpp"
+    "src/ParallaxGen/ParallaxGen.cpp"
     "src/ParallaxGenUtil/ParallaxGenUtil.cpp"
     "src/ParallaxGenDirectory/ParallaxGenDirectory.cpp"
 )
