@@ -5,6 +5,7 @@
 #include <boost/iostreams/device/array.hpp>
 #include <boost/iostreams/stream.hpp>
 #include <boost/asio.hpp>
+#include <boost/algorithm/string.hpp>
 #include <thread>
 #include <chrono>
 #include <cmath>
@@ -15,14 +16,33 @@ using namespace std;
 using namespace nifly;
 namespace fs = filesystem;
 
-ParallaxGenDirectory::ParallaxGenDirectory(BethesdaGame bg) : BethesdaDirectory(bg, true)
-{
-	// contructor
-	findHeightMaps();
-	//findComplexMaterialMaps();
-	findMeshes();
+ParallaxGenDirectory::ParallaxGenDirectory(BethesdaGame bg, const bool ignore_parallax, const bool ignore_complex_material) : BethesdaDirectory(bg, true) {
+	this->ignore_parallax = ignore_parallax;
+	this->ignore_complex_material = ignore_complex_material;
+}
 
-	mapTexturesToMeshes(true);
+void ParallaxGenDirectory::buildFileVectors()
+{
+	// build file vectors
+	findHeightMaps();
+	findComplexMaterialMaps();
+	findMeshes();
+}
+
+void ParallaxGenDirectory::patchMeshes()
+{
+	// patch meshes
+	// loop through each mesh nif file
+	size_t finished_task = 0;
+	size_t num_meshes = meshes.size();
+	for (fs::path mesh : meshes) {
+		if (finished_task % 100 == 0) {
+			spdlog::info("Completed tasks: {}/{}", finished_task, num_meshes);
+		}
+
+		processNIF(mesh);
+		finished_task++;
+	}
 }
 
 void ParallaxGenDirectory::findHeightMaps()
@@ -51,7 +71,8 @@ void ParallaxGenDirectory::findComplexMaterialMaps()
 		DirectX::ScratchImage image;
 		HRESULT hr = DirectX::LoadFromDDSMemory(env_map_data.data(), env_map_data.size(), DirectX::DDS_FLAGS_NONE, nullptr, image);
 		if (FAILED(hr)) {
-			throw runtime_error("Failed to load DDS from memory");
+			spdlog::warn("Failed to load DDS from memory: {} - skipping", env_map.string());
+			continue;
 		}
 
 		// check if image is a complex material map
@@ -74,67 +95,7 @@ void ParallaxGenDirectory::findMeshes()
 	spdlog::info("Found {} meshes", meshes.size());
 }
 
-void ParallaxGenDirectory::monitorThread(size_t num_workers)
-{
-	// monitor thread
-	size_t i = 0;
-	while (completed_tasks < num_workers) {
-		if (i % 100 == 0) {
-			spdlog::info("Completed tasks: {}/{}", completed_tasks, meshes.size());
-		}
-
-		this_thread::sleep_for(chrono::seconds(1));
-	}
-}
-
-void ParallaxGenDirectory::mapTexturesToMeshes(bool threaded = false)
-{
-	// randomize input
-	ParallaxGenUtil::shuffleVector(meshes);
-
-	//loop through each mesh nif file
-	unsigned int max_threads = thread::hardware_concurrency();
-	if (max_threads < 1) {
-		max_threads = 1;
-	}
-	max_threads = 1;  // DEBUG TEMP
-
-	boost::asio::thread_pool pool(max_threads);
-
-	// setup monitor thread
-	completed_tasks = 0;
-	size_t max_tasks = meshes.size();
-	thread monitorThread([this, max_tasks]() { monitorThread(max_tasks); });
-
-	// get thread intervals
-	size_t nif_batch_size = ceil(max_tasks / max_threads);
-
-	for (size_t i = 0; i < max_tasks; i += nif_batch_size) {
-		size_t b = i + nif_batch_size - 1;
-		if (b >= max_tasks) {
-			b = max_tasks - 1;
-		}
-
-		vector<fs::path> subvec = ParallaxGenUtil::getSubVector(meshes, i, b);
-
-		boost::asio::post(pool, [this, subvec]() {
-			processNIFBatch(subvec);
-		});
-	}
-
-	pool.join();
-	monitorThread.join();
-}
-
-void ParallaxGenDirectory::processNIFBatch(vector<fs::path> nif_files)
-{
-	// process nif files
-	for (fs::path nif_file : nif_files) {
-		processNIF(nif_file);
-		completed_tasks++;
-	}
-}
-
+// shorten some enum names
 typedef BSLightingShaderPropertyShaderType BSLSP;
 typedef SkyrimShaderPropertyFlags1 SSPF1;
 typedef SkyrimShaderPropertyFlags2 SSPF2;
@@ -150,19 +111,52 @@ void ParallaxGenDirectory::processNIF(fs::path nif_file)
 	NifFile nif(nif_stream);
 	bool nif_modified = false;
 
+	// ignore nif if has attached havok animations
+	//todo: I don't think this is right
+	for (NiNode* node : nif.GetNodes()) {
+		string block_name = node->GetBlockName();
+		if (block_name == "BSBehaviorGraphExtraData") {
+			spdlog::debug("Rejecting NIF file {} due to attached havok animations", nif_file.string());
+			return;
+		}
+	}
+
 	// loop through each node in nif
+	size_t shape_id = 0;
 	for (NiShape* shape : nif.GetShapes()) {
 		// exclusions
 		// get shader type
 		if (!shape->HasShaderProperty()) {
+			//spdlog::debug("Rejecting shape {} in NIF file {}: No shader property", shape_id, nif_file.string());
 			continue;
 		}
 
+		// only allow BSLightingShaderProperty blocks
+		string shape_block_name = shape->GetBlockName();
+		if (shape_block_name != "NiTriShape" && shape_block_name != "BSTriShape") {
+			//spdlog::debug("Rejecting shape {} in NIF file {}: Incorrect shape block type", shape_id, nif_file.string());
+			continue;
+		}
+
+		// ignore skinned meshes, these don't support parallax
+		if (shape->HasSkinInstance() || shape->IsSkinned()) {
+			//spdlog::debug("Rejecting shape {} in NIF file {}: Skinned mesh", shape_id, nif_file.string());
+			continue;
+		}
+
+		// get shader from shape
 		NiShader* shader = nif.GetShader(shape);
+
+		string shader_block_name = shader->GetBlockName();
+		if (shader_block_name != "BSLightingShaderProperty") {
+			//spdlog::debug("Rejecting shape {} in NIF file {}: Incorrect shader block type", shape->GetBlockName(), nif_file.string());
+			continue;
+		}
 
 		// Ignore if shader type is not 0 (nothing) or 1 (environemnt map) or 3 (parallax)
 		BSLSP shader_type = static_cast<BSLSP>(shader->GetShaderType());
 		if (shader_type != BSLSP::BSLSP_DEFAULT && shader_type != BSLSP::BSLSP_ENVMAP && shader_type != BSLSP::BSLSP_PARALLAX) {
+			//spdlog::debug("Rejecting shape {} in NIF file {}: Incorrect shader type", shape->GetBlockName(), nif_file.string());
 			continue;
 		}
 
@@ -186,31 +180,41 @@ void ParallaxGenDirectory::processNIF(fs::path nif_file)
 		for (string& search_prefix : search_prefixes) {
 			// check if complex material file exists
 			fs::path search_path;
-			search_path = search_prefix + "_m.dds";
-			if (find(complexMaterialMaps.begin(), complexMaterialMaps.end(), search_path) != complexMaterialMaps.end()) {
-				// Enable complex parallax for this shape!
-				nif_modified |= enableComplexMaterialOnShape(nif, shape, shader, search_prefix);
-				break;
+
+			// processing for complex material
+			if (!ignore_complex_material) {
+				search_path = search_prefix + "_m.dds";
+				if (find(complexMaterialMaps.begin(), complexMaterialMaps.end(), search_path) != complexMaterialMaps.end()) {
+					// Enable complex parallax for this shape!
+					nif_modified |= enableComplexMaterialOnShape(nif, shape, shader, search_prefix);
+					break;
+				}
 			}
 
-			search_path = search_prefix + "_p.dds";
-			if (find(heightMaps.begin(), heightMaps.end(), search_path) != heightMaps.end()) {
-				// Enable regular parallax for this shape!
-				nif_modified |= enableParallaxOnShape(nif, shape, shader, search_prefix);
-				break;
+			// processing for parallax
+			if (!ignore_parallax) {
+				search_path = search_prefix + "_p.dds";
+				if (find(heightMaps.begin(), heightMaps.end(), search_path) != heightMaps.end()) {
+					// Enable regular parallax for this shape!
+					nif_modified |= enableParallaxOnShape(nif, shape, shader, search_prefix);
+					break;
+				}
 			}
 		}
+
+		shape_id++;
 	}
 
+	// save NIF if it was modified
 	if (nif_modified) {
 		spdlog::info("NIF Modified: {}", nif_file.string());
-		if (nif.Save(data_dir / nif_file, nif_save_options) != 0) {
+		if (nif.Save("ParallaxGen_Output" / nif_file, nif_save_options)) {
 			spdlog::error("Unable to save NIF file: {}", nif_file.string());
 		}
 	}
 }
 
-bool ParallaxGenDirectory::enableComplexMaterialOnShape(NifFile& nif, NiShape* shape, NiShader* shader, string& search_prefix)
+bool ParallaxGenDirectory::enableComplexMaterialOnShape(NifFile& nif, NiShape* shape, NiShader* shader, const string& search_prefix)
 {
 	// enable complex material on shape
 	bool changed = false;
@@ -247,7 +251,7 @@ bool ParallaxGenDirectory::enableComplexMaterialOnShape(NifFile& nif, NiShape* s
 	return changed;
 }
 
-bool ParallaxGenDirectory::enableParallaxOnShape(NifFile& nif, NiShape* shape, NiShader* shader, string& search_prefix)
+bool ParallaxGenDirectory::enableParallaxOnShape(NifFile& nif, NiShape* shape, NiShader* shader, const string& search_prefix)
 {
 	// enable parallax on shape
 	bool changed = false;

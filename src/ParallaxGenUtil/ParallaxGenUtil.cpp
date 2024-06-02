@@ -24,7 +24,7 @@ namespace ParallaxGenUtil {
 		}
 	}
 
-	boost::property_tree::ptree readINIFile(const fs::path& ini_path, bool required = false)
+	boost::property_tree::ptree readINIFile(const fs::path& ini_path, const bool required = false)
 	{
 		boost::property_tree::ptree pt_out;
 
@@ -36,7 +36,7 @@ namespace ParallaxGenUtil {
 		return pt_out;
 	}
 
-	ifstream openFileHandle(const fs::path& file_path, bool required = false) {
+	ifstream openFileHandle(const fs::path& file_path, const bool required = false) {
 		ifstream file(file_path);
 		if (!file.is_open()) {
 			if (required) {
@@ -63,7 +63,7 @@ namespace ParallaxGenUtil {
 		}
 	}
 
-	void exitWithUserInput(int exit_code)
+	void exitWithUserInput(const int exit_code)
 	{
 		cout << "Press any key to exit...";
 		cin.get();

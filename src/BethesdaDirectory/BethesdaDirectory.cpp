@@ -21,7 +21,7 @@ using namespace std;
 using namespace ParallaxGenUtil;
 namespace fs = filesystem;
 
-BethesdaDirectory::BethesdaDirectory(BethesdaGame bg, bool logging)
+BethesdaDirectory::BethesdaDirectory(BethesdaGame& bg, const bool logging)
 {
 	this->logging = logging;
 
@@ -33,9 +33,6 @@ BethesdaDirectory::BethesdaDirectory(BethesdaGame bg, bool logging)
 	// Assign instance vars
 	data_dir = fs::path(bg.getGameDataPath());
 	game_type = bg.getGameType();
-
-	// Populate map for iterator
-	populateFileMap();
 }
 
 void BethesdaDirectory::populateFileMap()
@@ -55,18 +52,17 @@ map<fs::path, shared_ptr<BethesdaDirectory::BSAFile>> BethesdaDirectory::getFile
 	return fileMap;
 }
 
-vector<std::byte> BethesdaDirectory::getFile(fs::path rel_path) const
+vector<std::byte> BethesdaDirectory::getFile(const fs::path rel_path) const
 {
 	// find bsa/loose file to open
 	shared_ptr<BSAFile> bsa_struct = fileMap.at(rel_path);
 	if (bsa_struct == nullptr) {
-		return vector<std::byte>();
 		// this is a loose file
 		fs::path file_path = data_dir / rel_path;
 		binary_io::file_istream fis(file_path);
 
 		// create buffer to store bytes
-		//todo: is there a way to avoid the span here?
+		//todo: is there a way to avoid the span conversion here?
 		vector<std::byte> buffer(fs::file_size(file_path));
 		span<std::byte> span(buffer);
 		fis.read_bytes(span);
@@ -92,8 +88,7 @@ vector<std::byte> BethesdaDirectory::getFile(fs::path rel_path) const
 	}
 }
 
-//todo: reduce these repeated methods
-vector<fs::path> BethesdaDirectory::findFilesBySuffix(string_view suffix, vector<string> path_blocklist) const
+vector<fs::path> BethesdaDirectory::findFilesBySuffix(const string_view suffix, const vector<string>& path_blocklist) const
 {
 	// find all keys in fileMap that match pattern
 	vector<fs::path> found_files;
@@ -104,7 +99,7 @@ vector<fs::path> BethesdaDirectory::findFilesBySuffix(string_view suffix, vector
 			// check if any component of the path is in the blocklist
 			bool block = false;
 			for (string block_path : path_blocklist) {
-				if (boost::algorithm::contains(key.wstring(), block_path)) {
+				if (boost::algorithm::icontains(key.wstring(), block_path)) {
 					block = true;
 					break;
 				}
@@ -115,32 +110,6 @@ vector<fs::path> BethesdaDirectory::findFilesBySuffix(string_view suffix, vector
 			}
 
 			found_files.push_back(key);
-		}
-	}
-
-	return found_files;
-}
-
-map<shared_ptr<BethesdaDirectory::BSAFile>, fs::path, BethesdaDirectory::BSAFileComparator> BethesdaDirectory::findFilesBySuffixKeyedContainer(std::string_view suffix) const
-{
-	map<shared_ptr<BethesdaDirectory::BSAFile>, fs::path, BethesdaDirectory::BSAFileComparator> found_files;
-
-	for (const auto& [key, value] : fileMap) {
-		if (boost::algorithm::ends_with(key.wstring(), suffix)) {
-			found_files[value] = key;
-		}
-	}
-
-	return found_files;
-}
-
-map<fs::path, shared_ptr<BethesdaDirectory::BSAFile>> BethesdaDirectory::findFilesBySuffixKeyedFile(std::string_view suffix) const
-{
-	map<fs::path, shared_ptr<BethesdaDirectory::BSAFile>> found_files;
-
-	for (const auto& [key, value] : fileMap) {
-		if (boost::algorithm::ends_with(key.wstring(), suffix)) {
-			found_files[key] = value;
 		}
 	}
 
@@ -270,7 +239,7 @@ vector<string> BethesdaDirectory::getBSAPriorityList() const
 	return out_bsa_order;
 }
 
-vector<string> BethesdaDirectory::getPluginLoadOrder(bool trim_extension = false) const
+vector<string> BethesdaDirectory::getPluginLoadOrder(const bool trim_extension) const
 {
 	// initialize output vector. Stores
 	vector<string> output_lo;
@@ -382,7 +351,8 @@ vector<string> BethesdaDirectory::findBSAFilesFromPluginName(const vector<string
 			// skip any BSAs that may start with the prefix but belong to a different plugin
 			string after_prefix = bsa.substr(plugin_prefix.length());
 
-			// todo: Is this actually how the game handles BSA files? Example: 3DNPC0.bsa, 3DNPC1.bsa, 3DNPC2.bsa are loaded, but 3DNPC - Textures.bsa is also loaded, whats the logic there?
+			// todo: Is this actually how the game handles BSA files? Example: 3DNPC0.bsa, 3DNPC1.bsa, 3DNPC2.bsa are loaded,
+			// todo: but 3DNPC - Textures.bsa is also loaded, whats the logic there?
 			if (after_prefix.starts_with(" ") && !after_prefix.starts_with(" -")) {
 				continue;
 			}

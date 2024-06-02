@@ -10,26 +10,22 @@
 
 namespace ParallaxGenUtil
 {
-	boost::property_tree::ptree readINIFile(const std::filesystem::path& ini_path, bool required);
-	std::ifstream openFileHandle(const std::filesystem::path& file_path, bool required);
+	// reads ini file into ptree
+	boost::property_tree::ptree readINIFile(const std::filesystem::path& ini_path, const bool required);
+
+	// opens a file handle for a file
+	std::ifstream openFileHandle(const std::filesystem::path& file_path, const bool required);
+
+	// merges two ptrees
 	void mergePropertyTrees(boost::property_tree::ptree& pt1, const boost::property_tree::ptree& pt2);
 
+	// gets the system path for a folder (from windows.h)
 	std::filesystem::path getSystemPath(const GUID& folder_id);
 
-	void exitWithUserInput(int exit_code);
+	// terminals usually auto exit when program ends, this function waits for user input before exiting
+	void exitWithUserInput(const int exit_code);
 
-	template <typename T>
-	std::vector<T> getSubVector(const std::vector<T>& vec, size_t a, size_t b) {
-		// Ensure a and b are within bounds and a <= b
-		if (a > b || a >= vec.size() || b >= vec.size()) {
-			throw std::out_of_range("Invalid indices for subvector");
-		}
-
-		// Create the subvector using vector's range constructor
-		std::vector<T> subVector(vec.begin() + a, vec.begin() + b + 1);
-		return subVector;
-	}
-
+	// concatenates two vectors without duplicates
 	template <typename T>
 	void concatenateVectorsWithoutDuplicates(std::vector<T>& vec1, const std::vector<T>& vec2) {
 		std::unordered_set<T> set(vec1.begin(), vec1.end());
@@ -42,21 +38,12 @@ namespace ParallaxGenUtil
 		}
 	};
 
+	// adds an element to a vector if it is not already present
 	template<typename T>
 	void addUniqueElement(std::vector<T>& vec, const T& element) {
 		if (std::find(vec.begin(), vec.end(), element) == vec.end()) {
 			vec.push_back(element);
 		}
-	}
-
-	template<typename T>
-	void shuffleVector(std::vector<T>& vec) {
-		// Create a random number generator
-		std::random_device rd;  // Seed
-		std::mt19937 g(rd());   // Generator
-
-		// Shuffle the vector
-		std::shuffle(vec.begin(), vec.end(), g);
 	}
 }
 

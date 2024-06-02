@@ -1,11 +1,16 @@
-#include <windows.h>
-
 #include "BethesdaGame/BethesdaGame.hpp"
+
+#include <windows.h>
+#include <spdlog/spdlog.h>
+
+#include "ParallaxGenUtil/ParallaxGenUtil.hpp"
 
 using namespace std;
 namespace fs = std::filesystem;
 
-BethesdaGame::BethesdaGame(GameType game_type, fs::path game_path) {
+BethesdaGame::BethesdaGame(GameType game_type, fs::path game_path, bool logging) {
+	this->logging = logging;
+
 	// game_type == SKYRIM_SE: Skyrim Special Edition
 	// game_type == SKYRIM_VR: Skyrim VR
 	// game_type == SKYRIM: Skyrim
@@ -22,7 +27,12 @@ BethesdaGame::BethesdaGame(GameType game_type, fs::path game_path) {
 
 	if (this->game_path.empty()) {
 		// If the game path is still empty, throw an exception
-		throw runtime_error("Game path not found");
+		if (this->logging) {
+			spdlog::critical("Unable to locate game data path. If you are using a non-Steam version of skyrim, please specify the game data path manually using the --g argument.");
+			ParallaxGenUtil::exitWithUserInput(1);
+		} else {
+			throw runtime_error("Game path not found");
+		}
 	}
 
 	this->game_data_path = this->game_path / "Data";
