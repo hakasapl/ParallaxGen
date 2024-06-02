@@ -77,6 +77,7 @@ find_package(spdlog REQUIRED CONFIG)
 find_package(CLI11 REQUIRED CONFIG)
 find_package(Boost REQUIRED)
 find_package(directxtex REQUIRED CONFIG)
+find_package(miniz REQUIRED CONFIG)
 
 setup_external("nifly" "${CMAKE_SOURCE_DIR}/external/nifly" "-DBUILD_TESTING=OFF")
 find_package(nifly REQUIRED CONFIG)
@@ -88,4 +89,5 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Boost::boost
     Microsoft::DirectXTex
     nifly
+    miniz::miniz
 )
