@@ -24,6 +24,8 @@ private:
 	bool ignore_complex_material;
 
 public:
+	static inline const std::string parallax_state_file = "PARALLAXGEN_DONTDELETE";
+
     // constructor
     ParallaxGen(const std::filesystem::path output_dir, ParallaxGenDirectory* pgd);
     // enables parallax on relevant meshes

@@ -105,6 +105,11 @@ int main(int argc, char** argv) {
     ParallaxGenDirectory pgd = ParallaxGenDirectory(bg);
     ParallaxGen pg = ParallaxGen(mesh_output_dir, &pgd);
 
+    if (fs::exists(bg.getGameDataPath() / ParallaxGen::parallax_state_file)) {
+        spdlog::critical("ParallaxGen meshes exist in your data directory, please delete before re-running.");
+        exitWithUserInput(1);
+    }
+
     // User Input to Continue
     cout << "Press ENTER to start mesh generation...";
     cin.get();
@@ -140,7 +145,7 @@ int main(int argc, char** argv) {
 
     // cleanup
     if (!no_cleanup) {
-        pg.deleteOutputDir();
+        pg.deleteMeshes();
     }
 
     // Close Console

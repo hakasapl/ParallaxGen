@@ -35,6 +35,10 @@ void ParallaxGen::patchMeshes(vector<fs::path>& meshes, vector<fs::path>& height
 		processNIF(mesh, heightMaps, complexMaterialMaps);
 		finished_task++;
 	}
+
+	// create state file
+	ofstream state_file(output_dir / parallax_state_file);
+	state_file.close();
 }
 
 void ParallaxGen::zipMeshes() {
@@ -299,6 +303,12 @@ void ParallaxGen::zipDirectory(const fs::path& dirPath, const fs::path& zipPath)
 
 	// init to 0
     memset(&zip, 0, sizeof(zip));
+
+	// check if directory exists
+	if (!fs::exists(dirPath)) {
+		spdlog::info("No outputs were created", dirPath.string());
+		ParallaxGenUtil::exitWithUserInput(0);
+	}
 
 	// initialize file
     if (!mz_zip_writer_init_file(&zip, zipPath.string().c_str(), 0)) {

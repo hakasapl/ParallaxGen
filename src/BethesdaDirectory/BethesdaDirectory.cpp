@@ -103,9 +103,11 @@ vector<fs::path> BethesdaDirectory::findFilesBySuffix(const string_view suffix, 
 			// check if any component of the path is in the blocklist
 			bool block = false;
 			for (string block_path : path_blocklist) {
-				if (boost::algorithm::icontains(key.wstring(), block_path)) {
-					block = true;
-					break;
+				for (const auto& component : key) {
+					if (block_path == component.string()) {
+						block = true;
+						break;
+					}
 				}
 			}
 
