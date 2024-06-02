@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <array>
 #include <NifFile.hpp>
+#include <miniz.h>
 #include "ParallaxGenDirectory/ParallaxGenDirectory.hpp"
 
 class ParallaxGen
@@ -27,6 +28,12 @@ public:
     ParallaxGen(const std::filesystem::path output_dir, ParallaxGenDirectory* pgd);
     // enables parallax on relevant meshes
 	void patchMeshes(std::vector<std::filesystem::path>& meshes, std::vector<std::filesystem::path>& heightMaps, std::vector<std::filesystem::path>& complexMaterialMaps);
+	// zips all meshes and removes originals
+	void zipMeshes();
+	// deletes generated meshes
+	void deleteMeshes();
+	// deletes entire output folder
+	void deleteOutputDir();
 
 private:
     // processes a NIF file (enable parallax if needed)
@@ -35,6 +42,10 @@ private:
 	bool enableComplexMaterialOnShape(nifly::NifFile& nif, nifly::NiShape* shape, nifly::NiShader* shader, const std::string& search_prefix);
 	// enables parallax on a shape in a NIF
 	bool enableParallaxOnShape(nifly::NifFile& nif, nifly::NiShape* shape, nifly::NiShader* shader, const std::string& search_prefix);
+
+	// zip methods
+	void addFileToZip(mz_zip_archive& zip, const std::filesystem::path& filePath, const std::filesystem::path& zipPath);
+	void zipDirectory(const std::filesystem::path& dirPath, const std::filesystem::path& zipPath);
 };
 
 #endif

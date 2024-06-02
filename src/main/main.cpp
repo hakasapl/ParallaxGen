@@ -1,11 +1,7 @@
 #include <windows.h>
 #include <iostream>
-#include <fstream>
 #include <string>
-#include <bsa/tes4.hpp>
-#include <cstdio>
 #include <filesystem>
-#include <tuple>
 #include <CLI/CLI.hpp>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -20,23 +16,20 @@ using namespace std;
 using namespace ParallaxGenUtil;
 namespace fs = std::filesystem;
 
-//todo: blacklist files that can be defined by mods
-//todo: ability to specify multiple suffixes for height/env map?
-//todo: return types?
-//todo: ziping
-
 fs::path getExecutablePath() {
     char buffer[MAX_PATH];
     GetModuleFileName(NULL, buffer, MAX_PATH);
     return fs::path(buffer);
 }
 
-void addArguments(CLI::App& app, int& verbosity, fs::path& data_dir, string& game_type, bool& ignore_parallax, bool& ignore_complex_material) {
+void addArguments(CLI::App& app, int& verbosity, fs::path& data_dir, string& game_type, bool& no_zip, bool& no_cleanup, bool& ignore_parallax, bool& ignore_complex_material) {
     app.add_flag("-v", verbosity, "Verbosity level -v for DEBUG data or -vv for TRACE data (warning: TRACE data is very verbose)");
     app.add_option("-d,--data-dir", data_dir, "Manually specify of Skyrim data directory (ie. <Skyrim SE Directory>/Data)");
     app.add_option("-g,--game-type", game_type, "Specify game type [skyrimse, skyrim, or skyrimvr]");
+    app.add_flag("--no-zip", no_zip, "Don't zip the output meshes");
+    app.add_flag("--no-cleanup", no_cleanup, "Don't delete files after zipping");
     app.add_flag("--ignore-parallax", ignore_parallax, "Don't generate any parallax meshes");
-    app.add_flag("--ignore-complex-material", ignore_complex_material, "Don't generate any complex material meshes");
+    app.add_flag("--enable-complex-material", ignore_complex_material, "Generate any complex material meshes (Experimental!)");
 }
 
 int main(int argc, char** argv) {
@@ -65,11 +58,13 @@ int main(int argc, char** argv) {
     int verbosity = 0;
     fs::path data_dir;
     string game_type = "skyrimse";
+    bool no_zip = false;
+    bool no_cleanup = false;
     bool ignore_parallax = false;
-    bool ignore_complex_material = false;
+    bool ignore_complex_material = false;  // this is prefixed with ignore because eventually this should be an ignore option once stable
 
     CLI::App app{ "ParallaxGen: Auto convert meshes to parallax meshes" };
-    addArguments(app, verbosity, data_dir, game_type, ignore_parallax, ignore_complex_material);
+    addArguments(app, verbosity, data_dir, game_type, no_zip, no_cleanup, ignore_parallax, ignore_complex_material);
     CLI11_PARSE(app, argc, argv);
 
     // CLI argument validation
@@ -78,7 +73,7 @@ int main(int argc, char** argv) {
         exitWithUserInput(1);
     }
 
-    if (ignore_parallax && ignore_complex_material) {
+    if (ignore_parallax && !ignore_complex_material) {
         spdlog::critical("Both ignore-parallax and ignore-complex-material flags are set. Nothing to do.");
         exitWithUserInput(1);
     }
@@ -114,6 +109,9 @@ int main(int argc, char** argv) {
     cout << "Press ENTER to start mesh generation...";
     cin.get();
 
+    // delete existing output
+    pg.deleteOutputDir();
+
     // Populate file map from data directory
     pgd.populateFileMap();
 
@@ -124,7 +122,7 @@ int main(int argc, char** argv) {
     }
 
     vector<fs::path> complexMaterialMaps;
-    if (!ignore_complex_material) {
+    if (ignore_complex_material) {
         complexMaterialMaps = pgd.findComplexMaterialMaps();
     }
 
@@ -134,6 +132,16 @@ int main(int argc, char** argv) {
     pg.patchMeshes(meshes, heightMaps, complexMaterialMaps);
 
     spdlog::info("ParallaxGen has finished generating meshes.");
+
+    // archive
+    if (!no_zip) {
+        pg.zipMeshes();
+    }
+
+    // cleanup
+    if (!no_cleanup) {
+        pg.deleteOutputDir();
+    }
 
     // Close Console
 	exitWithUserInput(0);
