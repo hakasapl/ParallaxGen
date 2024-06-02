@@ -47,6 +47,7 @@ Options:
 
 * The way ParallaxGen finds meshes to update is by checking if the normal or diffuse map with the `_p.dds` or `_m.dds` texture exists. If for whatever reason the maps are not named according to that convention, this app will miss it.
 * Uncommonly, some mods will have texture maps defined in the plugin and not in the mesh (or it overrides the mesh). These will need an esp patch to work properly (example: Capital Whiterun Expansion does this)
+* The experimental complex material support will not enable complex material if there is no parallax occlusion (alpha layer) in the environment map. This is because the way ParallaxGen differentiates normal env maps from complex material maps is whether or not an alpha layer exists.
 
 ## Future Work
 
@@ -56,7 +57,7 @@ Options:
 
 ## Contributing
 
-This is my first endeavour into C++ so any experienced C++ and/or skyrim modders that are willing to contribute or code review are more than welcome. Thank you in advnace! This is a CMake project with VCPKG for packages. Supported IDEs are Visual Studio 2022 or Visual Studio Code.
+This is my first endeavor into C++ so any experienced C++ and/or skyrim modders that are willing to contribute or code review are more than welcome. Thank you in advance! This is a CMake project with VCPKG for packages. Supported IDEs are Visual Studio 2022 or Visual Studio Code.
 
 ### Visual Studio Code
 
@@ -73,7 +74,7 @@ You should be able to just open the directory in Visual Studio and everything sh
 1. Get git submodules: `git submodule init` and `git submodule update`
 1. Configure CMake
 
-## Acknowldgements
+## Acknowledgements
 
 A ton of very useful libraries were used in this project, including:
 
