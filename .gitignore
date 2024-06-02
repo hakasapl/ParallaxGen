@@ -7,3 +7,7 @@ vcpkg_installed
 
 # VS code
 .vs
+
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
