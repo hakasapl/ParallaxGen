@@ -1,29 +1,25 @@
 # ParallaxGen
 
-NIF dynamic patcher to enable Parallax for Skyrim SE, also known as my excuse to start learning C++.
+NIF dynamic patcher to enable Parallax for Skyrim SE, also known as my excuse to start learning C++. Many parallax texture mods on the nexus do not provide meshes with parallax enabled. Some of this can be remedied by mods like Lux Orbis with parallax meshes, but even that doesn't cover everything and many meshes are still not enabled for parallax properly. ParallaxGen hopes to provide a dynamic method of generating parallax meshes for any load order.
 
-This is still in its early stages and could cause issues in your game (sometimes a badly configured mesh can cause game crashes). When filing a bug report please provide a log with trace output with `-vv` argument, as well as any other relevant details. For example, the path and mod of a mesh that didn't get patched correctly, crash logs from a crash logger mod, etc. I appreciate your help ironing this out!
+This project is in a very early beta for its initial release. Use at your own risk. The app shouldn't mess with your data folder at all, but as mentioned it's in beta so this is not a 100% guarantee. I appreciate anyone's help in getting this tested initially. Another more common risk that may come up is a badly configured mesh which might cause game crashes. In this case it would be great if you could provide a crash log from a crash logger mod of your choice, as well as the log of ParallaxGen, which is stored as a file in the same directory as `ParallaxGen.exe`. It would be helpful to enable trace logging for any issues with the CLI argument `-vv`.
 
 ## Features
 
 * Converts meshes to support parallax dynamically based on what parallax or complex material textures you have in your modlist
 * Doesn't modify meshes where a corresponding parallax texture cannot be found
-* Support for regular parallax and experimental complex material
-* Patches meshes even if they are not loose files
+* Support for regular parallax
+* Supports complex material (experimental, needs to be enabled with cli argument `--enable-complex-material`)
+* Patches meshes even if they are not loose files (in BSAs)
 
 ## Usage
 
-### Mod Organizer
-
-Just put `ParallaxGen.exe` in any folder then add it as an executable in MO2. Run it from MO2, then add the `ParallaxGen_Output.zip`, which is created in the `ParallaxGen_Output` folder in the same directory as `ParallaxGen.exe` file as a mod in your load order.
-
-### Vortex
-
-Put `ParallaxGen.exe` anywhere and run it. Afterwards add the `ParallaxGen_Output.zip`, which is created in the `ParallaxGen_Output` folder in the same directory as `ParallaxGen.exe` file as a mod in your load order.
-
-### Mod Order
-
-The output should overwrite any mesh in your load order, except for complex material meshes (unless you enable that argument).
+1. Download ParallaxGen and drop all files in the zip to a folder of your choice (make sure this is a new empty folder)
+1. If using mod organizer, add `ParallaxGen.exe` as an executable to your instance
+1. Run `ParallaxGen.exe` from either MO2 or the folder (if using Vortex) and generate meshes
+1. A file `ParallaxGen_Output/ParallaxGen_Output.zip` should exist which you can import into your mod manager of choice
+1. These meshes should win every conflict, even lighting mods. The only exception is complex material meshes unless you are running with `--enable-complex-material`
+1. If you need to re-generate meshes you'll need to delete the existing `ParallaxGen_Output` mod from your mod manager before rerunning `ParallaxGen.exe`
 
 ### CLI arguments
 
@@ -56,10 +52,11 @@ Options:
 
 * Ability to manually blocklist files on a per-mod basis by providing custom blocklist in the data directory (allows mods to specify what shouldn't be touched in their package)
 * Multi-threading for faster mesh processing
+* User interface
 
 ## Contributing
 
-This is my first endeavour into C++ so any experiences C++ and/or skyrim modders that are willing to contribute or code review are more than welcome. This is a CMake project with VCPKG for packages. Supported IDEs are Visual Studio 2022 or Visual Studio Code.
+This is my first endeavour into C++ so any experienced C++ and/or skyrim modders that are willing to contribute or code review are more than welcome. Thank you in advnace! This is a CMake project with VCPKG for packages. Supported IDEs are Visual Studio 2022 or Visual Studio Code.
 
 ### Visual Studio Code
 
@@ -75,3 +72,20 @@ You should be able to just open the directory in Visual Studio and everything sh
 
 1. Get git submodules: `git submodule init` and `git submodule update`
 1. Configure CMake
+
+## Acknowldgements
+
+A ton of very useful libraries were used in this project, including:
+
+* [cli11](https://github.com/CLIUtils/CLI11) for CLI argument processing
+* [spdlog](https://github.com/gabime/spdlog) for logging
+* [DirectXTex](https://github.com/microsoft/DirectXTex) for analyzing dds environment maps
+* [rsm-bsa](https://github.com/Ryan-rsm-McKenzie/bsa) for reading BSA files
+* [nifly](https://github.com/ousnius/nifly) for modifying NIF files
+* [miniz](https://github.com/richgel999/miniz) for creating the output zip file
+* [boost](https://www.boost.org/) for several helpful features used throughout
+
+A special thanks to:
+
+* [Spongeman131](https://www.nexusmods.com/skyrimspecialedition/users/1366316) for their SSEedit script [NIF Batch Processing Script](https://www.nexusmods.com/skyrimspecialedition/mods/33846), which was instrumental on figuring out how to modify meshes to enable parallax
+* [Kulharin](https://www.nexusmods.com/skyrimspecialedition/users/930789) for their SSEedit script [itAddsComplexMaterialParallax](https://www.nexusmods.com/skyrimspecialedition/mods/96777/?tab=files), which served the same purpose for figuring out how to modify meshes to enable complex material
