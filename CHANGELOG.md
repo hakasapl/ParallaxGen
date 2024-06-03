@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.3] - UNRELEASED
+
+- Fixed CLI arg requesting game data path instead of game path.
+
 ## [0.1.2] - 2024-06-02
 
 - Added error handling for unable to find ParallaxGen.exe

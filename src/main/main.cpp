@@ -43,9 +43,9 @@ fs::path getExecutablePath() {
     return fs::path();
 }
 
-void addArguments(CLI::App& app, int& verbosity, fs::path& data_dir, string& game_type, bool& no_zip, bool& no_cleanup, bool& ignore_parallax, bool& ignore_complex_material) {
+void addArguments(CLI::App& app, int& verbosity, fs::path& game_dir, string& game_type, bool& no_zip, bool& no_cleanup, bool& ignore_parallax, bool& ignore_complex_material) {
     app.add_flag("-v", verbosity, "Verbosity level -v for DEBUG data or -vv for TRACE data (warning: TRACE data is very verbose)");
-    app.add_option("-d,--data-dir", data_dir, "Manually specify of Skyrim data directory (ie. <Skyrim SE Directory>/Data)");
+    app.add_option("-d,--game-dir", game_dir, "Manually specify of Skyrim directory");
     app.add_option("-g,--game-type", game_type, "Specify game type [skyrimse, skyrim, or skyrimvr]");
     app.add_flag("--no-zip", no_zip, "Don't zip the output meshes");
     app.add_flag("--no-cleanup", no_cleanup, "Don't delete files after zipping");
@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
     // CLI Arguments
     //
     int verbosity = 0;
-    fs::path data_dir;
+    fs::path game_dir;
     string game_type = "skyrimse";
     bool no_zip = false;
     bool no_cleanup = false;
@@ -89,7 +89,7 @@ int main(int argc, char** argv) {
     bool ignore_complex_material = false;  // this is prefixed with ignore because eventually this should be an ignore option once stable
 
     CLI::App app{ "ParallaxGen: Auto convert meshes to parallax meshes" };
-    addArguments(app, verbosity, data_dir, game_type, no_zip, no_cleanup, ignore_parallax, ignore_complex_material);
+    addArguments(app, verbosity, game_dir, game_type, no_zip, no_cleanup, ignore_parallax, ignore_complex_material);
     CLI11_PARSE(app, argc, argv);
 
     // welcome message
@@ -133,7 +133,7 @@ int main(int argc, char** argv) {
         gameType = BethesdaGame::GameType::SKYRIM_VR;
     }
 
-	BethesdaGame bg = BethesdaGame(gameType, data_dir, true);
+	BethesdaGame bg = BethesdaGame(gameType, game_dir, true);
     ParallaxGenDirectory pgd = ParallaxGenDirectory(bg);
     ParallaxGen pg = ParallaxGen(mesh_output_dir, &pgd);
 
