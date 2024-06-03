@@ -93,9 +93,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Microsoft::DirectXTex
     nifly
     miniz::miniz
-    LZ4::LZ4
-    ZLIB::ZLIB
 )
+
 # Install the executable and DLLs
 install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION . )
 install(FILES $<TARGET_RUNTIME_DLLS:${PROJECT_NAME}> DESTINATION . )
