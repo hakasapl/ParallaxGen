@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.6] - UNRELEASED
+
+- Added wstring support for all file paths
+- Added additional trace logging for building file map
+- Stopped using memoryio file buffer, using ifstream now
+
 ## [0.1.5] - 2024-06-03
 
 - Fixed an issue that would cause hangs or crashes when loading invalid or corrupt NIFs

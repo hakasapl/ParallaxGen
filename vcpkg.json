@@ -7,13 +7,19 @@
     "boost-property-tree",
     "cli11",
     "directxtex",
+    "miniz",
     {
       "name": "rsm-bsa",
       "features": [
         "xmem"
       ]
     },
-    "spdlog",
-    "miniz"
+    {
+      "name": "spdlog",
+      "features": [
+        "wchar"
+      ]
+    },
+    "boost-filesystem"
   ]
 }

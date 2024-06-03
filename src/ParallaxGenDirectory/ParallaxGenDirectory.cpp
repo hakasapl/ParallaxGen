@@ -39,7 +39,7 @@ vector<fs::path> ParallaxGenDirectory::findComplexMaterialMaps() const
 		DirectX::ScratchImage image;
 		HRESULT hr = DirectX::LoadFromDDSMemory(env_map_data.data(), env_map_data.size(), DirectX::DDS_FLAGS_NONE, nullptr, image);
 		if (FAILED(hr)) {
-			spdlog::warn("Failed to load DDS from memory: {} - skipping", env_map.string());
+			spdlog::warn(L"Failed to load DDS from memory: {} - skipping", env_map.wstring());
 			continue;
 		}
 
@@ -48,7 +48,7 @@ vector<fs::path> ParallaxGenDirectory::findComplexMaterialMaps() const
 			// if alpha channel is used, there is parallax data
 			// this won't work on complex matterial maps that don't make use of complex parallax
 			// I'm not sure there's a way to check for those other cases
-			spdlog::trace("Adding {} as a complex material map", env_map.string());
+			spdlog::trace(L"Adding {} as a complex material map", env_map.wstring());
 			complexMaterialMaps.push_back(env_map);
 		}
 	}

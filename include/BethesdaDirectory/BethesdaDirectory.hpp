@@ -75,11 +75,11 @@ public:
 
 	// File functions
 	std::vector<std::byte> getFile(const std::filesystem::path rel_path) const;
-	std::vector<std::filesystem::path> findFilesBySuffix(const std::string_view suffix, const std::vector<std::string>& parent_blocklist = std::vector<std::string>()) const;
+	std::vector<std::filesystem::path> findFilesBySuffix(const std::string_view suffix, const std::vector<std::wstring>& parent_blocklist = std::vector<std::wstring>()) const;
 
 	// BSA functions
-	std::vector<std::string> getBSAPriorityList() const;
-	std::vector<std::string> getPluginLoadOrder(const bool trim_extension = false) const;
+	std::vector<std::wstring> getBSAPriorityList() const;
+	std::vector<std::wstring> getPluginLoadOrder(const bool trim_extension = false) const;
 
 private:
 	// Adds BSA files to the file map
@@ -87,17 +87,17 @@ private:
 	// Adds loose files to the file map
 	void addLooseFilesToMap();
 	// Adds a BSA file to the file map
-	void addBSAToFileMap(const std::string& bsa_name);
+	void addBSAToFileMap(const std::wstring& bsa_name);
 	// checks if a file is allowed based on blocklist
 	bool file_allowed(const std::filesystem::path file_path) const;
 	// gets BSA load order from INI files
-	std::vector<std::string> getBSAFilesFromINIs() const;
+	std::vector<std::wstring> getBSAFilesFromINIs() const;
 	// gets BSA files in the data directory
-	std::vector<std::string> getBSAFilesInDirectory() const;
+	std::vector<std::wstring> getBSAFilesInDirectory() const;
 	// gets BSA files from a given plugin
-	std::vector<std::string> findBSAFilesFromPluginName(const std::vector<std::string>& bsa_file_list, const std::string& plugin_prefix) const;
+	std::vector<std::wstring> findBSAFilesFromPluginName(const std::vector<std::wstring>& bsa_file_list, const std::wstring& plugin_prefix) const;
 	// gets INI properties from documents
-	boost::property_tree::ptree getINIProperties() const;
+	boost::property_tree::wptree getINIProperties() const;
 
 	// Folder finding methods
 	std::filesystem::path getGameDocumentPath() const;

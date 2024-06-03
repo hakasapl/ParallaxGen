@@ -39,7 +39,7 @@ BethesdaGame::BethesdaGame(GameType game_type, const fs::path game_path, bool lo
 	if (!fs::exists(this->game_path)) {
 		// If the game path does not exist, throw an exception
 		if (this->logging) {
-			spdlog::critical("Game path does not exist: {}", this->game_path.string());
+			spdlog::critical(L"Game path does not exist: {}", this->game_path.wstring());
 			ParallaxGenUtil::exitWithUserInput(1);
 		} else {
 			throw runtime_error("Game path does not exist");
@@ -51,7 +51,7 @@ BethesdaGame::BethesdaGame(GameType game_type, const fs::path game_path, bool lo
 	if (!fs::exists(this->game_data_path / lookup_file)) {
 		// If the game data path does not contain Skyrim.esm, throw an exception
 		if (this->logging) {
-			spdlog::critical("Game data path does not contain Skyrim.esm, which probably means it's invalid: {}", this->game_data_path.string());
+			spdlog::critical(L"Game data path does not contain Skyrim.esm, which probably means it's invalid: {}", this->game_data_path.wstring());
 			ParallaxGenUtil::exitWithUserInput(1);
 		} else {
 			throw runtime_error("Game data path does not contain Skyrim.esm");

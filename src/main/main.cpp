@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
     }
 
     if (ignore_parallax && !ignore_complex_material) {
-        spdlog::critical("Both ignore-parallax and ignore-complex-material flags are set. Nothing to do.");
+        spdlog::critical("If ignore-parallax is set, enable-complex-material must be set, otherwise there is nothing to do");
         exitWithUserInput(1);
     }
 
@@ -120,7 +120,7 @@ int main(int argc, char** argv) {
 
     // print mesh output location
     fs::path mesh_output_dir = output_dir / "ParallaxGen_Output";
-    spdlog::info("Mesh output directory: {}", mesh_output_dir.string());
+    spdlog::info(L"Mesh output directory: {}", mesh_output_dir.wstring());
 
     // Create bethesda game object
     BethesdaGame::GameType gameType;

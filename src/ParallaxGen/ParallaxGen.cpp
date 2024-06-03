@@ -55,7 +55,7 @@ void ParallaxGen::deleteMeshes() {
 		if (fs::is_directory(entry.path())) {
 			// Remove the directory and all its contents
 			fs::remove_all(entry.path());
-			spdlog::trace("Deleted directory {}", entry.path().string());
+			spdlog::trace(L"Deleted directory {}", entry.path().wstring());
 		}
 	}
 }
@@ -72,16 +72,21 @@ void ParallaxGen::deleteOutputDir() {
 typedef BSLightingShaderPropertyShaderType BSLSP;
 typedef SkyrimShaderPropertyFlags1 SSPF1;
 typedef SkyrimShaderPropertyFlags2 SSPF2;
-void ParallaxGen::processNIF(fs::path nif_file, vector<fs::path>& heightMaps, vector<fs::path>& complexMaterialMaps)
+void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightMaps, vector<fs::path>& complexMaterialMaps)
 {
 	const fs::path output_file = output_dir / nif_file;
 	if (fs::exists(output_file)) {
-		spdlog::error("Unable to process NIF file, file already exists: {}", nif_file.string());
+		spdlog::error(L"Unable to process NIF file, file already exists: {}", nif_file.wstring());
 		return;
 	}
 
 	// process nif file
 	vector<std::byte> nif_file_data = pgd->getFile(nif_file);
+
+	if (nif_file_data.empty()) {
+		spdlog::warn(L"Unable to read NIF file (ignoring): {}", nif_file.wstring());
+		return;
+	}
 
 	boost::iostreams::array_source nif_array_source(reinterpret_cast<const char*>(nif_file_data.data()), nif_file_data.size());
 	boost::iostreams::stream<boost::iostreams::array_source> nif_stream(nif_array_source);
@@ -94,7 +99,7 @@ void ParallaxGen::processNIF(fs::path nif_file, vector<fs::path>& heightMaps, ve
 		nif.Load(nif_stream);
 	}
 	catch (const exception& e) {
-		spdlog::warn("Error reading NIF file (ignoring): {}, {}", nif_file.string(), e.what());
+		spdlog::warn(L"Error reading NIF file (ignoring): {}, {}", nif_file.wstring(), ParallaxGenUtil::convertToWstring(e.what()));
 		return;
 	}
 
@@ -105,7 +110,7 @@ void ParallaxGen::processNIF(fs::path nif_file, vector<fs::path>& heightMaps, ve
 	for (NiNode* node : nif.GetNodes()) {
 		string block_name = node->GetBlockName();
 		if (block_name == "BSBehaviorGraphExtraData") {
-			spdlog::debug("Rejecting NIF file {} due to attached havok animations", nif_file.string());
+			spdlog::debug(L"Rejecting NIF file {} due to attached havok animations", nif_file.wstring());
 			return;
 		}
 	}
@@ -116,20 +121,20 @@ void ParallaxGen::processNIF(fs::path nif_file, vector<fs::path>& heightMaps, ve
 		// exclusions
 		// get shader type
 		if (!shape->HasShaderProperty()) {
-			spdlog::trace("Rejecting shape {} in NIF file {}: No shader property", shape_id, nif_file.string());
+			spdlog::trace(L"Rejecting shape {} in NIF file {}: No shader property", shape_id, nif_file.wstring());
 			continue;
 		}
 
 		// only allow BSLightingShaderProperty blocks
 		string shape_block_name = shape->GetBlockName();
 		if (shape_block_name != "NiTriShape" && shape_block_name != "BSTriShape") {
-			spdlog::trace("Rejecting shape {} in NIF file {}: Incorrect shape block type", shape_id, nif_file.string());
+			spdlog::trace(L"Rejecting shape {} in NIF file {}: Incorrect shape block type", shape_id, nif_file.wstring());
 			continue;
 		}
 
 		// ignore skinned meshes, these don't support parallax
 		if (shape->HasSkinInstance() || shape->IsSkinned()) {
-			spdlog::trace("Rejecting shape {} in NIF file {}: Skinned mesh", shape_id, nif_file.string());
+			spdlog::trace(L"Rejecting shape {} in NIF file {}: Skinned mesh", shape_id, nif_file.wstring());
 			continue;
 		}
 
@@ -138,14 +143,14 @@ void ParallaxGen::processNIF(fs::path nif_file, vector<fs::path>& heightMaps, ve
 
 		string shader_block_name = shader->GetBlockName();
 		if (shader_block_name != "BSLightingShaderProperty") {
-			spdlog::trace("Rejecting shape {} in NIF file {}: Incorrect shader block type", shape->GetBlockName(), nif_file.string());
+			spdlog::trace(L"Rejecting shape {} in NIF file {}: Incorrect shader block type", ParallaxGenUtil::convertToWstring(shape->GetBlockName()), nif_file.wstring());
 			continue;
 		}
 
 		// Ignore if shader type is not 0 (nothing) or 1 (environemnt map) or 3 (parallax)
 		BSLSP shader_type = static_cast<BSLSP>(shader->GetShaderType());
 		if (shader_type != BSLSP::BSLSP_DEFAULT && shader_type != BSLSP::BSLSP_ENVMAP && shader_type != BSLSP::BSLSP_PARALLAX) {
-			spdlog::trace("Rejecting shape {} in NIF file {}: Incorrect shader type", shape->GetBlockName(), nif_file.string());
+			spdlog::trace(L"Rejecting shape {} in NIF file {}: Incorrect shader type", ParallaxGenUtil::convertToWstring(shape->GetBlockName()), nif_file.wstring());
 			continue;
 		}
 
@@ -185,7 +190,7 @@ void ParallaxGen::processNIF(fs::path nif_file, vector<fs::path>& heightMaps, ve
                 // Enable regular parallax for this shape!
 				if (shader_type != BSLSP::BSLSP_DEFAULT && shader_type != BSLSP::BSLSP_PARALLAX) {
 					// this avoids an env map mesh being reverted to parallax mesh
-					spdlog::trace("Rejecting shape {} in NIF file {}: Incorrect shader type", shape->GetBlockName(), nif_file.string());
+					spdlog::trace(L"Rejecting shape {} in NIF file {}: Incorrect shader type", ParallaxGenUtil::convertToWstring(shape->GetBlockName()), nif_file.wstring());
 					continue;
 				}
 
@@ -199,13 +204,13 @@ void ParallaxGen::processNIF(fs::path nif_file, vector<fs::path>& heightMaps, ve
 
 	// save NIF if it was modified
 	if (nif_modified) {
-		spdlog::debug("NIF Modified: {}", nif_file.string());
+		spdlog::debug(L"NIF Modified: {}", nif_file.wstring());
 
 		// create directories if required
 		fs::create_directories(output_file.parent_path());
 
 		if (nif.Save(output_file, nif_save_options)) {
-			spdlog::error("Unable to save NIF file: {}", nif_file.string());
+			spdlog::error(L"Unable to save NIF file: {}", nif_file.wstring());
 		}
 	}
 }
@@ -293,16 +298,16 @@ void ParallaxGen::addFileToZip(mz_zip_archive& zip, const fs::path& filePath, co
 	}
 
 	// open file stream
-	ifstream file(filePath.string(), std::ios::binary);
-	vector<char> buffer((istreambuf_iterator<char>(file)), istreambuf_iterator<char>());
+	vector<std::byte> buffer = ParallaxGenUtil::getFileBytes(filePath);
 
 	// get relative path
 	fs::path zip_relative_path = filePath.lexically_relative(output_dir);
-	string zip_file_path = zip_relative_path.string();
+
+	string zip_file_path = ParallaxGenUtil::wstring_to_utf8(zip_relative_path.wstring());
 
 	// add file to zip
     if (!mz_zip_writer_add_mem(&zip, zip_file_path.c_str(), buffer.data(), buffer.size(), MZ_NO_COMPRESSION)) {
-		spdlog::error("Error adding file to zip: {}", filePath.string());
+		spdlog::error(L"Error adding file to zip: {}", filePath.wstring());
 		ParallaxGenUtil::exitWithUserInput(1);
     }
 }
@@ -316,13 +321,14 @@ void ParallaxGen::zipDirectory(const fs::path& dirPath, const fs::path& zipPath)
 
 	// check if directory exists
 	if (!fs::exists(dirPath)) {
-		spdlog::info("No outputs were created", dirPath.string());
+		spdlog::info("No outputs were created");
 		ParallaxGenUtil::exitWithUserInput(0);
 	}
 
 	// initialize file
-    if (!mz_zip_writer_init_file(&zip, zipPath.string().c_str(), 0)) {
-		spdlog::error("Error creating zip file: {}", zipPath.string());
+	string zip_path_string = ParallaxGenUtil::wstring_to_utf8(zipPath);
+    if (!mz_zip_writer_init_file(&zip, zip_path_string.c_str(), 0)) {
+		spdlog::critical(L"Error creating zip file: {}", zipPath.wstring());
 		ParallaxGenUtil::exitWithUserInput(1);
     }
 
@@ -335,7 +341,7 @@ void ParallaxGen::zipDirectory(const fs::path& dirPath, const fs::path& zipPath)
 
 	// finalize zip
     if (!mz_zip_writer_finalize_archive(&zip)) {
-		spdlog::error("Error finalizing zip archive: {}", zipPath.string());
+		spdlog::critical(L"Error finalizing zip archive: {}", zipPath.wstring());
 		ParallaxGenUtil::exitWithUserInput(1);
     }
 

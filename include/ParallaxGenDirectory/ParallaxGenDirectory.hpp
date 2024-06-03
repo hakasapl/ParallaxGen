@@ -10,19 +10,19 @@
 class ParallaxGenDirectory : public BethesdaDirectory {
 private:
 	// list of mesh block names to ignore (if the path has any of these as a component it is ignored)
-	static inline const std::vector<std::string> mesh_blocklist = {
-		"actors",
-		"cameras",
-		"decals",
-		"effects",
-		"interface",
-		"loadscreenart",
-		"lod",
-		"magic",
-		"markers",
-		"mps",
-		"sky",
-		"water"
+	static inline const std::vector<std::wstring> mesh_blocklist = {
+		L"actors",
+		L"cameras",
+		L"decals",
+		L"effects",
+		L"interface",
+		L"loadscreenart",
+		L"lod",
+		L"magic",
+		L"markers",
+		L"mps",
+		L"sky",
+		L"water"
 	};
 
 public:
