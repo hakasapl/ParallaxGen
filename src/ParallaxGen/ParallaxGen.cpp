@@ -87,11 +87,21 @@ void ParallaxGen::processNIF(fs::path nif_file, vector<fs::path>& heightMaps, ve
 	boost::iostreams::stream<boost::iostreams::array_source> nif_stream(nif_array_source);
 
 	// load nif file
-	NifFile nif(nif_stream);
+	NifFile nif;
+
+	try {
+		// try block for loading nif
+		nif.Load(nif_stream);
+	}
+	catch (const exception& e) {
+		spdlog::warn("Error reading NIF file (ignoring): {}, {}", nif_file.string(), e.what());
+		return;
+	}
+
 	bool nif_modified = false;
 
 	// ignore nif if has attached havok animations
-	//todo: This is not tested
+	//todo: This is not properly tested
 	for (NiNode* node : nif.GetNodes()) {
 		string block_name = node->GetBlockName();
 		if (block_name == "BSBehaviorGraphExtraData") {

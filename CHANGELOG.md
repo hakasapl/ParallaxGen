@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.5] - 2024-06-03
+
+- Fixed an issue that would cause hangs or crashes when loading invalid or corrupt NIFs
+
 ## [0.1.4] - 2024-06-03
 
 - Set log to flush on whatever the verbosity mode is set to (trace, debug, or info). Should help reproducing some issues.
