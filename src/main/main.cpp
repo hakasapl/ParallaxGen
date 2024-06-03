@@ -2,7 +2,6 @@
 #include <iostream>
 #include <string>
 #include <filesystem>
-#include <chrono>
 #include <CLI/CLI.hpp>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -74,8 +73,8 @@ int main(int argc, char** argv) {
     // register logger parameters
     spdlog::register_logger(logger);
     spdlog::set_default_logger(logger);
-    spdlog::flush_on(spdlog::level::info);
     spdlog::set_level(spdlog::level::info);
+    spdlog::flush_on(spdlog::level::info);
 
     //
     // CLI Arguments
@@ -109,11 +108,13 @@ int main(int argc, char** argv) {
     // Set logging mode
     if (verbosity >= 1) {
         spdlog::set_level(spdlog::level::debug);
+        spdlog::flush_on(spdlog::level::debug);
         spdlog::debug("DEBUG logging enabled");
     }
     
     if (verbosity >= 2) {
         spdlog::set_level(spdlog::level::trace);
+        spdlog::flush_on(spdlog::level::trace);
         spdlog::trace("TRACE logging enabled");
     }
 

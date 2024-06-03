@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.4] - 2024-06-03
+
+- Set log to flush on whatever the verbosity mode is set to (trace, debug, or info). Should help reproducing some issues.
+
 ## [0.1.3] - 2024-06-02
 
 - Fixed CLI arg requesting game data path instead of game path.
