@@ -19,8 +19,28 @@ namespace fs = std::filesystem;
 
 fs::path getExecutablePath() {
     char buffer[MAX_PATH];
-    GetModuleFileName(NULL, buffer, MAX_PATH);
-    return fs::path(buffer);
+    if (GetModuleFileName(NULL, buffer, MAX_PATH) == 0) {
+        spdlog::critical("Unable to locate ParallaxGen.exe: {}", GetLastError());
+        exitWithUserInput(1);
+    }
+
+    try {
+        fs::path out_path = fs::path(buffer);
+
+        if (fs::exists(out_path)) {
+            return out_path;
+        }
+        else {
+            spdlog::critical("Located ParallaxGen.exe path is invalid: {}", out_path.string());
+            exitWithUserInput(1);
+        }
+    }
+    catch(const fs::filesystem_error& ex) {
+        spdlog::critical("Unable to locate ParallaxGen.exe: {}", ex.what());
+        exitWithUserInput(1);
+    }
+
+    return fs::path();
 }
 
 void addArguments(CLI::App& app, int& verbosity, fs::path& data_dir, string& game_type, bool& no_zip, bool& no_cleanup, bool& ignore_parallax, bool& ignore_complex_material) {
@@ -38,21 +58,24 @@ int main(int argc, char** argv) {
     const fs::path output_dir = getExecutablePath().parent_path();
 
     // Create loggers
-    auto console_sink = make_shared<spdlog::sinks::stdout_color_sink_mt>();
-    auto basic_sink = make_shared<spdlog::sinks::basic_file_sink_mt>(output_dir.string() + "/ParallaxGen.log", true);
-    vector<spdlog::sink_ptr> sinks{console_sink, basic_sink};
+    vector<spdlog::sink_ptr> sinks;
+    try {
+        auto console_sink = make_shared<spdlog::sinks::stdout_color_sink_mt>();
+        auto basic_sink = make_shared<spdlog::sinks::basic_file_sink_mt>(output_dir.string() + "/ParallaxGen.log", true);
+        sinks = {console_sink, basic_sink};
+    }
+    catch (const spdlog::spdlog_ex& ex) {
+        spdlog::critical("Error creating logging objects: {}", ex.what());
+        exitWithUserInput(1);
+    }
+
     auto logger = make_shared<spdlog::logger>("ParallaxGen", sinks.begin(), sinks.end());
 
+    // register logger parameters
     spdlog::register_logger(logger);
     spdlog::set_default_logger(logger);
-    spdlog::flush_every(chrono::seconds(3));
+    spdlog::flush_on(spdlog::level::info);
     spdlog::set_level(spdlog::level::info);
-
-    spdlog::info("Welcome to ParallaxGen version {}!", PARALLAXGEN_VERSION);
-
-    // print mesh output location
-    fs::path mesh_output_dir = output_dir / "ParallaxGen_Output";
-    spdlog::info("Mesh output directory: {}", mesh_output_dir.string());
 
     //
     // CLI Arguments
@@ -68,6 +91,9 @@ int main(int argc, char** argv) {
     CLI::App app{ "ParallaxGen: Auto convert meshes to parallax meshes" };
     addArguments(app, verbosity, data_dir, game_type, no_zip, no_cleanup, ignore_parallax, ignore_complex_material);
     CLI11_PARSE(app, argc, argv);
+
+    // welcome message
+    spdlog::info("Welcome to ParallaxGen version {}!", PARALLAXGEN_VERSION);
 
     // CLI argument validation
     if (game_type != "skyrimse" && game_type != "skyrim" && game_type != "skyrimvr") {
@@ -91,6 +117,10 @@ int main(int argc, char** argv) {
         spdlog::trace("TRACE logging enabled");
     }
 
+    // print mesh output location
+    fs::path mesh_output_dir = output_dir / "ParallaxGen_Output";
+    spdlog::info("Mesh output directory: {}", mesh_output_dir.string());
+
     // Create bethesda game object
     BethesdaGame::GameType gameType;
     if (game_type == "skyrimse") {
@@ -103,7 +133,7 @@ int main(int argc, char** argv) {
         gameType = BethesdaGame::GameType::SKYRIM_VR;
     }
 
-	BethesdaGame bg = BethesdaGame(gameType, data_dir);
+	BethesdaGame bg = BethesdaGame(gameType, data_dir, true);
     ParallaxGenDirectory pgd = ParallaxGenDirectory(bg);
     ParallaxGen pg = ParallaxGen(mesh_output_dir, &pgd);
 

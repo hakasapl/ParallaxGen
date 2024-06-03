@@ -28,10 +28,21 @@ BethesdaGame::BethesdaGame(GameType game_type, const fs::path game_path, bool lo
 	if (this->game_path.empty()) {
 		// If the game path is still empty, throw an exception
 		if (this->logging) {
-			spdlog::critical("Unable to locate game data path. If you are using a non-Steam version of skyrim, please specify the game data path manually using the --g argument.");
+			spdlog::critical("Unable to locate game data path. If you are using a non-Steam version of skyrim, please specify the game data path manually using the -d argument.");
 			ParallaxGenUtil::exitWithUserInput(1);
 		} else {
 			throw runtime_error("Game path not found");
+		}
+	}
+
+	// check if path actually exists
+	if (!fs::exists(this->game_path)) {
+		// If the game path does not exist, throw an exception
+		if (this->logging) {
+			spdlog::critical("Game path does not exist: {}", this->game_path.string());
+			ParallaxGenUtil::exitWithUserInput(1);
+		} else {
+			throw runtime_error("Game path does not exist");
 		}
 	}
 
@@ -63,19 +74,20 @@ fs::path BethesdaGame::findGamePathFromSteam() const {
 	DWORD dataType;
 	DWORD dataSize = sizeof(data);
 
-	if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, reg_path.c_str(), 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+	LONG result = RegOpenKeyExA(HKEY_LOCAL_MACHINE, reg_path.c_str(), 0, KEY_READ, &hKey);
+	if (result == ERROR_SUCCESS) {
 		// Query the value
-		if (RegQueryValueExA(hKey, "InstallLocation", nullptr, &dataType, (LPBYTE)data, &dataSize) == ERROR_SUCCESS) {
+		result = RegQueryValueExA(hKey, "InstallLocation", nullptr, &dataType, (LPBYTE)data, &dataSize);
+		if (result == ERROR_SUCCESS) {
 			// Ensure null-terminated string
 			data[dataSize] = '\0';
 			return string(data);
 		}
-
 		// Close the registry key
 		RegCloseKey(hKey);
 	}
 
-	return "";
+	return fs::path();
 }
 
 int BethesdaGame::getSteamGameID() const {

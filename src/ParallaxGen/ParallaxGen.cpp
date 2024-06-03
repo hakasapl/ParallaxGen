@@ -62,8 +62,8 @@ void ParallaxGen::deleteMeshes() {
 
 void ParallaxGen::deleteOutputDir() {
 	// delete output directory
-	spdlog::info("Deleting existing ParallaxGen output...");
 	if (fs::exists(output_dir)) {
+		spdlog::info("Deleting existing ParallaxGen output...");
 		fs::remove_all(output_dir);
 	}
 }
