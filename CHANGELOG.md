@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.1.6] - UNRELEASED
+## [0.1.6] - 2024-06-03
 
 - Added wstring support for all file paths
 - Added additional trace logging for building file map
