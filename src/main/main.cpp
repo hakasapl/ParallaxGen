@@ -48,7 +48,7 @@ void addArguments(CLI::App& app, int& verbosity, fs::path& game_dir, string& gam
     app.add_option("-d,--game-dir", game_dir, "Manually specify of Skyrim directory");
     app.add_option("-g,--game-type", game_type, "Specify game type [skyrimse, skyrim, or skyrimvr]");
     app.add_flag("--no-zip", no_zip, "Don't zip the output meshes");
-    app.add_flag("--no-cleanup", no_cleanup, "Don't delete files after zipping");
+    app.add_flag("--no-cleanup", no_cleanup, "Don't delete generated meshes after zipping");
     app.add_flag("--ignore-parallax", ignore_parallax, "Don't generate any parallax meshes");
     app.add_flag("--enable-complex-material", ignore_complex_material, "Generate any complex material meshes (Experimental!)");
 }
