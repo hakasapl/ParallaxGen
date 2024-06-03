@@ -79,6 +79,8 @@ typedef SkyrimShaderPropertyFlags1 SSPF1;
 typedef SkyrimShaderPropertyFlags2 SSPF2;
 void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightMaps, vector<fs::path>& complexMaterialMaps)
 {
+	fs::path nif_file_temp = fs::path("meshes\\actors\\alduin\\alduin.nif");
+
 	const fs::path output_file = output_dir / nif_file;
 	if (fs::exists(output_file)) {
 		spdlog::error(L"Unable to process NIF file, file already exists: {}", nif_file.wstring());
@@ -86,7 +88,8 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 	}
 
 	// process nif file
-	vector<std::byte> nif_file_data = pgd->getFile(nif_file);
+	//vector<std::byte> nif_file_data = pgd->getFile(nif_file);
+	vector<std::byte> nif_file_data = pgd->getFile(nif_file_temp);
 
 	if (nif_file_data.empty()) {
 		spdlog::warn(L"Unable to read NIF file (ignoring): {}", nif_file.wstring());
@@ -111,10 +114,12 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 	bool nif_modified = false;
 
 	// ignore nif if has attached havok animations
-	//todo: This is not properly tested
-	for (NiNode* node : nif.GetNodes()) {
-		string block_name = node->GetBlockName();
-		if (block_name == "BSBehaviorGraphExtraData") {
+	vector<NiObject*> block_tree;
+	nif.GetTree(block_tree);
+
+	// loop through blocks
+	for (NiObject* block : block_tree) {
+		if (block->GetBlockName() == "BSBehaviorGraphExtraData") {
 			spdlog::debug(L"Rejecting NIF file {} due to attached havok animations", nif_file.wstring());
 			return;
 		}
@@ -351,4 +356,6 @@ void ParallaxGen::zipDirectory(const fs::path& dirPath, const fs::path& zipPath)
     }
 
     mz_zip_writer_end(&zip);
+
+	spdlog::info(L"Please import this file into your mod manager: {}", zipPath.wstring());
 }

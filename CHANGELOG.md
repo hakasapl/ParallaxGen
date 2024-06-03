@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.7] - UNRELEASED
+
+- Added a helper log message for which file to import at the end of generation
+- Meshes now don't process if there are attached havok physics
+
 ## [0.1.6] - 2024-06-03
 
 - Added wstring support for all file paths
