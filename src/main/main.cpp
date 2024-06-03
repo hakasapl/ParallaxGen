@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 #include <filesystem>
+#include <chrono>
 #include <CLI/CLI.hpp>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -44,6 +45,7 @@ int main(int argc, char** argv) {
 
     spdlog::register_logger(logger);
     spdlog::set_default_logger(logger);
+    spdlog::flush_every(chrono::seconds(3));
     spdlog::set_level(spdlog::level::info);
 
     spdlog::info("Welcome to ParallaxGen version {}!", PARALLAXGEN_VERSION);
