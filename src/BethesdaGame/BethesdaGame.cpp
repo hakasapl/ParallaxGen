@@ -28,7 +28,7 @@ BethesdaGame::BethesdaGame(GameType game_type, const fs::path game_path, bool lo
 	if (this->game_path.empty()) {
 		// If the game path is still empty, throw an exception
 		if (this->logging) {
-			spdlog::critical("Unable to locate game data path. If you are using a non-Steam version of skyrim, please specify the game data path manually using the -d argument.");
+			spdlog::critical("Unable to locate game data path. Please specify the game data path manually using the -d argument.");
 			ParallaxGenUtil::exitWithUserInput(1);
 		} else {
 			throw runtime_error("Game path not found");
@@ -47,6 +47,16 @@ BethesdaGame::BethesdaGame(GameType game_type, const fs::path game_path, bool lo
 	}
 
 	this->game_data_path = this->game_path / "Data";
+
+	if (!fs::exists(this->game_data_path / lookup_file)) {
+		// If the game data path does not contain Skyrim.esm, throw an exception
+		if (this->logging) {
+			spdlog::critical("Game data path does not contain Skyrim.esm, which probably means it's invalid: {}", this->game_data_path.string());
+			ParallaxGenUtil::exitWithUserInput(1);
+		} else {
+			throw runtime_error("Game data path does not contain Skyrim.esm");
+		}
+	}
 }
 
 BethesdaGame::GameType BethesdaGame::getGameType() const {

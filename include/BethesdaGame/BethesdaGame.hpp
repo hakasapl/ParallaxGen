@@ -67,6 +67,8 @@ private:
 		{BethesdaGame::GameType::SKYRIM, 72850}
 	};
 
+	inline static const std::string lookup_file = "Skyrim.esm";
+
 public:
 	// constructor
 	BethesdaGame(GameType game_type, const std::filesystem::path game_path, const bool logging = false);
