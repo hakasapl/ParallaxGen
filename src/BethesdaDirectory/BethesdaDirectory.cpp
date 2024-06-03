@@ -259,6 +259,16 @@ vector<string> BethesdaDirectory::getPluginLoadOrder(const bool trim_extension) 
 	// set path to loadorder.txt
 	fs::path lo_file = getGameAppdataPath() / "loadorder.txt";
 
+	if (!fs::exists(lo_file)) {
+		if (logging) {
+			spdlog::critical("loadorder.txt not found. If you are using mod organizer be sure to launch this program through MO2.");
+			exitWithUserInput(1);
+		}
+		else {
+			throw runtime_error("loadorder.txt not found.");
+		}
+	}
+
 	// open file
 	ifstream f = openFileHandle(lo_file, true);
 
