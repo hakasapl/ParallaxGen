@@ -1,8 +1,11 @@
 # Changelog
 
-## [0.1.3] - UNRELEASED
+## [0.1.3] - 2024-06-02
 
 - Fixed CLI arg requesting game data path instead of game path.
+- Made some messages more descriptive
+- Made some CLI arg helps more descriptive
+- Added a check to look for Skyrim.esm in the data folder
 
 ## [0.1.2] - 2024-06-02
 
