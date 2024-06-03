@@ -57,6 +57,11 @@ void ParallaxGen::deleteMeshes() {
 			fs::remove_all(entry.path());
 			spdlog::trace(L"Deleted directory {}", entry.path().wstring());
 		}
+
+		// remove state file
+		if (entry.path().filename().wstring() == L"PARALLAXGEN_DONTDELETE") {
+			fs::remove(entry.path());
+		}
 	}
 }
 

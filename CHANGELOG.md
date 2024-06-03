@@ -5,6 +5,7 @@
 - Added wstring support for all file paths
 - Added additional trace logging for building file map
 - Stopped using memoryio file buffer, using ifstream now
+- After generation state file is now cleaned up properly
 
 ## [0.1.5] - 2024-06-03
 
