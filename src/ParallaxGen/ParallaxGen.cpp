@@ -79,8 +79,6 @@ typedef SkyrimShaderPropertyFlags1 SSPF1;
 typedef SkyrimShaderPropertyFlags2 SSPF2;
 void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightMaps, vector<fs::path>& complexMaterialMaps)
 {
-	fs::path nif_file_temp = fs::path("meshes\\actors\\alduin\\alduin.nif");
-
 	const fs::path output_file = output_dir / nif_file;
 	if (fs::exists(output_file)) {
 		spdlog::error(L"Unable to process NIF file, file already exists: {}", nif_file.wstring());
@@ -88,8 +86,7 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 	}
 
 	// process nif file
-	//vector<std::byte> nif_file_data = pgd->getFile(nif_file);
-	vector<std::byte> nif_file_data = pgd->getFile(nif_file_temp);
+	vector<std::byte> nif_file_data = pgd->getFile(nif_file);
 
 	if (nif_file_data.empty()) {
 		spdlog::warn(L"Unable to read NIF file (ignoring): {}", nif_file.wstring());
