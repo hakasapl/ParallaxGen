@@ -3,8 +3,8 @@
     "boost-algorithm",
     "boost-asio",
     "boost-container",
+    "boost-filesystem",
     "boost-iostreams",
-    "boost-property-tree",
     "cli11",
     "directxtex",
     "miniz",
@@ -19,7 +19,6 @@
       "features": [
         "wchar"
       ]
-    },
-    "boost-filesystem"
+    }
   ]
 }

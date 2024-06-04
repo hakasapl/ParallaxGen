@@ -1,6 +1,7 @@
 #ifndef BETHESDAGAME_H
 #define BETHESDAGAME_H
 
+#include <windows.h>
 #include <unordered_map>
 #include <filesystem>
 #include <string>
@@ -27,16 +28,18 @@ public:
 	// struct that stores location of ini and custom ini file for a game
 	struct ININame {
 		std::filesystem::path ini;
+		std::filesystem::path ini_prefs;
 		std::filesystem::path ini_custom;
 	};
 
+private:
 	// Define INI locations for each game
 	static inline const std::unordered_map<BethesdaGame::GameType, ININame> INILocations = {
-		{BethesdaGame::GameType::SKYRIM_SE, ININame{"skyrim.ini", "skyrimcustom.ini"}},
-		{BethesdaGame::GameType::SKYRIM_VR, ININame{"skyrim.ini", "skyrimcustom.ini"}},
-		{BethesdaGame::GameType::SKYRIM, ININame{"skyrim.ini", "skyrimcustom.ini"}},
-		{BethesdaGame::GameType::ENDERAL, ININame{"enderal.ini", "enderalcustom.ini"}},
-		{BethesdaGame::GameType::ENDERAL_SE, ININame{"enderal.ini", "enderalcustom.ini"}}
+		{BethesdaGame::GameType::SKYRIM_SE, ININame{"skyrim.ini", "skyrimprefs.ini", "skyrimcustom.ini"}},
+		{BethesdaGame::GameType::SKYRIM_VR, ININame{"skyrim.ini", "skyrimprefs.ini", "skyrimcustom.ini"}},
+		{BethesdaGame::GameType::SKYRIM, ININame{"skyrim.ini", "skyrimprefs.ini", "skyrimcustom.ini"}},
+		{BethesdaGame::GameType::ENDERAL, ININame{"enderal.ini", "enderalprefs.ini", "enderalcustom.ini"}},
+		{BethesdaGame::GameType::ENDERAL_SE, ININame{"enderal.ini", "enderalprefs.ini", "enderalcustom.ini"}}
 	};
 
 	// Define document folder location for each game
@@ -57,7 +60,6 @@ public:
 		{BethesdaGame::GameType::ENDERAL_SE, "Enderal Special Edition"}
 	};
 
-private:
 	// stores the game type
 	GameType game_type;
 
@@ -88,11 +90,20 @@ public:
 	std::filesystem::path getGamePath() const;
 	std::filesystem::path getGameDataPath() const;
 
+	std::filesystem::path getGameDocumentPath() const;
+	std::filesystem::path getGameAppdataPath() const;
+
+	ININame getINIPaths() const;
+	std::filesystem::path getLoadOrderFile() const;
+
 private:
 	// locates the steam install locatino of steam
 	std::filesystem::path findGamePathFromSteam() const;
 	// returns the steam ID of the current game
 	int getSteamGameID() const;
+
+	// gets the system path for a folder (from windows.h)
+	std::filesystem::path getSystemPath(const GUID& folder_id) const;
 };
 
 #endif

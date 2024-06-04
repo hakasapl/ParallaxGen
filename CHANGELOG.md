@@ -1,8 +1,9 @@
 # Changelog
 
-## [0.1.9] - UNRELEASED
+## [0.2.0] - 2024-06-04
 
 - Added support for enderal and enderal se
+- Fixed crash when reading invalid INI file
 
 ## [0.1.8] - 2024-06-04
 

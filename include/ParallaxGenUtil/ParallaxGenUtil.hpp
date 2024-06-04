@@ -2,7 +2,6 @@
 #define PARALLAXGENUTIL_H
 
 #include <filesystem>
-#include <boost/property_tree/ptree.hpp>
 #include <windows.h>
 #include <unordered_set>
 #include <algorithm>
@@ -10,17 +9,11 @@
 
 namespace ParallaxGenUtil
 {
-	// reads ini file into ptree
-	boost::property_tree::wptree readINIFile(const std::filesystem::path& ini_path, const bool required = false, const bool logging = false);
-
 	// opens a file handle for a file
 	std::ifstream openFileHandle(const std::filesystem::path& file_path, const bool required);
 
-	// merges two ptrees
-	void mergePropertyTrees(boost::property_tree::wptree& pt1, const boost::property_tree::wptree& pt2);
-
-	// gets the system path for a folder (from windows.h)
-	std::filesystem::path getSystemPath(const GUID& folder_id);
+	// get a single value from ini file
+	std::wstring readINIValue(const std::filesystem::path& ini_path, const std::wstring& section, const std::wstring& key, const bool logging, const bool first_ini_read);
 
 	// terminals usually auto exit when program ends, this function waits for user input before exiting
 	void exitWithUserInput(const int exit_code);

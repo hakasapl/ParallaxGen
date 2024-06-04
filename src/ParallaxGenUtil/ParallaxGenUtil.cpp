@@ -3,7 +3,6 @@
 #include <spdlog/spdlog.h>
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/algorithm/string.hpp>
-#include <shlobj.h>
 #include <iostream>
 #include <fstream>
 #include <codecvt>
@@ -12,60 +11,69 @@ using namespace std;
 namespace fs = filesystem;
 
 namespace ParallaxGenUtil {
-	void mergePropertyTrees(boost::property_tree::wptree& pt1, const boost::property_tree::wptree& pt2) {
-		for (const auto& kv : pt2) {
-			const auto& key = kv.first;
-			const auto& value = kv.second;
-
-			// Check if the value is a subtree or a single value
-			if (value.empty()) {
-				pt1.put(key, value.data()); // Overwrite single value
-			}
-			else {
-				mergePropertyTrees(pt1.put_child(key, boost::property_tree::wptree()), value); // Recurse for subtrees
-			}
-		}
-	}
-
-	boost::property_tree::wptree readINIFile(const fs::path& ini_path, const bool required, const bool logging)
+	wstring readINIValue(const fs::path& ini_path, const wstring& section, const wstring& key, const bool logging, const bool first_ini_read)
 	{
-		boost::property_tree::wptree pt_out;
-
 		if (!fs::exists(ini_path)) {
-			if (required) {
-				if (logging) {
-					spdlog::critical(L"INI file does not exist: {}", ini_path.wstring());
-					exitWithUserInput(1);
-				}
-			}
-
-			if (logging) {
+			if (logging && first_ini_read) {
 				spdlog::warn(L"INI file does not exist (ignoring): {}", ini_path.wstring());
 			}
-			return pt_out;
+			return L"";
 		}
 
-		// open ini file handle
 		wifstream f(ini_path);
-
 		if (!f.is_open()) {
-			if (required) {
-				if (logging) {
-					spdlog::critical(L"Unable to open INI: {}", ini_path.wstring());
-					exitWithUserInput(1);
-				}
-			}
-
-			if (logging) {
+			if (logging && first_ini_read) {
 				spdlog::warn(L"Unable to open INI (ignoring): {}", ini_path.wstring());
 			}
-			return pt_out;
+			return L"";
 		}
 
-		read_ini(f, pt_out);
-		f.close();
+		wstring cur_line;
+		wstring cur_section;
+		bool foundSection = false;
 
-		return pt_out;
+		while(getline(f, cur_line)) {
+			boost::trim(cur_line);
+
+			// ignore comments
+			if (cur_line.empty() || cur_line[0] == ';' || cur_line[0] == '#') {
+            	continue;
+        	}
+
+			// Check if it's a section
+			if (cur_line.front() == '[' && cur_line.back() == ']') {
+				cur_section = cur_line.substr(1, cur_line.size() - 2);
+				continue;
+			}
+
+			// Check if it's the correct section
+			if (boost::iequals(cur_section, section)) {
+				foundSection = true;
+			}
+
+			if (!boost::iequals(cur_section, section)) {
+				// exit if already checked section
+				if (foundSection) {
+					break;
+				}
+				continue;
+			}
+
+			// check key
+			size_t pos = cur_line.find('=');
+			if (pos != std::string::npos) {
+				// found key value pair
+				wstring cur_key = cur_line.substr(0, pos);
+				boost::trim(cur_key);
+				if (boost::iequals(cur_key, key)) {
+					wstring cur_value = cur_line.substr(pos + 1);
+					boost::trim(cur_value);
+					return cur_value;
+				}
+			}
+		}
+
+		return L"";
 	}
 
 	ifstream openFileHandle(const fs::path& file_path, const bool required = false) {
@@ -77,22 +85,6 @@ namespace ParallaxGenUtil {
 		}
 
 		return file;
-	}
-
-	fs::path getSystemPath(const GUID& folder_id)
-	{
-		PWSTR path = NULL;
-		HRESULT result = SHGetKnownFolderPath(folder_id, 0, NULL, &path);
-		if (SUCCEEDED(result)) {
-			wstring appDataPath(path);
-			CoTaskMemFree(path);  // Free the memory allocated for the path
-
-			return fs::path(path);
-		}
-		else {
-			// Handle error
-			return fs::path();
-		}
 	}
 
 	void exitWithUserInput(const int exit_code)

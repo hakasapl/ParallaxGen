@@ -1,7 +1,8 @@
 #include "BethesdaGame/BethesdaGame.hpp"
 
-#include <windows.h>
 #include <spdlog/spdlog.h>
+#include <knownfolders.h>
+#include <shlobj.h>
 
 #include "ParallaxGenUtil/ParallaxGenUtil.hpp"
 
@@ -101,5 +102,63 @@ fs::path BethesdaGame::findGamePathFromSteam() const {
 }
 
 int BethesdaGame::getSteamGameID() const {
-	return BethesdaGame::steam_game_ids.at(this->game_type);
+	return BethesdaGame::steam_game_ids.at(game_type);
+}
+
+BethesdaGame::ININame BethesdaGame::getINIPaths() const
+{
+	BethesdaGame::ININame output = INILocations.at(game_type);
+	fs::path game_docs_path = getGameDocumentPath();
+	
+	// normal ini file
+	output.ini = game_docs_path / output.ini;
+	output.ini_prefs = game_docs_path / output.ini_prefs;
+	output.ini_custom = game_docs_path / output.ini_custom;
+
+	return output;
+}
+
+fs::path BethesdaGame::getLoadOrderFile() const
+{
+	fs::path game_appdata_path = getGameAppdataPath();
+	fs::path load_order_file = game_appdata_path / "loadorder.txt";
+	return load_order_file;
+}
+
+fs::path BethesdaGame::getGameDocumentPath() const
+{
+	fs::path doc_path = getSystemPath(FOLDERID_Documents);
+	if (doc_path.empty()) {
+		return fs::path();
+	}
+
+	doc_path /= BethesdaGame::DocumentLocations.at(game_type);
+	return doc_path;
+}
+
+fs::path BethesdaGame::getGameAppdataPath() const
+{
+	fs::path appdata_path = getSystemPath(FOLDERID_LocalAppData);
+	if (appdata_path.empty()) {
+		return fs::path();
+	}
+
+	appdata_path /= BethesdaGame::AppDataLocations.at(game_type);
+	return appdata_path;
+}
+
+fs::path BethesdaGame::getSystemPath(const GUID& folder_id) const
+{
+	PWSTR path = NULL;
+	HRESULT result = SHGetKnownFolderPath(folder_id, 0, NULL, &path);
+	if (SUCCEEDED(result)) {
+		wstring appDataPath(path);
+		CoTaskMemFree(path);  // Free the memory allocated for the path
+
+		return fs::path(path);
+	}
+	else {
+		// Handle error
+		return fs::path();
+	}
 }

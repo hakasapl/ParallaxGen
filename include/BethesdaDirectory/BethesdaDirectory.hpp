@@ -9,7 +9,6 @@
 #include <map>
 #include <array>
 #include <vector>
-#include <boost/property_tree/ptree.hpp>
 #include <bsa/tes4.hpp>
 
 #include "BethesdaGame/BethesdaGame.hpp"
@@ -45,8 +44,8 @@ private:
 	// stores whether logging is enabled
 	bool logging;
 
-	// stores the game type
-	BethesdaGame::GameType game_type;
+	// stores the game
+	BethesdaGame bg;
 
 	// these fields will be searched in ini files for manually specified BSA loading
 	static inline const std::array<std::string, 3> ini_bsa_fields = {
@@ -96,12 +95,6 @@ private:
 	std::vector<std::wstring> getBSAFilesInDirectory() const;
 	// gets BSA files from a given plugin
 	std::vector<std::wstring> findBSAFilesFromPluginName(const std::vector<std::wstring>& bsa_file_list, const std::wstring& plugin_prefix) const;
-	// gets INI properties from documents
-	boost::property_tree::wptree getINIProperties() const;
-
-	// Folder finding methods
-	std::filesystem::path getGameDocumentPath() const;
-	std::filesystem::path getGameAppdataPath() const;
 };
 
 #endif
