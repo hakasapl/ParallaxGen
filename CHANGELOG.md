@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.1.7] - UNRELEASED
+## [0.1.7] - 2024-06-03
 
 - Added a helper log message for which file to import at the end of generation
 - Meshes now don't process if there are attached havok physics
