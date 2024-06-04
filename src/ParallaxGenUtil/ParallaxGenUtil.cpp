@@ -1,7 +1,6 @@
 #include "ParallaxGenUtil/ParallaxGenUtil.hpp"
 
 #include <spdlog/spdlog.h>
-#include <boost/property_tree/ini_parser.hpp>
 #include <boost/algorithm/string.hpp>
 #include <iostream>
 #include <fstream>
