@@ -108,6 +108,11 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 		return;
 	}
 
+	if (!nif.IsValid()) {
+		spdlog::warn(L"Invalid NIF file (ignoring): {}", nif_file.wstring());
+		return;
+	}
+
 	bool nif_modified = false;
 
 	// ignore nif if has attached havok animations

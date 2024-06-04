@@ -1,8 +1,10 @@
 # Changelog
 
-## [0.1.8] - UNRELEASED
+## [0.1.8] - 2024-06-04
 
 - Fixed log level for havok animation warning to trace
+- Added additional logging for pre-generation
+- Added additional error handling for missing INI files
 
 ## [0.1.7] - 2024-06-03
 

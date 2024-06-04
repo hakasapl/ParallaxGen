@@ -282,6 +282,10 @@ vector<wstring> BethesdaDirectory::getBSAPriorityList() const
 
 vector<wstring> BethesdaDirectory::getPluginLoadOrder(const bool trim_extension) const
 {
+	if (logging) {
+		spdlog::debug("Reading plugin load order from loadorder.txt.");
+	}
+
 	// initialize output vector. Stores
 	vector<wstring> output_lo;
 
@@ -344,6 +348,10 @@ vector<wstring> BethesdaDirectory::getBSAFilesFromINIs() const
 	// output vector
 	vector<wstring> bsa_files;
 
+	if (logging) {
+		spdlog::debug("Reading manually loaded BSAs from INI files.");
+	}
+
 	// get ini properties
 	boost::property_tree::wptree pt_ini = getINIProperties();
 
@@ -379,6 +387,10 @@ vector<wstring> BethesdaDirectory::getBSAFilesFromINIs() const
 
 vector<wstring> BethesdaDirectory::getBSAFilesInDirectory() const
 {
+	if (logging) {
+		spdlog::debug("Finding existing BSA files in data directory.");
+	}
+
 	vector<wstring> bsa_files;
 
 	for (const auto& entry : fs::directory_iterator(this->data_dir)) {
@@ -399,6 +411,10 @@ vector<wstring> BethesdaDirectory::getBSAFilesInDirectory() const
 
 vector<wstring> BethesdaDirectory::findBSAFilesFromPluginName(const vector<wstring>& bsa_file_list, const wstring& plugin_prefix) const
 {
+	if (logging) {
+		spdlog::trace(L"Finding BSA files that correspond to plugin {}", plugin_prefix);
+	}
+
 	vector<wstring> bsa_files_found;
 
 	for (wstring bsa : bsa_file_list) {
@@ -420,6 +436,10 @@ vector<wstring> BethesdaDirectory::findBSAFilesFromPluginName(const vector<wstri
 
 			if (!after_prefix.starts_with(L" ") && !isdigit(after_prefix[0])) {
 				continue;
+			}
+
+			if (logging) {
+				spdlog::trace(L"Found BSA file that corresponds to plugin {}: {}", plugin_prefix, bsa);
 			}
 
 			bsa_files_found.push_back(bsa);
@@ -464,6 +484,16 @@ boost::property_tree::wptree BethesdaDirectory::getINIProperties() const
 fs::path BethesdaDirectory::getGameDocumentPath() const
 {
 	fs::path doc_path = getSystemPath(FOLDERID_Documents);
+	if (doc_path.empty()) {
+		if (logging) {
+			spdlog::critical("Unable to find INI folder location");
+			exitWithUserInput(1);
+		}
+		else {
+			throw runtime_error("Unable to find INI folder location");
+		}
+	}
+
 	doc_path /= BethesdaGame::DocumentLocations.at(this->game_type);
 	return doc_path;
 }
@@ -471,6 +501,16 @@ fs::path BethesdaDirectory::getGameDocumentPath() const
 fs::path BethesdaDirectory::getGameAppdataPath() const
 {
 	fs::path appdata_path = getSystemPath(FOLDERID_LocalAppData);
+	if (appdata_path.empty()) {
+		if (logging) {
+			spdlog::critical("Unable to find loadorder folder location");
+			exitWithUserInput(1);
+		}
+		else {
+			throw runtime_error("Unable to find loadorder folder location");
+		}
+	}
+
 	appdata_path /= BethesdaGame::AppDataLocations.at(this->game_type);
 	return appdata_path;
 }

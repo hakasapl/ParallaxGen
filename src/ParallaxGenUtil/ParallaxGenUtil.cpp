@@ -31,20 +31,34 @@ namespace ParallaxGenUtil {
 	{
 		boost::property_tree::wptree pt_out;
 
+		if (!fs::exists(ini_path)) {
+			if (required) {
+				if (logging) {
+					spdlog::critical(L"INI file does not exist: {}", ini_path.wstring());
+					exitWithUserInput(1);
+				}
+			}
+
+			if (logging) {
+				spdlog::warn(L"INI file does not exist (ignoring): {}", ini_path.wstring());
+			}
+			return pt_out;
+		}
+
 		// open ini file handle
 		wifstream f(ini_path);
 
 		if (!f.is_open()) {
 			if (required) {
 				if (logging) {
-					spdlog::critical("Unable to open INI: {}", ini_path.string());
+					spdlog::critical(L"Unable to open INI: {}", ini_path.wstring());
 					exitWithUserInput(1);
-				}
-				else {
-					throw runtime_error("Unable to open file: " + ini_path.string());
 				}
 			}
 
+			if (logging) {
+				spdlog::warn(L"Unable to open INI (ignoring): {}", ini_path.wstring());
+			}
 			return pt_out;
 		}
 
@@ -77,7 +91,7 @@ namespace ParallaxGenUtil {
 		}
 		else {
 			// Handle error
-			return fs::path("");
+			return fs::path();
 		}
 	}
 
