@@ -117,7 +117,7 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 	// loop through blocks
 	for (NiObject* block : block_tree) {
 		if (block->GetBlockName() == "BSBehaviorGraphExtraData") {
-			spdlog::debug(L"Rejecting NIF file {} due to attached havok animations", nif_file.wstring());
+			spdlog::trace(L"Rejecting NIF file {} due to attached havok animations", nif_file.wstring());
 			return;
 		}
 	}

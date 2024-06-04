@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.8] - UNRELEASED
+
+- Fixed log level for havok animation warning to trace
+
 ## [0.1.7] - 2024-06-03
 
 - Added a helper log message for which file to import at the end of generation
