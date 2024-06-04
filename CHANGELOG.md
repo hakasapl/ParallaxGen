@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.9] - UNRELEASED
+
+- Added support for enderal and enderal se
+
 ## [0.1.8] - 2024-06-04
 
 - Fixed log level for havok animation warning to trace

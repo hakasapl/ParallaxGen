@@ -45,7 +45,7 @@ fs::path getExecutablePath() {
 void addArguments(CLI::App& app, int& verbosity, fs::path& game_dir, string& game_type, bool& no_zip, bool& no_cleanup, bool& ignore_parallax, bool& ignore_complex_material) {
     app.add_flag("-v", verbosity, "Verbosity level -v for DEBUG data or -vv for TRACE data (warning: TRACE data is very verbose)");
     app.add_option("-d,--game-dir", game_dir, "Manually specify of Skyrim directory");
-    app.add_option("-g,--game-type", game_type, "Specify game type [skyrimse, skyrim, or skyrimvr]");
+    app.add_option("-g,--game-type", game_type, "Specify game type [skyrimse, skyrim, skyrimvr, enderal, or enderalse]");
     app.add_flag("--no-zip", no_zip, "Don't zip the output meshes");
     app.add_flag("--no-cleanup", no_cleanup, "Don't delete generated meshes after zipping");
     app.add_flag("--ignore-parallax", ignore_parallax, "Don't generate any parallax meshes");
@@ -95,7 +95,7 @@ int main(int argc, char** argv) {
     spdlog::info("Welcome to ParallaxGen version {}!", PARALLAXGEN_VERSION);
 
     // CLI argument validation
-    if (game_type != "skyrimse" && game_type != "skyrim" && game_type != "skyrimvr") {
+    if (game_type != "skyrimse" && game_type != "skyrim" && game_type != "skyrimvr" && game_type != "enderal" && game_type != "enderalse") {
         spdlog::critical("Invalid game type specified. Please specify 'skyrimse', 'skyrim', or 'skyrimvr'");
         exitWithUserInput(1);
     }
@@ -132,6 +132,12 @@ int main(int argc, char** argv) {
     }
     else if (game_type == "skyrimvr") {
         gameType = BethesdaGame::GameType::SKYRIM_VR;
+    }
+    else if (game_type == "enderal") {
+        gameType = BethesdaGame::GameType::ENDERAL;
+    }
+    else if (game_type == "enderalse") {
+        gameType = BethesdaGame::GameType::ENDERAL_SE;
     }
 
 	BethesdaGame bg = BethesdaGame(gameType, game_dir, true);

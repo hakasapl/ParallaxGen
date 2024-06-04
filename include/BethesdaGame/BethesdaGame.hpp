@@ -11,7 +11,9 @@ public:
 	enum class GameType {
 		SKYRIM_SE,
 		SKYRIM_VR,
-		SKYRIM
+		SKYRIM,
+		ENDERAL,
+		ENDERAL_SE
 	};
 
 	// StoreType enum (for now only Steam is used)
@@ -32,21 +34,27 @@ public:
 	static inline const std::unordered_map<BethesdaGame::GameType, ININame> INILocations = {
 		{BethesdaGame::GameType::SKYRIM_SE, ININame{"skyrim.ini", "skyrimcustom.ini"}},
 		{BethesdaGame::GameType::SKYRIM_VR, ININame{"skyrim.ini", "skyrimcustom.ini"}},
-		{BethesdaGame::GameType::SKYRIM, ININame{"skyrim.ini", "skyrimcustom.ini"}}
+		{BethesdaGame::GameType::SKYRIM, ININame{"skyrim.ini", "skyrimcustom.ini"}},
+		{BethesdaGame::GameType::ENDERAL, ININame{"enderal.ini", "enderalcustom.ini"}},
+		{BethesdaGame::GameType::ENDERAL_SE, ININame{"enderal.ini", "enderalcustom.ini"}}
 	};
 
 	// Define document folder location for each game
 	static inline const std::unordered_map<BethesdaGame::GameType, std::filesystem::path> DocumentLocations = {
 		{BethesdaGame::GameType::SKYRIM_SE, "My Games/Skyrim Special Edition"},
 		{BethesdaGame::GameType::SKYRIM_VR, "My Games/Skyrim VR"},
-		{BethesdaGame::GameType::SKYRIM, "My Games/Skyrim"}
+		{BethesdaGame::GameType::SKYRIM, "My Games/Skyrim"},
+		{BethesdaGame::GameType::ENDERAL, "My Games/Enderal"},
+		{BethesdaGame::GameType::ENDERAL_SE, "My Games/Enderal Special Edition"}
 	};
 
 	// Define appdata folder location for each game
 	static inline const std::unordered_map<BethesdaGame::GameType, std::filesystem::path> AppDataLocations = {
 		{BethesdaGame::GameType::SKYRIM_SE, "Skyrim Special Edition"},
 		{BethesdaGame::GameType::SKYRIM_VR, "Skyrim VR"},
-		{BethesdaGame::GameType::SKYRIM, "Skyrim"}
+		{BethesdaGame::GameType::SKYRIM, "Skyrim"},
+		{BethesdaGame::GameType::ENDERAL, "Enderal"},
+		{BethesdaGame::GameType::ENDERAL_SE, "Enderal Special Edition"}
 	};
 
 private:
@@ -64,7 +72,9 @@ private:
 	inline static const std::unordered_map<BethesdaGame::GameType, int> steam_game_ids = {
 		{BethesdaGame::GameType::SKYRIM_SE, 489830},
 		{BethesdaGame::GameType::SKYRIM_VR, 611670},
-		{BethesdaGame::GameType::SKYRIM, 72850}
+		{BethesdaGame::GameType::SKYRIM, 72850},
+		{BethesdaGame::GameType::ENDERAL, 933480},
+		{BethesdaGame::GameType::ENDERAL_SE, 976620}
 	};
 
 	inline static const std::string lookup_file = "Skyrim.esm";
