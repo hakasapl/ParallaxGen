@@ -54,13 +54,23 @@ void ParallaxGen::deleteMeshes() {
 	for (const auto& entry : fs::directory_iterator(output_dir)) {
 		if (fs::is_directory(entry.path())) {
 			// Remove the directory and all its contents
-			fs::remove_all(entry.path());
-			spdlog::trace(L"Deleted directory {}", entry.path().wstring());
+			try {
+				fs::remove_all(entry.path());
+				spdlog::trace(L"Deleted directory {}", entry.path().wstring());
+			}
+			catch (const exception& e) {
+				spdlog::error(L"Error deleting directory {}: {}", entry.path().wstring(), ParallaxGenUtil::convertToWstring(e.what()));
+			}
 		}
 
 		// remove state file
 		if (entry.path().filename().wstring() == L"PARALLAXGEN_DONTDELETE") {
-			fs::remove(entry.path());
+			try {
+				fs::remove(entry.path());
+			}
+			catch (const exception& e) {
+				spdlog::error(L"Error deleting state file {}: {}", entry.path().wstring(), ParallaxGenUtil::convertToWstring(e.what()));
+			}
 		}
 	}
 }
@@ -69,7 +79,14 @@ void ParallaxGen::deleteOutputDir() {
 	// delete output directory
 	if (fs::exists(output_dir)) {
 		spdlog::info("Deleting existing ParallaxGen output...");
-		fs::remove_all(output_dir);
+
+		try {
+			fs::remove_all(output_dir);
+		}
+		catch (const exception& e) {
+			spdlog::critical(L"Error deleting output directory {}: {}", output_dir.wstring(), ParallaxGenUtil::convertToWstring(e.what()));
+			ParallaxGenUtil::exitWithUserInput(1);
+		}
 	}
 }
 
@@ -79,10 +96,6 @@ typedef SkyrimShaderPropertyFlags1 SSPF1;
 typedef SkyrimShaderPropertyFlags2 SSPF2;
 void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightMaps, vector<fs::path>& complexMaterialMaps)
 {
-	if (nif_file.filename().wstring() == L"wrmainroadmarket.nif") {
-		spdlog::error(L"Empty NIF file path");
-	}
-
 	const fs::path output_file = output_dir / nif_file;
 	if (fs::exists(output_file)) {
 		spdlog::error(L"Unable to process NIF file, file already exists: {}", nif_file.wstring());
@@ -132,25 +145,26 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 	}
 
 	// loop through each node in nif
-	size_t shape_id = 0;
 	for (NiShape* shape : nif.GetShapes()) {
+		const auto block_id = nif.GetBlockID(shape);
+
 		// exclusions
 		// get shader type
 		if (!shape->HasShaderProperty()) {
-			spdlog::trace(L"Rejecting shape {} in NIF file {}: No shader property", shape_id, nif_file.wstring());
+			spdlog::trace(L"Rejecting shape {} in NIF file {}: No shader property", block_id, nif_file.wstring());
 			continue;
 		}
 
 		// only allow BSLightingShaderProperty blocks
 		string shape_block_name = shape->GetBlockName();
 		if (shape_block_name != "NiTriShape" && shape_block_name != "BSTriShape") {
-			spdlog::trace(L"Rejecting shape {} in NIF file {}: Incorrect shape block type", shape_id, nif_file.wstring());
+			spdlog::trace(L"Rejecting shape {} in NIF file {}: Incorrect shape block type", block_id, nif_file.wstring());
 			continue;
 		}
 
 		// ignore skinned meshes, these don't support parallax
 		if (shape->HasSkinInstance() || shape->IsSkinned()) {
-			spdlog::trace(L"Rejecting shape {} in NIF file {}: Skinned mesh", shape_id, nif_file.wstring());
+			spdlog::trace(L"Rejecting shape {} in NIF file {}: Skinned mesh", block_id, nif_file.wstring());
 			continue;
 		}
 
@@ -159,14 +173,14 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 
 		string shader_block_name = shader->GetBlockName();
 		if (shader_block_name != "BSLightingShaderProperty") {
-			spdlog::trace(L"Rejecting shape {} in NIF file {}: Incorrect shader block type", ParallaxGenUtil::convertToWstring(shape->GetBlockName()), nif_file.wstring());
+			spdlog::trace(L"Rejecting shape {} in NIF file {}: Incorrect shader block type", block_id, nif_file.wstring());
 			continue;
 		}
 
 		// Ignore if shader type is not 0 (nothing) or 1 (environemnt map) or 3 (parallax)
 		BSLSP shader_type = static_cast<BSLSP>(shader->GetShaderType());
 		if (shader_type != BSLSP::BSLSP_DEFAULT && shader_type != BSLSP::BSLSP_ENVMAP && shader_type != BSLSP::BSLSP_PARALLAX) {
-			spdlog::trace(L"Rejecting shape {} in NIF file {}: Incorrect shader type", ParallaxGenUtil::convertToWstring(shape->GetBlockName()), nif_file.wstring());
+			spdlog::trace(L"Rejecting shape {} in NIF file {}: Incorrect shader type", block_id, nif_file.wstring());
 			continue;
 		}
 
@@ -206,7 +220,7 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
                 // Enable regular parallax for this shape!
 				if (shader_type != BSLSP::BSLSP_DEFAULT && shader_type != BSLSP::BSLSP_PARALLAX) {
 					// this avoids an env map mesh being reverted to parallax mesh
-					spdlog::trace(L"Rejecting shape {} in NIF file {}: Incorrect shader type", ParallaxGenUtil::convertToWstring(shape->GetBlockName()), nif_file.wstring());
+					spdlog::trace(L"Rejecting shape {} in NIF file {}: Incorrect shader type", block_id, nif_file.wstring());
 					continue;
 				}
 
@@ -214,8 +228,6 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
                 break;
             }
 		}
-
-		shape_id++;
 	}
 
 	// save NIF if it was modified
@@ -273,6 +285,7 @@ bool ParallaxGen::enableParallaxOnShape(NifFile& nif, NiShape* shape, NiShader* 
 	// enable parallax on shape
 	bool changed = false;
 	// 1. set shader type to parallax
+	uint32_t shader_type = shader->GetShaderType();
 	if (shader->GetShaderType() != BSLSP::BSLSP_PARALLAX) {
 		shader->SetShaderType(BSLSP::BSLSP_PARALLAX);
 		changed = true;
