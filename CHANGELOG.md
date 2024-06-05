@@ -4,6 +4,8 @@
 
 - Fixed BSAs not being detected due to case insensitivity
 - Made --no-zip enable --no-cleanup by default
+- NIF processing logs will not show the block id of shapes
+- getFile now logs which BSA it's pulling a file from
 
 ## [0.2.0] - 2024-06-04
 

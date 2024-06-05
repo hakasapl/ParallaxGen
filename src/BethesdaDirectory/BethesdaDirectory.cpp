@@ -72,12 +72,13 @@ vector<std::byte> BethesdaDirectory::getFile(const fs::path rel_path) const
 		return getFileBytes(file_path);
 	}
 	else {
+		fs::path bsa_path = bsa_struct->path;
+
 		if (logging) {
-			spdlog::trace(L"Reading BSA file from BethesdaDirectory: {}", rel_path.wstring());
+			spdlog::trace(L"Reading BSA file from {}: {}", bsa_path.wstring(), rel_path.wstring());
 		}
 
 		// this is a bsa archive file
-		fs::path bsa_path = bsa_struct->path;
 		bsa::tes4::version bsa_version = bsa_struct->version;
 		bsa::tes4::archive bsa_obj = bsa_struct->archive;
 
