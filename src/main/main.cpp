@@ -46,7 +46,7 @@ void addArguments(CLI::App& app, int& verbosity, fs::path& game_dir, string& gam
     app.add_flag("-v", verbosity, "Verbosity level -v for DEBUG data or -vv for TRACE data (warning: TRACE data is very verbose)");
     app.add_option("-d,--game-dir", game_dir, "Manually specify of Skyrim directory");
     app.add_option("-g,--game-type", game_type, "Specify game type [skyrimse, skyrim, skyrimvr, enderal, or enderalse]");
-    app.add_flag("--no-zip", no_zip, "Don't zip the output meshes");
+    app.add_flag("--no-zip", no_zip, "Don't zip the output meshes (also enables --no-cleanup)");
     app.add_flag("--no-cleanup", no_cleanup, "Don't delete generated meshes after zipping");
     app.add_flag("--ignore-parallax", ignore_parallax, "Don't generate any parallax meshes");
     app.add_flag("--enable-complex-material", ignore_complex_material, "Generate any complex material meshes (Experimental!)");
@@ -103,6 +103,10 @@ int main(int argc, char** argv) {
     if (ignore_parallax && !ignore_complex_material) {
         spdlog::critical("If ignore-parallax is set, enable-complex-material must be set, otherwise there is nothing to do");
         exitWithUserInput(1);
+    }
+
+    if (no_zip) {
+        no_cleanup = true;
     }
 
     // Set logging mode

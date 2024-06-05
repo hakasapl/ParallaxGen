@@ -1,5 +1,7 @@
 # Changelog
 
+## [0.2.1] - UNRELEASED
+
 ## [0.2.0] - 2024-06-04
 
 - Added support for enderal and enderal se
