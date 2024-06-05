@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.2.1] - UNRELEASED
+## [0.2.1] - 2024-06-05
 
 - Fixed BSAs not being detected due to case insensitivity
 - Made --no-zip enable --no-cleanup by default
