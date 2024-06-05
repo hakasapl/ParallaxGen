@@ -106,7 +106,7 @@ vector<std::byte> BethesdaDirectory::getFile(const fs::path rel_path) const
 	return vector<std::byte>();
 }
 
-vector<fs::path> BethesdaDirectory::findFilesBySuffix(const string_view suffix, const vector<wstring>& path_blocklist) const
+vector<fs::path> BethesdaDirectory::findFilesBySuffix(const string_view suffix, const bool lower, const vector<wstring>& path_blocklist) const
 {
 	// find all keys in fileMap that match pattern
 	vector<fs::path> found_files;
@@ -143,7 +143,12 @@ vector<fs::path> BethesdaDirectory::findFilesBySuffix(const string_view suffix, 
 				spdlog::trace(L"Matched file by suffix: {}", cur_file_path.wstring());
 			}
 
-			found_files.push_back(cur_file_path);
+			if (lower) {
+				found_files.push_back(key);
+			}
+			else {
+				found_files.push_back(cur_file_path);
+			}
 		}
 	}
 

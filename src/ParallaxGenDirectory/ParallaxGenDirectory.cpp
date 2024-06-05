@@ -15,7 +15,7 @@ vector<fs::path> ParallaxGenDirectory::findHeightMaps() const
 {
 	// find height maps
 	spdlog::info("Finding parallax height maps");
-	vector<fs::path> heightMaps = findFilesBySuffix("_p.dds");
+	vector<fs::path> heightMaps = findFilesBySuffix("_p.dds", true);
 	spdlog::info("Found {} height maps", heightMaps.size());
 	return heightMaps;
 }
@@ -28,7 +28,7 @@ vector<fs::path> ParallaxGenDirectory::findComplexMaterialMaps() const
 	vector<fs::path> complexMaterialMaps;
 
 	// find complex material maps
-	vector<fs::path> env_maps = findFilesBySuffix("_m.dds");
+	vector<fs::path> env_maps = findFilesBySuffix("_m.dds", true);
 
 	// loop through env maps
 	for (fs::path env_map : env_maps) {
@@ -62,7 +62,7 @@ vector<fs::path> ParallaxGenDirectory::findMeshes() const
 {
 	// find meshes
 	spdlog::info("Finding meshes");
-	vector<fs::path> meshes = findFilesBySuffix(".nif", mesh_blocklist);
+	vector<fs::path> meshes = findFilesBySuffix(".nif", true, mesh_blocklist);
 	spdlog::info("Found {} meshes", meshes.size());
 	return meshes;
 }

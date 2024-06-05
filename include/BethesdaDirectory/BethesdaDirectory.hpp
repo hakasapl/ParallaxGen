@@ -69,7 +69,7 @@ public:
 
 	// File functions
 	std::vector<std::byte> getFile(const std::filesystem::path rel_path) const;
-	std::vector<std::filesystem::path> findFilesBySuffix(const std::string_view suffix, const std::vector<std::wstring>& parent_blocklist = std::vector<std::wstring>()) const;
+	std::vector<std::filesystem::path> findFilesBySuffix(const std::string_view suffix, const bool lower = false, const std::vector<std::wstring>& parent_blocklist = std::vector<std::wstring>()) const;
 
 	// BSA functions
 	std::vector<std::wstring> getBSAPriorityList() const;
