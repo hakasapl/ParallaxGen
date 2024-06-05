@@ -2,6 +2,9 @@
 
 ## [0.2.1] - UNRELEASED
 
+- Fixed BSAs not being detected due to case insensitivity
+- Made --no-zip enable --no-cleanup by default
+
 ## [0.2.0] - 2024-06-04
 
 - Added support for enderal and enderal se

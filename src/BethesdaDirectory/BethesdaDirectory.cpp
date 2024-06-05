@@ -43,26 +43,25 @@ void BethesdaDirectory::populateFileMap()
 	addLooseFilesToMap();
 }
 
-map<fs::path, shared_ptr<BethesdaDirectory::BSAFile>> BethesdaDirectory::getFileMap() const
+map<fs::path, BethesdaDirectory::BethesdaFile> BethesdaDirectory::getFileMap() const
 {
 	return fileMap;
 }
 
 vector<std::byte> BethesdaDirectory::getFile(const fs::path rel_path) const
 {
-	// check if key exists in map
-	if (fileMap.find(rel_path) == fileMap.end()) {
+	// find bsa/loose file to open
+	BethesdaFile file = getFileFromMap(rel_path);
+	if (file.path.empty()) {
 		if (logging) {
 			spdlog::error(L"File not found in file map: {}", rel_path.wstring());
-			return vector<std::byte>();
 		}
 		else {
 			throw runtime_error("File not found in file map");
 		}
 	}
 
-	// find bsa/loose file to open
-	shared_ptr<BSAFile> bsa_struct = fileMap.at(rel_path);
+	shared_ptr<BSAFile> bsa_struct = file.bsa_file;
 	if (bsa_struct == nullptr) {
 		if (logging) {
 			spdlog::trace(L"Reading loose file from BethesdaDirectory: {}", rel_path.wstring());
@@ -78,9 +77,14 @@ vector<std::byte> BethesdaDirectory::getFile(const fs::path rel_path) const
 		}
 
 		// this is a bsa archive file
+		fs::path bsa_path = bsa_struct->path;
 		bsa::tes4::version bsa_version = bsa_struct->version;
 		bsa::tes4::archive bsa_obj = bsa_struct->archive;
-		const auto file = bsa_obj[rel_path.parent_path().string()][rel_path.filename().string()];
+
+		string parent_path = wstring_to_utf8(rel_path.parent_path().wstring());
+		string filename = wstring_to_utf8(rel_path.filename().wstring());
+
+		const auto file = bsa_obj[parent_path][filename];
 		if (file) {
 			binary_io::any_ostream aos{ std::in_place_type<binary_io::memory_ostream> };
 			// read file from output stream
@@ -109,9 +113,10 @@ vector<fs::path> BethesdaDirectory::findFilesBySuffix(const string_view suffix, 
 
 	// loop through filemap and match keys
 	for (const auto& [key, value] : fileMap) {
+		fs::path cur_file_path = value.path;
 
 		if (logging) {
-			spdlog::trace(L"Checking file for suffix {} match: {}", convertToWstring(string(suffix)), key.wstring());
+			spdlog::trace(L"Checking file for suffix {} match: {}", convertToWstring(string(suffix)), cur_file_path.wstring());
 		}
 
         if (boost::algorithm::ends_with(key.wstring(), suffix)) {
@@ -135,10 +140,10 @@ vector<fs::path> BethesdaDirectory::findFilesBySuffix(const string_view suffix, 
 			}
 
 			if (logging) {
-				spdlog::trace(L"Matched file by suffix: {}", key.wstring());
+				spdlog::trace(L"Matched file by suffix: {}", cur_file_path.wstring());
 			}
 
-			found_files.push_back(key);
+			found_files.push_back(cur_file_path);
 		}
 	}
 
@@ -171,7 +176,6 @@ void BethesdaDirectory::addLooseFilesToMap()
 		if (entry.is_regular_file()) {
 			const fs::path file_path = entry.path();
 			fs::path relative_path = file_path.lexically_relative(data_dir);
-			pathLower(relative_path);
 
 			// check type of file, skip BSAs and ESPs
 			if (!file_allowed(file_path)) {
@@ -182,7 +186,7 @@ void BethesdaDirectory::addLooseFilesToMap()
 				spdlog::trace(L"Adding loose file to map: {}", relative_path.wstring());
 			}
 
-			fileMap[relative_path] = nullptr;
+			updateFileMap(relative_path, nullptr);
 		}
 	}
 }
@@ -228,7 +232,6 @@ void BethesdaDirectory::addBSAToFileMap(const wstring& bsa_name)
 			// get name of file
 			const string_view cur_entry = entry.first.name();
 			fs::path cur_path = folder_name / cur_entry;
-			pathLower(cur_path);
 
 			// chekc if we should ignore this file
 			if (!file_allowed(cur_path)) {
@@ -240,7 +243,7 @@ void BethesdaDirectory::addBSAToFileMap(const wstring& bsa_name)
 			}
 
 			// add to filemap
-			fileMap[cur_path] = bsa_shared_ptr;
+			updateFileMap(cur_path, bsa_shared_ptr);
 		}
 	}
 }
@@ -430,10 +433,12 @@ vector<wstring> BethesdaDirectory::findBSAFilesFromPluginName(const vector<wstri
 	}
 
 	vector<wstring> bsa_files_found;
+	wstring plugin_prefix_lower = boost::to_lower_copy(plugin_prefix);
 
 	for (wstring bsa : bsa_file_list) {
-		if (bsa.starts_with(plugin_prefix)) {
-			if (bsa == plugin_prefix + L".bsa") {
+		wstring bsa_lower = boost::to_lower_copy(bsa);
+		if (bsa_lower.starts_with(plugin_prefix_lower)) {
+			if (bsa_lower == plugin_prefix_lower + L".bsa") {
 				// load bsa with the plugin name before any others
 				bsa_files_found.insert(bsa_files_found.begin(), bsa);
 				continue;
@@ -473,4 +478,25 @@ bool BethesdaDirectory::file_allowed(const fs::path file_path) const
 	}
 
 	return true;
+}
+
+// helpers
+BethesdaDirectory::BethesdaFile BethesdaDirectory::getFileFromMap(const fs::path& file_path) const
+{
+	fs::path lower_path = boost::to_lower_copy(file_path.wstring());
+
+	if (fileMap.find(lower_path) == fileMap.end()) {
+		return BethesdaFile { fs::path(), nullptr };
+	}
+
+	return fileMap.at(lower_path);
+}
+
+void BethesdaDirectory::updateFileMap(const fs::path& file_path, shared_ptr<BethesdaDirectory::BSAFile> bsa_file)
+{
+	fs::path lower_path = boost::to_lower_copy(file_path.wstring());
+
+	BethesdaFile new_bfile = { file_path, bsa_file };
+
+	fileMap[lower_path] = new_bfile;
 }

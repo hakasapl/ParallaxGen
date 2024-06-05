@@ -10,6 +10,7 @@
 #include <array>
 #include <vector>
 #include <bsa/tes4.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include "BethesdaGame/BethesdaGame.hpp"
 
@@ -20,17 +21,11 @@ public:
 		std::filesystem::path path;
 		bsa::tes4::version version;
 		bsa::tes4::archive archive;
-
-		bool operator<(const BSAFile& other) const {
-			return path < other.path;
-		}
 	};
 
-	// comparator for BSA file in case a map is defined with keys as BSAFile
-	struct BSAFileComparator {
-		bool operator()(const std::shared_ptr<BSAFile>& lhs, const std::shared_ptr<BSAFile>& rhs) const {
-			return *lhs < *rhs;
-		}
+	struct BethesdaFile {
+		std::filesystem::path path;
+		std::shared_ptr<BSAFile> bsa_file;
 	};
 
 protected:
@@ -39,7 +34,7 @@ protected:
 
 private:
 	// stores the file map
-	std::map<std::filesystem::path, std::shared_ptr<BSAFile>> fileMap;
+	std::map<std::filesystem::path, BethesdaFile> fileMap;
 
 	// stores whether logging is enabled
 	bool logging;
@@ -70,7 +65,7 @@ public:
 
 	// File map functions
 	void populateFileMap();
-	std::map<std::filesystem::path, std::shared_ptr<BSAFile>> getFileMap() const;
+	std::map<std::filesystem::path, BethesdaFile> getFileMap() const;
 
 	// File functions
 	std::vector<std::byte> getFile(const std::filesystem::path rel_path) const;
@@ -95,6 +90,10 @@ private:
 	std::vector<std::wstring> getBSAFilesInDirectory() const;
 	// gets BSA files from a given plugin
 	std::vector<std::wstring> findBSAFilesFromPluginName(const std::vector<std::wstring>& bsa_file_list, const std::wstring& plugin_prefix) const;
+
+	// helpers
+	BethesdaFile getFileFromMap(const std::filesystem::path& file_path) const;
+	void updateFileMap(const std::filesystem::path& file_path, std::shared_ptr<BSAFile> bsa_file);
 };
 
 #endif
