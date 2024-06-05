@@ -96,6 +96,10 @@ typedef SkyrimShaderPropertyFlags1 SSPF1;
 typedef SkyrimShaderPropertyFlags2 SSPF2;
 void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightMaps, vector<fs::path>& complexMaterialMaps)
 {
+	if (nif_file.filename().wstring() == L"rifletemp.nif") {
+		spdlog::debug("HERE");
+	}
+
 	const fs::path output_file = output_dir / nif_file;
 	if (fs::exists(output_file)) {
 		spdlog::error(L"Unable to process NIF file, file already exists: {}", nif_file.wstring());
@@ -170,6 +174,11 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 
 		// get shader from shape
 		NiShader* shader = nif.GetShader(shape);
+		if (shader == nullptr) {
+			// skip if no shader
+			spdlog::trace(L"Rejecting shape {} in NIF file {}: No shader", block_id, nif_file.wstring());
+			continue;
+		}
 
 		string shader_block_name = shader->GetBlockName();
 		if (shader_block_name != "BSLightingShaderProperty") {
@@ -285,7 +294,6 @@ bool ParallaxGen::enableParallaxOnShape(NifFile& nif, NiShape* shape, NiShader* 
 	// enable parallax on shape
 	bool changed = false;
 	// 1. set shader type to parallax
-	uint32_t shader_type = shader->GetShaderType();
 	if (shader->GetShaderType() != BSLSP::BSLSP_PARALLAX) {
 		shader->SetShaderType(BSLSP::BSLSP_PARALLAX);
 		changed = true;
