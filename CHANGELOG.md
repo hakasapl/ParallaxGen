@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.2.2] - UNRELEASED
+## [0.2.2] - 2024-06-05
 
 - Ignore shaders with back ligting, which seems to cause flickering
 
