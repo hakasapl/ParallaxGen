@@ -89,7 +89,14 @@ vector<std::byte> BethesdaDirectory::getFile(const fs::path rel_path) const
 		if (file) {
 			binary_io::any_ostream aos{ std::in_place_type<binary_io::memory_ostream> };
 			// read file from output stream
-			file->write(aos, bsa_version);
+			try {
+				file->write(aos, bsa_version);
+			}
+			catch (const std::exception& e) {
+				if (logging) {
+					spdlog::error(L"Failed to read file {}: {}", rel_path.wstring(), convertToWstring(e.what()));
+				}
+			}
 
 			auto& s = aos.get<binary_io::memory_ostream>();
 			return s.rdbuf();

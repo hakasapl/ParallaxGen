@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.3] - UNRELEASED
+
+- Fixed crash from failure to write BSA file to memory buffer
+
 ## [0.2.2] - 2024-06-05
 
 - Ignore shaders with back ligting, which seems to cause flickering
