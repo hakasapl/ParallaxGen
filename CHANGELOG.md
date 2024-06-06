@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.2.3] - UNRELEASED
+## [0.2.3] - 2024-06-05
 
 - Fixed crash from failure to write BSA file to memory buffer
 
