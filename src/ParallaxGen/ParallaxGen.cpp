@@ -96,11 +96,6 @@ typedef SkyrimShaderPropertyFlags1 SSPF1;
 typedef SkyrimShaderPropertyFlags2 SSPF2;
 void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightMaps, vector<fs::path>& complexMaterialMaps)
 {
-	if (nif_file.filename().wstring() == L"m_lunarguard_helmet_0.nif") {
-		// ignore state file
-		spdlog::debug("here");
-	}
-
 	const fs::path output_file = output_dir / nif_file;
 	if (fs::exists(output_file)) {
 		spdlog::error(L"Unable to process NIF file, file already exists: {}", nif_file.wstring());

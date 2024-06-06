@@ -14,7 +14,7 @@ private:
     ParallaxGenDirectory* pgd;
 
     // we don't want any other change on the NIF file so we disable all save options from nifly
-	const nifly::NifSaveOptions nif_save_options = { false, false };
+	const nifly::NifSaveOptions nif_save_options = { false, true };
 
     // which texture indices to search when mapping mesh shapes to parallax maps
 	static inline const std::array<uint32_t, 2> texture_maps_idx_search = { 0, 1 };

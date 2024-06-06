@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.4] - 2024-06-06
+
+- Generation now sorts nif blocks before saving
+
 ## [0.2.3] - 2024-06-05
 
 - Fixed crash from failure to write BSA file to memory buffer
