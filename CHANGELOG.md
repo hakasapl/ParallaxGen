@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.2] - UNRELEASED
+
+- Ignore shaders with back ligting, which seems to cause flickering
+
 ## [0.2.1] - 2024-06-05
 
 - Fixed BSAs not being detected due to case insensitivity

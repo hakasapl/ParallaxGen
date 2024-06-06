@@ -14,6 +14,7 @@ ParallaxGenDirectory::ParallaxGenDirectory(BethesdaGame bg) : BethesdaDirectory(
 vector<fs::path> ParallaxGenDirectory::findHeightMaps() const
 {
 	// find height maps
+	//todo: maybe we should verify DDS files here so they don't cause CTDs later?
 	spdlog::info("Finding parallax height maps");
 	vector<fs::path> heightMaps = findFilesBySuffix("_p.dds", true);
 	spdlog::info("Found {} height maps", heightMaps.size());

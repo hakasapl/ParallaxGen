@@ -195,6 +195,11 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 			continue;
 		}
 
+		if (cur_bslsp->shaderFlags2 & SSPF2::SLSF2_BACK_LIGHTING) {
+			spdlog::trace(L"Rejecting shape {} in NIF file {}: Back lighting shape", block_id, nif_file.wstring());
+			continue;
+		}
+
 		// Ignore if shader type is not 0 (nothing) or 1 (environemnt map) or 3 (parallax)
 		BSLSP shader_type = static_cast<BSLSP>(shader->GetShaderType());
 		if (shader_type != BSLSP::BSLSP_DEFAULT && shader_type != BSLSP::BSLSP_ENVMAP && shader_type != BSLSP::BSLSP_PARALLAX) {
