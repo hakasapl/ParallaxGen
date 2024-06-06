@@ -7,6 +7,7 @@
 - NIF processing logs will not show the block id of shapes
 - getFile now logs which BSA it's pulling a file from
 - Fixed crash that would occur if a shape doesn't have a shader
+- Generation will now ignore shaders with the DECAL or DYNAMIC DECAL shader flag set
 
 ## [0.2.0] - 2024-06-04
 

@@ -180,9 +180,22 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 			continue;
 		}
 
+		// check that shader has a texture set
+		if (!shader->HasTextureSet()) {
+			spdlog::trace(L"Rejecting shape {} in NIF file {}: No texture set", block_id, nif_file.wstring());
+			continue;
+		}
+
 		string shader_block_name = shader->GetBlockName();
 		if (shader_block_name != "BSLightingShaderProperty") {
 			spdlog::trace(L"Rejecting shape {} in NIF file {}: Incorrect shader block type", block_id, nif_file.wstring());
+			continue;
+		}
+
+		// don't enable parallax on decals because that gets rid of blending
+		BSLightingShaderProperty* cur_bslsp = dynamic_cast<BSLightingShaderProperty*>(shader);
+		if (cur_bslsp->shaderFlags1 & SSPF1::SLSF1_DECAL || cur_bslsp->shaderFlags1 & SSPF1::SLSF1_DYNAMIC_DECAL) {
+			spdlog::trace(L"Rejecting shape {} in NIF file {}: Decal shape", block_id, nif_file.wstring());
 			continue;
 		}
 
