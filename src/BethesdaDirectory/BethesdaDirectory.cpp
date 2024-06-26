@@ -114,6 +114,23 @@ vector<std::byte> BethesdaDirectory::getFile(const fs::path rel_path) const
 	return vector<std::byte>();
 }
 
+bool BethesdaDirectory::isLooseFile(const fs::path rel_path) const
+{
+	BethesdaFile file = getFileFromMap(rel_path);
+	return file.bsa_file == nullptr;
+}
+
+bool BethesdaDirectory::isBSAFile(const fs::path rel_path) const
+{
+	BethesdaFile file = getFileFromMap(rel_path);
+	return file.bsa_file != nullptr;
+}
+
+fs::path BethesdaDirectory::getFullPath(const fs::path rel_path) const
+{
+	return data_dir / rel_path;
+}
+
 vector<fs::path> BethesdaDirectory::findFilesBySuffix(const string_view suffix, const bool lower, const vector<wstring>& path_blocklist) const
 {
 	// find all keys in fileMap that match pattern

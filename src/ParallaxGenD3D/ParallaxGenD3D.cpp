@@ -1,7 +1,6 @@
 #include "ParallaxGenD3D/ParallaxGenD3D.hpp"
 
 #include <spdlog/spdlog.h>
-#include <DirectXTex.h>
 #include <fstream>
 
 #include "ParallaxGenUtil/ParallaxGenUtil.hpp"
@@ -9,9 +8,10 @@
 using namespace std;
 using Microsoft::WRL::ComPtr;
 
-ParallaxGenD3D::ParallaxGenD3D()
+ParallaxGenD3D::ParallaxGenD3D(ParallaxGenDirectory* pgd)
 {
     // Constructor
+    this->pgd = pgd;
 
     // initialize GPU device and context
     #ifdef _DEBUG
@@ -40,6 +40,8 @@ ParallaxGenD3D::ParallaxGenD3D()
         spdlog::critical("Unable to find any DX11 compatible devices. Exiting.");
         ParallaxGenUtil::exitWithUserInput(1);
 	}
+
+    CreateShaders();
 }
 
 vector<char> ParallaxGenD3D::LoadCompiledShader(const std::filesystem::path& filename) {
@@ -67,18 +69,13 @@ void ParallaxGenD3D::CreateShaders()
     }
 }
 
-cv::Mat ParallaxGenD3D::decodeDDS(const vector<std::byte> dds_bytes) const
+cv::Mat ParallaxGenD3D::decodeDDS(const filesystem::path& dds_path) const
 {
     // Define error object
     HRESULT hr;
 
     // Read DDS file from memory
-    DirectX::ScratchImage dds_image;
-    hr = DirectX::LoadFromDDSMemory(dds_bytes.data(), dds_bytes.size(), DirectX::DDS_FLAGS_NONE, nullptr, dds_image);
-    if (FAILED(hr)) {
-        spdlog::debug("Failed to load DDS file from memory: {}", hr);
-        return cv::Mat();
-    }
+    DirectX::ScratchImage dds_image = getDDS(dds_path);
 
     size_t num_images = dds_image.GetImageCount();
     if (num_images <= 0) {
@@ -213,4 +210,34 @@ cv::Mat ParallaxGenD3D::decodeDDS(const vector<std::byte> dds_bytes) const
 	cv::Mat mat(decoded_desc.Width, decoded_desc.Height, CV_8UC4, data);  // create RGBA cv::Mat
 
 	return mat;
+}
+
+DirectX::ScratchImage ParallaxGenD3D::getDDS(const filesystem::path& dds_path) const
+{
+    DirectX::ScratchImage dds_image;
+
+    if (pgd->isLooseFile(dds_path)) {
+        spdlog::trace(L"Reading DDS loose file {}", dds_path.wstring());
+        filesystem::path full_path = pgd->getFullPath(dds_path);
+
+        // Load DDS file
+        // ! Todo: wstring support for the path here?
+        HRESULT hr = DirectX::LoadFromDDSFile(full_path.c_str(), DirectX::DDS_FLAGS_NONE, nullptr, dds_image);
+        if (FAILED(hr)) {
+            spdlog::debug("Failed to load DDS file: {}", hr);
+            return DirectX::ScratchImage();
+        }
+    } else {
+        spdlog::trace(L"Reading DDS BSA file {}", dds_path.wstring());
+        vector<std::byte> dds_bytes = pgd->getFile(dds_path);
+
+        // Load DDS file
+        HRESULT hr = DirectX::LoadFromDDSMemory(dds_bytes.data(), dds_bytes.size(), DirectX::DDS_FLAGS_NONE, nullptr, dds_image);
+        if (FAILED(hr)) {
+            spdlog::debug("Failed to load DDS file from memory: {}", hr);
+            return DirectX::ScratchImage();
+        }
+    }
+
+    return dds_image;
 }

@@ -249,8 +249,8 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 				}
 
 				// verify that maps match each other
-				cv::Mat diffuse_map_mat = pgd3d->decodeDDS(pgd->getFile(diffuse_map));
-				cv::Mat height_map_mat = pgd3d->decodeDDS(pgd->getFile(search_path));
+				cv::Mat diffuse_map_mat = pgd3d->decodeDDS(diffuse_map);
+				cv::Mat height_map_mat = pgd3d->decodeDDS(search_path);
 
                 nif_modified |= enableParallaxOnShape(nif, shape, shader, search_prefix);
                 break;

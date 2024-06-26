@@ -69,6 +69,9 @@ public:
 
 	// File functions
 	std::vector<std::byte> getFile(const std::filesystem::path rel_path) const;
+	bool isLooseFile(const std::filesystem::path rel_path) const;
+	bool isBSAFile(const std::filesystem::path rel_path) const;
+	std::filesystem::path getFullPath(const std::filesystem::path rel_path) const;
 	std::vector<std::filesystem::path> findFilesBySuffix(const std::string_view suffix, const bool lower = false, const std::vector<std::wstring>& parent_blocklist = std::vector<std::wstring>()) const;
 
 	// BSA functions

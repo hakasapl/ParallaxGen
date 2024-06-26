@@ -3,7 +3,7 @@
 Texture2D<float4> encodedTexture : register(t0); // Input BC7 compressed texture
 RWTexture2D<float4> decodedTexture : register(u0); // Output RGBA uncompressed texture
 
-[numthreads(8, 8, 1)]
+[numthreads(16, 16, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
     float4 color = encodedTexture.Load(int3(DTid.xy, 0));

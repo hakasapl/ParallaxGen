@@ -147,7 +147,7 @@ int main(int argc, char** argv) {
 
 	BethesdaGame bg = BethesdaGame(gameType, game_dir, true);
     ParallaxGenDirectory pgd = ParallaxGenDirectory(bg);
-    ParallaxGenD3D pgd3d = ParallaxGenD3D();
+    ParallaxGenD3D pgd3d = ParallaxGenD3D(&pgd);
     ParallaxGen pg = ParallaxGen(mesh_output_dir, &pgd, &pgd3d);
 
     if (fs::exists(bg.getGameDataPath() / ParallaxGen::parallax_state_file)) {
