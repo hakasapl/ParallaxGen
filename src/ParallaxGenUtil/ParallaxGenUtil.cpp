@@ -5,6 +5,7 @@
 #include <iostream>
 #include <fstream>
 #include <codecvt>
+#include <DirectXTex.h>
 
 using namespace std;
 namespace fs = filesystem;

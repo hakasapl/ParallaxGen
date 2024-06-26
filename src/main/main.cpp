@@ -11,6 +11,7 @@
 #include "ParallaxGen/ParallaxGen.hpp"
 #include "ParallaxGenUtil/ParallaxGenUtil.hpp"
 #include "ParallaxGenDirectory/ParallaxGenDirectory.hpp"
+#include "ParallaxGenD3D/ParallaxGenD3D.hpp"
 
 using namespace std;
 using namespace ParallaxGenUtil;
@@ -146,7 +147,8 @@ int main(int argc, char** argv) {
 
 	BethesdaGame bg = BethesdaGame(gameType, game_dir, true);
     ParallaxGenDirectory pgd = ParallaxGenDirectory(bg);
-    ParallaxGen pg = ParallaxGen(mesh_output_dir, &pgd);
+    ParallaxGenD3D pgd3d = ParallaxGenD3D();
+    ParallaxGen pg = ParallaxGen(mesh_output_dir, &pgd, &pgd3d);
 
     if (fs::exists(bg.getGameDataPath() / ParallaxGen::parallax_state_file)) {
         spdlog::critical("ParallaxGen meshes exist in your data directory, please delete before re-running.");

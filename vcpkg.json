@@ -8,6 +8,7 @@
     "cli11",
     "directxtex",
     "miniz",
+    "opencv4",
     {
       "name": "rsm-bsa",
       "features": [
@@ -19,6 +20,7 @@
       "features": [
         "wchar"
       ]
-    }
+    },
+    "directxtk"
   ]
 }

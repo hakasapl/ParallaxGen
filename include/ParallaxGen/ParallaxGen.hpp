@@ -5,13 +5,17 @@
 #include <array>
 #include <NifFile.hpp>
 #include <miniz.h>
+#include <opencv2/opencv.hpp>
+
 #include "ParallaxGenDirectory/ParallaxGenDirectory.hpp"
+#include "ParallaxGenD3D/ParallaxGenD3D.hpp"
 
 class ParallaxGen
 {
 private:
     std::filesystem::path output_dir;
     ParallaxGenDirectory* pgd;
+	ParallaxGenD3D* pgd3d;
 
     // we don't want any other change on the NIF file so we disable all save options from nifly
 	const nifly::NifSaveOptions nif_save_options = { false, true };
@@ -23,11 +27,13 @@ private:
 	bool ignore_parallax;
 	bool ignore_complex_material;
 
+	size_t num_completed;
+
 public:
 	static inline const std::string parallax_state_file = "PARALLAXGEN_DONTDELETE";
 
     // constructor
-    ParallaxGen(const std::filesystem::path output_dir, ParallaxGenDirectory* pgd);
+    ParallaxGen(const std::filesystem::path output_dir, ParallaxGenDirectory* pgd, ParallaxGenD3D* pgd3d);
     // enables parallax on relevant meshes
 	void patchMeshes(std::vector<std::filesystem::path>& meshes, std::vector<std::filesystem::path>& heightMaps, std::vector<std::filesystem::path>& complexMaterialMaps);
 	// zips all meshes and removes originals

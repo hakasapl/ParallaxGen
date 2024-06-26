@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.3.0] - UNRELEASED
+
+- Initial GPU acceleration implementation
+
 ## [0.2.4] - 2024-06-06
 
 - Generation now sorts nif blocks before saving

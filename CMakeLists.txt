@@ -3,6 +3,14 @@
 #
 cmake_minimum_required (VERSION 3.8)
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# For MSVC
+add_compile_options("/Zc:__cplusplus")
+
+# VCPKG vars
+set(VCPKG_INSTALL_DIR "${CMAKE_BINARY_DIR}/vcpkg_installed/${VCPKG_TARGET_TRIPLET}")
+
 # Enable Hot Reload for MSVC compilers if supported.
 if (POLICY CMP0141)
   cmake_policy(SET CMP0141 NEW)
@@ -14,7 +22,7 @@ set(PROJECT_NAME "ParallaxGen")
 set(PROJECT_URI "com.github.hakasapl.ParallaxGen")
 
 # Initialize Project
-set(PARALLAXGEN_VERSION 0.2.4)
+set(PARALLAXGEN_VERSION 0.3.0)
 project(${PROJECT_NAME} VERSION ${PARALLAXGEN_VERSION})
 
 # Define preprocessor macro with the version number
@@ -33,6 +41,7 @@ set(HEADERS
     "include/BethesdaGame/BethesdaGame.hpp"
     "include/BethesdaDirectory/BethesdaDirectory.hpp"
     "include/ParallaxGen/ParallaxGen.hpp"
+    "include/ParallaxGenD3D/ParallaxGenD3D.hpp"
     "include/ParallaxGenUtil/ParallaxGenUtil.hpp"
     "include/ParallaxGenDirectory/ParallaxGenDirectory.hpp"
 )
@@ -42,16 +51,12 @@ set(SOURCES
     "src/BethesdaGame/BethesdaGame.cpp"
     "src/BethesdaDirectory/BethesdaDirectory.cpp"
     "src/ParallaxGen/ParallaxGen.cpp"
+    "src/ParallaxGenD3D/ParallaxGenD3D.cpp"
     "src/ParallaxGenUtil/ParallaxGenUtil.cpp"
     "src/ParallaxGenDirectory/ParallaxGenDirectory.cpp"
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
-
-# Pass build type to compiler
-if(CMAKE_BUILD_TYPE)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE BUILD_TYPE=${CMAKE_BUILD_TYPE})
-endif()
 
 # Externals
 # Setup Folders
@@ -79,21 +84,62 @@ find_package(bsa REQUIRED CONFIG)
 find_package(spdlog REQUIRED CONFIG)
 find_package(CLI11 REQUIRED CONFIG)
 find_package(Boost REQUIRED)
+find_package(directxtk REQUIRED)
 find_package(directxtex REQUIRED CONFIG)
 find_package(miniz REQUIRED CONFIG)
+find_package(OpenCV REQUIRED)
 
 setup_external("nifly" "${CMAKE_SOURCE_DIR}/external/nifly" "-DBUILD_TESTING=OFF")
 find_package(nifly REQUIRED CONFIG)
+
+set(DirectXTK_LIBS
+    d3d11.lib
+    dxgi.lib
+    dxguid.lib
+    uuid.lib
+    kernel32.lib
+    user32.lib
+    comdlg32.lib
+    advapi32.lib
+    shell32.lib
+    ole32.lib
+    oleaut32.lib
+)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     bsa::bsa
     spdlog::spdlog
     CLI11::CLI11
     Boost::boost
-    Microsoft::DirectXTex
     nifly
     miniz::miniz
+    ${OpenCV_LIBS}
+    Microsoft::DirectXTex
+    ${DirectXTK_LIBS}
+    Microsoft::DirectXTK
 )
+
+# build shaders
+add_custom_target(shaders)
+
+set(HLSL_SHADER_FILES shaders/DecodeBC.hlsl)
+
+set_source_files_properties(shaders/DecodeBC.hlsl PROPERTIES ShaderType "cs")
+set_source_files_properties(${HLSL_SHADER_FILES} PROPERTIES ShaderModel "5_0")
+
+foreach(FILE ${HLSL_SHADER_FILES})
+  get_filename_component(FILE_WE ${FILE} NAME_WE)
+  get_source_file_property(shadertype ${FILE} ShaderType)
+  get_source_file_property(shadermodel ${FILE} ShaderModel)
+  add_custom_command(TARGET shaders
+                     COMMAND fxc.exe /nologo /Emain /T${shadertype}_${shadermodel} $<IF:$<CONFIG:DEBUG>,/Od,/O1> /Zi /Fo ${CMAKE_BINARY_DIR}/${FILE_WE}.cso /Fd ${CMAKE_BINARY_DIR}/${FILE_WE}.pdb ${FILE}
+                     MAIN_DEPENDENCY ${FILE}
+                     COMMENT "HLSL ${FILE}"
+                     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                     VERBATIM)
+endforeach(FILE)
+
+add_dependencies(${PROJECT_NAME} shaders)
 
 # Install the executable and DLLs
 install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION . )

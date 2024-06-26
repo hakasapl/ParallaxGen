@@ -13,11 +13,12 @@ using namespace std;
 namespace fs = filesystem;
 using namespace nifly;
 
-ParallaxGen::ParallaxGen(const fs::path output_dir, ParallaxGenDirectory* pgd)
+ParallaxGen::ParallaxGen(const fs::path output_dir, ParallaxGenDirectory* pgd, ParallaxGenD3D* pgd3d)
 {
     // constructor
     this->output_dir = output_dir;
     this->pgd = pgd;
+	this->pgd3d = pgd3d;
 }
 
 void ParallaxGen::patchMeshes(vector<fs::path>& meshes, vector<fs::path>& heightMaps, vector<fs::path>& complexMaterialMaps)
@@ -223,7 +224,7 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 			ParallaxGenUtil::addUniqueElement(search_prefixes, normal_map.substr(0, normal_map.find_last_of('_')));
 		}
 
-		// check if complex parallax should be enabled
+		// check if meshes should be changed
 		for (string& search_prefix : search_prefixes) {
 			// check if complex material file exists
 			fs::path search_path;
@@ -246,6 +247,10 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 					spdlog::trace(L"Rejecting shape {} in NIF file {}: Incorrect shader type", block_id, nif_file.wstring());
 					continue;
 				}
+
+				// verify that maps match each other
+				cv::Mat diffuse_map_mat = pgd3d->decodeDDS(pgd->getFile(diffuse_map));
+				cv::Mat height_map_mat = pgd3d->decodeDDS(pgd->getFile(search_path));
 
                 nif_modified |= enableParallaxOnShape(nif, shape, shader, search_prefix);
                 break;
