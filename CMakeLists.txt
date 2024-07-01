@@ -122,12 +122,18 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 # build shaders
 add_custom_target(shaders)
 
-set(HLSL_SHADER_FILES shaders/DecodeBC.hlsl)
+set(HLSL_COMPUTE_SHADER_FILES
+    shaders/GaussianBlurX.hlsl
+    shaders/GaussianBlurY.hlsl
+    shaders/Passthrough.hlsl
+    shaders/Scaling.hlsl
+    shaders/SobelEdgeDetection.hlsl
+)
 
-set_source_files_properties(shaders/DecodeBC.hlsl PROPERTIES ShaderType "cs")
-set_source_files_properties(${HLSL_SHADER_FILES} PROPERTIES ShaderModel "5_0")
+set_source_files_properties(${HLSL_COMPUTE_SHADER_FILES} PROPERTIES ShaderType "cs")
+set_source_files_properties(${HLSL_COMPUTE_SHADER_FILES} PROPERTIES ShaderModel "5_0")
 
-foreach(FILE ${HLSL_SHADER_FILES})
+foreach(FILE ${HLSL_COMPUTE_SHADER_FILES})
   get_filename_component(FILE_WE ${FILE} NAME_WE)
   get_source_file_property(shadertype ${FILE} ShaderType)
   get_source_file_property(shadermodel ${FILE} ShaderModel)

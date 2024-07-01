@@ -119,6 +119,7 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 
 	try {
 		// try block for loading nif
+		//!TODO if NIF is a loose file nifly should load it directly
 		nif.Load(nif_stream);
 	}
 	catch (const exception& e) {
@@ -248,10 +249,26 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 					continue;
 				}
 
-				// verify that maps match each other
-				cv::Mat diffuse_map_mat = pgd3d->decodeDDS(diffuse_map);
-				cv::Mat height_map_mat = pgd3d->decodeDDS(search_path);
+				if (search_path.filename().wstring() == L"wrdragoncarvings01_p.dds") {
+					spdlog::trace("HERE");
+				}
 
+				// verify that maps match each other
+				//! todo textures are analyzed a bunch of times for the same texture which is inefficient (store as instance map?)
+				double edge_comp = pgd3d->CheckHeightMapMatching(diffuse_map, search_path);
+				if (edge_comp < 0.0f) {
+					// ! TODO wstring here
+					spdlog::warn("Couldn't process edge comparison for {} and {}, skipping", diffuse_map, search_path.string());
+					continue;
+				}
+
+				if (edge_comp > 0.3f) {
+					// ! TODO wstring here
+					spdlog::warn("{} and {} probably don't go together, skipping", diffuse_map, search_path.string());
+					continue;
+				}
+
+				// enable parallax on mesh!
                 nif_modified |= enableParallaxOnShape(nif, shape, shader, search_prefix);
                 break;
             }
