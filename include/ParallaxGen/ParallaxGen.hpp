@@ -6,6 +6,8 @@
 #include <NifFile.hpp>
 #include <miniz.h>
 #include <opencv2/opencv.hpp>
+#include <unordered_map>
+#include <tuple>
 
 #include "ParallaxGenDirectory/ParallaxGenDirectory.hpp"
 #include "ParallaxGenD3D/ParallaxGenD3D.hpp"
@@ -28,6 +30,19 @@ private:
 	bool ignore_complex_material;
 
 	size_t num_completed;
+
+	// Hash function for std::tuple
+	struct TupleHash {
+		template <typename T1, typename T2>
+		std::size_t operator()(const std::tuple<T1, T2>& t) const {
+			auto hash1 = std::hash<T1>{}(std::get<0>(t));
+			auto hash2 = std::hash<T2>{}(std::get<1>(t));
+			return hash1 ^ (hash2 << 1); // Combining the hash values
+		}
+	};
+
+	// store already checked height map checks
+	std::unordered_map<std::tuple<std::filesystem::path, std::filesystem::path>, double, TupleHash> height_map_checks;
 
 public:
 	static inline const std::string parallax_state_file = "PARALLAXGEN_DONTDELETE";

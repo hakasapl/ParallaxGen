@@ -249,22 +249,19 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 					continue;
 				}
 
-				if (search_path.filename().wstring() == L"wrdragoncarvings01_p.dds") {
-					spdlog::trace("HERE");
-				}
-
 				// verify that maps match each other
-				//! todo textures are analyzed a bunch of times for the same texture which is inefficient (store as instance map?)
-				double edge_comp = pgd3d->CheckHeightMapMatching(diffuse_map, search_path);
-				if (edge_comp < 0.0f) {
-					// ! TODO wstring here
-					spdlog::warn("Couldn't process edge comparison for {} and {}, skipping", diffuse_map, search_path.string());
-					continue;
+				auto check_tuple = make_tuple(fs::path(boost::algorithm::to_lower_copy(diffuse_map)), search_path);
+				bool verify_tex;
+				if (height_map_checks.find(check_tuple) != height_map_checks.end()) {
+					// key already exists
+					verify_tex = height_map_checks[check_tuple];
+				} else {
+					// Need to perform computation
+					verify_tex = pgd3d->CheckHeightMapMatching(diffuse_map, search_path);
 				}
 
-				if (edge_comp > 0.3f) {
-					// ! TODO wstring here
-					spdlog::warn("{} and {} probably don't go together, skipping", diffuse_map, search_path.string());
+				if (!verify_tex) {
+					spdlog::trace(L"Rejecting shape {} in NIF file {}: Height map does not match diffuse map", block_id, nif_file.wstring());
 					continue;
 				}
 

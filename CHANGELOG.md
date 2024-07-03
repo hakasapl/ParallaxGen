@@ -2,7 +2,7 @@
 
 ## [0.3.0] - UNRELEASED
 
-- Initial GPU acceleration implementation
+- Before enabling parallax on mesh heightmap and diffuse map are now checked to make sure they are the same aspect ratio
 
 ## [0.2.4] - 2024-06-06
 

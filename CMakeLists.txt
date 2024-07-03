@@ -1,7 +1,4 @@
-﻿# CMakeList.txt : Top-level CMake project file, do global configuration
-# and include sub-projects here.
-#
-cmake_minimum_required (VERSION 3.8)
+﻿cmake_minimum_required (VERSION 3.8)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -84,27 +81,11 @@ find_package(bsa REQUIRED CONFIG)
 find_package(spdlog REQUIRED CONFIG)
 find_package(CLI11 REQUIRED CONFIG)
 find_package(Boost REQUIRED)
-find_package(directxtk REQUIRED)
 find_package(directxtex REQUIRED CONFIG)
 find_package(miniz REQUIRED CONFIG)
-find_package(OpenCV REQUIRED)
 
 setup_external("nifly" "${CMAKE_SOURCE_DIR}/external/nifly" "-DBUILD_TESTING=OFF")
 find_package(nifly REQUIRED CONFIG)
-
-set(DirectXTK_LIBS
-    d3d11.lib
-    dxgi.lib
-    dxguid.lib
-    uuid.lib
-    kernel32.lib
-    user32.lib
-    comdlg32.lib
-    advapi32.lib
-    shell32.lib
-    ole32.lib
-    oleaut32.lib
-)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     bsa::bsa
@@ -113,39 +94,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Boost::boost
     nifly
     miniz::miniz
-    ${OpenCV_LIBS}
     Microsoft::DirectXTex
-    ${DirectXTK_LIBS}
-    Microsoft::DirectXTK
 )
-
-# build shaders
-add_custom_target(shaders)
-
-set(HLSL_COMPUTE_SHADER_FILES
-    shaders/GaussianBlurX.hlsl
-    shaders/GaussianBlurY.hlsl
-    shaders/Passthrough.hlsl
-    shaders/Scaling.hlsl
-    shaders/SobelEdgeDetection.hlsl
-)
-
-set_source_files_properties(${HLSL_COMPUTE_SHADER_FILES} PROPERTIES ShaderType "cs")
-set_source_files_properties(${HLSL_COMPUTE_SHADER_FILES} PROPERTIES ShaderModel "5_0")
-
-foreach(FILE ${HLSL_COMPUTE_SHADER_FILES})
-  get_filename_component(FILE_WE ${FILE} NAME_WE)
-  get_source_file_property(shadertype ${FILE} ShaderType)
-  get_source_file_property(shadermodel ${FILE} ShaderModel)
-  add_custom_command(TARGET shaders
-                     COMMAND fxc.exe /nologo /Emain /T${shadertype}_${shadermodel} $<IF:$<CONFIG:DEBUG>,/Od,/O1> /Zi /Fo ${CMAKE_BINARY_DIR}/${FILE_WE}.cso /Fd ${CMAKE_BINARY_DIR}/${FILE_WE}.pdb ${FILE}
-                     MAIN_DEPENDENCY ${FILE}
-                     COMMENT "HLSL ${FILE}"
-                     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                     VERBATIM)
-endforeach(FILE)
-
-add_dependencies(${PROJECT_NAME} shaders)
 
 # Install the executable and DLLs
 install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION . )
