@@ -19,6 +19,11 @@ ParallaxGen::ParallaxGen(const fs::path output_dir, ParallaxGenDirectory* pgd, P
     this->output_dir = output_dir;
     this->pgd = pgd;
 	this->pgd3d = pgd3d;
+
+	if (fs::equivalent(this->output_dir, this->pgd->getDataPath())) {
+		spdlog::critical("Output directory cannot be your data folder, as meshes can be overwritten this way. Exiting.");
+		ParallaxGenUtil::exitWithUserInput(1);
+	}
 }
 
 void ParallaxGen::patchMeshes(vector<fs::path>& meshes, vector<fs::path>& heightMaps, vector<fs::path>& complexMaterialMaps)
@@ -78,11 +83,13 @@ void ParallaxGen::deleteMeshes() {
 
 void ParallaxGen::deleteOutputDir() {
 	// delete output directory
-	if (fs::exists(output_dir)) {
+	if (fs::exists(output_dir) && fs::is_directory(output_dir)) {
 		spdlog::info("Deleting existing ParallaxGen output...");
 
 		try {
-			fs::remove_all(output_dir);
+			for (const auto& entry : fs::directory_iterator(output_dir)) {
+                fs::remove_all(entry.path());
+            }
 		}
 		catch (const exception& e) {
 			spdlog::critical(L"Error deleting output directory {}: {}", output_dir.wstring(), ParallaxGenUtil::convertToWstring(e.what()));
@@ -192,22 +199,14 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 
 		// don't enable parallax on decals because that gets rid of blending
 		BSLightingShaderProperty* cur_bslsp = dynamic_cast<BSLightingShaderProperty*>(shader);
-		if (cur_bslsp->shaderFlags1 & SSPF1::SLSF1_DECAL || cur_bslsp->shaderFlags1 & SSPF1::SLSF1_DYNAMIC_DECAL) {
-			spdlog::trace(L"Rejecting shape {} in NIF file {}: Decal shape", block_id, nif_file.wstring());
-			continue;
-		}
 
 		if (cur_bslsp->shaderFlags2 & SSPF2::SLSF2_BACK_LIGHTING) {
 			spdlog::trace(L"Rejecting shape {} in NIF file {}: Back lighting shape", block_id, nif_file.wstring());
 			continue;
 		}
 
-		// Ignore if shader type is not 0 (nothing) or 1 (environemnt map) or 3 (parallax)
+		// Get shader type for later use
 		BSLSP shader_type = static_cast<BSLSP>(shader->GetShaderType());
-		if (shader_type != BSLSP::BSLSP_DEFAULT && shader_type != BSLSP::BSLSP_ENVMAP && shader_type != BSLSP::BSLSP_PARALLAX) {
-			spdlog::trace(L"Rejecting shape {} in NIF file {}: Incorrect shader type", block_id, nif_file.wstring());
-			continue;
-		}
 
 		// build search vector
 		vector<string> search_prefixes;
@@ -234,6 +233,11 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 			// processing for complex material
             search_path = search_prefix_lower + "_m.dds";
             if (find(complexMaterialMaps.begin(), complexMaterialMaps.end(), search_path) != complexMaterialMaps.end()) {
+				if (shader_type != BSLSP::BSLSP_DEFAULT && shader_type != BSLSP::BSLSP_ENVMAP && shader_type != BSLSP::BSLSP_PARALLAX) {
+					spdlog::trace(L"Rejecting shape {} in NIF file {}: Incorrect shader type", block_id, nif_file.wstring());
+					continue;
+				}
+
                 // Enable complex parallax for this shape!
                 nif_modified |= enableComplexMaterialOnShape(nif, shape, shader, search_prefix);
                 break;
@@ -242,9 +246,15 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 			// processing for parallax
             search_path = search_prefix_lower + "_p.dds";
             if (find(heightMaps.begin(), heightMaps.end(), search_path) != heightMaps.end()) {
+				// decals don't work with regular parallax
+				if (cur_bslsp->shaderFlags1 & SSPF1::SLSF1_DECAL || cur_bslsp->shaderFlags1 & SSPF1::SLSF1_DYNAMIC_DECAL) {
+					spdlog::trace(L"Rejecting shape {} in NIF file {}: Decal shape", block_id, nif_file.wstring());
+					continue;
+				}
+
                 // Enable regular parallax for this shape!
 				if (shader_type != BSLSP::BSLSP_DEFAULT && shader_type != BSLSP::BSLSP_PARALLAX) {
-					// this avoids an env map mesh being reverted to parallax mesh
+					// don't overwrite existing shaders
 					spdlog::trace(L"Rejecting shape {} in NIF file {}: Incorrect shader type", block_id, nif_file.wstring());
 					continue;
 				}
@@ -257,7 +267,7 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 					verify_tex = height_map_checks[check_tuple];
 				} else {
 					// Need to perform computation
-					verify_tex = pgd3d->CheckHeightMapMatching(diffuse_map, search_path);
+					verify_tex = pgd3d->checkIfAspectRatioMatches(diffuse_map, search_path);
 				}
 
 				if (!verify_tex) {
@@ -393,6 +403,12 @@ void ParallaxGen::zipDirectory(const fs::path& dirPath, const fs::path& zipPath)
 	if (!fs::exists(dirPath)) {
 		spdlog::info("No outputs were created");
 		ParallaxGenUtil::exitWithUserInput(0);
+	}
+
+	// Check if file already exists and delete
+	if (fs::exists(zipPath)) {
+		spdlog::info(L"Deleting existing output zip file: {}", zipPath.wstring());
+		fs::remove(zipPath);
 	}
 
 	// initialize file

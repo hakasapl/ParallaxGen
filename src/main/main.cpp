@@ -6,6 +6,7 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
+#include <boost/algorithm/string.hpp>
 
 #include "BethesdaGame/BethesdaGame.hpp"
 #include "ParallaxGen/ParallaxGen.hpp"
@@ -43,19 +44,30 @@ fs::path getExecutablePath() {
     return fs::path();
 }
 
-void addArguments(CLI::App& app, int& verbosity, fs::path& game_dir, string& game_type, bool& no_zip, bool& no_cleanup, bool& ignore_parallax, bool& ignore_complex_material) {
+void addArguments(
+    CLI::App& app,
+    int& verbosity,
+    fs::path& game_dir,
+    string& game_type,
+    fs::path& output_dir,
+    bool& no_zip,
+    bool& no_cleanup,
+    bool& ignore_parallax,
+    bool& ignore_complex_material
+) {
     app.add_flag("-v", verbosity, "Verbosity level -v for DEBUG data or -vv for TRACE data (warning: TRACE data is very verbose)");
     app.add_option("-d,--game-dir", game_dir, "Manually specify of Skyrim directory");
     app.add_option("-g,--game-type", game_type, "Specify game type [skyrimse, skyrim, skyrimvr, enderal, or enderalse]");
+    app.add_option("-o,--output-dir", output_dir, "Manually specify output directory");
     app.add_flag("--no-zip", no_zip, "Don't zip the output meshes (also enables --no-cleanup)");
     app.add_flag("--no-cleanup", no_cleanup, "Don't delete generated meshes after zipping");
     app.add_flag("--ignore-parallax", ignore_parallax, "Don't generate any parallax meshes");
-    app.add_flag("--enable-complex-material", ignore_complex_material, "Generate any complex material meshes (Experimental!)");
+    app.add_flag("--ignore-complex-material", ignore_complex_material, "Don't generate any complex material meshes");
 }
 
 int main(int argc, char** argv) {
     // get program location
-    const fs::path output_dir = getExecutablePath().parent_path();
+    fs::path output_dir = getExecutablePath().parent_path();
 
     // Create loggers
     vector<spdlog::sink_ptr> sinks;
@@ -83,13 +95,14 @@ int main(int argc, char** argv) {
     int verbosity = 0;
     fs::path game_dir;
     string game_type = "skyrimse";
+    output_dir /= "ParallaxGen_Output";
     bool no_zip = false;
     bool no_cleanup = false;
     bool ignore_parallax = false;
     bool ignore_complex_material = false;  // this is prefixed with ignore because eventually this should be an ignore option once stable
 
     CLI::App app{ "ParallaxGen: Auto convert meshes to parallax meshes" };
-    addArguments(app, verbosity, game_dir, game_type, no_zip, no_cleanup, ignore_parallax, ignore_complex_material);
+    addArguments(app, verbosity, game_dir, game_type, output_dir, no_zip, no_cleanup, ignore_parallax, ignore_complex_material);
     CLI11_PARSE(app, argc, argv);
 
     // welcome message
@@ -124,8 +137,7 @@ int main(int argc, char** argv) {
     }
 
     // print mesh output location
-    fs::path mesh_output_dir = output_dir / "ParallaxGen_Output";
-    spdlog::info(L"Mesh output directory: {}", mesh_output_dir.wstring());
+    spdlog::info(L"Mesh output directory: {}", output_dir.wstring());
 
     // Create bethesda game object
     BethesdaGame::GameType gameType;
@@ -148,7 +160,7 @@ int main(int argc, char** argv) {
 	BethesdaGame bg = BethesdaGame(gameType, game_dir, true);
     ParallaxGenDirectory pgd = ParallaxGenDirectory(bg);
     ParallaxGenD3D pgd3d = ParallaxGenD3D(&pgd);
-    ParallaxGen pg = ParallaxGen(mesh_output_dir, &pgd, &pgd3d);
+    ParallaxGen pg = ParallaxGen(output_dir, &pgd, &pgd3d);
 
     if (fs::exists(bg.getGameDataPath() / ParallaxGen::parallax_state_file)) {
         spdlog::critical("ParallaxGen meshes exist in your data directory, please delete before re-running.");
@@ -160,7 +172,12 @@ int main(int argc, char** argv) {
     cin.get();
 
     // delete existing output
-    pg.deleteOutputDir();
+    cout << "Would you like to delete the existing output directory? (y/n): ";
+    string response;
+    getline(cin, response);
+    if (boost::iequals(response, "y")) {
+        pg.deleteOutputDir();
+    }
 
     // Populate file map from data directory
     pgd.populateFileMap();
@@ -172,7 +189,7 @@ int main(int argc, char** argv) {
     }
 
     vector<fs::path> complexMaterialMaps;
-    if (ignore_complex_material) {
+    if (!ignore_complex_material) {
         complexMaterialMaps = pgd.findComplexMaterialMaps();
     }
 

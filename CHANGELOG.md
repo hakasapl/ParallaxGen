@@ -1,8 +1,13 @@
 # Changelog
 
-## [0.3.0] - UNRELEASED
+## [0.3.0] - 2024-07-11
 
 - Before enabling parallax on mesh heightmap and diffuse map are now checked to make sure they are the same aspect ratio
+- Complex parallax checking is now enabled by default
+- Console will now ask the user if the output location should be deleted before generating
+- Added a -o CLI argument to allow the user to specify the output directory
+- App will throw a critical error if the output directory is the game data directory
+- Fixed bug where loadorder.txt would sometimes not be found
 
 ## [0.2.4] - 2024-06-06
 

@@ -13,7 +13,7 @@ ParallaxGenD3D::ParallaxGenD3D(ParallaxGenDirectory* pgd)
     this->pgd = pgd;
 }
 
-bool ParallaxGenD3D::CheckHeightMapMatching(const std::filesystem::path& dds_path_1, const std::filesystem::path& dds_path_2) const
+bool ParallaxGenD3D::checkIfAspectRatioMatches(const std::filesystem::path& dds_path_1, const std::filesystem::path& dds_path_2) const
 {
     // get metadata (should only pull headers, which is much faster)
     DirectX::TexMetadata dds_image_meta_1, dds_image_meta_2;

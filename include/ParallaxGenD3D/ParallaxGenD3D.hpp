@@ -17,7 +17,7 @@ private:
 public:
     ParallaxGenD3D(ParallaxGenDirectory* pgd);
 
-    bool CheckHeightMapMatching(const std::filesystem::path& dds_path_1, const std::filesystem::path& dds_path_2) const;
+    bool checkIfAspectRatioMatches(const std::filesystem::path& dds_path_1, const std::filesystem::path& dds_path_2) const;
 
 private:
     // Texture Helpers

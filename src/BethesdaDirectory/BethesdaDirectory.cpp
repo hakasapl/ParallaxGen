@@ -131,6 +131,11 @@ fs::path BethesdaDirectory::getFullPath(const fs::path rel_path) const
 	return data_dir / rel_path;
 }
 
+fs::path BethesdaDirectory::getDataPath() const
+{
+	return data_dir;
+}
+
 vector<fs::path> BethesdaDirectory::findFilesBySuffix(const string_view suffix, const bool lower, const vector<wstring>& path_blocklist) const
 {
 	// find all keys in fileMap that match pattern
@@ -323,7 +328,7 @@ vector<wstring> BethesdaDirectory::getPluginLoadOrder(const bool trim_extension)
 	// set path to loadorder.txt
 	fs::path lo_file = bg.getLoadOrderFile();
 
-	if (!fs::exists(lo_file)) {
+	/*if (!fs::exists(lo_file)) {
 		if (logging) {
 			spdlog::critical("loadorder.txt not found. If you are using mod organizer be sure to launch this program through MO2.");
 			exitWithUserInput(1);
@@ -331,7 +336,7 @@ vector<wstring> BethesdaDirectory::getPluginLoadOrder(const bool trim_extension)
 		else {
 			throw runtime_error("loadorder.txt not found");
 		}
-	}
+	}*/
 
 	// open file
 	wifstream f(lo_file, true);
