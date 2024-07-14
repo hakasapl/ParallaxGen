@@ -21,7 +21,7 @@ namespace fs = std::filesystem;
 fs::path getExecutablePath() {
     char buffer[MAX_PATH];
     if (GetModuleFileName(NULL, buffer, MAX_PATH) == 0) {
-        spdlog::critical("Unable to locate ParallaxGen.exe: {}", GetLastError());
+        cout << "Error getting executable path: " << GetLastError() << "\n";
         exitWithUserInput(1);
     }
 
@@ -32,12 +32,12 @@ fs::path getExecutablePath() {
             return out_path;
         }
         else {
-            spdlog::critical("Located ParallaxGen.exe path is invalid: {}", out_path.string());
+            cout << "Error getting executable path: path does not exist\n";
             exitWithUserInput(1);
         }
     }
     catch(const fs::filesystem_error& ex) {
-        spdlog::critical("Unable to locate ParallaxGen.exe: {}", ex.what());
+        cout << "Error getting executable path: " << ex.what() << "\n";
         exitWithUserInput(1);
     }
 
@@ -54,7 +54,8 @@ void addArguments(
     bool& no_cleanup,
     bool& ignore_parallax,
     bool& ignore_complex_material
-) {
+    )
+{
     app.add_flag("-v", verbosity, "Verbosity level -v for DEBUG data or -vv for TRACE data (warning: TRACE data is very verbose)");
     app.add_option("-d,--game-dir", game_dir, "Manually specify of Skyrim directory");
     app.add_option("-g,--game-type", game_type, "Specify game type [skyrimse, skyrim, skyrimvr, enderal, or enderalse]");
@@ -66,21 +67,12 @@ void addArguments(
 }
 
 int main(int argc, char** argv) {
-    // get program location
-    fs::path output_dir = getExecutablePath().parent_path();
+    fs::path EXE_PATH = getExecutablePath().parent_path();
 
     // Create loggers
     vector<spdlog::sink_ptr> sinks;
-    try {
-        auto console_sink = make_shared<spdlog::sinks::stdout_color_sink_mt>();
-        auto basic_sink = make_shared<spdlog::sinks::basic_file_sink_mt>(output_dir.string() + "/ParallaxGen.log", true);
-        sinks = {console_sink, basic_sink};
-    }
-    catch (const spdlog::spdlog_ex& ex) {
-        spdlog::critical("Error creating logging objects: {}", ex.what());
-        exitWithUserInput(1);
-    }
-
+    sinks.push_back(make_shared<spdlog::sinks::stdout_color_sink_mt>());
+    sinks.push_back(make_shared<spdlog::sinks::basic_file_sink_mt>(EXE_PATH.string() + "/ParallaxGen.log", true));
     auto logger = make_shared<spdlog::logger>("ParallaxGen", sinks.begin(), sinks.end());
 
     // register logger parameters
@@ -95,7 +87,7 @@ int main(int argc, char** argv) {
     int verbosity = 0;
     fs::path game_dir;
     string game_type = "skyrimse";
-    output_dir /= "ParallaxGen_Output";
+    fs::path output_dir = EXE_PATH / "ParallaxGen_Output";
     bool no_zip = false;
     bool no_cleanup = false;
     bool ignore_parallax = false;
@@ -129,7 +121,7 @@ int main(int argc, char** argv) {
         spdlog::flush_on(spdlog::level::debug);
         spdlog::debug("DEBUG logging enabled");
     }
-    
+
     if (verbosity >= 2) {
         spdlog::set_level(spdlog::level::trace);
         spdlog::flush_on(spdlog::level::trace);
@@ -172,12 +164,7 @@ int main(int argc, char** argv) {
     cin.get();
 
     // delete existing output
-    cout << "Would you like to delete the existing output directory? (y/n): ";
-    string response;
-    getline(cin, response);
-    if (boost::iequals(response, "y")) {
-        pg.deleteOutputDir();
-    }
+    pg.deleteOutputDir();
 
     // Populate file map from data directory
     pgd.populateFileMap();

@@ -1,14 +1,12 @@
 {
   "dependencies": [
     "boost-algorithm",
-    "boost-asio",
     "boost-container",
     "boost-filesystem",
     "boost-iostreams",
     "cli11",
     "directxtex",
     "miniz",
-    "opencv4",
     {
       "name": "rsm-bsa",
       "features": [

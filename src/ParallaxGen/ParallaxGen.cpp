@@ -20,7 +20,7 @@ ParallaxGen::ParallaxGen(const fs::path output_dir, ParallaxGenDirectory* pgd, P
     this->pgd = pgd;
 	this->pgd3d = pgd3d;
 
-	if (fs::equivalent(this->output_dir, this->pgd->getDataPath())) {
+	if (boost::iequals(this->output_dir.wstring(), this->pgd->getDataPath().wstring())) {
 		spdlog::critical("Output directory cannot be your data folder, as meshes can be overwritten this way. Exiting.");
 		ParallaxGenUtil::exitWithUserInput(1);
 	}
@@ -306,6 +306,11 @@ bool ParallaxGen::enableComplexMaterialOnShape(NifFile& nif, NiShape* shape, NiS
 	}
 	// 2. set shader flags
 	BSLightingShaderProperty* cur_bslsp = dynamic_cast<BSLightingShaderProperty*>(shader);
+	if(cur_bslsp->shaderFlags1 & SSPF1::SLSF1_PARALLAX) {
+		// Complex material cannot have parallax shader flag
+		cur_bslsp->shaderFlags1 &= ~SSPF1::SLSF1_PARALLAX;
+	}
+
 	if (!(cur_bslsp->shaderFlags1 & SSPF1::SLSF1_ENVIRONMENT_MAPPING)) {
 		cur_bslsp->shaderFlags1 |= SSPF1::SLSF1_ENVIRONMENT_MAPPING;
 		changed = true;
@@ -321,6 +326,15 @@ bool ParallaxGen::enableComplexMaterialOnShape(NifFile& nif, NiShape* shape, NiS
 		changed = true;
 	}
 	// 5. set complex material texture
+	string height_map;
+	uint32_t height_result = nif.GetTextureSlot(shape, height_map, 3);
+	if (height_result != 0 || !height_map.empty()) {
+		// remove height map
+		string new_height_map = "";
+		nif.SetTextureSlot(shape, new_height_map, 3);
+		changed = true;
+	}
+
 	string env_map;
 	uint32_t env_result = nif.GetTextureSlot(shape, env_map, 5);
 	if (env_result == 0 || env_map.empty()) {
@@ -343,6 +357,11 @@ bool ParallaxGen::enableParallaxOnShape(NifFile& nif, NiShape* shape, NiShader* 
 	}
 	// 2. Set shader flags
 	BSLightingShaderProperty* cur_bslsp = dynamic_cast<BSLightingShaderProperty*>(shader);
+	if(cur_bslsp->shaderFlags1 & SSPF1::SLSF1_ENVIRONMENT_MAPPING) {
+		// Vanilla parallax cannot have environment mapping flag
+		cur_bslsp->shaderFlags1 &= ~SSPF1::SLSF1_ENVIRONMENT_MAPPING;
+	}
+
 	if (!(cur_bslsp->shaderFlags1 & SSPF1::SLSF1_PARALLAX)) {
 		cur_bslsp->shaderFlags1 |= SSPF1::SLSF1_PARALLAX;
 		changed = true;

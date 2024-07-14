@@ -2,17 +2,6 @@
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-# For MSVC
-add_compile_options("/Zc:__cplusplus")
-
-# VCPKG vars
-set(VCPKG_INSTALL_DIR "${CMAKE_BINARY_DIR}/vcpkg_installed/${VCPKG_TARGET_TRIPLET}")
-
-# Enable Hot Reload for MSVC compilers if supported.
-if (POLICY CMP0141)
-  cmake_policy(SET CMP0141 NEW)
-  set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
-endif()
 
 # Project Vars
 set(PROJECT_NAME "ParallaxGen")
@@ -32,6 +21,7 @@ include_directories("include")
 add_compile_definitions(NOMINMAX)
 add_compile_definitions(WIN32_LEAN_AND_MEAN)
 add_compile_definitions(NOSOCKETTYPE)
+add_compile_definitions(_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR)
 
 # Add Executables
 set(HEADERS
@@ -77,8 +67,8 @@ function(setup_external PACKAGE_NAME PACKAGE_SOURCE_DIR CONF_ARGS)
 endfunction()
 
 # Add Packages
-find_package(bsa REQUIRED CONFIG)
 find_package(spdlog REQUIRED CONFIG)
+find_package(bsa REQUIRED CONFIG)
 find_package(CLI11 REQUIRED CONFIG)
 find_package(Boost REQUIRED)
 find_package(directxtex REQUIRED CONFIG)
@@ -88,8 +78,8 @@ setup_external("nifly" "${CMAKE_SOURCE_DIR}/external/nifly" "-DBUILD_TESTING=OFF
 find_package(nifly REQUIRED CONFIG)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    bsa::bsa
     spdlog::spdlog
+    bsa::bsa
     CLI11::CLI11
     Boost::boost
     nifly

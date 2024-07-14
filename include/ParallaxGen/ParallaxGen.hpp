@@ -5,7 +5,6 @@
 #include <array>
 #include <NifFile.hpp>
 #include <miniz.h>
-#include <opencv2/opencv.hpp>
 #include <unordered_map>
 #include <tuple>
 
