@@ -19,7 +19,7 @@ private:
 	ParallaxGenD3D* pgd3d;
 
     // we don't want any other change on the NIF file so we disable all save options from nifly
-	const nifly::NifSaveOptions nif_save_options = { false, true };
+	nifly::NifSaveOptions nif_save_options = { false, true };
 
     // which texture indices to search when mapping mesh shapes to parallax maps
 	static inline const std::array<uint32_t, 2> texture_maps_idx_search = { 0, 1 };
@@ -47,7 +47,7 @@ public:
 	static inline const std::string parallax_state_file = "PARALLAXGEN_DONTDELETE";
 
     // constructor
-    ParallaxGen(const std::filesystem::path output_dir, ParallaxGenDirectory* pgd, ParallaxGenD3D* pgd3d);
+    ParallaxGen(const std::filesystem::path output_dir, ParallaxGenDirectory* pgd, ParallaxGenD3D* pgd3d, bool optimize_meshes = false);
     // enables parallax on relevant meshes
 	void patchMeshes(std::vector<std::filesystem::path>& meshes, std::vector<std::filesystem::path>& heightMaps, std::vector<std::filesystem::path>& complexMaterialMaps);
 	// zips all meshes and removes originals

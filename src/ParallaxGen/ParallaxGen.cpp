@@ -13,7 +13,7 @@ using namespace std;
 namespace fs = filesystem;
 using namespace nifly;
 
-ParallaxGen::ParallaxGen(const fs::path output_dir, ParallaxGenDirectory* pgd, ParallaxGenD3D* pgd3d)
+ParallaxGen::ParallaxGen(const fs::path output_dir, ParallaxGenDirectory* pgd, ParallaxGenD3D* pgd3d, bool optimize_meshes)
 {
     // constructor
     this->output_dir = output_dir;
@@ -24,6 +24,9 @@ ParallaxGen::ParallaxGen(const fs::path output_dir, ParallaxGenDirectory* pgd, P
 		spdlog::critical("Output directory cannot be your data folder, as meshes can be overwritten this way. Exiting.");
 		ParallaxGenUtil::exitWithUserInput(1);
 	}
+
+	// set optimize meshes flag
+	nif_save_options.optimize = optimize_meshes;
 }
 
 void ParallaxGen::patchMeshes(vector<fs::path>& meshes, vector<fs::path>& heightMaps, vector<fs::path>& complexMaterialMaps)

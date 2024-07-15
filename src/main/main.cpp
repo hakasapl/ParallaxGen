@@ -50,6 +50,7 @@ void addArguments(
     fs::path& game_dir,
     string& game_type,
     fs::path& output_dir,
+    bool& optimize_meshes,
     bool& no_zip,
     bool& no_cleanup,
     bool& ignore_parallax,
@@ -60,6 +61,7 @@ void addArguments(
     app.add_option("-d,--game-dir", game_dir, "Manually specify of Skyrim directory");
     app.add_option("-g,--game-type", game_type, "Specify game type [skyrimse, skyrim, skyrimvr, enderal, or enderalse]");
     app.add_option("-o,--output-dir", output_dir, "Manually specify output directory");
+    app.add_flag("--optimize-meshes", optimize_meshes, "Optimize meshes before saving them");
     app.add_flag("--no-zip", no_zip, "Don't zip the output meshes (also enables --no-cleanup)");
     app.add_flag("--no-cleanup", no_cleanup, "Don't delete generated meshes after zipping");
     app.add_flag("--ignore-parallax", ignore_parallax, "Don't generate any parallax meshes");
@@ -88,14 +90,17 @@ int main(int argc, char** argv) {
     fs::path game_dir;
     string game_type = "skyrimse";
     fs::path output_dir = EXE_PATH / "ParallaxGen_Output";
+    bool optimize_meshes = false;
     bool no_zip = false;
     bool no_cleanup = false;
     bool ignore_parallax = false;
     bool ignore_complex_material = false;  // this is prefixed with ignore because eventually this should be an ignore option once stable
 
     CLI::App app{ "ParallaxGen: Auto convert meshes to parallax meshes" };
-    addArguments(app, verbosity, game_dir, game_type, output_dir, no_zip, no_cleanup, ignore_parallax, ignore_complex_material);
+    addArguments(app, verbosity, game_dir, game_type, output_dir, optimize_meshes, no_zip, no_cleanup, ignore_parallax, ignore_complex_material);
     CLI11_PARSE(app, argc, argv);
+
+    //! TODO print CLI args here, also don't close the application if CLI args are wrong
 
     // welcome message
     spdlog::info("Welcome to ParallaxGen version {}!", PARALLAXGEN_VERSION);
@@ -106,7 +111,7 @@ int main(int argc, char** argv) {
         exitWithUserInput(1);
     }
 
-    if (ignore_parallax && !ignore_complex_material) {
+    if (ignore_parallax && ignore_complex_material) {
         spdlog::critical("If ignore-parallax is set, enable-complex-material must be set, otherwise there is nothing to do");
         exitWithUserInput(1);
     }

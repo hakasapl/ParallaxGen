@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.1] - 2024-07-15
+
+- Added option to optimize meshes that are generated
+- Fixed issue where ignoring parallax caused nothing to work
+
 ## [0.3.0] - 2024-07-14
 
 - Before enabling parallax on mesh heightmap and diffuse map are now checked to make sure they are the same aspect ratio
