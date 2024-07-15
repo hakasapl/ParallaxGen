@@ -20,6 +20,7 @@ ParallaxGen::ParallaxGen(const fs::path output_dir, ParallaxGenDirectory* pgd, P
     this->pgd = pgd;
 	this->pgd3d = pgd3d;
 
+	// ! TODO normalize these paths before string comparing
 	if (boost::iequals(this->output_dir.wstring(), this->pgd->getDataPath().wstring())) {
 		spdlog::critical("Output directory cannot be your data folder, as meshes can be overwritten this way. Exiting.");
 		ParallaxGenUtil::exitWithUserInput(1);
@@ -241,9 +242,15 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 					continue;
 				}
 
+				// verify that maps match each other
+				if (!hasSameAspectRatio(diffuse_map, search_path)) {
+					spdlog::trace(L"Rejecting shape {} in NIF file {}: Height map does not match diffuse map", block_id, nif_file.wstring());
+					continue;
+				}
+
                 // Enable complex parallax for this shape!
                 nif_modified |= enableComplexMaterialOnShape(nif, shape, shader, search_prefix);
-                break;
+                break;  // don't check anything else
             }
 
 			// processing for parallax
@@ -263,17 +270,7 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 				}
 
 				// verify that maps match each other
-				auto check_tuple = make_tuple(fs::path(boost::algorithm::to_lower_copy(diffuse_map)), search_path);
-				bool verify_tex;
-				if (height_map_checks.find(check_tuple) != height_map_checks.end()) {
-					// key already exists
-					verify_tex = height_map_checks[check_tuple];
-				} else {
-					// Need to perform computation
-					verify_tex = pgd3d->checkIfAspectRatioMatches(diffuse_map, search_path);
-				}
-
-				if (!verify_tex) {
+				if (!hasSameAspectRatio(diffuse_map, search_path)) {
 					spdlog::trace(L"Rejecting shape {} in NIF file {}: Height map does not match diffuse map", block_id, nif_file.wstring());
 					continue;
 				}
@@ -340,7 +337,7 @@ bool ParallaxGen::enableComplexMaterialOnShape(NifFile& nif, NiShape* shape, NiS
 
 	string env_map;
 	uint32_t env_result = nif.GetTextureSlot(shape, env_map, 5);
-	if (env_result == 0 || env_map.empty()) {
+	if (!boost::iends_with(env_map, ".dds")) {
 		// add height map
 		string new_env_map = search_prefix + "_m.dds";
 		nif.SetTextureSlot(shape, new_env_map, 5);
@@ -382,7 +379,11 @@ bool ParallaxGen::enableParallaxOnShape(NifFile& nif, NiShape* shape, NiShader* 
 	// 5. set parallax heightmap texture
 	string height_map;
 	uint32_t height_result = nif.GetTextureSlot(shape, height_map, 3);
-	if (height_result == 0 || height_map.empty()) {
+	
+	// Check if existing heightmap ends with .dds
+	// Sometimes the height_map is textures\\ and nothing else so we need to check for that
+	// There may be a more ideal solution for this (ie. why is nifly reporting textures this way?)
+	if (!boost::iends_with(height_map, ".dds")) {
 		// add height map
 		string new_height_map = search_prefix + "_p.dds";
 		nif.SetTextureSlot(shape, new_height_map, 3);
@@ -390,6 +391,19 @@ bool ParallaxGen::enableParallaxOnShape(NifFile& nif, NiShape* shape, NiShader* 
 	}
 
 	return changed;
+}
+
+bool ParallaxGen::hasSameAspectRatio(const fs::path& dds_path_1, const fs::path& dds_path_2)
+{
+	// verify that maps match each other
+	auto check_tuple = make_tuple(fs::path(boost::algorithm::to_lower_copy(dds_path_1.wstring())), fs::path(boost::algorithm::to_lower_copy(dds_path_2.wstring())));
+	if (height_map_checks.find(check_tuple) != height_map_checks.end()) {
+		// key already exists
+		return height_map_checks[check_tuple];
+	} else {
+		// Need to perform computation
+		return pgd3d->checkIfAspectRatioMatches(dds_path_1, dds_path_2);
+	}
 }
 
 void ParallaxGen::addFileToZip(mz_zip_archive& zip, const fs::path& filePath, const fs::path& zipPath)

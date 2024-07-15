@@ -46,7 +46,6 @@ bool ParallaxGenD3D::getDDS(const filesystem::path& dds_path, DirectX::ScratchIm
         filesystem::path full_path = pgd->getFullPath(dds_path);
 
         // Load DDS file
-        // ! Todo: wstring support for the path here?
         HRESULT hr = DirectX::LoadFromDDSFile(full_path.c_str(), DirectX::DDS_FLAGS_NONE, nullptr, dds);
         if (FAILED(hr)) {
             spdlog::debug("Failed to load DDS file: {}", hr);
@@ -74,7 +73,6 @@ bool ParallaxGenD3D::getDDSMetadata(const filesystem::path& dds_path, DirectX::T
         filesystem::path full_path = pgd->getFullPath(dds_path);
 
         // Load DDS file
-        // ! Todo: wstring support for the path here?
         HRESULT hr = DirectX::GetMetadataFromDDSFile(full_path.c_str(), DirectX::DDS_FLAGS_NONE, dds_meta);
         if (FAILED(hr)) {
             spdlog::debug("Failed to load DDS file metadata: {}", hr);

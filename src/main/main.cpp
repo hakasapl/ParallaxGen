@@ -83,9 +83,14 @@ int main(int argc, char** argv) {
     spdlog::set_level(spdlog::level::info);
     spdlog::flush_on(spdlog::level::info);
 
+    // welcome message
+    spdlog::info("Welcome to ParallaxGen version {}!", PARALLAXGEN_VERSION);
+
     //
     // CLI Arguments
     //
+    spdlog::info("Starting ParallaxGen with Arguments \"{}\"", boost::join(vector<string>(argv + 1, argv + argc), " "));
+
     int verbosity = 0;
     fs::path game_dir;
     string game_type = "skyrimse";
@@ -98,12 +103,14 @@ int main(int argc, char** argv) {
 
     CLI::App app{ "ParallaxGen: Auto convert meshes to parallax meshes" };
     addArguments(app, verbosity, game_dir, game_type, output_dir, optimize_meshes, no_zip, no_cleanup, ignore_parallax, ignore_complex_material);
-    CLI11_PARSE(app, argc, argv);
 
-    //! TODO print CLI args here, also don't close the application if CLI args are wrong
-
-    // welcome message
-    spdlog::info("Welcome to ParallaxGen version {}!", PARALLAXGEN_VERSION);
+    try {
+        app.parse(argc, argv);
+    }
+    catch (const CLI::ParseError &e) {
+        spdlog::critical("Error parsing arguments: {}", e.what());
+        exitWithUserInput(1);
+    }
 
     // CLI argument validation
     if (game_type != "skyrimse" && game_type != "skyrim" && game_type != "skyrimvr" && game_type != "enderal" && game_type != "enderalse") {

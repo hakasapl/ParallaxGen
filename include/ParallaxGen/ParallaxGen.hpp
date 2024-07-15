@@ -64,6 +64,8 @@ private:
 	bool enableComplexMaterialOnShape(nifly::NifFile& nif, nifly::NiShape* shape, nifly::NiShader* shader, const std::string& search_prefix);
 	// enables parallax on a shape in a NIF
 	bool enableParallaxOnShape(nifly::NifFile& nif, nifly::NiShape* shape, nifly::NiShader* shader, const std::string& search_prefix);
+	// checks aspectRatio of two DDS files
+	bool hasSameAspectRatio(const std::filesystem::path& dds_path_1, const std::filesystem::path& dds_path_2);
 
 	// zip methods
 	void addFileToZip(mz_zip_archive& zip, const std::filesystem::path& filePath, const std::filesystem::path& zipPath);

@@ -254,31 +254,38 @@ void BethesdaDirectory::addBSAToFileMap(const wstring& bsa_name)
 	// loop iterator
 	for (auto bsa_iter = bsa_obj.begin(); bsa_iter != bsa_obj.end(); ++bsa_iter) {
 		// get file entry from pointer
-		const auto& file_entry = *bsa_iter;
+		try {
+			const auto& file_entry = *bsa_iter;
 
-		// get folder name within the BSA vfs
-		const fs::path folder_name = file_entry.first.name();
+			// get folder name within the BSA vfs
+			const fs::path folder_name = file_entry.first.name();
 
-		// .second stores the files in the folder
-		const auto file_name = file_entry.second;
+			// .second stores the files in the folder
+			const auto file_name = file_entry.second;
 
-		// loop through files in folder
-		for (const auto& entry : file_name) {
-			// get name of file
-			const string_view cur_entry = entry.first.name();
-			fs::path cur_path = folder_name / cur_entry;
+			// loop through files in folder
+			for (const auto& entry : file_name) {
+				// get name of file
+				const string_view cur_entry = entry.first.name();
+				fs::path cur_path = folder_name / cur_entry;
 
-			// chekc if we should ignore this file
-			if (!file_allowed(cur_path)) {
-				continue;
+				// chekc if we should ignore this file
+				if (!file_allowed(cur_path)) {
+					continue;
+				}
+
+				if (logging) {
+					spdlog::trace(L"Adding file from BSA {} to file map: {}", bsa_name, cur_path.wstring());
+				}
+
+				// add to filemap
+				updateFileMap(cur_path, bsa_shared_ptr);
 			}
-
+		} catch (const std::exception& e) {
 			if (logging) {
-				spdlog::trace(L"Adding file from BSA {} to file map: {}", bsa_name, cur_path.wstring());
+				spdlog::warn(L"Failed to get file pointer from BSA, skipping {}: {}", bsa_name, convertToWstring(e.what()));
 			}
-
-			// add to filemap
-			updateFileMap(cur_path, bsa_shared_ptr);
+			continue;
 		}
 	}
 }

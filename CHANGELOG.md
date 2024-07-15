@@ -1,6 +1,14 @@
 # Changelog
 
-## [0.3.2] - UNRELEASED
+## [0.3.3] - 2024-07-15
+
+- Fixed parallax heightmaps not applying correctly for some meshes
+- Aspect ratio of texture maps are checked for complex material now too
+- Added additional error handling during BSA read step
+- CLI arguments are now printed to console
+- Wrong CLI arguments results in a graceful termination now
+
+## [0.3.2] - 2024-07-15
 
 - Fixed --optimize-meshes CLI arg not doing anything
 
