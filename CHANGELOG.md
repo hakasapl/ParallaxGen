@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.3.2] - UNRELEASED
+
+- Fixed --optimize-meshes CLI arg not doing anything
+
 ## [0.3.1] - 2024-07-15
 
 - Added option to optimize meshes that are generated
