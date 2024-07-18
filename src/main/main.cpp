@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 #include <filesystem>
+#include <unordered_map>
 #include <CLI/CLI.hpp>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -16,9 +17,8 @@
 
 using namespace std;
 using namespace ParallaxGenUtil;
-namespace fs = std::filesystem;
 
-fs::path getExecutablePath() {
+filesystem::path getExecutablePath() {
     char buffer[MAX_PATH];
     if (GetModuleFileName(NULL, buffer, MAX_PATH) == 0) {
         cout << "Error getting executable path: " << GetLastError() << "\n";
@@ -26,9 +26,9 @@ fs::path getExecutablePath() {
     }
 
     try {
-        fs::path out_path = fs::path(buffer);
+        filesystem::path out_path = filesystem::path(buffer);
 
-        if (fs::exists(out_path)) {
+        if (filesystem::exists(out_path)) {
             return out_path;
         }
         else {
@@ -36,31 +36,47 @@ fs::path getExecutablePath() {
             exitWithUserInput(1);
         }
     }
-    catch(const fs::filesystem_error& ex) {
+    catch(const filesystem::filesystem_error& ex) {
         cout << "Error getting executable path: " << ex.what() << "\n";
         exitWithUserInput(1);
     }
 
-    return fs::path();
+    return filesystem::path();
+}
+
+void initLogger(filesystem::path LOG_PATH)
+{
+    // Create loggers
+    vector<spdlog::sink_ptr> sinks;
+    sinks.push_back(make_shared<spdlog::sinks::stdout_color_sink_mt>());
+    sinks.push_back(make_shared<spdlog::sinks::basic_file_sink_mt>(LOG_PATH.string(), true));  // TODO wide string support here
+    auto logger = make_shared<spdlog::logger>("ParallaxGen", sinks.begin(), sinks.end());
+
+    // register logger parameters
+    spdlog::register_logger(logger);
+    spdlog::set_default_logger(logger);
+    spdlog::set_level(spdlog::level::info);
+    spdlog::flush_on(spdlog::level::info);
 }
 
 void addArguments(
     CLI::App& app,
     int& verbosity,
-    fs::path& game_dir,
+    filesystem::path& game_dir,
     string& game_type,
-    fs::path& output_dir,
+    filesystem::path& output_dir,
     bool& upgrade_shaders,
     bool& optimize_meshes,
     bool& no_zip,
     bool& no_cleanup,
     bool& ignore_parallax,
-    bool& ignore_complex_material
+    bool& ignore_complex_material,
+    const string& AVAILABLE_GAME_TYPES_STR
     )
 {
     app.add_flag("-v", verbosity, "Verbosity level -v for DEBUG data or -vv for TRACE data (warning: TRACE data is very verbose)");
-    app.add_option("-d,--game-dir", game_dir, "Manually specify of Skyrim directory");
-    app.add_option("-g,--game-type", game_type, "Specify game type [skyrimse, skyrim, skyrimvr, enderal, or enderalse]");
+    app.add_option("-d,--game-dir", game_dir, "Manually specify game directory");
+    app.add_option("-g,--game-type", game_type, "Specify game type [" + AVAILABLE_GAME_TYPES_STR + "]");
     app.add_option("-o,--output-dir", output_dir, "Manually specify output directory");
     app.add_flag("--upgrade-shaders", upgrade_shaders, "Upgrade shaders to a better version whenever possible");
     app.add_flag("--optimize-meshes", optimize_meshes, "Optimize meshes before saving them");
@@ -70,68 +86,89 @@ void addArguments(
     app.add_flag("--ignore-complex-material", ignore_complex_material, "Don't generate any complex material meshes");
 }
 
+const unordered_map<string, BethesdaGame::GameType> GAME_TYPE_MAP = {
+    {"skyrimse", BethesdaGame::GameType::SKYRIM_SE},
+    {"skyrim", BethesdaGame::GameType::SKYRIM},
+    {"skyrimvr", BethesdaGame::GameType::SKYRIM_VR},
+    {"enderal", BethesdaGame::GameType::ENDERAL},
+    {"enderalse", BethesdaGame::GameType::ENDERAL_SE}
+};
+
 int main(int argc, char** argv) {
-    fs::path EXE_PATH = getExecutablePath().parent_path();
+    // Find location of ParallaxGen.exe
+    const filesystem::path EXE_PATH = getExecutablePath().parent_path();
 
-    // Create loggers
-    vector<spdlog::sink_ptr> sinks;
-    sinks.push_back(make_shared<spdlog::sinks::stdout_color_sink_mt>());
-    sinks.push_back(make_shared<spdlog::sinks::basic_file_sink_mt>(EXE_PATH.string() + "/ParallaxGen.log", true));
-    auto logger = make_shared<spdlog::logger>("ParallaxGen", sinks.begin(), sinks.end());
-
-    // register logger parameters
-    spdlog::register_logger(logger);
-    spdlog::set_default_logger(logger);
-    spdlog::set_level(spdlog::level::info);
-    spdlog::flush_on(spdlog::level::info);
-
-    // welcome message
-    spdlog::info("Welcome to ParallaxGen version {}!", PARALLAXGEN_VERSION);
+    // Initialize logger
+    const filesystem::path LOG_PATH = EXE_PATH / "ParallaxGen.log";
+    initLogger(LOG_PATH);
 
     //
     // CLI Arguments
     //
-    spdlog::info("Starting ParallaxGen with Arguments \"{}\"", boost::join(vector<string>(argv + 1, argv + argc), " "));
+    const string STARTUP_CLI_ARGS = boost::join(vector<string>(argv + 1, argv + argc), " ");
 
+    // Define game type vars
+    vector<string> AVAILABLE_GAME_TYPES;
+    for (const auto& pair : GAME_TYPE_MAP) {
+        AVAILABLE_GAME_TYPES.push_back(pair.first);
+    }
+    const string AVAILABLE_GAME_TYPES_STR = boost::join(AVAILABLE_GAME_TYPES, ", ");
+
+    // Vars that store CLI argument values
+    // Default values are defined here
     int verbosity = 0;
-    fs::path game_dir;
+    filesystem::path game_dir;
     string game_type = "skyrimse";
-    fs::path output_dir = EXE_PATH / "ParallaxGen_Output";
+    filesystem::path output_dir = EXE_PATH / "ParallaxGen_Output";
     bool upgrade_shaders = false;
     bool optimize_meshes = false;
     bool no_zip = false;
     bool no_cleanup = false;
     bool ignore_parallax = false;
-    bool ignore_complex_material = false;  // this is prefixed with ignore because eventually this should be an ignore option once stable
+    bool ignore_complex_material = false;
 
+    // Parse CLI arguments
     CLI::App app{ "ParallaxGen: Auto convert meshes to parallax meshes" };
-    addArguments(app, verbosity, game_dir, game_type, output_dir, upgrade_shaders, optimize_meshes, no_zip, no_cleanup, ignore_parallax, ignore_complex_material);
+    addArguments(app, verbosity, game_dir, game_type, output_dir, upgrade_shaders, optimize_meshes, no_zip, no_cleanup, ignore_parallax, ignore_complex_material, AVAILABLE_GAME_TYPES_STR);
 
+    // Check if arguments are valid, otherwise print error to user
     try {
         app.parse(argc, argv);
     }
     catch (const CLI::ParseError &e) {
-        spdlog::critical("Error parsing arguments: {}", e.what());
+        spdlog::critical("Arguments Invalid: {}", e.what());
         exitWithUserInput(1);
     }
 
-    // CLI argument validation
-    if (game_type != "skyrimse" && game_type != "skyrim" && game_type != "skyrimvr" && game_type != "enderal" && game_type != "enderalse") {
-        spdlog::critical("Invalid game type specified. Please specify 'skyrimse', 'skyrim', or 'skyrimvr'");
+    //
+    // Welcome Message
+    //
+    spdlog::info("Welcome to ParallaxGen version {}!", PARALLAXGEN_VERSION);
+    spdlog::info("Arguments Supplied: {}", STARTUP_CLI_ARGS);
+
+    //
+    // Argument validation
+    //
+
+    // Check if game_type exists in allowed_game_types
+    if (GAME_TYPE_MAP.find(game_type) == GAME_TYPE_MAP.end()){
+        spdlog::critical("Invalid game type (-g) specified: {}", game_type);
         exitWithUserInput(1);
     }
 
-    if (ignore_parallax && ignore_complex_material) {
-        spdlog::critical("If ignore-parallax is set, enable-complex-material must be set, otherwise there is nothing to do");
+    // Check if there is actually anything to do
+    if (ignore_parallax && ignore_complex_material && !upgrade_shaders) {
+        spdlog::critical("There is nothing to do if both --ignore-parallax and --ignore-complex-material are set and --upgrade-shaders is not set.");
         exitWithUserInput(1);
     }
 
+    // If --no-zip is set, also set --no-cleanup
     if (no_zip) {
         no_cleanup = true;
     }
 
     // Set logging mode
-    if (verbosity >= 1) {
+    if (verbosity == 1) {
         spdlog::set_level(spdlog::level::debug);
         spdlog::flush_on(spdlog::level::debug);
         spdlog::debug("DEBUG logging enabled");
@@ -143,28 +180,18 @@ int main(int argc, char** argv) {
         spdlog::trace("TRACE logging enabled");
     }
 
-    // print mesh output location
-    spdlog::info(L"Mesh output directory: {}", output_dir.wstring());
+    //
+    // Init
+    //
 
-    // Create bethesda game object
-    BethesdaGame::GameType gameType;
-    if (game_type == "skyrimse") {
-        gameType = BethesdaGame::GameType::SKYRIM_SE;
-    }
-    else if (game_type == "skyrim") {
-        gameType = BethesdaGame::GameType::SKYRIM;
-    }
-    else if (game_type == "skyrimvr") {
-        gameType = BethesdaGame::GameType::SKYRIM_VR;
-    }
-    else if (game_type == "enderal") {
-        gameType = BethesdaGame::GameType::ENDERAL;
-    }
-    else if (game_type == "enderalse") {
-        gameType = BethesdaGame::GameType::ENDERAL_SE;
-    }
+    // print output location
+    spdlog::info(L"ParallaxGen output directory (the contents will be deleted if you start generation!): {}", output_dir.wstring());
 
-	BethesdaGame bg = BethesdaGame(gameType, game_dir, true);
+    // Create bethesda game type object
+    BethesdaGame::GameType bg_type = GAME_TYPE_MAP.at(game_type);
+
+    // Create relevant objects
+	BethesdaGame bg = BethesdaGame(bg_type, game_dir, true);
     ParallaxGenDirectory pgd = ParallaxGenDirectory(bg);
     ParallaxGenD3D pgd3d = ParallaxGenD3D(&pgd, output_dir);
     ParallaxGen pg = ParallaxGen(output_dir, &pgd, &pgd3d, optimize_meshes);
@@ -174,13 +201,19 @@ int main(int argc, char** argv) {
         pgd3d.initGPU();
     }
 
-    if (fs::exists(bg.getGameDataPath() / ParallaxGen::parallax_state_file)) {
+    // Check if ParallaxGen output already exists in data directory
+    const filesystem::path PARALLAXGEN_STATE_FILE_PATH = bg.getGameDataPath() / ParallaxGen::parallax_state_file;
+    if (filesystem::exists(PARALLAXGEN_STATE_FILE_PATH)) {
         spdlog::critical("ParallaxGen meshes exist in your data directory, please delete before re-running.");
         exitWithUserInput(1);
     }
 
+    //
+    // Generation
+    //
+
     // User Input to Continue
-    cout << "Press ENTER to start mesh generation...";
+    cout << "Press ENTER to start ParallaxGen...";
     cin.get();
 
     // delete existing output
@@ -190,25 +223,28 @@ int main(int argc, char** argv) {
     pgd.populateFileMap();
 
     // Build file vectors
-    vector<fs::path> heightMaps;
+    // TODO make these instance vars
+    vector<filesystem::path> heightMaps;
     if (!ignore_parallax) {
         heightMaps = pgd.findHeightMaps();
     }
 
-    vector<fs::path> complexMaterialMaps;
+    vector<filesystem::path> complexMaterialMaps;
     if (!ignore_complex_material) {
         complexMaterialMaps = pgd.findComplexMaterialMaps();
     }
 
-    vector<fs::path> meshes = pgd.findMeshes();
+    vector<filesystem::path> meshes = pgd.findMeshes();
 
-    // Upgrade shaders
+    // Upgrade shaders if set
     if (upgrade_shaders) {
         pg.upgradeShaders(heightMaps, complexMaterialMaps);
     }
 
-    // Patch meshes
-    pg.patchMeshes(meshes, heightMaps, complexMaterialMaps);
+    // Patch meshes if set
+    if (!ignore_parallax || !ignore_complex_material) {
+        pg.patchMeshes(meshes, heightMaps, complexMaterialMaps);
+    }
 
     spdlog::info("ParallaxGen has finished generating meshes.");
 
