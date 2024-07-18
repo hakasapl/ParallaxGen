@@ -117,7 +117,6 @@ add_custom_target(shaders)
 
 set(HLSL_COMPUTE_SHADER_FILES
     shaders/MergeToComplexMaterial.hlsl
-    shaders/StretchChannels.hlsl
 )
 
 set_source_files_properties(${HLSL_COMPUTE_SHADER_FILES} PROPERTIES ShaderType "cs")
