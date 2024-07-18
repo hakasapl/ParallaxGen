@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.4.0] - UNRELEASED
+
+- Added --upgrade-shader argument to enable upgrading vanilla parallax to complex material
+- Lots of code cleanup and optimization
+- Fixed some typos in log messages
+
 ## [0.3.3] - 2024-07-15
 
 - Fixed parallax heightmaps not applying correctly for some meshes
