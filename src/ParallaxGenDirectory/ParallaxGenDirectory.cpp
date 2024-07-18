@@ -7,32 +7,27 @@
 #include "ParallaxGenUtil/ParallaxGenUtil.hpp"
 
 using namespace std;
-namespace fs = filesystem;
+using namespace ParallaxGenUtil;
 
 ParallaxGenDirectory::ParallaxGenDirectory(BethesdaGame bg) : BethesdaDirectory(bg, true) {}
 
-vector<fs::path> ParallaxGenDirectory::findHeightMaps() const
+void ParallaxGenDirectory::findHeightMaps()
 {
 	// find height maps
-	//todo: maybe we should verify DDS files here so they don't cause CTDs later?
 	spdlog::info("Finding parallax height maps");
-	vector<fs::path> heightMaps = findFilesBySuffix("_p.dds", true);
+	heightMaps = findFilesBySuffix("_p.dds", true);
 	spdlog::info("Found {} height maps", heightMaps.size());
-	return heightMaps;
 }
 
-vector<fs::path> ParallaxGenDirectory::findComplexMaterialMaps() const
+void ParallaxGenDirectory::findComplexMaterialMaps()
 {
 	spdlog::info("Finding complex material maps");
 
-	// initialize output vector
-	vector<fs::path> complexMaterialMaps;
-
 	// find complex material maps
-	vector<fs::path> env_maps = findFilesBySuffix("_m.dds", true);
+	vector<filesystem::path> env_maps = findFilesBySuffix("_m.dds", true);
 
 	// loop through env maps
-	for (fs::path env_map : env_maps) {
+	for (filesystem::path env_map : env_maps) {
 		// check if env map is actually a complex material map
 		const vector<std::byte> env_map_data = getFile(env_map);
 
@@ -55,15 +50,80 @@ vector<fs::path> ParallaxGenDirectory::findComplexMaterialMaps() const
 	}
 
 	spdlog::info("Found {} complex material maps", complexMaterialMaps.size());
-
-	return complexMaterialMaps;
 }
 
-vector<fs::path> ParallaxGenDirectory::findMeshes() const
+void ParallaxGenDirectory::findMeshes()
 {
 	// find meshes
 	spdlog::info("Finding meshes");
-	vector<fs::path> meshes = findFilesBySuffix(".nif", true, mesh_blocklist);
+	meshes = findFilesBySuffix(".nif", true, mesh_blocklist);
 	spdlog::info("Found {} meshes", meshes.size());
+}
+
+void ParallaxGenDirectory::addHeightMap(filesystem::path path)
+{
+	filesystem::path path_lower = getPathLower(path);
+
+	// add to vector
+	addUniqueElement(heightMaps, path_lower);
+}
+
+void ParallaxGenDirectory::addComplexMaterialMap(filesystem::path path)
+{
+	filesystem::path path_lower = getPathLower(path);
+
+	// add to vector
+	addUniqueElement(complexMaterialMaps, path_lower);
+}
+
+void ParallaxGenDirectory::addMesh(filesystem::path path)
+{
+	filesystem::path path_lower = getPathLower(path);
+
+	// add to vector
+	addUniqueElement(meshes, path_lower);
+}
+
+bool ParallaxGenDirectory::isHeightMap(filesystem::path path) const
+{
+	return find(heightMaps.begin(), heightMaps.end(), getPathLower(path)) != heightMaps.end();
+}
+
+bool ParallaxGenDirectory::isComplexMaterialMap(filesystem::path path) const
+{
+	return find(complexMaterialMaps.begin(), complexMaterialMaps.end(), getPathLower(path)) != complexMaterialMaps.end();
+}
+
+bool ParallaxGenDirectory::isMesh(filesystem::path path) const
+{
+	return find(meshes.begin(), meshes.end(), getPathLower(path)) != meshes.end();
+}
+
+const vector<filesystem::path> ParallaxGenDirectory::getHeightMaps() const
+{
+	return heightMaps;
+}
+
+const vector<filesystem::path> ParallaxGenDirectory::getComplexMaterialMaps() const
+{
+	return complexMaterialMaps;
+}
+
+const vector<filesystem::path> ParallaxGenDirectory::getMeshes() const
+{
 	return meshes;
+}
+
+// Helpers
+filesystem::path ParallaxGenDirectory::changeDDSSuffix(std::filesystem::path path, std::wstring suffix)
+{
+	wstring path_str = path.wstring();
+	size_t pos = path_str.find_last_of('_');
+
+    // If an underscore is found, resize the string
+    if (pos != std::wstring::npos) {
+        path_str = path_str.substr(0, pos);
+    }
+
+	return path_str + suffix + L".dds";
 }

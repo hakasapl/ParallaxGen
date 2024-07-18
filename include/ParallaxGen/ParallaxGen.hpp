@@ -49,9 +49,9 @@ public:
     // constructor
     ParallaxGen(const std::filesystem::path output_dir, ParallaxGenDirectory* pgd, ParallaxGenD3D* pgd3d, bool optimize_meshes = false);
 	// upgrades textures whenever possible
-	void upgradeShaders(std::vector<std::filesystem::path>& heightMaps, std::vector<std::filesystem::path>& complexMaterialMaps);
+	void upgradeShaders();
     // enables parallax on relevant meshes
-	void patchMeshes(std::vector<std::filesystem::path>& meshes, std::vector<std::filesystem::path>& heightMaps, std::vector<std::filesystem::path>& complexMaterialMaps);
+	void patchMeshes();
 	// zips all meshes and removes originals
 	void zipMeshes();
 	// deletes generated meshes

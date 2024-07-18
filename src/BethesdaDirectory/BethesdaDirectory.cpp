@@ -392,6 +392,16 @@ vector<wstring> BethesdaDirectory::getPluginLoadOrder(const bool trim_extension)
 	return output_lo;
 }
 
+fs::path BethesdaDirectory::getPathLower(const fs::path path)
+{
+	return fs::path(boost::to_lower_copy(path.wstring()));
+}
+
+bool BethesdaDirectory::pathEqualityIgnoreCase(const fs::path path1, const fs::path path2)
+{
+	return getPathLower(path1) == getPathLower(path2);
+}
+
 vector<wstring> BethesdaDirectory::getBSAFilesFromINIs() const
 {
 	// output vector

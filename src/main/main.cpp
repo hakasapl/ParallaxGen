@@ -86,6 +86,8 @@ void addArguments(
     app.add_flag("--ignore-complex-material", ignore_complex_material, "Don't generate any complex material meshes");
 }
 
+// Store game type strings and their corresponding BethesdaGame::GameType enum values
+// This also determines the CLI argument help text (the key values)
 const unordered_map<string, BethesdaGame::GameType> GAME_TYPE_MAP = {
     {"skyrimse", BethesdaGame::GameType::SKYRIM_SE},
     {"skyrim", BethesdaGame::GameType::SKYRIM},
@@ -180,6 +182,8 @@ int main(int argc, char** argv) {
         spdlog::trace("TRACE logging enabled");
     }
 
+    bool patch_meshes = !ignore_parallax || !ignore_complex_material;
+
     //
     // Init
     //
@@ -224,26 +228,23 @@ int main(int argc, char** argv) {
 
     // Build file vectors
     // TODO make these instance vars
-    vector<filesystem::path> heightMaps;
-    if (!ignore_parallax) {
-        heightMaps = pgd.findHeightMaps();
+    if (!ignore_parallax || (ignore_parallax && upgrade_shaders)) {
+        pgd.findHeightMaps();
     }
 
-    vector<filesystem::path> complexMaterialMaps;
     if (!ignore_complex_material) {
-        complexMaterialMaps = pgd.findComplexMaterialMaps();
+        pgd.findComplexMaterialMaps();
     }
-
-    vector<filesystem::path> meshes = pgd.findMeshes();
 
     // Upgrade shaders if set
     if (upgrade_shaders) {
-        pg.upgradeShaders(heightMaps, complexMaterialMaps);
+        pg.upgradeShaders();
     }
 
     // Patch meshes if set
-    if (!ignore_parallax || !ignore_complex_material) {
-        pg.patchMeshes(meshes, heightMaps, complexMaterialMaps);
+    if (patch_meshes) {
+        pgd.findMeshes();
+        pg.patchMeshes();
     }
 
     spdlog::info("ParallaxGen has finished generating meshes.");

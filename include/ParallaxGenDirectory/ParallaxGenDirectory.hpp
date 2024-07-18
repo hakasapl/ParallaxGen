@@ -17,7 +17,6 @@ private:
 		L"effects",
 		L"interface",
 		L"loadscreenart",
-		L"lod",
 		L"magic",
 		L"markers",
 		L"mps",
@@ -25,16 +24,38 @@ private:
 		L"water"
 	};
 
+	std::vector<std::filesystem::path> heightMaps;
+	std::vector<std::filesystem::path> complexMaterialMaps;
+	std::vector<std::filesystem::path> meshes;
+
 public:
 	// constructor - calls the BethesdaDirectory constructor
 	ParallaxGenDirectory(BethesdaGame bg);
 
 	// searches for height maps in the data directory
-	std::vector<std::filesystem::path> findHeightMaps() const;
+	void findHeightMaps();
 	// searches for complex material maps in the data directory
-	std::vector<std::filesystem::path> findComplexMaterialMaps() const;
+	void findComplexMaterialMaps();
 	// searches for meshes in the data directory
-	std::vector<std::filesystem::path> findMeshes() const;
+	void findMeshes();
+
+	// add methods
+	void addHeightMap(std::filesystem::path path);
+	void addComplexMaterialMap(std::filesystem::path path);
+	void addMesh(std::filesystem::path path);
+
+	// is methods
+	bool isHeightMap(std::filesystem::path path) const;
+	bool isComplexMaterialMap(std::filesystem::path path) const;
+	bool isMesh(std::filesystem::path) const;
+
+	// get methods
+	const std::vector<std::filesystem::path> getHeightMaps() const;
+	const std::vector<std::filesystem::path> getComplexMaterialMaps() const;
+	const std::vector<std::filesystem::path> getMeshes() const;
+
+	// helpers
+	static std::filesystem::path changeDDSSuffix(std::filesystem::path path, std::wstring suffix);
 };
 
 #endif

@@ -80,6 +80,10 @@ public:
 	std::vector<std::wstring> getBSAPriorityList() const;
 	std::vector<std::wstring> getPluginLoadOrder(const bool trim_extension = false) const;
 
+	// Helpers
+	static std::filesystem::path getPathLower(const std::filesystem::path path);
+	static bool pathEqualityIgnoreCase(const std::filesystem::path path1, const std::filesystem::path path2);
+
 private:
 	// Adds BSA files to the file map
 	void addBSAFilesToMap();

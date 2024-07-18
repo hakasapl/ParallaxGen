@@ -31,26 +31,23 @@ ParallaxGen::ParallaxGen(const fs::path output_dir, ParallaxGenDirectory* pgd, P
 	nif_save_options.optimize = optimize_meshes;
 }
 
-void ParallaxGen::upgradeShaders(vector<fs::path>& heightMaps, vector<fs::path>& complexMaterialMaps)
+void ParallaxGen::upgradeShaders()
 {
 	spdlog::info("Attempting to upgrade shaders where possible...");
 
 	//loop through height maps
 	size_t finished_task = 0;
+
+	auto heightMaps = pgd->getHeightMaps();
 	size_t num_upgrades = heightMaps.size();
 	for (fs::path height_map : heightMaps) {
 		if (finished_task % 10 == 0) {
 			double progress = (double)finished_task / num_upgrades * 100.0;
-			spdlog::info("Upgrades Processed: {}/{} ({:.1f}%)", finished_task, num_upgrades, progress);
+			spdlog::info("Shader Upgrades Processed: {}/{} ({:.1f}%)", finished_task, num_upgrades, progress);
 		}
 
 		// Replace "_p" with "_m" in the stem
-		wstring env_stem = height_map.stem().wstring();
-		size_t pos = env_stem.find(L"_p");
-		env_stem.replace(pos, 2, L"_m");
-
-		fs::path env_map_path = height_map.parent_path() / (env_stem + L".dds");
-
+		fs::path env_map_path = pgd->changeDDSSuffix(height_map, L"_m");
 		fs::path complex_map_path = env_map_path;
 
 		if (!pgd->isFile(env_map_path))
@@ -73,8 +70,7 @@ void ParallaxGen::upgradeShaders(vector<fs::path>& heightMaps, vector<fs::path>&
 			}
 
 			// add newly created file to complexMaterialMaps for later processing
-			fs::path complex_path_lower = boost::to_lower_copy(complex_map_path.wstring());
-			complexMaterialMaps.push_back(complex_path_lower);
+			pgd->addComplexMaterialMap(complex_map_path);
 		}
 		else {
 			spdlog::warn(L"Unable to upgrade to complex material: {}", height_map.wstring());
@@ -84,11 +80,15 @@ void ParallaxGen::upgradeShaders(vector<fs::path>& heightMaps, vector<fs::path>&
 	}
 }
 
-void ParallaxGen::patchMeshes(vector<fs::path>& meshes, vector<fs::path>& heightMaps, vector<fs::path>& complexMaterialMaps)
+void ParallaxGen::patchMeshes()
 {
 	// patch meshes
 	// loop through each mesh nif file
 	size_t finished_task = 0;
+
+	auto meshes = pgd->getMeshes();
+	auto heightMaps = pgd->getHeightMaps();
+	auto complexMaterialMaps = pgd->getComplexMaterialMaps();
 	size_t num_meshes = meshes.size();
 	for (fs::path mesh : meshes) {
 		if (finished_task % 100 == 0) {
