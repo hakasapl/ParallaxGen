@@ -117,13 +117,19 @@ vector<std::byte> BethesdaDirectory::getFile(const fs::path rel_path) const
 bool BethesdaDirectory::isLooseFile(const fs::path rel_path) const
 {
 	BethesdaFile file = getFileFromMap(rel_path);
-	return file.bsa_file == nullptr;
+	return !file.path.empty() && file.bsa_file == nullptr;
 }
 
 bool BethesdaDirectory::isBSAFile(const fs::path rel_path) const
 {
 	BethesdaFile file = getFileFromMap(rel_path);
-	return file.bsa_file != nullptr;
+	return !file.path.empty() && file.bsa_file != nullptr;
+}
+
+bool BethesdaDirectory::isFile(const fs::path rel_path) const
+{
+	BethesdaFile file = getFileFromMap(rel_path);
+	return !file.path.empty();
 }
 
 fs::path BethesdaDirectory::getFullPath(const fs::path rel_path) const

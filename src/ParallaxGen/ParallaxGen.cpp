@@ -6,6 +6,7 @@
 #include <boost/algorithm/string.hpp>
 #include <vector>
 #include <fstream>
+#include <DirectXTex.h>
 
 #include "ParallaxGenUtil/ParallaxGenUtil.hpp"
 
@@ -28,6 +29,59 @@ ParallaxGen::ParallaxGen(const fs::path output_dir, ParallaxGenDirectory* pgd, P
 
 	// set optimize meshes flag
 	nif_save_options.optimize = optimize_meshes;
+}
+
+void ParallaxGen::upgradeShaders(vector<fs::path>& heightMaps, vector<fs::path>& complexMaterialMaps)
+{
+	spdlog::info("Attempting to upgrade shaders where possible...");
+
+	//loop through height maps
+	size_t finished_task = 0;
+	size_t num_upgrades = heightMaps.size();
+	for (fs::path height_map : heightMaps) {
+		if (finished_task % 10 == 0) {
+			double progress = (double)finished_task / num_upgrades * 100.0;
+			spdlog::info("Upgrades Processed: {}/{} ({:.1f}%)", finished_task, num_upgrades, progress);
+		}
+
+		// Replace "_p" with "_m" in the stem
+		wstring env_stem = height_map.stem().wstring();
+		size_t pos = env_stem.find(L"_p");
+		env_stem.replace(pos, 2, L"_m");
+
+		fs::path env_map_path = height_map.parent_path() / (env_stem + L".dds");
+
+		fs::path complex_map_path = env_map_path;
+
+		if (!pgd->isFile(env_map_path))
+		{
+			// no env map
+			env_map_path = fs::path();
+		}
+
+		// upgrade to complex material
+		DirectX::ScratchImage new_ComplexMap = pgd3d->upgradeToComplexMaterial(height_map, env_map_path);
+
+		// save to file
+		if (new_ComplexMap.GetImageCount() > 0) {
+			fs::path output_path = output_dir / complex_map_path;
+			fs::create_directories(output_path.parent_path());
+
+			HRESULT hr = DirectX::SaveToDDSFile(new_ComplexMap.GetImages(), new_ComplexMap.GetImageCount(), new_ComplexMap.GetMetadata(), DirectX::DDS_FLAGS_NONE, output_path.c_str());
+			if (FAILED(hr)) {
+				spdlog::error(L"Unable to save complex material {}: {}", env_map_path.wstring(), hr);
+			}
+
+			// add newly created file to complexMaterialMaps for later processing
+			fs::path complex_path_lower = boost::to_lower_copy(complex_map_path.wstring());
+			complexMaterialMaps.push_back(complex_path_lower);
+		}
+		else {
+			spdlog::warn(L"Unable to upgrade to complex material: {}", height_map.wstring());
+		}
+
+		finished_task++;
+	}
 }
 
 void ParallaxGen::patchMeshes(vector<fs::path>& meshes, vector<fs::path>& heightMaps, vector<fs::path>& complexMaterialMaps)
