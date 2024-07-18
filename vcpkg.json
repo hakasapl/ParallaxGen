@@ -5,7 +5,13 @@
     "boost-filesystem",
     "boost-iostreams",
     "cli11",
-    "directxtex",
+    {
+      "name": "directxtex",
+      "features": [
+        "dx11"
+      ]
+    },
+    "directxtk",
     "miniz",
     {
       "name": "rsm-bsa",
