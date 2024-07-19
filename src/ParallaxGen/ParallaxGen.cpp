@@ -72,9 +72,6 @@ void ParallaxGen::upgradeShaders()
 			// add newly created file to complexMaterialMaps for later processing
 			pgd->addComplexMaterialMap(complex_map_path);
 		}
-		else {
-			spdlog::warn(L"Unable to upgrade to complex material: {}", height_map.wstring());
-		}
 
 		finished_task++;
 	}
