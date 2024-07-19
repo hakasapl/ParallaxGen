@@ -45,7 +45,7 @@ jobs:
 
     - name: Build project
       run: |
-        cmake --build build/x64-release --preset x64-release --target install
+        cmake --build build/x64-release --target install
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
