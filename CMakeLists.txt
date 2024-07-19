@@ -143,3 +143,6 @@ install(FILES $<TARGET_RUNTIME_DLLS:${PROJECT_NAME}> DESTINATION . )
 # manual copy DLLs not caught by TARGET_RUNTIME_DLLS
 install(FILES ${CMAKE_BINARY_DIR}/lz4.dll DESTINATION . )
 install(FILES ${CMAKE_BINARY_DIR}/zlib1.dll DESTINATION . )
+
+# Copy compiled shaders to install
+install(FILES ${CMAKE_BINARY_DIR}/MergeToComplexMaterial.cso DESTINATION . )

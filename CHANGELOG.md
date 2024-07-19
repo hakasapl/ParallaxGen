@@ -1,8 +1,9 @@
 # Changelog
 
-## [0.4.0] - UNRELEASED
+## [0.4.0] - 2024-07-18
 
 - Added --upgrade-shader argument to enable upgrading vanilla parallax to complex material
+- Implemented DX11 into --upgrade-shader process
 - Lots of code cleanup and optimization
 - Fixed some typos in log messages
 
