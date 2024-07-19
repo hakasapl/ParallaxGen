@@ -17,7 +17,7 @@ jobs:
       with:
         arch: amd64
     
-    - name: Checkout repository
+    - name: Checkout Repository
       uses: actions/checkout@v4
       with:
         submodules: true
@@ -29,7 +29,6 @@ jobs:
         key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
         path: |
           build/x64-release/vcpkg_installed
-          build/x64-debug/vcpkg_installed
 
     - name: Cache Externals
       uses: actions/cache@v3
@@ -37,17 +36,16 @@ jobs:
         key: externals-${{ runner.os }}-${{ hashFiles('.gitmodules') }}
         path: |
           build/x64-release/external
-          build/x64-debug/external
 
     - name: Configure CMake
       run: |
         cmake --preset x64-release
 
-    - name: Build project
+    - name: Build and Install ParallaxGen
       run: |
         cmake --build build/x64-release --target install
 
-    - name: Upload build artifacts
+    - name: Upload Build Artifacts
       uses: actions/upload-artifact@v4
       with:
         name: install-artifacts
