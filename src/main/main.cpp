@@ -198,7 +198,7 @@ int main(int argc, char** argv) {
 	BethesdaGame bg = BethesdaGame(bg_type, game_dir, true);
     ParallaxGenDirectory pgd = ParallaxGenDirectory(bg);
     ParallaxGenD3D pgd3d = ParallaxGenD3D(&pgd, output_dir);
-    ParallaxGen pg = ParallaxGen(output_dir, &pgd, &pgd3d, optimize_meshes);
+    ParallaxGen pg = ParallaxGen(output_dir, &pgd, &pgd3d, optimize_meshes, ignore_parallax, ignore_complex_material);
 
     // Check if GPU needs to be initialized
     if (upgrade_shaders) {
@@ -227,7 +227,6 @@ int main(int argc, char** argv) {
     pgd.populateFileMap();
 
     // Build file vectors
-    // TODO make these instance vars
     if (!ignore_parallax || (ignore_parallax && upgrade_shaders)) {
         pgd.findHeightMaps();
     }

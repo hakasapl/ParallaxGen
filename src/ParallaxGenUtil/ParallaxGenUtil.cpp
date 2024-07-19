@@ -94,12 +94,6 @@ namespace ParallaxGenUtil {
 		exit(exit_code);
 	}
 
-	void pathLower(fs::path& path) {
-		wstring path_str = path.wstring();
-		boost::algorithm::to_lower(path_str);
-		path = fs::path(path_str);
-	}
-
 	wstring convertToWstring(const string str) {
 		size_t length = str.length() + 1; // Including null terminator
 		std::vector<wchar_t> wbuffer(length);

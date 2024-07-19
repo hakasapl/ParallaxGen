@@ -18,9 +18,6 @@ namespace ParallaxGenUtil
 	// terminals usually auto exit when program ends, this function waits for user input before exiting
 	void exitWithUserInput(const int exit_code);
 
-	// converts fs::path to a lowercase variant (for case-insensitive comparison)
-	void pathLower(std::filesystem::path& path);
-
 	// converts a string to a wstring
 	std::wstring convertToWstring(const std::string str);
 

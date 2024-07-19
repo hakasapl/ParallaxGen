@@ -21,6 +21,8 @@ void ParallaxGenDirectory::findHeightMaps()
 
 void ParallaxGenDirectory::findComplexMaterialMaps()
 {
+	// TODO GPU acceleration for this part
+
 	spdlog::info("Finding complex material maps");
 
 	// find complex material maps

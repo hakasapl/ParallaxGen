@@ -14,14 +14,14 @@ using namespace std;
 namespace fs = filesystem;
 using namespace nifly;
 
-ParallaxGen::ParallaxGen(const fs::path output_dir, ParallaxGenDirectory* pgd, ParallaxGenD3D* pgd3d, bool optimize_meshes)
+ParallaxGen::ParallaxGen(const fs::path output_dir, ParallaxGenDirectory* pgd, ParallaxGenD3D* pgd3d, bool optimize_meshes, bool ignore_parallax, bool ignore_complex_material)
 {
     // constructor
     this->output_dir = output_dir;
     this->pgd = pgd;
 	this->pgd3d = pgd3d;
 
-	// ! TODO normalize these paths before string comparing
+	// TODO normalize these paths before string comparing
 	if (boost::iequals(this->output_dir.wstring(), this->pgd->getDataPath().wstring())) {
 		spdlog::critical("Output directory cannot be your data folder, as meshes can be overwritten this way. Exiting.");
 		ParallaxGenUtil::exitWithUserInput(1);
@@ -29,11 +29,15 @@ ParallaxGen::ParallaxGen(const fs::path output_dir, ParallaxGenDirectory* pgd, P
 
 	// set optimize meshes flag
 	nif_save_options.optimize = optimize_meshes;
+
+	// set ignore flags
+	this->ignore_parallax = ignore_parallax;
+	this->ignore_complex_material = ignore_complex_material;
 }
 
 void ParallaxGen::upgradeShaders()
 {
-	spdlog::info("Attempting to upgrade shaders where possible...");
+	spdlog::info("Starting shader upgrade process...");
 
 	//loop through height maps
 	size_t finished_task = 0;
@@ -79,6 +83,8 @@ void ParallaxGen::upgradeShaders()
 
 void ParallaxGen::patchMeshes()
 {
+	spdlog::info("Starting mesh patching process...");
+
 	// patch meshes
 	// loop through each mesh nif file
 	size_t finished_task = 0;
@@ -283,11 +289,10 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 		for (string& search_prefix : search_prefixes) {
 			// check if complex material file exists
 			fs::path search_path;
-			string search_prefix_lower = boost::algorithm::to_lower_copy(search_prefix);
 
 			// processing for complex material
-            search_path = search_prefix_lower + "_m.dds";
-            if (find(complexMaterialMaps.begin(), complexMaterialMaps.end(), search_path) != complexMaterialMaps.end()) {
+            search_path = search_prefix + "_m.dds";
+            if (!ignore_complex_material && pgd->isComplexMaterialMap(search_path)) {
 				if (shader_type != BSLSP::BSLSP_DEFAULT && shader_type != BSLSP::BSLSP_ENVMAP && shader_type != BSLSP::BSLSP_PARALLAX) {
 					spdlog::trace(L"Rejecting shape {} in NIF file {}: Incorrect shader type", block_id, nif_file.wstring());
 					continue;
@@ -305,8 +310,8 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
             }
 
 			// processing for parallax
-            search_path = search_prefix_lower + "_p.dds";
-            if (find(heightMaps.begin(), heightMaps.end(), search_path) != heightMaps.end()) {
+            search_path = search_prefix + "_p.dds";
+            if (!ignore_parallax && pgd->isHeightMap(search_path)) {
 				// decals don't work with regular parallax
 				if (cur_bslsp->shaderFlags1 & SSPF1::SLSF1_DECAL || cur_bslsp->shaderFlags1 & SSPF1::SLSF1_DYNAMIC_DECAL) {
 					spdlog::trace(L"Rejecting shape {} in NIF file {}: Decal shape", block_id, nif_file.wstring());
@@ -326,7 +331,7 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 					continue;
 				}
 
-				// enable parallax on mesh!
+				// enable parallax for this shape!
                 nif_modified |= enableParallaxOnShape(nif, shape, shader, search_prefix);
                 break;
             }
@@ -366,16 +371,7 @@ bool ParallaxGen::enableComplexMaterialOnShape(NifFile& nif, NiShape* shape, NiS
 		cur_bslsp->shaderFlags1 |= SSPF1::SLSF1_ENVIRONMENT_MAPPING;
 		changed = true;
 	}
-	// 3. set vertex colors for shape
-	if (!shape->HasVertexColors()) {
-		shape->SetVertexColors(true);
-		changed = true;
-	}
-	// 4. set vertex colors for shader
-	if (!shader->HasVertexColors()) {
-		shader->SetVertexColors(true);
-		changed = true;
-	}
+
 	// 5. set complex material texture
 	string height_map;
 	uint32_t height_result = nif.GetTextureSlot(shape, height_map, 3);
@@ -447,13 +443,16 @@ bool ParallaxGen::enableParallaxOnShape(NifFile& nif, NiShape* shape, NiShader* 
 bool ParallaxGen::hasSameAspectRatio(const fs::path& dds_path_1, const fs::path& dds_path_2)
 {
 	// verify that maps match each other
-	auto check_tuple = make_tuple(fs::path(boost::algorithm::to_lower_copy(dds_path_1.wstring())), fs::path(boost::algorithm::to_lower_copy(dds_path_2.wstring())));
+	fs::path dds_path_1_lower = pgd->getPathLower(dds_path_1);
+	fs::path dds_path_2_lower = pgd->getPathLower(dds_path_2);
+
+	auto check_tuple = make_tuple(dds_path_1_lower, dds_path_2_lower);
 	if (height_map_checks.find(check_tuple) != height_map_checks.end()) {
 		// key already exists
 		return height_map_checks[check_tuple];
 	} else {
 		// Need to perform computation
-		return pgd3d->checkIfAspectRatioMatches(dds_path_1, dds_path_2);
+		return pgd3d->checkIfAspectRatioMatches(dds_path_1_lower, dds_path_2_lower);
 	}
 }
 

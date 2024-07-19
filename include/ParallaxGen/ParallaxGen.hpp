@@ -47,7 +47,7 @@ public:
 	static inline const std::string parallax_state_file = "PARALLAXGEN_DONTDELETE";
 
     // constructor
-    ParallaxGen(const std::filesystem::path output_dir, ParallaxGenDirectory* pgd, ParallaxGenD3D* pgd3d, bool optimize_meshes = false);
+    ParallaxGen(const std::filesystem::path output_dir, ParallaxGenDirectory* pgd, ParallaxGenD3D* pgd3d, bool optimize_meshes = false, bool ignore_parallax = false, bool ignore_complex_material = false);
 	// upgrades textures whenever possible
 	void upgradeShaders();
     // enables parallax on relevant meshes

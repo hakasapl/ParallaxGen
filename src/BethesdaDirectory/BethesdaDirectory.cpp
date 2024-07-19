@@ -541,7 +541,7 @@ bool BethesdaDirectory::file_allowed(const fs::path file_path) const
 // helpers
 BethesdaDirectory::BethesdaFile BethesdaDirectory::getFileFromMap(const fs::path& file_path) const
 {
-	fs::path lower_path = boost::to_lower_copy(file_path.wstring());
+	fs::path lower_path = getPathLower(file_path);
 
 	if (fileMap.find(lower_path) == fileMap.end()) {
 		return BethesdaFile { fs::path(), nullptr };
@@ -552,7 +552,7 @@ BethesdaDirectory::BethesdaFile BethesdaDirectory::getFileFromMap(const fs::path
 
 void BethesdaDirectory::updateFileMap(const fs::path& file_path, shared_ptr<BethesdaDirectory::BSAFile> bsa_file)
 {
-	fs::path lower_path = boost::to_lower_copy(file_path.wstring());
+	fs::path lower_path = getPathLower(file_path);
 
 	BethesdaFile new_bfile = { file_path, bsa_file };
 

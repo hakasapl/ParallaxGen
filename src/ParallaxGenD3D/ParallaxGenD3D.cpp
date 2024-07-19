@@ -421,7 +421,7 @@ ComPtr<ID3D11Buffer> ParallaxGenD3D::createBuffer(const void* data, D3D11_BUFFER
     initData.pSysMem = data;
 
     ComPtr<ID3D11Buffer> output_buffer;
-    HRESULT hr = pDevice->CreateBuffer(&desc, &initData, &output_buffer);
+    HRESULT hr = pDevice->CreateBuffer(&desc, &initData, output_buffer.ReleaseAndGetAddressOf());
     if (FAILED(hr))
     {
         spdlog::debug("Failed to create ID3D11Buffer on GPU: {}", hr);
@@ -550,7 +550,12 @@ vector<T> ParallaxGenD3D::readBack(const ComPtr<ID3D11Buffer>& gpu_resource) con
     buffer_desc.StructureByteStride = 0;
 
     // Create the staging buffer
-    ComPtr<ID3D11Buffer> staging_buffer = createBuffer(nullptr, buffer_desc);
+    ComPtr<ID3D11Buffer> staging_buffer;
+    hr = pDevice->CreateBuffer(&buffer_desc, nullptr, staging_buffer.ReleaseAndGetAddressOf());
+    if (FAILED(hr)) {
+        spdlog::debug("[GPU] Failed to create staging buffer: {}", hr);
+        return std::vector<T>();
+    }
 
     // copy resource
     pContext->CopyResource(staging_buffer.Get(), gpu_resource.Get());
