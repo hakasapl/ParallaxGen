@@ -40,7 +40,6 @@ private:
         UINT MinParallaxValue;
         UINT MaxParallaxValue;
     };
-    Microsoft::WRL::ComPtr<ID3D11ComputeShader> shader_StretchChannels;
 
 public:
     ParallaxGenD3D(ParallaxGenDirectory* pgd, std::filesystem::path output_dir);

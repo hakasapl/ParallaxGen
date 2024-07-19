@@ -84,12 +84,6 @@ void ParallaxGenD3D::initShaders()
         spdlog::critical("Failed to create compute shader. Exiting.");
         ParallaxGenUtil::exitWithUserInput(1);
     }
-
-    // StretchChannels.hlsl
-    if (!createComputeShader(L"StretchChannels.cso", shader_StretchChannels)) {
-        spdlog::critical("Failed to create compute shader. Exiting.");
-        ParallaxGenUtil::exitWithUserInput(1);
-    }
 }
 
 vector<char> ParallaxGenD3D::loadCompiledShader(const std::filesystem::path& filename) {
@@ -165,7 +159,7 @@ DirectX::ScratchImage ParallaxGenD3D::upgradeToComplexMaterial(const std::filesy
 
     // Compare aspect ratios if both exist
     if (parallax_exists && env_exists && parallax_aspect_ratio != env_aspect_ratio) {
-        spdlog::warn(L"Unable to upgrade to complex material due to mismatched aspect ratio. {} and {}", parallax_map.wstring(), env_map.wstring());
+        spdlog::trace(L"Rejecting shader upgrade for {} due to aspect ratio mismatch with {}", parallax_map.wstring(), env_map.wstring());
         return DirectX::ScratchImage();
     }
 
@@ -286,26 +280,20 @@ DirectX::ScratchImage ParallaxGenD3D::upgradeToComplexMaterial(const std::filesy
     output_buffer.Reset();
     output_buffer_uav.Reset();
 
+    // Flush GPU to avoid leaks
     pContext->Flush();
 
     // Import into directx scratchimage
     DirectX::ScratchImage output_image = LoadRawPixelsToScratchImage(output_texture_data, result_width, result_height, DXGI_FORMAT_R8G8B8A8_UNORM, 4);
 
     // Compress dds
-    DXGI_FORMAT output_format;
-    if (parallax_exists) {
-        output_format = parallax_meta.format;
-    } else {
-        output_format = env_meta.format;
-    }
-
+    // BC3 works best with heightmaps
     DirectX::ScratchImage compressed_image;
     HRESULT hr = DirectX::Compress(
-        pDevice.Get(),
         output_image.GetImages(),
         output_image.GetImageCount(),
         output_image.GetMetadata(),
-        DXGI_FORMAT_BC7_UNORM,
+        DXGI_FORMAT_BC3_UNORM,
         DirectX::TEX_COMPRESS_DEFAULT,
         1.0f,
         compressed_image);
@@ -533,7 +521,7 @@ vector<unsigned char> ParallaxGenD3D::readBack(const ComPtr<ID3D11Texture2D>& gp
     }
 
     // Access the texture data from mappedResource.pData
-    //! TODO auto detect # of channels?
+    // TODO auto detect # of channels?
     size_t dataSize = staging_tex2d_desc.Width * staging_tex2d_desc.Height * channels;
     std::vector<unsigned char> output_data(reinterpret_cast<unsigned char*>(mappedResource.pData), reinterpret_cast<unsigned char*>(mappedResource.pData) + dataSize);
 
@@ -562,13 +550,7 @@ vector<T> ParallaxGenD3D::readBack(const ComPtr<ID3D11Buffer>& gpu_resource) con
     buffer_desc.StructureByteStride = 0;
 
     // Create the staging buffer
-    //! TODO make this a method
-    ComPtr<ID3D11Buffer> staging_buffer;
-    hr = pDevice->CreateBuffer(&buffer_desc, nullptr, &staging_buffer);
-    if (FAILED(hr)) {
-        spdlog::debug("[GPU] Failed to create staging buffer: {}", hr);
-        return std::vector<T>();
-    }
+    ComPtr<ID3D11Buffer> staging_buffer = createBuffer(nullptr, buffer_desc);
 
     // copy resource
     pContext->CopyResource(staging_buffer.Get(), gpu_resource.Get());

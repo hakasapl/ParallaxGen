@@ -338,7 +338,7 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 
 	// save NIF if it was modified
 	if (nif_modified) {
-		spdlog::debug(L"NIF Modified: {}", nif_file.wstring());
+		spdlog::debug(L"NIF Patched: {}", nif_file.wstring());
 
 		// create directories if required
 		fs::create_directories(output_file.parent_path());
