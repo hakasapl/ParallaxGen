@@ -54,6 +54,12 @@ void ParallaxGen::upgradeShaders()
 		fs::path env_map_path = pgd->changeDDSSuffix(height_map, L"_m");
 		fs::path complex_map_path = env_map_path;
 
+		if (pgd->isFile(env_map_path) && pgd->isComplexMaterialMap(env_map_path)) {
+			// already upgraded
+			finished_task++;
+			continue;
+		}
+
 		if (!pgd->isFile(env_map_path))
 		{
 			// no env map

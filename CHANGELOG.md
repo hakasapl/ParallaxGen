@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.4.1] - 2024-07-18
+
+- Fixed already generated complex parallax maps regenerating if a heightmap was also included
+
 ## [0.4.0] - 2024-07-18
 
 - Added --upgrade-shader argument to enable upgrading vanilla parallax to complex material
