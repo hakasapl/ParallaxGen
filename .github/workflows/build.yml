@@ -36,8 +36,8 @@ jobs:
       with:
         key: externals-${{ runner.os }}-${{ hashFiles('.gitmodules') }}
         path: |
-          build/x64-release/externals
-          build/x64-debug/externals
+          build/x64-release/external
+          build/x64-debug/external
 
     - name: Configure CMake
       run: |
