@@ -1,0 +1,37 @@
+name: Build and Publish Artifacts
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: ilammy/msvc-dev-cmd@v1
+    
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: true
+        fetch-depth: 0
+
+    - name: Configure CMake
+      run: |
+        cmake --preset x64-release
+
+    - name: Build project
+      run: |
+        cd build/x64-release
+        cmake --build --preset x64-release --target install
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: install-artifacts
+        path: install/x64-release
