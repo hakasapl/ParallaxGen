@@ -17,7 +17,7 @@ private:
 		L"effects",
 		L"interface",
 		L"loadscreenart",
-                L"lods",
+                L"lod",
 		L"magic",
 		L"markers",
 		L"mps",
