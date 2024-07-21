@@ -83,6 +83,7 @@ find_package(Boost REQUIRED)
 find_package(directxtk REQUIRED)
 find_package(directxtex REQUIRED CONFIG)
 find_package(miniz REQUIRED CONFIG)
+find_package(yaml-cpp REQUIRED CONFIG)
 
 setup_external("nifly" "${CMAKE_SOURCE_DIR}/external/nifly" "-DBUILD_TESTING=OFF")
 find_package(nifly REQUIRED CONFIG)
@@ -110,6 +111,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Microsoft::DirectXTex
     ${DirectXTK_LIBS}
     Microsoft::DirectXTK
+    ${YAML_CPP_LIBRARIES}
 )
 
 # build shaders
@@ -136,6 +138,29 @@ endforeach(FILE)
 
 add_dependencies(${PROJECT_NAME} shaders)
 
+# Download Spriggit
+set(SPRIGGIT_URL "https://github.com/Mutagen-Modding/Spriggit/releases/download/0.25/SpriggitCLI.zip")
+set(SPRIGGIT_ZIP "${CMAKE_BINARY_DIR}/spriggit.zip")
+set(SPRIGGIT_DIR "${CMAKE_BINARY_DIR}/spriggit")
+
+if(NOT EXISTS ${SPRIGGIT_ZIP} OR NOT EXISTS ${SPRIGGIT_DIR})
+    file(DOWNLOAD ${SPRIGGIT_URL} ${SPRIGGIT_ZIP} SHOW_PROGRESS STATUS status)
+
+    list(GET status 0 status_code)
+    if(NOT status_code EQUAL 0)
+        message(FATAL_ERROR "Download failed: ${status}")
+    endif()
+
+    execute_process(
+        COMMAND powershell -Command "Expand-Archive -Path ${SPRIGGIT_ZIP} -DestinationPath ${SPRIGGIT_DIR} -Force"
+        RESULT_VARIABLE extract_result
+    )
+
+    if(NOT extract_result EQUAL 0)
+        message(FATAL_ERROR "Extraction failed")
+    endif()
+endif()
+
 # Install the executable and DLLs
 install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION . )
 install(FILES $<TARGET_RUNTIME_DLLS:${PROJECT_NAME}> DESTINATION . )
@@ -146,3 +171,6 @@ install(FILES ${CMAKE_BINARY_DIR}/zlib1.dll DESTINATION . )
 
 # Copy compiled shaders to install
 install(FILES ${CMAKE_BINARY_DIR}/MergeToComplexMaterial.cso DESTINATION . )
+
+# Copy spriggit to install
+install(DIRECTORY ${SPRIGGIT_DIR}/ DESTINATION . )
