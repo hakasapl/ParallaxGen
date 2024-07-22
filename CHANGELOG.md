@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.4.2] - UNRELEASED
+
+- ParallaxGen no longer patches LOD
+- Added dynamic cubemaps support
+
 ## [0.4.1] - 2024-07-18
 
 - Fixed already generated complex parallax maps regenerating if a heightmap was also included

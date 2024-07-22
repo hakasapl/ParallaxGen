@@ -17,7 +17,7 @@ set(PROJECT_NAME "ParallaxGen")
 set(PROJECT_URI "com.github.hakasapl.ParallaxGen")
 
 # Initialize Project
-set(PARALLAXGEN_VERSION 0.4.1)
+set(PARALLAXGEN_VERSION 0.4.2)
 project(${PROJECT_NAME} VERSION ${PARALLAXGEN_VERSION})
 
 # Define preprocessor macro with the version number
@@ -79,7 +79,7 @@ endfunction()
 find_package(spdlog REQUIRED CONFIG)
 find_package(bsa REQUIRED CONFIG)
 find_package(CLI11 REQUIRED CONFIG)
-find_package(Boost REQUIRED)
+find_package(Boost REQUIRED COMPONENTS filesystem)
 find_package(directxtk REQUIRED)
 find_package(directxtex REQUIRED CONFIG)
 find_package(miniz REQUIRED CONFIG)
@@ -104,7 +104,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     spdlog::spdlog
     bsa::bsa
     CLI11::CLI11
-    Boost::boost
+    ${Boost_LIBRARIES}
     nifly
     miniz::miniz
     Microsoft::DirectXTex
@@ -136,6 +136,9 @@ endforeach(FILE)
 
 add_dependencies(${PROJECT_NAME} shaders)
 
+# Copy assets
+file(COPY ${CMAKE_SOURCE_DIR}/assets DESTINATION ${CMAKE_BINARY_DIR})
+
 # Install the executable and DLLs
 install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION . )
 install(FILES $<TARGET_RUNTIME_DLLS:${PROJECT_NAME}> DESTINATION . )
@@ -146,3 +149,6 @@ install(FILES ${CMAKE_BINARY_DIR}/zlib1.dll DESTINATION . )
 
 # Copy compiled shaders to install
 install(FILES ${CMAKE_BINARY_DIR}/MergeToComplexMaterial.cso DESTINATION . )
+
+# Copy assets to install
+install(DIRECTORY ${CMAKE_BINARY_DIR}/assets DESTINATION . )
