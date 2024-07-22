@@ -314,7 +314,7 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 
 				// check if this is weapon or armor
 				bool dynCubemaps = true;
-				if (pgd->checkIfAnyComponentIs(nif_file, { L"weapons", L"armor" }) || boost::icontains(search_prefix, "armor") || boost::icontains(search_prefix, "weapon")) {
+				if (pgd->checkIfAnyComponentIs(nif_file, dynCubemap_ignore_list) || pgd->checkIfAnyComponentIs(search_prefix, dynCubemap_ignore_list)) {
 					dynCubemaps = false;
 				}
 

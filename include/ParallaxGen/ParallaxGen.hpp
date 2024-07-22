@@ -24,6 +24,8 @@ private:
     // which texture indices to search when mapping mesh shapes to parallax maps
 	static inline const std::array<uint32_t, 2> texture_maps_idx_search = { 0, 1 };
 
+	static inline const std::vector<std::wstring> dynCubemap_ignore_list = { L"armor", L"weapons" };
+
     // bools to ignore parallax and/or complex material
 	bool ignore_parallax;
 	bool ignore_complex_material;
