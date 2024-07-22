@@ -157,21 +157,9 @@ vector<fs::path> BethesdaDirectory::findFilesBySuffix(const string_view suffix, 
 
         if (boost::algorithm::ends_with(key.wstring(), suffix)) {
 			// check if any component of the path is in the blocklist
-			bool block = false;
-			for (wstring block_path : path_blocklist) {
-				for (const auto& component : key) {
-					if (block_path == component.wstring()) {
-						block = true;
-						break;
-					}
-				}
-				
-				if (block) {
-					break;
-				}
-			}
-
-			if (block) {
+			bool blocked = checkIfAnyComponentIs(cur_file_path, path_blocklist);
+			if (blocked)
+			{
 				continue;
 			}
 
@@ -557,4 +545,17 @@ void BethesdaDirectory::updateFileMap(const fs::path& file_path, shared_ptr<Beth
 	BethesdaFile new_bfile = { file_path, bsa_file };
 
 	fileMap[lower_path] = new_bfile;
+}
+
+bool BethesdaDirectory::checkIfAnyComponentIs(const fs::path path, const vector<wstring>& components)
+{
+	for (const auto& component : path) {
+		for (wstring comp : components) {
+			if (boost::iequals(component.wstring(), comp)) {
+				return true;
+			}
+		}
+	}
+
+	return false;
 }
