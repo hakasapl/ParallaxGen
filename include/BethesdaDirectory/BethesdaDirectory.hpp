@@ -83,6 +83,7 @@ public:
 	// Helpers
 	static std::filesystem::path getPathLower(const std::filesystem::path path);
 	static bool pathEqualityIgnoreCase(const std::filesystem::path path1, const std::filesystem::path path2);
+	static bool checkIfAnyComponentIs(const std::filesystem::path path, const std::vector<std::wstring>& components);
 
 private:
 	// Adds BSA files to the file map
