@@ -17,7 +17,7 @@ private:
 		L"effects",
 		L"interface",
 		L"loadscreenart",
-                L"lod",
+        L"lod",
 		L"magic",
 		L"markers",
 		L"mps",
@@ -30,6 +30,8 @@ private:
 	std::vector<std::filesystem::path> meshes;
 
 public:
+	static inline const std::filesystem::path default_cubemap_path = "textures\\cubemaps\\dynamic1pxcubemap_black.dds";
+
 	// constructor - calls the BethesdaDirectory constructor
 	ParallaxGenDirectory(BethesdaGame bg);
 
@@ -49,6 +51,8 @@ public:
 	bool isHeightMap(std::filesystem::path path) const;
 	bool isComplexMaterialMap(std::filesystem::path path) const;
 	bool isMesh(std::filesystem::path) const;
+
+	bool defCubemapExists();
 
 	// get methods
 	const std::vector<std::filesystem::path> getHeightMaps() const;

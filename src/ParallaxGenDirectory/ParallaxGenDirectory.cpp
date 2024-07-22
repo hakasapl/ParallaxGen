@@ -101,6 +101,11 @@ bool ParallaxGenDirectory::isMesh(filesystem::path path) const
 	return find(meshes.begin(), meshes.end(), getPathLower(path)) != meshes.end();
 }
 
+bool ParallaxGenDirectory::defCubemapExists()
+{
+	return isFile(default_cubemap_path);
+}
+
 const vector<filesystem::path> ParallaxGenDirectory::getHeightMaps() const
 {
 	return heightMaps;
