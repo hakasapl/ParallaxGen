@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.4.2] - UNRELEASED
+## [0.4.2] - 2024-07-22
 
 - ParallaxGen no longer patches LOD
 - Added dynamic cubemaps support
