@@ -81,6 +81,8 @@ void ParallaxGen::upgradeShaders()
 
 			// add newly created file to complexMaterialMaps for later processing
 			pgd->addComplexMaterialMap(complex_map_path);
+
+			spdlog::debug(L"Added complex material map: {}", complex_map_path.wstring());
 		}
 
 		finished_task++;
@@ -310,8 +312,14 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 					continue;
 				}
 
+				// check if this is weapon or armor
+				bool dynCubemaps = true;
+				if (pgd->checkIfAnyComponentIs(nif_file, { L"weapons", L"armor" })) {
+					dynCubemaps = false;
+				}
+
                 // Enable complex parallax for this shape!
-                nif_modified |= enableComplexMaterialOnShape(nif, shape, shader, search_prefix);
+                nif_modified |= enableComplexMaterialOnShape(nif, shape, shader, search_prefix, dynCubemaps);
                 break;  // don't check anything else
             }
 
@@ -357,7 +365,7 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 	}
 }
 
-bool ParallaxGen::enableComplexMaterialOnShape(NifFile& nif, NiShape* shape, NiShader* shader, const string& search_prefix)
+bool ParallaxGen::enableComplexMaterialOnShape(NifFile& nif, NiShape* shape, NiShader* shader, const string& search_prefix, bool dynCubemaps)
 {
 	// enable complex material on shape
 	bool changed = false;
@@ -396,6 +404,20 @@ bool ParallaxGen::enableComplexMaterialOnShape(NifFile& nif, NiShape* shape, NiS
 		nif.SetTextureSlot(shape, new_env_map, 5);
 		changed = true;
 	}
+
+	// Dynamic cubemaps (if enabled)
+	if (dynCubemaps) {
+		// add cubemap to slot
+		string cubemap;
+		uint32_t cubemap_result = nif.GetTextureSlot(shape, cubemap, 4);
+		if (cubemap.empty()) {
+			// only fill if cubemap is empty, otherwise just carry it forward
+			string new_cubemap = ParallaxGenDirectory::default_cubemap_path.string();
+			nif.SetTextureSlot(shape, new_cubemap, 4);
+			changed = true;
+		}
+	}
+
 	return changed;
 }
 

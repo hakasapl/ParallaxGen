@@ -8,6 +8,7 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
 
 #include "BethesdaGame/BethesdaGame.hpp"
 #include "ParallaxGen/ParallaxGen.hpp"
@@ -225,6 +226,24 @@ int main(int argc, char** argv) {
 
     // Populate file map from data directory
     pgd.populateFileMap();
+
+    // Install default cubemap file if needed
+    if (!ignore_complex_material) {
+        // install default cubemap file if needed
+        if (!pgd.defCubemapExists()) {
+            spdlog::info("Installing default cubemap file");
+
+            // Create Directory
+            filesystem::path output_cubemap_dir = output_dir / ParallaxGenDirectory::default_cubemap_path.parent_path();
+            filesystem::create_directories(output_cubemap_dir);
+
+            boost::filesystem::path asset_path = boost::filesystem::path(EXE_PATH) / L"assets/dynamic1pxcubemap_black_ENB.dds";
+            boost::filesystem::path output_path = boost::filesystem::path(output_dir) / ParallaxGenDirectory::default_cubemap_path;
+
+            // Move File
+            boost::filesystem::copy_file(asset_path, output_path, boost::filesystem::copy_options::overwrite_existing);
+        }
+    }
 
     // Build file vectors
     if (!ignore_parallax || (ignore_parallax && upgrade_shaders)) {

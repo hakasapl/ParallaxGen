@@ -63,7 +63,7 @@ private:
     // processes a NIF file (enable parallax if needed)
 	void processNIF(const std::filesystem::path& nif_file, std::vector<std::filesystem::path>& heightMaps, std::vector<std::filesystem::path>& complexMaterialMaps);
 	// enables complex material on a shape in a NIF
-	bool enableComplexMaterialOnShape(nifly::NifFile& nif, nifly::NiShape* shape, nifly::NiShader* shader, const std::string& search_prefix);
+	bool enableComplexMaterialOnShape(nifly::NifFile& nif, nifly::NiShape* shape, nifly::NiShader* shader, const std::string& search_prefix, bool dynCubemaps);
 	// enables parallax on a shape in a NIF
 	bool enableParallaxOnShape(nifly::NifFile& nif, nifly::NiShape* shape, nifly::NiShader* shader, const std::string& search_prefix);
 	// checks aspectRatio of two DDS files
