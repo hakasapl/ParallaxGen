@@ -40,6 +40,8 @@ set(HEADERS
     "include/ParallaxGenD3D/ParallaxGenD3D.hpp"
     "include/ParallaxGenUtil/ParallaxGenUtil.hpp"
     "include/ParallaxGenDirectory/ParallaxGenDirectory.hpp"
+    "include/ParallaxGenPlugin/ParallaxGenPlugin.hpp"
+    "include/XEditLibCpp/XEditLibCpp.hpp"
 )
 
 set(SOURCES
@@ -50,6 +52,7 @@ set(SOURCES
     "src/ParallaxGenD3D/ParallaxGenD3D.cpp"
     "src/ParallaxGenUtil/ParallaxGenUtil.cpp"
     "src/ParallaxGenDirectory/ParallaxGenDirectory.cpp"
+    "src/ParallaxGenPlugin/ParallaxGenPlugin.cpp"
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})

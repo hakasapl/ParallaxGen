@@ -14,6 +14,7 @@
 #include "ParallaxGenUtil/ParallaxGenUtil.hpp"
 #include "ParallaxGenDirectory/ParallaxGenDirectory.hpp"
 #include "ParallaxGenD3D/ParallaxGenD3D.hpp"
+#include "ParallaxGenPlugin/ParallaxGenPlugin.hpp"
 
 using namespace std;
 using namespace ParallaxGenUtil;
@@ -219,6 +220,9 @@ int main(int argc, char** argv) {
     // User Input to Continue
     cout << "Press ENTER to start ParallaxGen...";
     cin.get();
+
+    // DEBUG
+    ParallaxGenPlugin pgp = ParallaxGenPlugin(&pgd);
 
     // delete existing output
     pg.deleteOutputDir();
