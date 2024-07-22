@@ -314,7 +314,7 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 
 				// check if this is weapon or armor
 				bool dynCubemaps = true;
-				if (pgd->checkIfAnyComponentIs(nif_file, { L"weapons", L"armor" })) {
+				if (pgd->checkIfAnyComponentIs(nif_file, { L"weapons", L"armor" }) || boost::icontains(search_prefix, "armor") || boost::icontains(search_prefix, "weapon")) {
 					dynCubemaps = false;
 				}
 
@@ -410,6 +410,7 @@ bool ParallaxGen::enableComplexMaterialOnShape(NifFile& nif, NiShape* shape, NiS
 		// add cubemap to slot
 		string cubemap;
 		uint32_t cubemap_result = nif.GetTextureSlot(shape, cubemap, 4);
+		// TODO figure out a better way to do this
 		if (cubemap.empty()) {
 			// only fill if cubemap is empty, otherwise just carry it forward
 			string new_cubemap = ParallaxGenDirectory::default_cubemap_path.string();
