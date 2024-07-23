@@ -1,8 +1,10 @@
 # Changelog
 
-## [0.4.5] - UNRELEASED
+## [0.4.5] - 2024-07-23
 
 - Shaders are no longer pre-compiled, they are compiled at runtime
+- Skinned meshes are only checked for vanilla parallax now
+- Havok animations are only checked for vanilla parallax now
 
 ## [0.4.4] - 2024-07-23
 

@@ -211,14 +211,14 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 	bool nif_modified = false;
 
 	// ignore nif if has attached havok animations
+	bool has_attached_havok = false;
 	vector<NiObject*> block_tree;
 	nif.GetTree(block_tree);
 
 	// loop through blocks
 	for (NiObject* block : block_tree) {
 		if (block->GetBlockName() == "BSBehaviorGraphExtraData") {
-			spdlog::trace(L"Rejecting NIF file {} due to attached havok animations", nif_file.wstring());
-			return;
+			has_attached_havok = true;
 		}
 	}
 
@@ -237,12 +237,6 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 		string shape_block_name = shape->GetBlockName();
 		if (shape_block_name != "NiTriShape" && shape_block_name != "BSTriShape") {
 			spdlog::trace(L"Rejecting shape {} in NIF file {}: Incorrect shape block type", block_id, nif_file.wstring());
-			continue;
-		}
-
-		// ignore skinned meshes, these don't support parallax
-		if (shape->HasSkinInstance() || shape->IsSkinned()) {
-			spdlog::trace(L"Rejecting shape {} in NIF file {}: Skinned mesh", block_id, nif_file.wstring());
 			continue;
 		}
 
@@ -318,6 +312,25 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 			// processing for parallax
             search_path = search_prefix + "_p.dds";
             if (!ignore_parallax && pgd->isHeightMap(search_path)) {
+				// Check if nif has attached havok (results in crashes for vanilla parallax)
+				if (has_attached_havok) {
+					spdlog::trace(L"Rejecting NIF file {} due to attached havok animations", nif_file.wstring());
+					return;
+				}
+
+				// ignore skinned meshes, these don't support parallax
+				if (shape->HasSkinInstance() || shape->IsSkinned()) {
+					spdlog::trace(L"Rejecting shape {} in NIF file {}: Skinned mesh", block_id, nif_file.wstring());
+					continue;
+				}
+
+				// Enable regular parallax for this shape!
+				if (shader_type != BSLSP::BSLSP_DEFAULT && shader_type != BSLSP::BSLSP_PARALLAX) {
+					// don't overwrite existing shaders
+					spdlog::trace(L"Rejecting shape {} in NIF file {}: Incorrect shader type", block_id, nif_file.wstring());
+					continue;
+				}
+
 				BSLightingShaderProperty* cur_bslsp = dynamic_cast<BSLightingShaderProperty*>(shader);
 
 				// decals don't work with regular parallax
@@ -332,14 +345,7 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 					continue;
 				}
 
-                // Enable regular parallax for this shape!
-				if (shader_type != BSLSP::BSLSP_DEFAULT && shader_type != BSLSP::BSLSP_PARALLAX) {
-					// don't overwrite existing shaders
-					spdlog::trace(L"Rejecting shape {} in NIF file {}: Incorrect shader type", block_id, nif_file.wstring());
-					continue;
-				}
-
-				// verify that maps match each other
+				// verify that maps match each other (this is somewhat expense so it happens last)
 				if (!hasSameAspectRatio(diffuse_map, search_path)) {
 					spdlog::trace(L"Rejecting shape {} in NIF file {}: Height map does not match diffuse map", block_id, nif_file.wstring());
 					continue;
