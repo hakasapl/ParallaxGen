@@ -201,21 +201,28 @@ void BethesdaDirectory::addLooseFilesToMap()
 		spdlog::info("Adding loose files to file map.");
 	}
 
-	for (const auto& entry : fs::recursive_directory_iterator(data_dir)) {
-		if (entry.is_regular_file()) {
-			const fs::path file_path = entry.path();
-			fs::path relative_path = file_path.lexically_relative(data_dir);
+	for (const auto& entry : fs::recursive_directory_iterator(data_dir, fs::directory_options::skip_permission_denied)) {
+		try{
+			if (entry.is_regular_file()) {
+				const fs::path file_path = entry.path();
+				fs::path relative_path = file_path.lexically_relative(data_dir);
 
-			// check type of file, skip BSAs and ESPs
-			if (!file_allowed(file_path)) {
-				continue;
+				// check type of file, skip BSAs and ESPs
+				if (!file_allowed(file_path)) {
+					continue;
+				}
+
+				if (logging) {
+					spdlog::trace(L"Adding loose file to map: {}", relative_path.wstring());
+				}
+
+				updateFileMap(relative_path, nullptr);
 			}
-
+		} catch (const std::exception& e) {
 			if (logging) {
-				spdlog::trace(L"Adding loose file to map: {}", relative_path.wstring());
+				spdlog::warn(L"Failed to add loose file to map, skipping {}: {}", entry.path().wstring(), convertToWstring(e.what()));
 			}
-
-			updateFileMap(relative_path, nullptr);
+			continue;
 		}
 	}
 }
