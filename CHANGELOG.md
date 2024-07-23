@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.4.4] - UNRELEASED
+
+- Fixed non ASCII characters in loose file extension causing crashes
+
 ## [0.4.3] - 2024-07-22
 
 - Fixed parallax being applied on soft and rim lighting

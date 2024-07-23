@@ -52,11 +52,11 @@ private:
 	// any file that ends with these strings will be ignored
 	// allowed BSAs etc. to be hidden from the file map since this object is an abstraction
 	// of the data directory that no longer factors BSAs for downstream users
-	std::vector<std::string> extension_blocklist = {
-		".bsa",
-		".esp",
-		".esl",
-		".esm"
+	std::vector<std::wstring> extension_blocklist = {
+		L".bsa",
+		L".esp",
+		L".esl",
+		L".esm"
 	};
 
 public:

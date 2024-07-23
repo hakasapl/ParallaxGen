@@ -202,27 +202,20 @@ void BethesdaDirectory::addLooseFilesToMap()
 	}
 
 	for (const auto& entry : fs::recursive_directory_iterator(data_dir, fs::directory_options::skip_permission_denied)) {
-		try{
-			if (entry.is_regular_file()) {
-				const fs::path file_path = entry.path();
-				fs::path relative_path = file_path.lexically_relative(data_dir);
+		if (entry.is_regular_file()) {
+			const fs::path file_path = entry.path();
+			fs::path relative_path = file_path.lexically_relative(data_dir);
 
-				// check type of file, skip BSAs and ESPs
-				if (!file_allowed(file_path)) {
-					continue;
-				}
-
-				if (logging) {
-					spdlog::trace(L"Adding loose file to map: {}", relative_path.wstring());
-				}
-
-				updateFileMap(relative_path, nullptr);
+			// check type of file, skip BSAs and ESPs
+			if (!file_allowed(file_path)) {
+				continue;
 			}
-		} catch (const std::exception& e) {
+
 			if (logging) {
-				spdlog::warn(L"Failed to add loose file to map, skipping {}: {}", entry.path().wstring(), convertToWstring(e.what()));
+				spdlog::trace(L"Adding loose file to map: {}", relative_path.wstring());
 			}
-			continue;
+
+			updateFileMap(relative_path, nullptr);
 		}
 	}
 }
@@ -523,7 +516,7 @@ vector<wstring> BethesdaDirectory::findBSAFilesFromPluginName(const vector<wstri
 
 bool BethesdaDirectory::file_allowed(const fs::path file_path) const
 {
-	string file_extension = file_path.extension().string();
+	wstring file_extension = file_path.extension().wstring();
 	boost::algorithm::to_lower(file_extension);
 	if (std::find(extension_blocklist.begin(), extension_blocklist.end(), file_extension) != extension_blocklist.end()) {
 		//elem exists in the vector

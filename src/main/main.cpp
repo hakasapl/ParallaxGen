@@ -26,19 +26,13 @@ filesystem::path getExecutablePath() {
         exitWithUserInput(1);
     }
 
-    try {
-        filesystem::path out_path = filesystem::path(buffer);
+    filesystem::path out_path = filesystem::path(buffer);
 
-        if (filesystem::exists(out_path)) {
-            return out_path;
-        }
-        else {
-            cout << "Error getting executable path: path does not exist\n";
-            exitWithUserInput(1);
-        }
+    if (filesystem::exists(out_path)) {
+        return out_path;
     }
-    catch(const filesystem::filesystem_error& ex) {
-        cout << "Error getting executable path: " << ex.what() << "\n";
+    else {
+        cout << "Error getting executable path: path does not exist\n";
         exitWithUserInput(1);
     }
 
@@ -97,7 +91,8 @@ const unordered_map<string, BethesdaGame::GameType> GAME_TYPE_MAP = {
     {"enderalse", BethesdaGame::GameType::ENDERAL_SE}
 };
 
-int main(int argc, char** argv) {
+void mainRunner(int argc, char** argv)
+{
     // Find location of ParallaxGen.exe
     const filesystem::path EXE_PATH = getExecutablePath().parent_path();
 
@@ -279,4 +274,13 @@ int main(int argc, char** argv) {
 
     // Close Console
 	exitWithUserInput(0);
+}
+
+int main(int argc, char** argv) {
+    try {
+        mainRunner(argc, argv);
+    } catch (const exception& ex) {
+        spdlog::critical("An unhandled exception occured, provide this message in your bug report: {}", ex.what());
+        exitWithUserInput(1);
+    }
 }
