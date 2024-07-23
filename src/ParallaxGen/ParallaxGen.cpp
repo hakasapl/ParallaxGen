@@ -410,10 +410,10 @@ bool ParallaxGen::enableComplexMaterialOnShape(NifFile& nif, NiShape* shape, NiS
 		// add cubemap to slot
 		string cubemap;
 		uint32_t cubemap_result = nif.GetTextureSlot(shape, cubemap, 4);
-		// TODO figure out a better way to do this
-		if (cubemap.empty()) {
-			// only fill if cubemap is empty, otherwise just carry it forward
-			string new_cubemap = ParallaxGenDirectory::default_cubemap_path.string();
+		string new_cubemap = ParallaxGenDirectory::default_cubemap_path.string();
+
+		if (!boost::iequals(cubemap, new_cubemap)) {
+			// only fill if dyn cubemap not already there
 			nif.SetTextureSlot(shape, new_cubemap, 4);
 			changed = true;
 		}
