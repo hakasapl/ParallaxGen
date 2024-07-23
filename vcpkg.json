@@ -4,6 +4,7 @@
     "boost-container",
     "boost-filesystem",
     "boost-iostreams",
+    "boost-stacktrace",
     "cli11",
     {
       "name": "directxtex",
@@ -24,7 +25,6 @@
       "features": [
         "wchar"
       ]
-    },
-    "boost-stacktrace"
+    }
   ]
 }
