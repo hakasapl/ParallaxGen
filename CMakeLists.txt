@@ -129,7 +129,7 @@ foreach(FILE ${HLSL_COMPUTE_SHADER_FILES})
   get_source_file_property(shadertype ${FILE} ShaderType)
   get_source_file_property(shadermodel ${FILE} ShaderModel)
   add_custom_command(TARGET shaders
-                     COMMAND fxc.exe /nologo /Emain /T${shadertype}_${shadermodel} $<IF:$<CONFIG:DEBUG>,/Od,/O1> /Zi /Fo ${CMAKE_BINARY_DIR}/shaders/${FILE_WE}.cso /Fd ${CMAKE_BINARY_DIR}/shaders/${FILE_WE}.pdb ${FILE}
+                     COMMAND fxc.exe /nologo /Emain /T${shadertype}_${shadermodel} $<IF:$<CONFIG:DEBUG>,/Od,/O1> /Zi /Fo ${CMAKE_BINARY_DIR}/shaders/${FILE_WE}.cso /Fd ${CMAKE_BINARY_DIR}/${FILE_WE}.pdb ${FILE}
                      MAIN_DEPENDENCY ${FILE}
                      COMMENT "HLSL ${FILE}"
                      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
@@ -150,8 +150,7 @@ install(FILES ${CMAKE_BINARY_DIR}/lz4.dll DESTINATION . )
 install(FILES ${CMAKE_BINARY_DIR}/zlib1.dll DESTINATION . )
 
 # Copy compiled shaders to install
-file(GLOB CSO_FILES "${CMAKE_BINARY_DIR}/shaders/*.cso")
-install(FILES ${CSO_FILES} DESTINATION ./shaders/ )
+install(DIRECTORY ${CMAKE_BINARY_DIR}/shaders DESTINATION . )
 
 # Copy assets to install
 install(DIRECTORY ${CMAKE_BINARY_DIR}/assets DESTINATION . )
