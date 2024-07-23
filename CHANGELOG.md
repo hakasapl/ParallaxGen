@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.4.4] - UNRELEASED
+## [0.4.4] - 2024-07-23
 
 - Fixed non ASCII characters in loose file extension causing crashes
 - Added global exception handler w/ stack trace
