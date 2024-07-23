@@ -87,7 +87,7 @@ void ParallaxGenD3D::initShaders()
 }
 
 vector<char> ParallaxGenD3D::loadCompiledShader(const std::filesystem::path& filename) {
-    ifstream shaderFile(filename, ios::binary);
+    ifstream shaderFile("shaders" / filename, ios::binary);
     if (!shaderFile) {
         spdlog::critical(L"Failed to load shader file {}", filename.wstring());
         ParallaxGenUtil::exitWithUserInput(1);
