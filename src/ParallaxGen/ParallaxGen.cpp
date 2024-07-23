@@ -266,14 +266,6 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 			continue;
 		}
 
-		// don't enable parallax on decals because that gets rid of blending
-		BSLightingShaderProperty* cur_bslsp = dynamic_cast<BSLightingShaderProperty*>(shader);
-
-		if (cur_bslsp->shaderFlags2 & SSPF2::SLSF2_BACK_LIGHTING) {
-			spdlog::trace(L"Rejecting shape {} in NIF file {}: Back lighting shape", block_id, nif_file.wstring());
-			continue;
-		}
-
 		// Get shader type for later use
 		BSLSP shader_type = static_cast<BSLSP>(shader->GetShaderType());
 
@@ -326,9 +318,17 @@ void ParallaxGen::processNIF(const fs::path& nif_file, vector<fs::path>& heightM
 			// processing for parallax
             search_path = search_prefix + "_p.dds";
             if (!ignore_parallax && pgd->isHeightMap(search_path)) {
+				BSLightingShaderProperty* cur_bslsp = dynamic_cast<BSLightingShaderProperty*>(shader);
+
 				// decals don't work with regular parallax
 				if (cur_bslsp->shaderFlags1 & SSPF1::SLSF1_DECAL || cur_bslsp->shaderFlags1 & SSPF1::SLSF1_DYNAMIC_DECAL) {
 					spdlog::trace(L"Rejecting shape {} in NIF file {}: Decal shape", block_id, nif_file.wstring());
+					continue;
+				}
+
+				// Mesh lighting doesn't work with regular parallax
+				if (cur_bslsp->shaderFlags2 & SSPF2::SLSF2_SOFT_LIGHTING || cur_bslsp->shaderFlags2 & SSPF2::SLSF2_RIM_LIGHTING || cur_bslsp->shaderFlags2 & SSPF2::SLSF2_BACK_LIGHTING) {
+					spdlog::trace(L"Rejecting shape {} in NIF file {}: Lighting on shape", block_id, nif_file.wstring());
 					continue;
 				}
 

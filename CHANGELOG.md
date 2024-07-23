@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.4.3] - 2024-07-22
+
+- Fixed parallax being applied on soft and rim lighting
+
 ## [0.4.2] - 2024-07-22
 
 - ParallaxGen no longer patches LOD
