@@ -28,6 +28,7 @@ jobs:
       with:
         key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
         path: |
+          build/x64-debug/vcpkg_installed
           build/x64-release/vcpkg_installed
 
     - name: Cache Externals
@@ -35,6 +36,7 @@ jobs:
       with:
         key: externals-${{ runner.os }}-${{ hashFiles('.gitmodules') }}
         path: |
+          build/x64-debug/external
           build/x64-release/external
 
     - name: Configure CMake
