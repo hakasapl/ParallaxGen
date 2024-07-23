@@ -48,5 +48,5 @@ jobs:
     - name: Upload Build Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: install-artifacts
+        name: parallaxgen-artifacts-${{ github.sha }}
         path: install/x64-release
