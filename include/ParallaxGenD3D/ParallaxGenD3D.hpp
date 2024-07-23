@@ -55,7 +55,7 @@ public:
 private:
     // GPU functions
     void initShaders();
-    std::vector<char> loadCompiledShader(const std::filesystem::path& filename);
+    Microsoft::WRL::ComPtr<ID3DBlob> compileShader(const std::filesystem::path& filename);
     bool createComputeShader(const std::wstring& shader_path, Microsoft::WRL::ComPtr<ID3D11ComputeShader>& cs_dest);
 
     // GPU Helpers

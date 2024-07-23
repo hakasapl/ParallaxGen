@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.4.5] - UNRELEASED
+
+- Shaders are no longer pre-compiled, they are compiled at runtime
+
 ## [0.4.4] - 2024-07-23
 
 - Fixed non ASCII characters in loose file extension causing crashes

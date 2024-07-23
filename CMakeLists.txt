@@ -17,7 +17,7 @@ set(PROJECT_NAME "ParallaxGen")
 set(PROJECT_URI "com.github.hakasapl.ParallaxGen")
 
 # Initialize Project
-set(PARALLAXGEN_VERSION 0.4.4)
+set(PARALLAXGEN_VERSION 0.4.5)
 project(${PROJECT_NAME} VERSION ${PARALLAXGEN_VERSION})
 
 # Define preprocessor macro with the version number
@@ -99,6 +99,7 @@ set(DirectXTK_LIBS
     shell32.lib
     ole32.lib
     oleaut32.lib
+    D3DCompiler.lib
 )
 target_link_libraries(${PROJECT_NAME} PRIVATE
     spdlog::spdlog
@@ -112,34 +113,24 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Microsoft::DirectXTK
 )
 
-# build shaders
-add_custom_target(shaders)
-
-set(HLSL_COMPUTE_SHADER_FILES
-    shaders/MergeToComplexMaterial.hlsl
+# Define a custom command to copy the assets directory
+add_custom_command(
+    OUTPUT assets
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/assets ${CMAKE_BINARY_DIR}/assets
+    DEPENDS ${SOURCE_DIR}
+    COMMENT "Copying assets directory to build directory"
 )
 
-file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/shaders)
+# Define a custom command to copy the shaders directory
+add_custom_command(
+    OUTPUT shaders
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/shaders ${CMAKE_BINARY_DIR}/shaders
+    DEPENDS ${SOURCE_DIR}
+    COMMENT "Copying shaders directory to build directory"
+)
 
-set_source_files_properties(${HLSL_COMPUTE_SHADER_FILES} PROPERTIES ShaderType "cs")
-set_source_files_properties(${HLSL_COMPUTE_SHADER_FILES} PROPERTIES ShaderModel "5_0")
-
-foreach(FILE ${HLSL_COMPUTE_SHADER_FILES})
-  get_filename_component(FILE_WE ${FILE} NAME_WE)
-  get_source_file_property(shadertype ${FILE} ShaderType)
-  get_source_file_property(shadermodel ${FILE} ShaderModel)
-  add_custom_command(TARGET shaders
-                     COMMAND fxc.exe /nologo /Emain /T${shadertype}_${shadermodel} $<IF:$<CONFIG:DEBUG>,/Od,/O1> /Zi /Fo ${CMAKE_BINARY_DIR}/shaders/${FILE_WE}.cso /Fd ${CMAKE_BINARY_DIR}/${FILE_WE}.pdb ${FILE}
-                     MAIN_DEPENDENCY ${FILE}
-                     COMMENT "HLSL ${FILE}"
-                     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                     VERBATIM)
-endforeach(FILE)
-
-add_dependencies(${PROJECT_NAME} shaders)
-
-# Copy assets
-file(COPY ${CMAKE_SOURCE_DIR}/assets DESTINATION ${CMAKE_BINARY_DIR})
+add_custom_target(CopyFolders ALL DEPENDS assets shaders)
+add_dependencies(${PROJECT_NAME} CopyFolders)
 
 # Install the executable and DLLs
 install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION . )

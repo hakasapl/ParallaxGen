@@ -2,6 +2,7 @@
 
 #include <spdlog/spdlog.h>
 #include <fstream>
+#include <d3dcompiler.h>
 
 #include "ParallaxGenUtil/ParallaxGenUtil.hpp"
 
@@ -80,29 +81,39 @@ void ParallaxGenD3D::initGPU()
 void ParallaxGenD3D::initShaders()
 {
     // MergeToComplexMaterial.hlsl
-    if (!createComputeShader(L"MergeToComplexMaterial.cso", shader_MergeToComplexMaterial)) {
+    if (!createComputeShader(L"shaders/MergeToComplexMaterial.hlsl", shader_MergeToComplexMaterial)) {
         spdlog::critical("Failed to create compute shader. Exiting.");
         ParallaxGenUtil::exitWithUserInput(1);
     }
 }
 
-vector<char> ParallaxGenD3D::loadCompiledShader(const std::filesystem::path& filename) {
-    ifstream shaderFile("shaders" / filename, ios::binary);
-    if (!shaderFile) {
-        spdlog::critical(L"Failed to load shader file {}", filename.wstring());
+ComPtr<ID3DBlob> ParallaxGenD3D::compileShader(const std::filesystem::path& filename) {
+    spdlog::trace(L"Starting compiling shader: {}", filename.wstring());
+
+    DWORD dwShaderFlags = D3DCOMPILE_ENABLE_STRICTNESS;
+    #if defined( DEBUG ) || defined( _DEBUG )
+        dwShaderFlags |= D3DCOMPILE_DEBUG;
+    #endif
+
+    ComPtr<ID3DBlob> pCSBlob;
+    HRESULT hr = D3DCompileFromFile(filename.c_str(), nullptr, nullptr, "main", "cs_5_0", dwShaderFlags, 0, pCSBlob.ReleaseAndGetAddressOf(), nullptr);
+    if (FAILED(hr)) {
+        spdlog::critical(L"Failed to compile shader {}: {}", filename.wstring(), hr);
         ParallaxGenUtil::exitWithUserInput(1);
     }
 
-    return vector<char>((istreambuf_iterator<char>(shaderFile)), istreambuf_iterator<char>());
+    spdlog::debug(L"Shader {} compiled successfully", filename.wstring());
+
+    return pCSBlob;
 }
 
 bool ParallaxGenD3D::createComputeShader(const wstring& shader_path, ComPtr<ID3D11ComputeShader>& cs_dest)
 {
     // Load shader
-    auto shader_bytes = loadCompiledShader(shader_path);
+    ComPtr<ID3DBlob> compiled_shader = compileShader(shader_path);
 
     // Create shader
-    HRESULT hr = pDevice->CreateComputeShader(shader_bytes.data(), shader_bytes.size(), nullptr, cs_dest.ReleaseAndGetAddressOf());
+    HRESULT hr = pDevice->CreateComputeShader(compiled_shader->GetBufferPointer(), compiled_shader->GetBufferSize(), nullptr, cs_dest.ReleaseAndGetAddressOf());
     if (FAILED(hr)) {
         spdlog::debug("Failed to create compute shader: {}", hr);
         return false;
