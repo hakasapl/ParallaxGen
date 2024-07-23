@@ -9,6 +9,7 @@
 #include <spdlog/sinks/basic_file_sink.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/stacktrace.hpp>
 
 #include "BethesdaGame/BethesdaGame.hpp"
 #include "ParallaxGen/ParallaxGen.hpp"
@@ -271,16 +272,14 @@ void mainRunner(int argc, char** argv)
     if (!no_cleanup) {
         pg.deleteMeshes();
     }
-
-    // Close Console
-	exitWithUserInput(0);
 }
 
 int main(int argc, char** argv) {
     try {
         mainRunner(argc, argv);
+        exitWithUserInput(0);
     } catch (const exception& ex) {
-        spdlog::critical("An unhandled exception occured, provide this message in your bug report: {}", ex.what());
+        spdlog::critical("An unhandled exception occurred (Please provide this entire message in your bug report).\n\nException type: {}\nMessage: {}\nStack Trace: \n{}", typeid(ex).name(), ex.what(), boost::stacktrace::to_string(boost::stacktrace::stacktrace()));
         exitWithUserInput(1);
     }
 }

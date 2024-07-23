@@ -3,6 +3,7 @@
 ## [0.4.4] - UNRELEASED
 
 - Fixed non ASCII characters in loose file extension causing crashes
+- Added global exception handler w/ stack trace
 
 ## [0.4.3] - 2024-07-22
 
