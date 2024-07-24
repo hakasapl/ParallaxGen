@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.4.6] - UNRELEASED
+## [0.4.6] - 2024-07-23
 
 - Added additional error handling for GPU code
 
