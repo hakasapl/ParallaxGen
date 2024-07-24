@@ -45,6 +45,8 @@ void ParallaxGen::upgradeShaders()
 	auto heightMaps = pgd->getHeightMaps();
 	size_t num_upgrades = heightMaps.size();
 	for (fs::path height_map : heightMaps) {
+		spdlog::trace(L"Processing height map: {}", height_map.wstring());
+
 		if (finished_task % 10 == 0) {
 			double progress = (double)finished_task / num_upgrades * 100.0;
 			spdlog::info("Shader Upgrades Processed: {}/{} ({:.1f}%)", finished_task, num_upgrades, progress);

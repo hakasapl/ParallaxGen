@@ -76,6 +76,9 @@ private:
     bool getDDS(const std::filesystem::path& dds_path, DirectX::ScratchImage& dds) const;
     bool getDDSMetadata(const std::filesystem::path& dds_path, DirectX::TexMetadata& dds_meta) const;
     static DirectX::ScratchImage LoadRawPixelsToScratchImage(const std::vector<unsigned char> rawPixels, size_t width, size_t height, DXGI_FORMAT format, int channels);
+
+    // Other Helpers
+    static std::string getHRESULTErrorMessage(HRESULT hr);
 };
 
 #endif

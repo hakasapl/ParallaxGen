@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.4.6] - UNRELEASED
+
+- Added additional error handling for GPU code
+
 ## [0.4.5] - 2024-07-23
 
 - Shaders are no longer pre-compiled, they are compiled at runtime
