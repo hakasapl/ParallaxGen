@@ -85,6 +85,8 @@ void ParallaxGen::upgradeShaders()
 			pgd->addComplexMaterialMap(complex_map_path);
 
 			spdlog::debug(L"Added complex material map: {}", complex_map_path.wstring());
+		} else {
+			spdlog::warn(L"Unable to upgrade height map, skipping: {}", height_map.wstring());
 		}
 
 		finished_task++;

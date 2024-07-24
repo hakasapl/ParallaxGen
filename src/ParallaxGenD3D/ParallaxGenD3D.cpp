@@ -187,13 +187,27 @@ DirectX::ScratchImage ParallaxGenD3D::upgradeToComplexMaterial(const std::filesy
     ComPtr<ID3D11ShaderResourceView> parallax_map_srv;
     if (parallax_exists) {
         parallax_map_gpu = createTexture2D(parallax_map_dds);
+        if (!parallax_map_gpu) {
+            spdlog::warn(L"Failed to create GPU texture for {}", parallax_map.wstring());
+            return DirectX::ScratchImage();
+        }
         parallax_map_srv = createShaderResourceView(parallax_map_gpu);
+        if (!parallax_map_srv) {
+            spdlog::warn(L"Failed to create GPU SRV for {}", parallax_map.wstring());
+            return DirectX::ScratchImage();
+        }
     }
     ComPtr<ID3D11Texture2D> env_map_gpu;
     ComPtr<ID3D11ShaderResourceView> env_map_srv;
     if (env_exists) {
         env_map_gpu = createTexture2D(env_map_dds);
+        if (!env_map_gpu) {
+            return DirectX::ScratchImage();
+        }
         env_map_srv = createShaderResourceView(env_map_gpu);
+        if (!env_map_srv) {
+            return DirectX::ScratchImage();
+        }
     }
 
     // Define parameters in constant buffer
@@ -221,6 +235,9 @@ DirectX::ScratchImage ParallaxGenD3D::upgradeToComplexMaterial(const std::filesy
     shader_params.intScalingFactor = 255;
 
     ComPtr<ID3D11Buffer> constant_buffer = createConstantBuffer(&shader_params, sizeof(shader_MergeToComplexMaterial_params));
+    if (!constant_buffer) {
+        return DirectX::ScratchImage();
+    }
 
     // Create output texture
     D3D11_TEXTURE2D_DESC output_texture_desc = {};
@@ -236,7 +253,13 @@ DirectX::ScratchImage ParallaxGenD3D::upgradeToComplexMaterial(const std::filesy
     output_texture_desc.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
 
     ComPtr<ID3D11Texture2D> output_texture = createTexture2D(output_texture_desc);
+    if (!output_texture) {
+        return DirectX::ScratchImage();
+    }
     ComPtr<ID3D11UnorderedAccessView> output_uav = createUnorderedAccessView(output_texture);
+    if (!output_uav) {
+        return DirectX::ScratchImage();
+    }
 
     // Create buffer for output
     shader_MergeToComplexMaterial_outputbuffer minMaxInitData = { UINT_MAX, 0, UINT_MAX, 0 };
@@ -250,6 +273,9 @@ DirectX::ScratchImage ParallaxGenD3D::upgradeToComplexMaterial(const std::filesy
     bufferDesc.StructureByteStride = sizeof(UINT);
 
     ComPtr<ID3D11Buffer> output_buffer = createBuffer(&minMaxInitData, bufferDesc);
+    if (!output_buffer) {
+        return DirectX::ScratchImage();
+    }
 
     // Create UAV for output buffer
     D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
@@ -259,6 +285,9 @@ DirectX::ScratchImage ParallaxGenD3D::upgradeToComplexMaterial(const std::filesy
     uavDesc.Buffer.NumElements = 4; // Number of UINT elements in the buffer
 
     ComPtr<ID3D11UnorderedAccessView> output_buffer_uav = createUnorderedAccessView(output_buffer, uavDesc);
+    if (!output_buffer_uav) {
+        return DirectX::ScratchImage();
+    }
 
     // Dispatch shader
     pContext->CSSetShader(shader_MergeToComplexMaterial.Get(), nullptr, 0);
@@ -268,7 +297,10 @@ DirectX::ScratchImage ParallaxGenD3D::upgradeToComplexMaterial(const std::filesy
     pContext->CSSetUnorderedAccessViews(0, 1, output_uav.GetAddressOf(), nullptr);
     pContext->CSSetUnorderedAccessViews(1, 1, output_buffer_uav.GetAddressOf(), nullptr);
 
-    BlockingDispatch(result_width, result_height, 1);
+    bool result_bool = BlockingDispatch(result_width, result_height, 1);
+    if (!result_bool) {
+        return DirectX::ScratchImage();
+    }
 
     // Clean up shader resources
     ID3D11ShaderResourceView* null_srv[] = { nullptr, nullptr };
@@ -505,7 +537,11 @@ bool ParallaxGenD3D::BlockingDispatch(UINT ThreadGroupCountX, UINT ThreadGroupCo
 
     // wait for shader to complete
     BOOL queryData = FALSE;
-    pContext->GetData(pQuery.Get(), &queryData, sizeof(queryData), D3D11_ASYNC_GETDATA_DONOTFLUSH);  // block until complete
+    hr = pContext->GetData(pQuery.Get(), &queryData, sizeof(queryData), D3D11_ASYNC_GETDATA_DONOTFLUSH);  // block until complete
+    if (FAILED(hr)) {
+        spdlog::debug("Failed to get query data: {}", getHRESULTErrorMessage(hr));
+        return false;
+    }
     pQuery.Reset();
 
     // return success
