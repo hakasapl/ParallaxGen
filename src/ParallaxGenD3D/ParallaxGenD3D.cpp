@@ -359,6 +359,10 @@ DirectX::ScratchImage ParallaxGenD3D::upgradeToComplexMaterial(const std::filesy
 //
 // GPU Helpers
 //
+bool ParallaxGenD3D::isPowerOfTwo(unsigned int x) {
+    return x && !(x & (x - 1));
+}
+
 ComPtr<ID3D11Texture2D> ParallaxGenD3D::createTexture2D(const DirectX::ScratchImage& texture) const
 {
     // Define error object
@@ -366,6 +370,13 @@ ComPtr<ID3D11Texture2D> ParallaxGenD3D::createTexture2D(const DirectX::ScratchIm
 
     // Smart Pointer to hold texture for output
     ComPtr<ID3D11Texture2D> texture_out;
+
+    // Verify dimention
+    auto texture_meta = texture.GetMetadata();
+    if (!isPowerOfTwo(static_cast<unsigned int>(texture_meta.width)) || !isPowerOfTwo(static_cast<unsigned int>(texture_meta.height))) {
+        spdlog::debug("Texture dimensions must be a power of 2: {}x{}", texture_meta.width, texture_meta.height);
+        return texture_out;
+    }
 
     // Create texture
     hr = DirectX::CreateTexture(pDevice.Get(), texture.GetImages(), texture.GetImageCount(), texture.GetMetadata(), reinterpret_cast<ID3D11Resource**>(texture_out.

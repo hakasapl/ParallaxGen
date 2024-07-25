@@ -59,6 +59,7 @@ private:
     bool createComputeShader(const std::wstring& shader_path, Microsoft::WRL::ComPtr<ID3D11ComputeShader>& cs_dest);
 
     // GPU Helpers
+    static bool isPowerOfTwo(unsigned int x);
     Microsoft::WRL::ComPtr<ID3D11Texture2D> createTexture2D(const DirectX::ScratchImage& texture) const;
     Microsoft::WRL::ComPtr<ID3D11Texture2D> createTexture2D(Microsoft::WRL::ComPtr<ID3D11Texture2D>& existing_texture) const;
     Microsoft::WRL::ComPtr<ID3D11Texture2D> createTexture2D(D3D11_TEXTURE2D_DESC& desc) const;
