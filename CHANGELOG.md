@@ -3,6 +3,7 @@
 ## [0.4.7] - UNRELEASED
 
 - GPU code will now verify textures are a power of 2
+- Added "skyrimgog" game type
 
 ## [0.4.6] - 2024-07-23
 

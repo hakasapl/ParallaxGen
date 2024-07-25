@@ -11,6 +11,7 @@ public:
 	// GameType enum
 	enum class GameType {
 		SKYRIM_SE,
+		SKYRIM_GOG,
 		SKYRIM_VR,
 		SKYRIM,
 		ENDERAL,
@@ -36,6 +37,7 @@ private:
 	// Define INI locations for each game
 	static inline const std::unordered_map<BethesdaGame::GameType, ININame> INILocations = {
 		{BethesdaGame::GameType::SKYRIM_SE, ININame{"skyrim.ini", "skyrimprefs.ini", "skyrimcustom.ini"}},
+		{BethesdaGame::GameType::SKYRIM_GOG, ININame{"skyrim.ini", "skyrimprefs.ini", "skyrimcustom.ini"}},
 		{BethesdaGame::GameType::SKYRIM_VR, ININame{"skyrim.ini", "skyrimprefs.ini", "skyrimcustom.ini"}},
 		{BethesdaGame::GameType::SKYRIM, ININame{"skyrim.ini", "skyrimprefs.ini", "skyrimcustom.ini"}},
 		{BethesdaGame::GameType::ENDERAL, ININame{"enderal.ini", "enderalprefs.ini", "enderalcustom.ini"}},
@@ -45,6 +47,7 @@ private:
 	// Define document folder location for each game
 	static inline const std::unordered_map<BethesdaGame::GameType, std::filesystem::path> DocumentLocations = {
 		{BethesdaGame::GameType::SKYRIM_SE, "My Games/Skyrim Special Edition"},
+		{BethesdaGame::GameType::SKYRIM_GOG, "My Games/Skyrim Special Edition GOG"},
 		{BethesdaGame::GameType::SKYRIM_VR, "My Games/Skyrim VR"},
 		{BethesdaGame::GameType::SKYRIM, "My Games/Skyrim"},
 		{BethesdaGame::GameType::ENDERAL, "My Games/Enderal"},
@@ -54,6 +57,7 @@ private:
 	// Define appdata folder location for each game
 	static inline const std::unordered_map<BethesdaGame::GameType, std::filesystem::path> AppDataLocations = {
 		{BethesdaGame::GameType::SKYRIM_SE, "Skyrim Special Edition"},
+		{BethesdaGame::GameType::SKYRIM_GOG, "Skyrim Special Edition GOG"},
 		{BethesdaGame::GameType::SKYRIM_VR, "Skyrim VR"},
 		{BethesdaGame::GameType::SKYRIM, "Skyrim"},
 		{BethesdaGame::GameType::ENDERAL, "Enderal"},

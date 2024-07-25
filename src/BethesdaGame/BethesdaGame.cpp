@@ -78,6 +78,11 @@ fs::path BethesdaGame::findGamePathFromSteam() const {
 	// Find the game path from the registry
 	// If the game is not found, return an empty string
 
+	// Check if key doesn't exists in steam map
+	if (BethesdaGame::steam_game_ids.find(game_type) == BethesdaGame::steam_game_ids.end()) {
+		return fs::path();
+	}
+
 	string reg_path = R"(Software\Microsoft\Windows\CurrentVersion\Uninstall\Steam App )" + to_string(this->getSteamGameID());
 
 	HKEY hKey;

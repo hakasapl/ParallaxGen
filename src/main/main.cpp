@@ -86,6 +86,7 @@ void addArguments(
 // This also determines the CLI argument help text (the key values)
 const unordered_map<string, BethesdaGame::GameType> GAME_TYPE_MAP = {
     {"skyrimse", BethesdaGame::GameType::SKYRIM_SE},
+    {"skyrimgog", BethesdaGame::GameType::SKYRIM_GOG},
     {"skyrim", BethesdaGame::GameType::SKYRIM},
     {"skyrimvr", BethesdaGame::GameType::SKYRIM_VR},
     {"enderal", BethesdaGame::GameType::ENDERAL},
