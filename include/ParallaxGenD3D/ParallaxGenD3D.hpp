@@ -52,6 +52,9 @@ public:
     // Attempt to upgrade vanilla parallax to complex material
     DirectX::ScratchImage upgradeToComplexMaterial(const std::filesystem::path& parallax_map, const std::filesystem::path& env_map) const;
 
+    // Other Helpers
+    static std::string getHRESULTErrorMessage(HRESULT hr);
+
 private:
     // GPU functions
     void initShaders();
@@ -77,9 +80,6 @@ private:
     bool getDDS(const std::filesystem::path& dds_path, DirectX::ScratchImage& dds) const;
     bool getDDSMetadata(const std::filesystem::path& dds_path, DirectX::TexMetadata& dds_meta) const;
     static DirectX::ScratchImage LoadRawPixelsToScratchImage(const std::vector<unsigned char> rawPixels, size_t width, size_t height, DXGI_FORMAT format, int channels);
-
-    // Other Helpers
-    static std::string getHRESULTErrorMessage(HRESULT hr);
 };
 
 #endif

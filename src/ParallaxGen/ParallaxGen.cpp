@@ -8,6 +8,7 @@
 #include <fstream>
 #include <DirectXTex.h>
 
+#include "ParallaxGenTask/ParallaxGenTask.hpp"
 #include "ParallaxGenUtil/ParallaxGenUtil.hpp"
 
 using namespace std;
@@ -39,59 +40,53 @@ ParallaxGen::ParallaxGen(const filesystem::path output_dir, ParallaxGenDirectory
 
 void ParallaxGen::upgradeShaders()
 {
-	spdlog::info("Starting shader upgrade process...");
-
-	//loop through height maps
-	size_t finished_task = 0;
-
+	// Get height maps (vanilla _p.dds files)
 	auto heightMaps = pgd->getHeightMaps();
-	size_t num_upgrades = heightMaps.size();
-	for (filesystem::path height_map : heightMaps) {
-		spdlog::trace(L"Processing height map: {}", height_map.wstring());
 
-		if (finished_task % 10 == 0) {
-			double progress = (double)finished_task / num_upgrades * 100.0;
-			spdlog::info("Shader Upgrades Processed: {}/{} ({:.1f}%)", finished_task, num_upgrades, progress);
-		}
+	// Define task parameters
+	ParallaxGenTask task_tracker("Shader Upgrades", heightMaps.size());
+
+	for (filesystem::path height_map : heightMaps) {
+		spdlog::trace(L"Upgrading height map: {}", height_map.wstring());
 
 		// Replace "_p" with "_m" in the stem
-		filesystem::path env_map_path = ParallaxGenUtil::replaceLastOf(height_map, L"_p.dds", L"_m.dds");
-		filesystem::path complex_map_path = env_map_path;
+		filesystem::path env_mask = replaceLastOf(height_map, L"_p.dds", L"_m.dds");
+		filesystem::path complex_map = env_mask;
 
-		if (pgd->isFile(env_map_path) && pgd->isComplexMaterialMap(env_map_path)) {
-			// already upgraded
-			finished_task++;
+		if (pgd->isComplexMaterialMap(env_mask)) {
+			// load order already has a complex material, skip this one
+			task_tracker.completeJobSuccess();
 			continue;
 		}
 
-		if (!pgd->isFile(env_map_path))
-		{
+		if (!pgd->isFile(env_mask)) {
 			// no env map
-			env_map_path = filesystem::path();
+			env_mask = filesystem::path();
 		}
 
 		// upgrade to complex material
-		DirectX::ScratchImage new_ComplexMap = pgd3d->upgradeToComplexMaterial(height_map, env_map_path);
+		DirectX::ScratchImage new_ComplexMap = pgd3d->upgradeToComplexMaterial(height_map, env_mask);
 
 		// save to file
 		if (new_ComplexMap.GetImageCount() > 0) {
-			filesystem::path output_path = output_dir / complex_map_path;
+			filesystem::path output_path = output_dir / complex_map;
 			filesystem::create_directories(output_path.parent_path());
 
 			HRESULT hr = DirectX::SaveToDDSFile(new_ComplexMap.GetImages(), new_ComplexMap.GetImageCount(), new_ComplexMap.GetMetadata(), DirectX::DDS_FLAGS_NONE, output_path.c_str());
 			if (FAILED(hr)) {
-				spdlog::error(L"Unable to save complex material {}: {}", env_map_path.wstring(), hr);
+				spdlog::error(L"Unable to save complex material {}: {}", output_path.wstring(), convertToWstring(ParallaxGenD3D::getHRESULTErrorMessage(hr)));
+				task_tracker.completeJobFailure();
 			}
 
 			// add newly created file to complexMaterialMaps for later processing
-			pgd->addComplexMaterialMap(complex_map_path);
+			pgd->addComplexMaterialMap(complex_map);
 
-			spdlog::debug(L"Added complex material map: {}", complex_map_path.wstring());
+			spdlog::debug(L"Generated complex material map: {}", complex_map.wstring());
 		} else {
-			spdlog::warn(L"Unable to upgrade height map, skipping: {}", height_map.wstring());
+			task_tracker.completeJobFailure();
 		}
 
-		finished_task++;
+		task_tracker.completeJobSuccess();
 	}
 }
 

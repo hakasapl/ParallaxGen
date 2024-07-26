@@ -137,14 +137,14 @@ DirectX::ScratchImage ParallaxGenD3D::upgradeToComplexMaterial(const std::filesy
 
     // Check if any texture was supplied
     if (!parallax_exists && !env_exists) {
-        spdlog::warn(L"Unable to upgrade to complex material, no textures supplied. {} and {}", parallax_map.wstring(), env_map.wstring());
+        spdlog::error(L"Unable to upgrade to complex material, no textures supplied. {} and {}", parallax_map.wstring(), env_map.wstring());
         return DirectX::ScratchImage();
     }
 
     // get parallax map
     DirectX::ScratchImage parallax_map_dds;
     if (parallax_exists && !getDDS(parallax_map, parallax_map_dds)) {
-        spdlog::warn(L"Failed to load DDS file: {} (skipping)", parallax_map.wstring());
+        spdlog::error(L"Failed to load DDS file: {}", parallax_map.wstring());
         return DirectX::ScratchImage();
     }
     DirectX::TexMetadata parallax_meta = parallax_map_dds.GetMetadata();
@@ -152,7 +152,7 @@ DirectX::ScratchImage ParallaxGenD3D::upgradeToComplexMaterial(const std::filesy
     // get env map
     DirectX::ScratchImage env_map_dds;
     if (env_exists && !getDDS(env_map, env_map_dds)) {
-        spdlog::warn(L"Failed to load DDS file: {} (skipping)", parallax_map.wstring());
+        spdlog::error(L"Failed to load DDS file: {}", parallax_map.wstring());
         return DirectX::ScratchImage();
     }
     DirectX::TexMetadata env_meta = env_map_dds.GetMetadata();
@@ -188,12 +188,12 @@ DirectX::ScratchImage ParallaxGenD3D::upgradeToComplexMaterial(const std::filesy
     if (parallax_exists) {
         parallax_map_gpu = createTexture2D(parallax_map_dds);
         if (!parallax_map_gpu) {
-            spdlog::warn(L"Failed to create GPU texture for {}", parallax_map.wstring());
+            spdlog::error(L"Failed to create GPU texture for {}", parallax_map.wstring());
             return DirectX::ScratchImage();
         }
         parallax_map_srv = createShaderResourceView(parallax_map_gpu);
         if (!parallax_map_srv) {
-            spdlog::warn(L"Failed to create GPU SRV for {}", parallax_map.wstring());
+            spdlog::error(L"Failed to create GPU SRV for {}", parallax_map.wstring());
             return DirectX::ScratchImage();
         }
     }
@@ -349,7 +349,7 @@ DirectX::ScratchImage ParallaxGenD3D::upgradeToComplexMaterial(const std::filesy
         1.0f,
         compressed_image);
     if (FAILED(hr)) {
-        spdlog::debug("Failed to compress output DDS file: {}", getHRESULTErrorMessage(hr));
+        spdlog::error("Failed to compress output DDS file: {}", getHRESULTErrorMessage(hr));
         return DirectX::ScratchImage();
     }
 

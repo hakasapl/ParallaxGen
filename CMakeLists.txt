@@ -38,6 +38,7 @@ set(HEADERS
     "include/BethesdaDirectory/BethesdaDirectory.hpp"
     "include/ParallaxGen/ParallaxGen.hpp"
     "include/ParallaxGenD3D/ParallaxGenD3D.hpp"
+    "include/ParallaxGenTask/ParallaxGenTask.hpp"
     "include/ParallaxGenUtil/ParallaxGenUtil.hpp"
     "include/ParallaxGenDirectory/ParallaxGenDirectory.hpp"
 )
@@ -48,6 +49,7 @@ set(SOURCES
     "src/BethesdaDirectory/BethesdaDirectory.cpp"
     "src/ParallaxGen/ParallaxGen.cpp"
     "src/ParallaxGenD3D/ParallaxGenD3D.cpp"
+    "src/ParallaxGenTask/ParallaxGenTask.cpp"
     "src/ParallaxGenUtil/ParallaxGenUtil.cpp"
     "src/ParallaxGenDirectory/ParallaxGenDirectory.cpp"
 )
