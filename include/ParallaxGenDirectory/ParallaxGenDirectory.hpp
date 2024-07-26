@@ -58,9 +58,6 @@ public:
 	const std::vector<std::filesystem::path> getHeightMaps() const;
 	const std::vector<std::filesystem::path> getComplexMaterialMaps() const;
 	const std::vector<std::filesystem::path> getMeshes() const;
-
-	// helpers
-	static std::filesystem::path changeDDSSuffix(std::filesystem::path path, std::wstring suffix);
 };
 
 #endif

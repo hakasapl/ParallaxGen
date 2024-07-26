@@ -15,7 +15,7 @@ void ParallaxGenDirectory::findHeightMaps()
 {
 	// find height maps
 	spdlog::info("Finding parallax height maps");
-	heightMaps = findFilesBySuffix("_p.dds", true);
+	heightMaps = findFilesBySuffix("_p.dds", true, vector<wstring>(), L"textures");
 	spdlog::info("Found {} height maps", heightMaps.size());
 }
 
@@ -26,7 +26,7 @@ void ParallaxGenDirectory::findComplexMaterialMaps()
 	spdlog::info("Finding complex material maps");
 
 	// find complex material maps
-	vector<filesystem::path> env_maps = findFilesBySuffix("_m.dds", true);
+	vector<filesystem::path> env_maps = findFilesBySuffix("_m.dds", true, vector<wstring>(), L"textures");
 
 	// loop through env maps
 	for (filesystem::path env_map : env_maps) {
@@ -58,7 +58,7 @@ void ParallaxGenDirectory::findMeshes()
 {
 	// find meshes
 	spdlog::info("Finding meshes");
-	meshes = findFilesBySuffix(".nif", true, mesh_blocklist);
+	meshes = findFilesBySuffix(".nif", true, mesh_blocklist, L"meshes");
 	spdlog::info("Found {} meshes", meshes.size());
 }
 
@@ -119,18 +119,4 @@ const vector<filesystem::path> ParallaxGenDirectory::getComplexMaterialMaps() co
 const vector<filesystem::path> ParallaxGenDirectory::getMeshes() const
 {
 	return meshes;
-}
-
-// Helpers
-filesystem::path ParallaxGenDirectory::changeDDSSuffix(std::filesystem::path path, std::wstring suffix)
-{
-	wstring path_str = path.wstring();
-	size_t pos = path_str.find_last_of('_');
-
-    // If an underscore is found, resize the string
-    if (pos != std::wstring::npos) {
-        path_str = path_str.substr(0, pos);
-    }
-
-	return path_str + suffix + L".dds";
 }

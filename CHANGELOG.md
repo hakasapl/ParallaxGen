@@ -4,6 +4,7 @@
 
 - GPU code will now verify textures are a power of 2
 - Added "skyrimgog" game type
+- Top level directory is now checked to make sure a NIF comes from "meshes", dds from "textures"
 
 ## [0.4.6] - 2024-07-23
 

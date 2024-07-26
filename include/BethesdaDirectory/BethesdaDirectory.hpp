@@ -73,7 +73,7 @@ public:
 	bool isBSAFile(const std::filesystem::path rel_path) const;
 	bool isFile(const std::filesystem::path rel_path) const;
 	std::filesystem::path getFullPath(const std::filesystem::path rel_path) const;
-	std::vector<std::filesystem::path> findFilesBySuffix(const std::string_view suffix, const bool lower = false, const std::vector<std::wstring>& parent_blocklist = std::vector<std::wstring>()) const;
+	std::vector<std::filesystem::path> findFilesBySuffix(const std::string_view suffix, const bool lower = false, const std::vector<std::wstring>& parent_blocklist = std::vector<std::wstring>(), const std::wstring& parent = L"") const;
 	std::filesystem::path getDataPath() const;
 
 	// BSA functions

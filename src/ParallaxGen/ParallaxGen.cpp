@@ -53,7 +53,7 @@ void ParallaxGen::upgradeShaders()
 		}
 
 		// Replace "_p" with "_m" in the stem
-		fs::path env_map_path = pgd->changeDDSSuffix(height_map, L"_m");
+		fs::path env_map_path = ParallaxGenUtil::replaceLastOf(height_map, L"_p.dds", L"_m.dds");
 		fs::path complex_map_path = env_map_path;
 
 		if (pgd->isFile(env_map_path) && pgd->isComplexMaterialMap(env_map_path)) {

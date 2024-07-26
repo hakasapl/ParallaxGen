@@ -142,7 +142,7 @@ fs::path BethesdaDirectory::getDataPath() const
 	return data_dir;
 }
 
-vector<fs::path> BethesdaDirectory::findFilesBySuffix(const string_view suffix, const bool lower, const vector<wstring>& path_blocklist) const
+vector<fs::path> BethesdaDirectory::findFilesBySuffix(const string_view suffix, const bool lower, const vector<wstring>& path_blocklist, const wstring& parent_path) const
 {
 	// find all keys in fileMap that match pattern
 	vector<fs::path> found_files;
@@ -157,9 +157,11 @@ vector<fs::path> BethesdaDirectory::findFilesBySuffix(const string_view suffix, 
 
         if (boost::algorithm::ends_with(key.wstring(), suffix)) {
 			// check if any component of the path is in the blocklist
-			bool blocked = checkIfAnyComponentIs(cur_file_path, path_blocklist);
-			if (blocked)
-			{
+			if (!parent_path.empty() && !key.begin()->wstring().starts_with(parent_path)) {
+				continue;
+			}
+
+			if (!path_blocklist.empty() && checkIfAnyComponentIs(cur_file_path, path_blocklist)) {
 				continue;
 			}
 

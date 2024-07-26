@@ -130,4 +130,15 @@ namespace ParallaxGenUtil {
 
 		return buffer;
 	}
+
+	filesystem::path replaceLastOf(const filesystem::path& path, const wstring& to_replace, const wstring& replace_with) {
+		wstring path_str = path.wstring();
+		size_t pos = path_str.rfind(to_replace);
+		if (pos == wstring::npos) {
+			return path;
+		}
+
+		path_str.replace(pos, to_replace.size(), replace_with);
+		return filesystem::path(path_str);
+	}
 }
