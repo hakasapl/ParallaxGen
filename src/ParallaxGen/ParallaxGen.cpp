@@ -408,9 +408,9 @@ bool ParallaxGen::enableComplexMaterialOnShape(NifFile& nif, NiShape* shape, NiS
 
 	string env_map;
 	uint32_t env_result = nif.GetTextureSlot(shape, env_map, 5);
-	if (!boost::iends_with(env_map, ".dds")) {
+	string new_env_map = search_prefix + "_m.dds";
+	if (!boost::iequals(env_map, new_env_map)) {
 		// add height map
-		string new_env_map = search_prefix + "_m.dds";
 		nif.SetTextureSlot(shape, new_env_map, 5);
 		changed = true;
 	}
@@ -465,13 +465,10 @@ bool ParallaxGen::enableParallaxOnShape(NifFile& nif, NiShape* shape, NiShader* 
 	// 5. set parallax heightmap texture
 	string height_map;
 	uint32_t height_result = nif.GetTextureSlot(shape, height_map, 3);
-	
-	// Check if existing heightmap ends with .dds
-	// Sometimes the height_map is textures\\ and nothing else so we need to check for that
-	// There may be a more ideal solution for this (ie. why is nifly reporting textures this way?)
-	if (!boost::iends_with(height_map, ".dds")) {
+	string new_height_map = search_prefix + "_p.dds";
+
+	if (!boost::iequals(height_map, new_height_map)) {
 		// add height map
-		string new_height_map = search_prefix + "_p.dds";
 		nif.SetTextureSlot(shape, new_height_map, 3);
 		changed = true;
 	}
@@ -491,7 +488,9 @@ bool ParallaxGen::hasSameAspectRatio(const fs::path& dds_path_1, const fs::path&
 		return height_map_checks[check_tuple];
 	} else {
 		// Need to perform computation
-		return pgd3d->checkIfAspectRatioMatches(dds_path_1_lower, dds_path_2_lower);
+		bool aspect_match = pgd3d->checkIfAspectRatioMatches(dds_path_1_lower, dds_path_2_lower);
+		height_map_checks[check_tuple] = aspect_match;
+		return aspect_match;
 	}
 }
 
