@@ -341,6 +341,8 @@ bool ParallaxGen::shouldEnableComplexMaterial(const filesystem::path& nif_file, 
 	// verify that maps match each other
 	string diffuse_map;
 	uint32_t diffuse_result = nif.GetTextureSlot(shape, diffuse_map, 0);
+	// TODO how do we integrate this properly?
+	// TODO probably a struct in the Task class that defines error states
 	bool same_aspect = false;
 	pgd3d->checkIfAspectRatioMatches(diffuse_map, cm_map, same_aspect);
 	if (!same_aspect) {

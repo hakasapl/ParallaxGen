@@ -19,6 +19,8 @@ private:
 
     std::filesystem::path output_dir;
 
+    std::filesystem::path exe_path;
+
     // GPU objects
     Microsoft::WRL::ComPtr<ID3D11Device> pDevice;           // GPU device
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext> pContext;  // GPU context
@@ -45,7 +47,7 @@ private:
     std::unordered_map<std::filesystem::path, DirectX::TexMetadata> dds_metadata_cache;
 
 public:
-    ParallaxGenD3D(ParallaxGenDirectory* pgd, std::filesystem::path output_dir);
+    ParallaxGenD3D(ParallaxGenDirectory* pgd, const std::filesystem::path output_dir, const std::filesystem::path exe_path);
 
     bool checkIfAspectRatioMatches(const std::filesystem::path& dds_path_1, const std::filesystem::path& dds_path_2, bool& check_aspect);
 

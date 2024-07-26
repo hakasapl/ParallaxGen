@@ -201,7 +201,7 @@ void mainRunner(int argc, char** argv)
     // Create relevant objects
 	BethesdaGame bg = BethesdaGame(bg_type, game_dir, true);
     ParallaxGenDirectory pgd = ParallaxGenDirectory(bg);
-    ParallaxGenD3D pgd3d = ParallaxGenD3D(&pgd, output_dir);
+    ParallaxGenD3D pgd3d = ParallaxGenD3D(&pgd, output_dir, EXE_PATH);
     ParallaxGen pg = ParallaxGen(output_dir, &pgd, &pgd3d, optimize_meshes, ignore_parallax, ignore_complex_material);
 
     // Check if GPU needs to be initialized

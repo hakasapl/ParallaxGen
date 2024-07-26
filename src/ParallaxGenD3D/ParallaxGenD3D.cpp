@@ -11,13 +11,14 @@ using namespace std;
 using Microsoft::WRL::ComPtr;
 using namespace ParallaxGenUtil;
 
-ParallaxGenD3D::ParallaxGenD3D(ParallaxGenDirectory* pgd, std::filesystem::path output_dir)
+ParallaxGenD3D::ParallaxGenD3D(ParallaxGenDirectory* pgd, const filesystem::path output_dir, const filesystem::path exe_path)
 {
     // Constructor
     this->pgd = pgd;
 
     // Set output directory
     this->output_dir = output_dir;
+    this->exe_path = exe_path;
 }
 
 bool ParallaxGenD3D::checkIfAspectRatioMatches(const std::filesystem::path& dds_path_1, const std::filesystem::path& dds_path_2, bool& check_aspect)
@@ -79,7 +80,7 @@ void ParallaxGenD3D::initGPU()
 void ParallaxGenD3D::initShaders()
 {
     // MergeToComplexMaterial.hlsl
-    if (!createComputeShader(L"shaders/MergeToComplexMaterial.hlsl", shader_MergeToComplexMaterial)) {
+    if (!createComputeShader(L"MergeToComplexMaterial.hlsl", shader_MergeToComplexMaterial)) {
         spdlog::critical("Failed to create compute shader. Exiting.");
         ParallaxGenUtil::exitWithUserInput(1);
     }
@@ -93,9 +94,11 @@ ComPtr<ID3DBlob> ParallaxGenD3D::compileShader(const std::filesystem::path& file
         dwShaderFlags |= D3DCOMPILE_DEBUG;
     #endif
 
+    filesystem::path shader_abs_path = exe_path / "shaders" / filename;
+
     ComPtr<ID3DBlob> pCSBlob;
     ComPtr<ID3DBlob> pErrorBlob;
-    HRESULT hr = D3DCompileFromFile(filename.c_str(), nullptr, nullptr, "main", "cs_5_0", dwShaderFlags, 0, pCSBlob.ReleaseAndGetAddressOf(), pErrorBlob.ReleaseAndGetAddressOf());
+    HRESULT hr = D3DCompileFromFile(shader_abs_path.c_str(), nullptr, nullptr, "main", "cs_5_0", dwShaderFlags, 0, pCSBlob.ReleaseAndGetAddressOf(), pErrorBlob.ReleaseAndGetAddressOf());
     if (FAILED(hr)) {
         if (pErrorBlob) {
             spdlog::critical(L"Failed to compile shader {}: {}, {}", filename.wstring(), ParallaxGenUtil::convertToWstring(getHRESULTErrorMessage(hr)), static_cast<wchar_t*>(pErrorBlob->GetBufferPointer()));

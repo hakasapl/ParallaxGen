@@ -8,6 +8,7 @@
 - Fixed parallax or complex material texture paths not being set correctly for some edge case NIFs
 - Fixed aspect ratio checks happening more than once for the same pair
 - Output directory + data dir path checking is done using std::filesystem now instead of string comparison
+- Fixed bugs where shaders wouldn't compile when in wrong working directory
 
 ## [0.4.6] - 2024-07-23
 
