@@ -23,7 +23,7 @@ using namespace ParallaxGenUtil;
 filesystem::path getExecutablePath() {
     char buffer[MAX_PATH];
     if (GetModuleFileName(NULL, buffer, MAX_PATH) == 0) {
-        cout << "Error getting executable path: " << GetLastError() << "\n";
+        cerr << "Error getting executable path: " << GetLastError() << "\n";
         exitWithUserInput(1);
     }
 
@@ -33,7 +33,7 @@ filesystem::path getExecutablePath() {
         return out_path;
     }
     else {
-        cout << "Error getting executable path: path does not exist\n";
+        cerr << "Error getting executable path: path does not exist\n";
         exitWithUserInput(1);
     }
 
@@ -162,6 +162,11 @@ void mainRunner(int argc, char** argv)
         exitWithUserInput(1);
     }
 
+    if (!filesystem::exists(output_dir) || !filesystem::is_directory(output_dir)) {
+        spdlog::critical(L"Output directory does not exist or is not a directory: {}", output_dir.wstring());
+        exitWithUserInput(1);
+    }
+
     // If --no-zip is set, also set --no-cleanup
     if (no_zip) {
         no_cleanup = true;
@@ -180,6 +185,7 @@ void mainRunner(int argc, char** argv)
         spdlog::trace("TRACE logging enabled");
     }
 
+    // If true, NIF patching occurs
     bool patch_meshes = !ignore_parallax || !ignore_complex_material;
 
     //

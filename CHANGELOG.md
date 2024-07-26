@@ -7,6 +7,7 @@
 - Top level directory is now checked to make sure a NIF comes from "meshes", dds from "textures"
 - Fixed parallax or complex material texture paths not being set correctly for some edge case NIFs
 - Fixed aspect ratio checks happening more than once for the same pair
+- Output directory + data dir path checking is done using std::filesystem now instead of string comparison
 
 ## [0.4.6] - 2024-07-23
 
