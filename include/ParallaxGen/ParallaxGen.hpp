@@ -30,21 +30,6 @@ private:
 	bool ignore_parallax;
 	bool ignore_complex_material;
 
-	size_t num_completed;
-
-	// Hash function for std::tuple
-	struct TupleHash {
-		template <typename T1, typename T2>
-		std::size_t operator()(const std::tuple<T1, T2>& t) const {
-			auto hash1 = std::hash<T1>{}(std::get<0>(t));
-			auto hash2 = std::hash<T2>{}(std::get<1>(t));
-			return hash1 ^ (hash2 << 1); // Combining the hash values
-		}
-	};
-
-	// store already checked height map checks
-	std::unordered_map<std::tuple<std::filesystem::path, std::filesystem::path>, double, TupleHash> height_map_checks;
-
 public:
 	static inline const std::string parallax_state_file = "PARALLAXGEN_DONTDELETE";
 
@@ -63,13 +48,19 @@ public:
 
 private:
     // processes a NIF file (enable parallax if needed)
-	void processNIF(const std::filesystem::path& nif_file, std::vector<std::filesystem::path>& heightMaps, std::vector<std::filesystem::path>& complexMaterialMaps);
+	bool processNIF(const std::filesystem::path& nif_file);
+	// processes a shape within a NIF file
+	bool processShape(const std::filesystem::path& nif_file, nifly::NifFile& nif, const uint32_t shape_block_id, nifly::NiShape* shape, bool& nif_modified, const bool has_attached_havok);
+	// check if complex material should be enabled on shape
+	bool shouldEnableComplexMaterial(const std::filesystem::path& nif_file, nifly::NifFile& nif, const uint32_t shape_block_id, nifly::NiShape* shape, nifly::NiShader* shader, const std::string& search_prefix);
+	// check if vanilla parallax should be enabled on shape
+	bool shouldEnableParallax(const std::filesystem::path& nif_file, nifly::NifFile& nif, const uint32_t shape_block_id, nifly::NiShape* shape, nifly::NiShader* shader, const std::string& search_prefix, const bool has_attached_havok);
 	// enables complex material on a shape in a NIF
-	bool enableComplexMaterialOnShape(nifly::NifFile& nif, nifly::NiShape* shape, nifly::NiShader* shader, const std::string& search_prefix, bool dynCubemaps);
+	bool enableComplexMaterialOnShape(nifly::NifFile& nif, nifly::NiShape* shape, nifly::NiShader* shader, const std::string& search_prefix, bool dynCubemaps, bool& nif_modified);
 	// enables parallax on a shape in a NIF
-	bool enableParallaxOnShape(nifly::NifFile& nif, nifly::NiShape* shape, nifly::NiShader* shader, const std::string& search_prefix);
-	// checks aspectRatio of two DDS files
-	bool hasSameAspectRatio(const std::filesystem::path& dds_path_1, const std::filesystem::path& dds_path_2);
+	bool enableParallaxOnShape(nifly::NifFile& nif, nifly::NiShape* shape, nifly::NiShader* shader, const std::string& search_prefix, bool& nif_modified);
+
+	static std::vector<std::string> getSearchPrefixes(nifly::NifFile& nif, nifly::NiShape* shape);
 
 	// zip methods
 	void addFileToZip(mz_zip_archive& zip, const std::filesystem::path& filePath, const std::filesystem::path& zipPath);

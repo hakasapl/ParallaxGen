@@ -9,6 +9,7 @@
 
 using namespace std;
 using Microsoft::WRL::ComPtr;
+using namespace ParallaxGenUtil;
 
 ParallaxGenD3D::ParallaxGenD3D(ParallaxGenDirectory* pgd, std::filesystem::path output_dir)
 {
@@ -19,12 +20,11 @@ ParallaxGenD3D::ParallaxGenD3D(ParallaxGenDirectory* pgd, std::filesystem::path 
     this->output_dir = output_dir;
 }
 
-bool ParallaxGenD3D::checkIfAspectRatioMatches(const std::filesystem::path& dds_path_1, const std::filesystem::path& dds_path_2) const
+bool ParallaxGenD3D::checkIfAspectRatioMatches(const std::filesystem::path& dds_path_1, const std::filesystem::path& dds_path_2, bool& check_aspect)
 {
     // get metadata (should only pull headers, which is much faster)
     DirectX::TexMetadata dds_image_meta_1, dds_image_meta_2;
     if (!getDDSMetadata(dds_path_1, dds_image_meta_1) || !getDDSMetadata(dds_path_2, dds_image_meta_2)) {
-        spdlog::warn(L"Failed to load DDS file metadata: {} and {} (skipping)", dds_path_1.wstring(), dds_path_2.wstring());
         return false;
     }
 
@@ -33,10 +33,7 @@ bool ParallaxGenD3D::checkIfAspectRatioMatches(const std::filesystem::path& dds_
     float aspect_ratio_2 = static_cast<float>(dds_image_meta_2.width) / static_cast<float>(dds_image_meta_2.height);
 
     // check if aspect ratios don't match
-    if (aspect_ratio_1 != aspect_ratio_2) {
-        spdlog::trace("Aspect ratios don't match: {} vs {}", aspect_ratio_1, aspect_ratio_2);
-        return false;
-    }
+    check_aspect = aspect_ratio_1 == aspect_ratio_2;
 
     return true;
 }
@@ -652,74 +649,73 @@ vector<T> ParallaxGenD3D::readBack(const ComPtr<ID3D11Buffer>& gpu_resource) con
 
 bool ParallaxGenD3D::getDDS(const filesystem::path& dds_path, DirectX::ScratchImage& dds) const
 {
+    HRESULT hr;
+
     if (pgd->isLooseFile(dds_path)) {
         spdlog::trace(L"Reading DDS loose file {}", dds_path.wstring());
         filesystem::path full_path = pgd->getFullPath(dds_path);
 
         // Load DDS file
-        HRESULT hr = DirectX::LoadFromDDSFile(full_path.c_str(), DirectX::DDS_FLAGS_NONE, nullptr, dds);
-        if (FAILED(hr)) {
-            spdlog::debug("Failed to load DDS file: {}", getHRESULTErrorMessage(hr));
-            return false;
-        }
+        hr = DirectX::LoadFromDDSFile(full_path.c_str(), DirectX::DDS_FLAGS_NONE, nullptr, dds);
     } else if(pgd->isBSAFile(dds_path)) {
         spdlog::trace(L"Reading DDS BSA file {}", dds_path.wstring());
         vector<std::byte> dds_bytes = pgd->getFile(dds_path);
 
         // Load DDS file
-        HRESULT hr = DirectX::LoadFromDDSMemory(dds_bytes.data(), dds_bytes.size(), DirectX::DDS_FLAGS_NONE, nullptr, dds);
-        if (FAILED(hr)) {
-            spdlog::debug("Failed to load DDS file from memory: {}", getHRESULTErrorMessage(hr));
-            return false;
-        }
+        hr = DirectX::LoadFromDDSMemory(dds_bytes.data(), dds_bytes.size(), DirectX::DDS_FLAGS_NONE, nullptr, dds);
     } else {
         spdlog::trace(L"Reading DDS file from output dir {}", dds_path.wstring());
         filesystem::path full_path = output_dir / dds_path;
 
         // Load DDS file
-        HRESULT hr = DirectX::LoadFromDDSFile(full_path.c_str(), DirectX::DDS_FLAGS_NONE, nullptr, dds);
-        if (FAILED(hr)) {
-            spdlog::debug("Failed to load DDS file: {}", getHRESULTErrorMessage(hr));
-            return false;
-        }
+        hr = DirectX::LoadFromDDSFile(full_path.c_str(), DirectX::DDS_FLAGS_NONE, nullptr, dds);
+    }
+
+    if (FAILED(hr)) {
+        spdlog::error(L"Failed to load DDS file from {}: {}", dds_path.wstring(), convertToWstring(getHRESULTErrorMessage(hr)));
+        return false;
     }
 
     return true;
 }
 
-bool ParallaxGenD3D::getDDSMetadata(const filesystem::path& dds_path, DirectX::TexMetadata& dds_meta) const
+bool ParallaxGenD3D::getDDSMetadata(const filesystem::path& dds_path, DirectX::TexMetadata& dds_meta)
 {
+    // Check if in cache
+    if (dds_metadata_cache.find(dds_path) != dds_metadata_cache.end()) {
+        dds_meta = dds_metadata_cache[dds_path];
+        return true;
+    }
+
+    HRESULT hr;
+
     if (pgd->isLooseFile(dds_path)) {
         spdlog::trace(L"Reading DDS loose file metadata {}", dds_path.wstring());
         filesystem::path full_path = pgd->getFullPath(dds_path);
 
         // Load DDS file
-        HRESULT hr = DirectX::GetMetadataFromDDSFile(full_path.c_str(), DirectX::DDS_FLAGS_NONE, dds_meta);
-        if (FAILED(hr)) {
-            spdlog::debug("Failed to load DDS file metadata: {}", getHRESULTErrorMessage(hr));
-            return false;
-        }
+        hr = DirectX::GetMetadataFromDDSFile(full_path.c_str(), DirectX::DDS_FLAGS_NONE, dds_meta);
     } else if (pgd->isBSAFile(dds_path)) {
         spdlog::trace(L"Reading DDS BSA file metadata {}", dds_path.wstring());
         vector<std::byte> dds_bytes = pgd->getFile(dds_path);
 
         // Load DDS file
-        HRESULT hr = DirectX::GetMetadataFromDDSMemory(dds_bytes.data(), dds_bytes.size(), DirectX::DDS_FLAGS_NONE, dds_meta);
-        if (FAILED(hr)) {
-            spdlog::debug("Failed to load DDS file metadata from memory: {}", getHRESULTErrorMessage(hr));
-            return false;
-        }
+        hr = DirectX::GetMetadataFromDDSMemory(dds_bytes.data(), dds_bytes.size(), DirectX::DDS_FLAGS_NONE, dds_meta);
     } else {
         spdlog::trace(L"Reading DDS file from output dir {}", dds_path.wstring());
         filesystem::path full_path = output_dir / dds_path;
 
         // Load DDS file
-        HRESULT hr = DirectX::GetMetadataFromDDSFile(full_path.c_str(), DirectX::DDS_FLAGS_NONE, dds_meta);
-        if (FAILED(hr)) {
-            spdlog::debug("Failed to load DDS file metadata: {}", getHRESULTErrorMessage(hr));
-            return false;
-        }
+        hr = DirectX::GetMetadataFromDDSFile(full_path.c_str(), DirectX::DDS_FLAGS_NONE, dds_meta);
     }
+
+    if (FAILED(hr)) {
+        spdlog::error(L"Failed to load DDS file metadata from {}: {}", dds_path.wstring(), convertToWstring(getHRESULTErrorMessage(hr)));
+        return false;
+    }
+
+    // update cache
+    dds_metadata_cache[dds_path] = dds_meta;
 
     return true;
 }

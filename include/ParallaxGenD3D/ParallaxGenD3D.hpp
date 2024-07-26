@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <filesystem>
 #include <string>
+#include <unordered_map>
 
 #include "ParallaxGenDirectory/ParallaxGenDirectory.hpp"
 
@@ -41,10 +42,12 @@ private:
         UINT MaxParallaxValue;
     };
 
+    std::unordered_map<std::filesystem::path, DirectX::TexMetadata> dds_metadata_cache;
+
 public:
     ParallaxGenD3D(ParallaxGenDirectory* pgd, std::filesystem::path output_dir);
 
-    bool checkIfAspectRatioMatches(const std::filesystem::path& dds_path_1, const std::filesystem::path& dds_path_2) const;
+    bool checkIfAspectRatioMatches(const std::filesystem::path& dds_path_1, const std::filesystem::path& dds_path_2, bool& check_aspect);
 
     // GPU functions
     void initGPU();
@@ -78,7 +81,7 @@ private:
 
     // Texture Helpers
     bool getDDS(const std::filesystem::path& dds_path, DirectX::ScratchImage& dds) const;
-    bool getDDSMetadata(const std::filesystem::path& dds_path, DirectX::TexMetadata& dds_meta) const;
+    bool getDDSMetadata(const std::filesystem::path& dds_path, DirectX::TexMetadata& dds_meta);
     static DirectX::ScratchImage LoadRawPixelsToScratchImage(const std::vector<unsigned char> rawPixels, size_t width, size_t height, DXGI_FORMAT format, int channels);
 };
 
