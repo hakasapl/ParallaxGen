@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.4.7] - UNRELEASED
+## [0.4.7] - 2024-07-27
 
 - GPU code will now verify textures are a power of 2
 - Added "skyrimgog" game type
@@ -10,6 +10,7 @@
 - Output directory + data dir path checking is done using std::filesystem now instead of string comparison
 - Fixed bugs where shaders wouldn't compile when in wrong working directory
 - Diffuse maps are checked to make sure they exist now before patching mesh
+- Fixed help not showing up with -h or --help argument
 
 ## [0.4.6] - 2024-07-23
 

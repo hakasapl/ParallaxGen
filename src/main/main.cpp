@@ -136,7 +136,8 @@ void mainRunner(int argc, char** argv)
         app.parse(argc, argv);
     }
     catch (const CLI::ParseError &e) {
-        spdlog::critical("Arguments Invalid: {}", e.what());
+        // TODO --help doesn't work correctly with this
+        spdlog::critical("Arguments Invalid: {}\n{}", e.what(), app.help());
         exitWithUserInput(1);
     }
 
