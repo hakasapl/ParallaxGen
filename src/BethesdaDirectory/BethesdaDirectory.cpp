@@ -7,6 +7,7 @@
 #include <binary_io/binary_io.hpp>
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/filesystem.hpp>
+#include <shlwapi.h>
 
 // BSA Includes
 #include <cstdio>
@@ -142,7 +143,7 @@ fs::path BethesdaDirectory::getDataPath() const
 	return data_dir;
 }
 
-vector<fs::path> BethesdaDirectory::findFilesBySuffix(const string_view suffix, const bool lower, const vector<wstring>& path_blocklist, const wstring& parent_path) const
+vector<fs::path> BethesdaDirectory::findFilesBySuffix(const string_view suffix, const bool lower, const vector<wstring>& glob_list_allow, const vector<wstring>& glob_list_deny, const vector<wstring>& archive_list_deny) const
 {
 	// find all keys in fileMap that match pattern
 	vector<fs::path> found_files;
@@ -155,13 +156,56 @@ vector<fs::path> BethesdaDirectory::findFilesBySuffix(const string_view suffix, 
 			spdlog::trace(L"Checking file for suffix {} match: {}", convertToWstring(string(suffix)), cur_file_path.wstring());
 		}
 
-        if (boost::algorithm::ends_with(key.wstring(), suffix)) {
-			// check if any component of the path is in the blocklist
-			if (!parent_path.empty() && !key.begin()->wstring().starts_with(parent_path)) {
-				continue;
+        if (boost::algorithm::iends_with(key.wstring(), suffix)) {
+			// Check globs
+			bool allow = false;
+
+			wstring key_str_ws = key.wstring();
+			LPCWSTR key_str = key_str_ws.c_str();
+
+			// Check allowlist
+			if (glob_list_allow.empty()) {
+				allow = true;
+			}
+			else {
+				for (const wstring& glob : glob_list_allow) {
+					LPCWSTR glob_str = glob.c_str();
+					if (PathMatchSpecW(key_str, glob_str)) {
+						allow = true;
+						break;
+					}
+				}
 			}
 
-			if (!path_blocklist.empty() && checkIfAnyComponentIs(cur_file_path, path_blocklist)) {
+			// Check denylist
+			if (!glob_list_deny.empty()) {
+				for (const wstring& glob : glob_list_deny) {
+					LPCWSTR glob_str = glob.c_str();
+					if (PathMatchSpecW(key_str, glob_str)) {
+						allow = false;
+						break;
+					}
+				}
+			}
+
+			// Verify BSA blocklist
+			if (value.bsa_file != nullptr) {
+				// Get BSA file
+				wstring bsa_file_ws = value.bsa_file->path.filename().wstring();
+				LPCWSTR bsa_file = bsa_file_ws.c_str();
+
+				// This is a BSA file, check deny list
+				for (wstring deny : archive_list_deny) {
+					LPCWSTR glob_str = deny.c_str();
+					if (PathMatchSpecW(bsa_file, glob_str)) {
+						allow = false;
+						break;
+					}
+				}
+			}
+
+			// If not allowed, skip
+			if (!allow) {
 				continue;
 			}
 

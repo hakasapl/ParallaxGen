@@ -65,6 +65,7 @@ void addArguments(
     bool& optimize_meshes,
     bool& no_zip,
     bool& no_cleanup,
+    bool& no_default_config,
     bool& ignore_parallax,
     bool& ignore_complex_material,
     const string& AVAILABLE_GAME_TYPES_STR
@@ -78,6 +79,7 @@ void addArguments(
     app.add_flag("--optimize-meshes", optimize_meshes, "Optimize meshes before saving them");
     app.add_flag("--no-zip", no_zip, "Don't zip the output meshes (also enables --no-cleanup)");
     app.add_flag("--no-cleanup", no_cleanup, "Don't delete generated meshes after zipping");
+    app.add_flag("--no-default-conifg", no_default_config, "Don't load the default config file (You need to know what you're doing for this)");
     app.add_flag("--ignore-parallax", ignore_parallax, "Don't generate any parallax meshes");
     app.add_flag("--ignore-complex-material", ignore_complex_material, "Don't generate any complex material meshes");
 }
@@ -124,12 +126,13 @@ void mainRunner(int argc, char** argv)
     bool optimize_meshes = false;
     bool no_zip = false;
     bool no_cleanup = false;
+    bool no_default_config = false;
     bool ignore_parallax = false;
     bool ignore_complex_material = false;
 
     // Parse CLI arguments
     CLI::App app{ "ParallaxGen: Auto convert meshes to parallax meshes" };
-    addArguments(app, verbosity, game_dir, game_type, output_dir, upgrade_shaders, optimize_meshes, no_zip, no_cleanup, ignore_parallax, ignore_complex_material, AVAILABLE_GAME_TYPES_STR);
+    addArguments(app, verbosity, game_dir, game_type, output_dir, upgrade_shaders, optimize_meshes, no_zip, no_cleanup, no_default_config, ignore_parallax, ignore_complex_material, AVAILABLE_GAME_TYPES_STR);
 
     // Check if arguments are valid, otherwise print error to user
     try {
@@ -196,7 +199,7 @@ void mainRunner(int argc, char** argv)
 
     // Create relevant objects
 	BethesdaGame bg = BethesdaGame(bg_type, game_dir, true);
-    ParallaxGenDirectory pgd = ParallaxGenDirectory(bg);
+    ParallaxGenDirectory pgd = ParallaxGenDirectory(bg, EXE_PATH);
     ParallaxGenD3D pgd3d = ParallaxGenD3D(&pgd, output_dir, EXE_PATH);
     ParallaxGen pg = ParallaxGen(output_dir, &pgd, &pgd3d, optimize_meshes, ignore_parallax, ignore_complex_material);
 
@@ -240,6 +243,9 @@ void mainRunner(int argc, char** argv)
 
     // Populate file map from data directory
     pgd.populateFileMap();
+
+    // Load configs
+    pgd.loadPGConfig(!no_default_config);
 
     // Install default cubemap file if needed
     if (!ignore_complex_material) {
