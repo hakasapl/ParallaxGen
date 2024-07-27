@@ -357,6 +357,14 @@ ParallaxGenTask::PGResult ParallaxGen::shouldEnableComplexMaterial(const filesys
 	// verify that maps match each other
 	string diffuse_map;
 	uint32_t diffuse_result = nif.GetTextureSlot(shape, diffuse_map, 0);
+	if (!diffuse_map.empty() && !pgd->isFile(diffuse_map)) {
+		// no diffuse map
+		spdlog::trace(L"Rejecting shape {}: Diffuse map missing: {}", shape_block_id, convertToWstring(diffuse_map));
+		enable_result = false;
+		return result;
+	}
+
+	// TODO check that diffuse map actually exists
 
 	bool same_aspect = false;
 	ParallaxGenTask::updatePGResult(result, pgd3d->checkIfAspectRatioMatches(diffuse_map, cm_map, same_aspect), ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
@@ -422,6 +430,12 @@ ParallaxGenTask::PGResult ParallaxGen::shouldEnableParallax(const filesystem::pa
 	// verify that maps match each other (this is somewhat expense so it happens last)
 	string diffuse_map;
 	uint32_t diffuse_result = nif.GetTextureSlot(shape, diffuse_map, 0);
+	if (!diffuse_map.empty() && !pgd->isFile(diffuse_map)) {
+		// no diffuse map
+		spdlog::trace(L"Rejecting shape {}: Diffuse map missing: {}", shape_block_id, convertToWstring(diffuse_map));
+		enable_result = false;
+		return result;
+	}
 
 	bool same_aspect = false;
 	ParallaxGenTask::updatePGResult(result, pgd3d->checkIfAspectRatioMatches(diffuse_map, height_map, same_aspect), ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
