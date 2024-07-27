@@ -11,6 +11,7 @@
 #include <unordered_map>
 
 #include "ParallaxGenDirectory/ParallaxGenDirectory.hpp"
+#include "ParallaxGenTask/ParallaxGenTask.hpp"
 
 class ParallaxGenD3D
 {
@@ -49,7 +50,7 @@ private:
 public:
     ParallaxGenD3D(ParallaxGenDirectory* pgd, const std::filesystem::path output_dir, const std::filesystem::path exe_path);
 
-    bool checkIfAspectRatioMatches(const std::filesystem::path& dds_path_1, const std::filesystem::path& dds_path_2, bool& check_aspect);
+    ParallaxGenTask::PGResult checkIfAspectRatioMatches(const std::filesystem::path& dds_path_1, const std::filesystem::path& dds_path_2, bool& check_aspect);
 
     // GPU functions
     void initGPU();

@@ -8,7 +8,6 @@
 #include <fstream>
 #include <DirectXTex.h>
 
-#include "ParallaxGenTask/ParallaxGenTask.hpp"
 #include "ParallaxGenUtil/ParallaxGenUtil.hpp"
 
 using namespace std;
@@ -18,12 +17,6 @@ using namespace nifly;
 ParallaxGen::ParallaxGen(const filesystem::path output_dir, ParallaxGenDirectory* pgd, ParallaxGenD3D* pgd3d, bool optimize_meshes, bool ignore_parallax, bool ignore_complex_material)
 {
     // constructor
-
-	// If output dir is the same as data dir meshes might get overwritten
-	if (filesystem::equivalent(output_dir, pgd->getDataPath())) {
-		spdlog::critical("Output directory cannot be the same directory as your data folder. Exiting.");
-		exitWithUserInput(1);
-	}
 
 	// set output directory
 	this->output_dir = output_dir;
@@ -47,46 +40,7 @@ void ParallaxGen::upgradeShaders()
 	ParallaxGenTask task_tracker("Shader Upgrades", heightMaps.size());
 
 	for (filesystem::path height_map : heightMaps) {
-		spdlog::trace(L"Upgrading height map: {}", height_map.wstring());
-
-		// Replace "_p" with "_m" in the stem
-		filesystem::path env_mask = replaceLastOf(height_map, L"_p.dds", L"_m.dds");
-		filesystem::path complex_map = env_mask;
-
-		if (pgd->isComplexMaterialMap(env_mask)) {
-			// load order already has a complex material, skip this one
-			task_tracker.completeJobSuccess();
-			continue;
-		}
-
-		if (!pgd->isFile(env_mask)) {
-			// no env map
-			env_mask = filesystem::path();
-		}
-
-		// upgrade to complex material
-		DirectX::ScratchImage new_ComplexMap = pgd3d->upgradeToComplexMaterial(height_map, env_mask);
-
-		// save to file
-		if (new_ComplexMap.GetImageCount() > 0) {
-			filesystem::path output_path = output_dir / complex_map;
-			filesystem::create_directories(output_path.parent_path());
-
-			HRESULT hr = DirectX::SaveToDDSFile(new_ComplexMap.GetImages(), new_ComplexMap.GetImageCount(), new_ComplexMap.GetMetadata(), DirectX::DDS_FLAGS_NONE, output_path.c_str());
-			if (FAILED(hr)) {
-				spdlog::error(L"Unable to save complex material {}: {}", output_path.wstring(), convertToWstring(ParallaxGenD3D::getHRESULTErrorMessage(hr)));
-				task_tracker.completeJobFailure();
-			}
-
-			// add newly created file to complexMaterialMaps for later processing
-			pgd->addComplexMaterialMap(complex_map);
-
-			spdlog::debug(L"Generated complex material map: {}", complex_map.wstring());
-		} else {
-			task_tracker.completeJobFailure();
-		}
-
-		task_tracker.completeJobSuccess();
+		task_tracker.completeJob(convertHeightMapToComplexMaterial(height_map));
 	}
 }
 
@@ -98,17 +52,54 @@ void ParallaxGen::patchMeshes()
 	ParallaxGenTask task_tracker("Mesh Patcher", meshes.size());
 
 	for (filesystem::path mesh : meshes) {
-		if (processNIF(mesh)) {
-			task_tracker.completeJobSuccess();
-		} else {
-			task_tracker.completeJobFailure();
-		}
+		task_tracker.completeJob(processNIF(mesh));
+	}
+}
+
+ParallaxGenTask::PGResult ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path& height_map)
+{
+	spdlog::trace(L"Upgrading height map: {}", height_map.wstring());
+
+	auto result = ParallaxGenTask::PGResult::SUCCESS;
+
+	// Replace "_p" with "_m" in the stem
+	filesystem::path env_mask = replaceLastOf(height_map, L"_p.dds", L"_m.dds");
+	filesystem::path complex_map = env_mask;
+
+	if (pgd->isComplexMaterialMap(env_mask)) {
+		// load order already has a complex material, skip this one
+		return result;
 	}
 
-	// create state file
-	// TODO move this to a separate function
-	ofstream state_file(output_dir / parallax_state_file);
-	state_file.close();
+	if (!pgd->isFile(env_mask)) {
+		// no env map
+		env_mask = filesystem::path();
+	}
+
+	// upgrade to complex material
+	DirectX::ScratchImage new_ComplexMap = pgd3d->upgradeToComplexMaterial(height_map, env_mask);
+
+	// save to file
+	if (new_ComplexMap.GetImageCount() > 0) {
+		filesystem::path output_path = output_dir / complex_map;
+		filesystem::create_directories(output_path.parent_path());
+
+		HRESULT hr = DirectX::SaveToDDSFile(new_ComplexMap.GetImages(), new_ComplexMap.GetImageCount(), new_ComplexMap.GetMetadata(), DirectX::DDS_FLAGS_NONE, output_path.c_str());
+		if (FAILED(hr)) {
+			spdlog::error(L"Unable to save complex material {}: {}", output_path.wstring(), convertToWstring(ParallaxGenD3D::getHRESULTErrorMessage(hr)));
+			result = ParallaxGenTask::PGResult::FAILURE;
+			return result;
+		}
+
+		// add newly created file to complexMaterialMaps for later processing
+		pgd->addComplexMaterialMap(complex_map);
+
+		spdlog::debug(L"Generated complex material map: {}", complex_map.wstring());
+	} else {
+		result = ParallaxGenTask::PGResult::FAILURE;
+	}
+
+	return result;
 }
 
 void ParallaxGen::zipMeshes() {
@@ -162,24 +153,34 @@ void ParallaxGen::deleteOutputDir() {
 	}
 }
 
+void ParallaxGen::initOutputDir() {
+	// create state file
+	ofstream state_file(output_dir / parallax_state_file);
+	state_file.close();
+}
+
 // shorten some enum names
 typedef BSLightingShaderPropertyShaderType BSLSP;
 typedef SkyrimShaderPropertyFlags1 SSPF1;
 typedef SkyrimShaderPropertyFlags2 SSPF2;
-bool ParallaxGen::processNIF(const filesystem::path& nif_file)
+ParallaxGenTask::PGResult ParallaxGen::processNIF(const filesystem::path& nif_file)
 {
+	auto result = ParallaxGenTask::PGResult::SUCCESS;
+
 	// Determine output path for patched NIF
 	const filesystem::path output_file = output_dir / nif_file;
 	if (filesystem::exists(output_file)) {
 		spdlog::error(L"Unable to process NIF file, file already exists: {}", nif_file.wstring());
-		return false;
+		result = ParallaxGenTask::PGResult::FAILURE;
+		return result;
 	}
 
 	// Get NIF Bytes
 	vector<std::byte> nif_file_data = pgd->getFile(nif_file);
 	if (nif_file_data.empty()) {
 		spdlog::error(L"Unable to read NIF file: {}", nif_file.wstring());
-		return false;
+		result = ParallaxGenTask::PGResult::FAILURE;
+		return result;
 	}
 
 	// Convert Byte Vector to Stream
@@ -196,12 +197,14 @@ bool ParallaxGen::processNIF(const filesystem::path& nif_file)
 	}
 	catch (const exception& e) {
 		spdlog::error(L"Error reading NIF file: {}, {}", nif_file.wstring(), ParallaxGenUtil::convertToWstring(e.what()));
-		return false;
+		result = ParallaxGenTask::PGResult::FAILURE;
+		return result;
 	}
 
 	if (!nif.IsValid()) {
 		spdlog::error(L"Invalid NIF file (ignoring): {}", nif_file.wstring());
-		return false;
+		result = ParallaxGenTask::PGResult::FAILURE;
+		return result;
 	}
 
 	// Stores whether the NIF has been modified throughout the patching process
@@ -223,14 +226,23 @@ bool ParallaxGen::processNIF(const filesystem::path& nif_file)
 	}
 
 	// Patch each shape in NIF
+	size_t num_shapes = 0;
+	bool one_shape_success = false;
 	for (NiShape* shape : nif.GetShapes()) {
+		num_shapes++;
 		// Get shape's block ID in NIF (used for logging)
 		const auto shape_block_id = nif.GetBlockID(shape);
 
-		if (!processShape(nif_file, nif, shape_block_id, shape, nif_modified, has_attached_havok)) {
-			spdlog::error(L"Error processing shape in NIF file: {}", nif_file.wstring());
-			return false;
+		ParallaxGenTask::updatePGResult(result, processShape(nif_file, nif, shape_block_id, shape, nif_modified, has_attached_havok), ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
+		if (result == ParallaxGenTask::PGResult::SUCCESS) {
+			one_shape_success = true;
 		}
+	}
+
+	if (!one_shape_success && num_shapes > 0) {
+		// No shapes were successfully processed
+		result = ParallaxGenTask::PGResult::FAILURE;
+		return result;
 	}
 
 	// Save patched NIF if it was modified
@@ -242,27 +254,30 @@ bool ParallaxGen::processNIF(const filesystem::path& nif_file)
 
 		if (nif.Save(output_file, nif_save_options)) {
 			spdlog::error(L"Unable to save NIF file: {}", nif_file.wstring());
-			return false;
+			result = ParallaxGenTask::PGResult::FAILURE;
+			return result;
 		}
 	}
 
-	return true;
+	return result;
 }
 
-bool ParallaxGen::processShape(const filesystem::path& nif_file, NifFile& nif, const uint32_t shape_block_id, NiShape* shape, bool& nif_modified, const bool has_attached_havok)
+ParallaxGenTask::PGResult ParallaxGen::processShape(const filesystem::path& nif_file, NifFile& nif, const uint32_t shape_block_id, NiShape* shape, bool& nif_modified, const bool has_attached_havok)
 {
+	auto result = ParallaxGenTask::PGResult::SUCCESS;
+
 	// Check for exclusions
 	// get shader type
 	if (!shape->HasShaderProperty()) {
 		spdlog::trace(L"Rejecting shape {}: No shader property", shape_block_id);
-		return true;
+		return result;
 	}
 
 	// only allow BSLightingShaderProperty blocks
 	string shape_block_name = shape->GetBlockName();
 	if (shape_block_name != "NiTriShape" && shape_block_name != "BSTriShape") {
 		spdlog::trace(L"Rejecting shape {}: Incorrect shape block type", shape_block_id);
-		return true;
+		return result;
 	}
 
 	// get shader from shape
@@ -270,108 +285,114 @@ bool ParallaxGen::processShape(const filesystem::path& nif_file, NifFile& nif, c
 	if (shader == nullptr) {
 		// skip if no shader
 		spdlog::trace(L"Rejecting shape {}: No shader", shape_block_id);
-		return true;
+		return result;
 	}
 
 	// check that shader has a texture set
 	if (!shader->HasTextureSet()) {
 		spdlog::trace(L"Rejecting shape {}: No texture set", shape_block_id);
-		return true;
+		return result;
 	}
 
 	// check that shader is a BSLightingShaderProperty
 	string shader_block_name = shader->GetBlockName();
 	if (shader_block_name != "BSLightingShaderProperty") {
 		spdlog::trace(L"Rejecting shape {}: Incorrect shader block type", shape_block_id);
-		return true;
+		return result;
 	}
 
 	auto search_prefixes = getSearchPrefixes(nif, shape);
 	if (search_prefixes.empty()) {
 		spdlog::trace(L"Rejecting shape {}: No search prefixes", shape_block_id);
-		return true;
+		return result;
 	}
 
 	// check if meshes should be changed
 	for (string& search_prefix : search_prefixes) {
 		// COMPLEX MATERIAL
-		if (shouldEnableComplexMaterial(nif_file, nif, shape_block_id, shape, shader, search_prefix)) {
+		bool enable_cm = false;
+		ParallaxGenTask::updatePGResult(result, shouldEnableComplexMaterial(nif_file, nif, shape_block_id, shape, shader, search_prefix, enable_cm), ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
+		if (enable_cm) {
 			// Determine if dynamic cubemaps should be set
 			bool dynCubemaps = !pgd->checkIfAnyComponentIs(nif_file, dynCubemap_ignore_list) && !pgd->checkIfAnyComponentIs(search_prefix, dynCubemap_ignore_list);
 
 			// Enable complex material on shape
-			if (!enableComplexMaterialOnShape(nif, shape, shader, search_prefix, dynCubemaps, nif_modified)) {
-				spdlog::error(L"Unable to enable complex material on shape {}", shape_block_id);
-				return false;
-			}
-
-			return true;
+			ParallaxGenTask::updatePGResult(result, enableComplexMaterialOnShape(nif, shape, shader, search_prefix, dynCubemaps, nif_modified));
+			return result;
 		}
 
 		// VANILLA PARALLAX
-		if (shouldEnableParallax(nif_file, nif, shape_block_id, shape, shader, search_prefix, has_attached_havok)) {
+		bool enable_parallax = false;
+		ParallaxGenTask::updatePGResult(result, shouldEnableParallax(nif_file, nif, shape_block_id, shape, shader, search_prefix, has_attached_havok, enable_parallax), ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
+		if (enable_parallax) {
 			// Enable parallax on shape
-			if (!enableParallaxOnShape(nif, shape, shader, search_prefix, nif_modified)) {
-				spdlog::error(L"Unable to enable parallax on shape {}", shape_block_id);
-				return false;
-			}
-
-			return true;
+			ParallaxGenTask::updatePGResult(result, enableParallaxOnShape(nif, shape, shader, search_prefix, nif_modified));
+			return result;
 		}
 	}
 
-	return true;
+	return result;
 }
 
-bool ParallaxGen::shouldEnableComplexMaterial(const filesystem::path& nif_file, NifFile& nif, const uint32_t shape_block_id, NiShape* shape, NiShader* shader, const string& search_prefix)
+ParallaxGenTask::PGResult ParallaxGen::shouldEnableComplexMaterial(const filesystem::path& nif_file, NifFile& nif, const uint32_t shape_block_id, NiShape* shape, NiShader* shader, const string& search_prefix, bool& enable_result)
 {
+	auto result = ParallaxGenTask::PGResult::SUCCESS;
+	enable_result = true;  // Start with default true
+
 	// Check if complex material file exists
 	filesystem::path cm_map = search_prefix + "_m.dds";
 	if (ignore_complex_material || !pgd->isComplexMaterialMap(cm_map)) {
-		return false;
+		enable_result = false;
+		return result;
 	}
 
 	// Get shader type
 	BSLSP shader_type = static_cast<BSLSP>(shader->GetShaderType());
 	if (shader_type != BSLSP::BSLSP_DEFAULT && shader_type != BSLSP::BSLSP_ENVMAP && shader_type != BSLSP::BSLSP_PARALLAX) {
 		spdlog::trace(L"Rejecting shape {}: Incorrect shader type", shape_block_id);
-		return false;
+		enable_result = false;
+		return result;
 	}
 
 	// verify that maps match each other
 	string diffuse_map;
 	uint32_t diffuse_result = nif.GetTextureSlot(shape, diffuse_map, 0);
-	// TODO how do we integrate this properly?
-	// TODO probably a struct in the Task class that defines error states
+
 	bool same_aspect = false;
-	pgd3d->checkIfAspectRatioMatches(diffuse_map, cm_map, same_aspect);
+	ParallaxGenTask::updatePGResult(result, pgd3d->checkIfAspectRatioMatches(diffuse_map, cm_map, same_aspect), ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
 	if (!same_aspect) {
 		spdlog::trace(L"Rejecting shape {} in NIF file {}: Complex material map does not match diffuse map", shape_block_id, nif_file.wstring());
-		return false;
+		enable_result = false;
+		return result;
 	}
 
-	// All checks passed
-	return true;
+	return result;
 }
 
-bool ParallaxGen::shouldEnableParallax(const filesystem::path& nif_file, NifFile& nif, const uint32_t shape_block_id, NiShape* shape, NiShader* shader, const string& search_prefix, const bool has_attached_havok)
+ParallaxGenTask::PGResult ParallaxGen::shouldEnableParallax(const filesystem::path& nif_file, NifFile& nif, const uint32_t shape_block_id, NiShape* shape, NiShader* shader, const string& search_prefix, const bool has_attached_havok, bool& enable_result)
 {
+	auto result = ParallaxGenTask::PGResult::SUCCESS;
+	enable_result = true;  // Start with default true
+
 	// processing for parallax
 	filesystem::path height_map = search_prefix + "_p.dds";
 	if (ignore_parallax || !pgd->isHeightMap(height_map)) {
-		return false;
+		enable_result = false;
+		return result;
 	}
 
 	// Check if nif has attached havok (results in crashes for vanilla parallax)
 	if (has_attached_havok) {
 		spdlog::trace(L"Rejecting NIF file {} due to attached havok animations", nif_file.wstring());
-		return false;
+		enable_result = false;
+		return result;
 	}
 
 	// ignore skinned meshes, these don't support parallax
 	if (shape->HasSkinInstance() || shape->IsSkinned()) {
 		spdlog::trace(L"Rejecting shape {}: Skinned mesh", shape_block_id, nif_file.wstring());
-		return false;
+		enable_result = false;
+		return result;
 	}
 
 	// Enable regular parallax for this shape!
@@ -379,39 +400,45 @@ bool ParallaxGen::shouldEnableParallax(const filesystem::path& nif_file, NifFile
 	if (shader_type != BSLSP::BSLSP_DEFAULT && shader_type != BSLSP::BSLSP_PARALLAX) {
 		// don't overwrite existing shaders
 		spdlog::trace(L"Rejecting shape {} in NIF file {}: Incorrect shader type", shape_block_id, nif_file.wstring());
-		return false;
+		enable_result = false;
+		return result;
 	}
 
 	// decals don't work with regular parallax
 	BSLightingShaderProperty* cur_bslsp = dynamic_cast<BSLightingShaderProperty*>(shader);
 	if (cur_bslsp->shaderFlags1 & SSPF1::SLSF1_DECAL || cur_bslsp->shaderFlags1 & SSPF1::SLSF1_DYNAMIC_DECAL) {
 		spdlog::trace(L"Rejecting shape {} in NIF file {}: Decal shape", shape_block_id, nif_file.wstring());
-		return false;
+		enable_result = false;
+		return result;
 	}
 
 	// Mesh lighting doesn't work with regular parallax
 	if (cur_bslsp->shaderFlags2 & SSPF2::SLSF2_SOFT_LIGHTING || cur_bslsp->shaderFlags2 & SSPF2::SLSF2_RIM_LIGHTING || cur_bslsp->shaderFlags2 & SSPF2::SLSF2_BACK_LIGHTING) {
 		spdlog::trace(L"Rejecting shape {} in NIF file {}: Lighting on shape", shape_block_id, nif_file.wstring());
-		return false;
+		enable_result = false;
+		return result;
 	}
 
 	// verify that maps match each other (this is somewhat expense so it happens last)
 	string diffuse_map;
 	uint32_t diffuse_result = nif.GetTextureSlot(shape, diffuse_map, 0);
+
 	bool same_aspect = false;
-	pgd3d->checkIfAspectRatioMatches(diffuse_map, height_map, same_aspect);
+	ParallaxGenTask::updatePGResult(result, pgd3d->checkIfAspectRatioMatches(diffuse_map, height_map, same_aspect), ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
 	if (!same_aspect) {
 		spdlog::trace(L"Rejecting shape {} in NIF file {}: Height map does not match diffuse map", shape_block_id, nif_file.wstring());
-		return false;
+		enable_result = false;
+		return result;
 	}
 
 	// All checks passed
-	return true;
+	return result;
 }
 
-bool ParallaxGen::enableComplexMaterialOnShape(NifFile& nif, NiShape* shape, NiShader* shader, const string& search_prefix, bool dynCubemaps, bool& nif_modified)
+ParallaxGenTask::PGResult ParallaxGen::enableComplexMaterialOnShape(NifFile& nif, NiShape* shape, NiShader* shader, const string& search_prefix, bool dynCubemaps, bool& nif_modified)
 {
 	// enable complex material on shape
+	auto result = ParallaxGenTask::PGResult::SUCCESS;
 
 	// 1. set shader type to env map
 	if (shader->GetShaderType() != BSLSP::BSLSP_ENVMAP) {
@@ -463,12 +490,13 @@ bool ParallaxGen::enableComplexMaterialOnShape(NifFile& nif, NiShape* shape, NiS
 		}
 	}
 
-	return true;
+	return result;
 }
 
-bool ParallaxGen::enableParallaxOnShape(NifFile& nif, NiShape* shape, NiShader* shader, const string& search_prefix, bool& nif_modified)
+ParallaxGenTask::PGResult ParallaxGen::enableParallaxOnShape(NifFile& nif, NiShape* shape, NiShader* shader, const string& search_prefix, bool& nif_modified)
 {
 	// enable parallax on shape
+	auto result = ParallaxGenTask::PGResult::SUCCESS;
 
 	// 1. set shader type to parallax
 	if (shader->GetShaderType() != BSLSP::BSLSP_PARALLAX) {
@@ -507,7 +535,7 @@ bool ParallaxGen::enableParallaxOnShape(NifFile& nif, NiShape* shape, NiShader* 
 		nif_modified = true;
 	}
 
-	return true;
+	return result;
 }
 
 vector<string> ParallaxGen::getSearchPrefixes(NifFile& nif, nifly::NiShape* shape)

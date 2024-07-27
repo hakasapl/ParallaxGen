@@ -162,11 +162,6 @@ void mainRunner(int argc, char** argv)
         exitWithUserInput(1);
     }
 
-    if (!filesystem::exists(output_dir) || !filesystem::is_directory(output_dir)) {
-        spdlog::critical(L"Output directory does not exist or is not a directory: {}", output_dir.wstring());
-        exitWithUserInput(1);
-    }
-
     // If --no-zip is set, also set --no-cleanup
     if (no_zip) {
         no_cleanup = true;
@@ -216,6 +211,20 @@ void mainRunner(int argc, char** argv)
         exitWithUserInput(1);
     }
 
+    // Create output directory
+    try {
+        filesystem::create_directories(output_dir);
+    } catch (const filesystem::filesystem_error& ex) {
+        spdlog::error("Failed to create output directory: {}", ex.what());
+        exitWithUserInput(1);
+    }
+
+    // If output dir is the same as data dir meshes might get overwritten
+	if (filesystem::equivalent(output_dir, pgd.getDataPath())) {
+		spdlog::critical("Output directory cannot be the same directory as your data folder. Exiting.");
+		exitWithUserInput(1);
+	}
+
     //
     // Generation
     //
@@ -226,6 +235,7 @@ void mainRunner(int argc, char** argv)
 
     // delete existing output
     pg.deleteOutputDir();
+    pg.initOutputDir();
 
     // Populate file map from data directory
     pgd.populateFileMap();

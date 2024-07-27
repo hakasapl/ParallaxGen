@@ -21,12 +21,12 @@ ParallaxGenD3D::ParallaxGenD3D(ParallaxGenDirectory* pgd, const filesystem::path
     this->exe_path = exe_path;
 }
 
-bool ParallaxGenD3D::checkIfAspectRatioMatches(const std::filesystem::path& dds_path_1, const std::filesystem::path& dds_path_2, bool& check_aspect)
+ParallaxGenTask::PGResult ParallaxGenD3D::checkIfAspectRatioMatches(const std::filesystem::path& dds_path_1, const std::filesystem::path& dds_path_2, bool& check_aspect)
 {
     // get metadata (should only pull headers, which is much faster)
     DirectX::TexMetadata dds_image_meta_1, dds_image_meta_2;
     if (!getDDSMetadata(dds_path_1, dds_image_meta_1) || !getDDSMetadata(dds_path_2, dds_image_meta_2)) {
-        return false;
+        return ParallaxGenTask::PGResult::FAILURE;
     }
 
     // calculate aspect ratios
@@ -36,7 +36,7 @@ bool ParallaxGenD3D::checkIfAspectRatioMatches(const std::filesystem::path& dds_
     // check if aspect ratios don't match
     check_aspect = aspect_ratio_1 == aspect_ratio_2;
 
-    return true;
+    return ParallaxGenTask::PGResult::SUCCESS;
 }
 
 //
@@ -685,6 +685,7 @@ bool ParallaxGenD3D::getDDS(const filesystem::path& dds_path, DirectX::ScratchIm
 bool ParallaxGenD3D::getDDSMetadata(const filesystem::path& dds_path, DirectX::TexMetadata& dds_meta)
 {
     // Check if in cache
+    // TODO set cache to something on failure
     if (dds_metadata_cache.find(dds_path) != dds_metadata_cache.end()) {
         dds_meta = dds_metadata_cache[dds_path];
         return true;

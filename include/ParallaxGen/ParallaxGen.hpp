@@ -10,6 +10,7 @@
 
 #include "ParallaxGenDirectory/ParallaxGenDirectory.hpp"
 #include "ParallaxGenD3D/ParallaxGenD3D.hpp"
+#include "ParallaxGenTask/ParallaxGenTask.hpp"
 
 class ParallaxGen
 {
@@ -45,20 +46,24 @@ public:
 	void deleteMeshes();
 	// deletes entire output folder
 	void deleteOutputDir();
+	// init output folder
+	void initOutputDir();
 
 private:
+// TODO what can be const here?
+	ParallaxGenTask::PGResult convertHeightMapToComplexMaterial(const std::filesystem::path& height_map);
     // processes a NIF file (enable parallax if needed)
-	bool processNIF(const std::filesystem::path& nif_file);
+	ParallaxGenTask::PGResult processNIF(const std::filesystem::path& nif_file);
 	// processes a shape within a NIF file
-	bool processShape(const std::filesystem::path& nif_file, nifly::NifFile& nif, const uint32_t shape_block_id, nifly::NiShape* shape, bool& nif_modified, const bool has_attached_havok);
+	ParallaxGenTask::PGResult processShape(const std::filesystem::path& nif_file, nifly::NifFile& nif, const uint32_t shape_block_id, nifly::NiShape* shape, bool& nif_modified, const bool has_attached_havok);
 	// check if complex material should be enabled on shape
-	bool shouldEnableComplexMaterial(const std::filesystem::path& nif_file, nifly::NifFile& nif, const uint32_t shape_block_id, nifly::NiShape* shape, nifly::NiShader* shader, const std::string& search_prefix);
+	ParallaxGenTask::PGResult shouldEnableComplexMaterial(const std::filesystem::path& nif_file, nifly::NifFile& nif, const uint32_t shape_block_id, nifly::NiShape* shape, nifly::NiShader* shader, const std::string& search_prefix, bool& enable_result);
 	// check if vanilla parallax should be enabled on shape
-	bool shouldEnableParallax(const std::filesystem::path& nif_file, nifly::NifFile& nif, const uint32_t shape_block_id, nifly::NiShape* shape, nifly::NiShader* shader, const std::string& search_prefix, const bool has_attached_havok);
+	ParallaxGenTask::PGResult shouldEnableParallax(const std::filesystem::path& nif_file, nifly::NifFile& nif, const uint32_t shape_block_id, nifly::NiShape* shape, nifly::NiShader* shader, const std::string& search_prefix, const bool has_attached_havok, bool& enable_result);
 	// enables complex material on a shape in a NIF
-	bool enableComplexMaterialOnShape(nifly::NifFile& nif, nifly::NiShape* shape, nifly::NiShader* shader, const std::string& search_prefix, bool dynCubemaps, bool& nif_modified);
+	ParallaxGenTask::PGResult enableComplexMaterialOnShape(nifly::NifFile& nif, nifly::NiShape* shape, nifly::NiShader* shader, const std::string& search_prefix, bool dynCubemaps, bool& nif_modified);
 	// enables parallax on a shape in a NIF
-	bool enableParallaxOnShape(nifly::NifFile& nif, nifly::NiShape* shape, nifly::NiShader* shader, const std::string& search_prefix, bool& nif_modified);
+	ParallaxGenTask::PGResult enableParallaxOnShape(nifly::NifFile& nif, nifly::NiShape* shape, nifly::NiShader* shader, const std::string& search_prefix, bool& nif_modified);
 
 	static std::vector<std::string> getSearchPrefixes(nifly::NifFile& nif, nifly::NiShape* shape);
 
