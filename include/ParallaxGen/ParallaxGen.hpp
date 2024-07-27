@@ -36,12 +36,12 @@ private:
 	static inline const std::vector<std::vector<std::string>> default_suffixes = {
 		{".dds"},
 		{"_n.dds"},
-		{"_g.dds"},
+		{"_g.dds", "_sk.dds"},
 		{"_p.dds"},
 		{"_e.dds"},
 		{"_m.dds", "_em.dds"},
-		{"_s.dds"},
-		{"_b.dds", "_bl.dds"},
+		{"_i.dds"},
+		{"_s.dds", "_b.dds", "_bl.dds"},
 		{}
 	};
 

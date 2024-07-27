@@ -83,6 +83,13 @@ void ParallaxGenDirectory::findTruePBRConfigs()
 					element["match_diffuse"] = element["texture"];
 				}
 
+				// loop through filename fields
+				for (const auto& field : truePBR_filename_fields) {
+					if (element.contains(field)) {
+						element[field] = static_cast<string>(element[field]).insert(0, 1, '\\');
+					}
+				}
+
 				truePBRConfigs.push_back(element);
 			}
 		}

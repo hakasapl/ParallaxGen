@@ -349,7 +349,6 @@ ParallaxGenTask::PGResult ParallaxGen::processShape(const filesystem::path& nif_
 ParallaxGenTask::PGResult ParallaxGen::shouldApplyTruePBRConfig(const filesystem::path& nif_file, NifFile& nif, const uint32_t shape_block_id, NiShape* shape, NiShader* shader, const array<string, 9>& search_prefixes, bool& enable_result, nlohmann::json& truepbr_data, string& matched_path)
 {
 	auto result = ParallaxGenTask::PGResult::SUCCESS;
-	enable_result = true;  // Start with default true
 
 	if (ignore_truepbr) {
 		enable_result = false;
@@ -360,8 +359,8 @@ ParallaxGenTask::PGResult ParallaxGen::shouldApplyTruePBRConfig(const filesystem
 		// "nif-filter" attribute
 		if (truepbr_cfg.contains("nif-filter") && boost::icontains(nif_file.string(), static_cast<string>(truepbr_cfg["nif-filter"]))) {
 			spdlog::trace(L"Rejecting shape {}: NIF filter", shape_block_id);
-			enable_result = false;
-			return result;
+			enable_result |= false;
+			continue;
 		}
 
 		// "path-contains" attribute
@@ -379,13 +378,12 @@ ParallaxGenTask::PGResult ParallaxGen::shouldApplyTruePBRConfig(const filesystem
 
 		if (!contains_match && !name_match) {
 			spdlog::trace(L"Rejecting shape {}: No matches", shape_block_id);
-			enable_result = false;
+			enable_result |= false;
 			continue;
 		}
 
 		enable_result = true;
-		truepbr_data = truepbr_cfg;
-		return result;
+		truepbr_data.merge_patch(truepbr_cfg);
 	}
 
 	return result;
@@ -435,8 +433,6 @@ ParallaxGenTask::PGResult ParallaxGen::shouldEnableComplexMaterial(const filesys
 		enable_result = false;
 		return result;
 	}
-
-	// TODO check that diffuse map actually exists
 
 	bool same_aspect = false;
 	ParallaxGenTask::updatePGResult(result, pgd3d->checkIfAspectRatioMatches(diffuse_map, cm_map, same_aspect), ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
@@ -686,30 +682,29 @@ ParallaxGenTask::PGResult ParallaxGen::enableTruePBROnShape(NifFile& nif, NiShap
 		boost::replace_first(tex_path, "textures\\", "textures\\pbr\\");
 	}
 
+	// Get PBR path, which is the path without the matched field
+	string matched_field = truepbr_data.contains("match_normal") ? truepbr_data["match_normal"] : truepbr_data["match_diffuse"];
+	tex_path.erase(tex_path.length() - matched_field.length(), matched_field.length());
+
 	// "rename" attribute
+	string named_field = matched_field;
 	if (truepbr_data.contains("rename")) {
-		string orig = truepbr_data.contains("match_normal") ? truepbr_data["match_normal"] : truepbr_data["match_diffuse"];
-		tex_path.erase(tex_path.length() - orig.length(), orig.length());
-		tex_path.append(truepbr_data["rename"]);
+		named_field = truepbr_data["rename"];
 	}
 
 	// "lock_diffuse" attribute
-	if (!flag(truepbr_data, "lock_diffuse")) {
-		auto diffuse = tex_path + ParallaxGen::default_suffixes[0][0];
-		nif.SetTextureSlot(shape, diffuse, 0);
-	}
+	auto diffuse = flag(truepbr_data, "lock_diffuse") ? tex_path + matched_field + ParallaxGen::default_suffixes[0][0] : tex_path + named_field + ParallaxGen::default_suffixes[0][0];
+	nif.SetTextureSlot(shape, diffuse, 0);
 
 	// "lock_normal" attribute
-	if (!flag(truepbr_data, "lock_normal")) {
-		auto normal = tex_path + ParallaxGen::default_suffixes[1][0];
-		nif.SetTextureSlot(shape, normal, 1);
-	}
+	auto normal = flag(truepbr_data, "lock_normal") ? tex_path + matched_field + ParallaxGen::default_suffixes[1][0] : tex_path + named_field + ParallaxGen::default_suffixes[1][0];
+	nif.SetTextureSlot(shape, normal, 1);
 
 	// "emmisive" attribute
 	if (truepbr_data.contains("emissive") && !flag(truepbr_data, "lock_emissive"))
 	{
 		if (truepbr_data["emissive"]) {
-			auto glow = tex_path + ParallaxGen::default_suffixes[2][0];
+			auto glow = tex_path + named_field + ParallaxGen::default_suffixes[2][0];
 			nif.SetTextureSlot(shape, glow, 2);
 			shader_BSLSP->shaderFlags1 |= SLSF1_EXTERNAL_EMITTANCE;
 		}
@@ -722,7 +717,7 @@ ParallaxGenTask::PGResult ParallaxGen::enableTruePBROnShape(NifFile& nif, NiShap
 	// "parallax" attribute
 	if (truepbr_data.contains("parallax") && !flag(truepbr_data, "lock_parallax")) {
 		if (truepbr_data["parallax"]) {
-			auto parallax = tex_path + ParallaxGen::default_suffixes[3][0];
+			auto parallax = tex_path + named_field + ParallaxGen::default_suffixes[3][0];
 			nif.SetTextureSlot(shape, parallax, 3);
 		}
 		else {
@@ -734,7 +729,7 @@ ParallaxGenTask::PGResult ParallaxGen::enableTruePBROnShape(NifFile& nif, NiShap
 
 	// "lock_rmaos" attribute
 	if (!flag(truepbr_data, "lock_rmaos")) {
-		auto rmaos = tex_path + "_rmaos.dds";
+		auto rmaos = tex_path + named_field + "_rmaos.dds";
 		nif.SetTextureSlot(shape, rmaos, 5);
 	}
 
@@ -742,7 +737,7 @@ ParallaxGenTask::PGResult ParallaxGen::enableTruePBROnShape(NifFile& nif, NiShap
 	if (!flag(truepbr_data, "lock_cnr")) {
 		// "coat_normal" attribute
 		if (truepbr_data.contains("coat_normal") && truepbr_data["coat_normal"]) {
-			auto cnr = tex_path + "_cnr.dds";
+			auto cnr = tex_path + named_field + "_cnr.dds";
 			nif.SetTextureSlot(shape, cnr, 6);
 		}
 		else {
@@ -756,7 +751,7 @@ ParallaxGenTask::PGResult ParallaxGen::enableTruePBROnShape(NifFile& nif, NiShap
 		if ((truepbr_data.contains("subsurface_foliage") && truepbr_data["subsurface_foliage"]) ||
 			(truepbr_data.contains("subsurface") && truepbr_data["subsurface"]) ||
 			(truepbr_data.contains("coat_diffuse") && truepbr_data["coat_diffuse"])) {
-			auto subsurface = tex_path + ParallaxGen::default_suffixes[7][0];
+			auto subsurface = tex_path + named_field + ParallaxGen::default_suffixes[7][0];
 			nif.SetTextureSlot(shape, subsurface, 7);
 		}
 		else {

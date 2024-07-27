@@ -29,6 +29,8 @@ private:
 	std::vector<std::filesystem::path> heightMaps;
 	std::vector<std::filesystem::path> complexMaterialMaps;
 	std::vector<std::filesystem::path> meshes;
+
+	static inline const std::vector<std::string> truePBR_filename_fields = { "match_normal", "match_diffuse", "rename" };
 	std::vector<nlohmann::json> truePBRConfigs;
 
 public:
