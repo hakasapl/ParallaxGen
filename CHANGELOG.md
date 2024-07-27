@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.5.0] - UNRELEASED
+
+- Initial TruePBR implementation
+
 ## [0.4.7] - 2024-07-27
 
 - GPU code will now verify textures are a power of 2

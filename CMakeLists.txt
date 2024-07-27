@@ -17,7 +17,7 @@ set(PROJECT_NAME "ParallaxGen")
 set(PROJECT_URI "com.github.hakasapl.ParallaxGen")
 
 # Initialize Project
-set(PARALLAXGEN_VERSION 0.4.7)
+set(PARALLAXGEN_VERSION 0.5.0)
 project(${PROJECT_NAME} VERSION ${PARALLAXGEN_VERSION})
 
 # Define preprocessor macro with the version number
@@ -85,6 +85,7 @@ find_package(Boost REQUIRED COMPONENTS filesystem stacktrace_windbg)
 find_package(directxtk REQUIRED)
 find_package(directxtex REQUIRED CONFIG)
 find_package(miniz REQUIRED CONFIG)
+find_package(nlohmann_json REQUIRED CONFIG)
 
 setup_external("nifly" "${CMAKE_SOURCE_DIR}/external/nifly" "-DBUILD_TESTING=OFF")
 find_package(nifly REQUIRED CONFIG)
@@ -113,6 +114,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Microsoft::DirectXTex
     ${DirectXTK_LIBS}
     Microsoft::DirectXTK
+    nlohmann_json::nlohmann_json
 )
 
 # Define a custom command to copy the assets directory

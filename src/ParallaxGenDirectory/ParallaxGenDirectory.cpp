@@ -62,6 +62,39 @@ void ParallaxGenDirectory::findMeshes()
 	spdlog::info("Found {} meshes", meshes.size());
 }
 
+void ParallaxGenDirectory::findTruePBRConfigs()
+{
+	// Find True PBR configs
+	spdlog::info("Finding TruePBR configs");
+	auto config_files = findFilesBySuffix(".json", true, vector<wstring>(), L"pbrnifpatcher");
+
+	// loop through and parse configs
+	for (auto& config : config_files) {
+		// check if config is valid
+		auto config_file_bytes = getFile(config);
+		string config_file_str(reinterpret_cast<const char*>(config_file_bytes.data()), config_file_bytes.size());
+
+		try {
+			nlohmann::json j = nlohmann::json::parse(config_file_str);
+			// loop through each element
+			for (auto& element : j) {
+				// Preprocessing steps here
+				if (element.contains("texture")) {
+					element["match_diffuse"] = element["texture"];
+				}
+
+				truePBRConfigs.push_back(element);
+			}
+		}
+		catch (nlohmann::json::parse_error& e) {
+			spdlog::error(L"Unable to parse TruePBR config file {}: {}", config.wstring(), convertToWstring(e.what()));
+			continue;
+		}
+	}
+
+	spdlog::info("Found {} TruePBR configs", truePBRConfigs.size());
+}
+
 void ParallaxGenDirectory::addHeightMap(filesystem::path path)
 {
 	filesystem::path path_lower = getPathLower(path);
@@ -119,4 +152,9 @@ const vector<filesystem::path> ParallaxGenDirectory::getComplexMaterialMaps() co
 const vector<filesystem::path> ParallaxGenDirectory::getMeshes() const
 {
 	return meshes;
+}
+
+const vector<nlohmann::json> ParallaxGenDirectory::getTruePBRConfigs() const
+{
+	return truePBRConfigs;
 }

@@ -4,6 +4,7 @@
 #include <vector>
 #include <filesystem>
 #include <array>
+#include <nlohmann/json.hpp>
 
 #include "BethesdaDirectory/BethesdaDirectory.hpp"
 
@@ -28,6 +29,7 @@ private:
 	std::vector<std::filesystem::path> heightMaps;
 	std::vector<std::filesystem::path> complexMaterialMaps;
 	std::vector<std::filesystem::path> meshes;
+	std::vector<nlohmann::json> truePBRConfigs;
 
 public:
 	static inline const std::filesystem::path default_cubemap_path = "textures\\cubemaps\\dynamic1pxcubemap_black.dds";
@@ -41,6 +43,8 @@ public:
 	void findComplexMaterialMaps();
 	// searches for meshes in the data directory
 	void findMeshes();
+	// find truepbr config files
+	void findTruePBRConfigs();
 
 	// add methods
 	void addHeightMap(std::filesystem::path path);
@@ -58,6 +62,7 @@ public:
 	const std::vector<std::filesystem::path> getHeightMaps() const;
 	const std::vector<std::filesystem::path> getComplexMaterialMaps() const;
 	const std::vector<std::filesystem::path> getMeshes() const;
+	const std::vector<nlohmann::json> getTruePBRConfigs() const;
 };
 
 #endif
