@@ -2,45 +2,45 @@
     "parallax_lookup": {
         "archive_blocklist": [],
         "allowlist": [
-            "textures/**/*"
-        ]
+            "textures/**"
+        ],
+        "blocklist": []
     },
     "complexmaterial_lookup": {
         "archive_blocklist": [
             "Skyrim - Textures*"
         ],
         "allowlist": [
-            "textures/**/*"
+            "textures/**"
         ],
         "blocklist": []
     },
     "truepbr_cfg_lookup": {
         "archive_blocklist": [],
         "allowlist": [
-            "pbrnifpatcher/**/*"
+            "pbrnifpatcher/**"
         ],
         "blocklist": []
     },
     "nif_lookup": {
         "archive_blocklist": [],
         "allowlist": [
-            "meshes/**/*"
+            "meshes/**"
         ],
         "blocklist": [
-            "**/actors/**/*",
-            "**/armor/**/*",
-		    "**/cameras/**/*",
-		    "**/decals/**/*",
-		    "**/dyndolod/**/*",
-		    "**/effects/**/*",
-		    "**/interface/**/*",
-		    "**/loadscreenart/**/*",
-            "**/lod/**/*",
-		    "**/magic/**/*",
-		    "**/markers/**/*",
-		    "**/mps/**/*",
-		    "**/sky/**/*",
-		    "**/water/**/*"
+            "**/actors/**",
+		    "**/cameras/**",
+		    "**/decals/**",
+		    "**/dyndolod/**",
+		    "**/effects/**",
+		    "**/interface/**",
+		    "**/loadscreenart/**",
+            "**/lod/**",
+		    "**/magic/**",
+		    "**/markers/**",
+		    "**/mps/**",
+		    "**/sky/**",
+		    "**/water/**"
         ]
     }
 }

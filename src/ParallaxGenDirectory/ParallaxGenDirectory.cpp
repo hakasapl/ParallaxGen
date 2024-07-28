@@ -88,7 +88,7 @@ void ParallaxGenDirectory::findTruePBRConfigs()
 	// Find True PBR configs
 	spdlog::info("Finding TruePBR configs");
   
-  // get relevant lists
+  	// get relevant lists
 	vector<wstring> truepbr_allowlist = jsonArrayToWString(PG_config["truepbr_cfg_lookup"]["allowlist"]);
 	vector<wstring> truepbr_blocklist = jsonArrayToWString(PG_config["truepbr_cfg_lookup"]["blocklist"]);
 	vector<wstring> truepbr_archive_blocklist = jsonArrayToWString(PG_config["truepbr_cfg_lookup"]["archive_blocklist"]);
@@ -122,7 +122,7 @@ void ParallaxGenDirectory::findTruePBRConfigs()
 		}
 		catch (nlohmann::json::parse_error& e) {
 			spdlog::error(L"Unable to parse TruePBR config file {}: {}", config.wstring(), convertToWstring(e.what()));
-      continue;
+      		continue;
 		}
 	}
   
@@ -154,7 +154,7 @@ void ParallaxGenDirectory::loadPGConfig(bool load_default)
 		}
 	}
   
-  // Loop through each element in JSON
+  	// Loop through each element in JSON
 	replaceForwardSlashes(PG_config);
 }
 
