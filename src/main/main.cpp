@@ -68,6 +68,7 @@ void addArguments(
     bool& no_default_config,
     bool& ignore_parallax,
     bool& ignore_complex_material,
+    bool& ignore_truepbr,
     const string& AVAILABLE_GAME_TYPES_STR
     )
 {
@@ -82,6 +83,7 @@ void addArguments(
     app.add_flag("--no-default-conifg", no_default_config, "Don't load the default config file (You need to know what you're doing for this)");
     app.add_flag("--ignore-parallax", ignore_parallax, "Don't generate any parallax meshes");
     app.add_flag("--ignore-complex-material", ignore_complex_material, "Don't generate any complex material meshes");
+    app.add_flag("--ignore-truepbr", ignore_truepbr, "Don't apply any TruePBR configs in the load order");
 }
 
 // Store game type strings and their corresponding BethesdaGame::GameType enum values
@@ -129,10 +131,11 @@ void mainRunner(int argc, char** argv)
     bool no_default_config = false;
     bool ignore_parallax = false;
     bool ignore_complex_material = false;
+    bool ignore_truepbr = false;
 
     // Parse CLI arguments
     CLI::App app{ "ParallaxGen: Auto convert meshes to parallax meshes" };
-    addArguments(app, verbosity, game_dir, game_type, output_dir, upgrade_shaders, optimize_meshes, no_zip, no_cleanup, no_default_config, ignore_parallax, ignore_complex_material, AVAILABLE_GAME_TYPES_STR);
+    addArguments(app, verbosity, game_dir, game_type, output_dir, upgrade_shaders, optimize_meshes, no_zip, no_cleanup, no_default_config, ignore_parallax, ignore_complex_material, ignore_truepbr, AVAILABLE_GAME_TYPES_STR);
 
     // Check if arguments are valid, otherwise print error to user
     try {
@@ -161,7 +164,7 @@ void mainRunner(int argc, char** argv)
     }
 
     // Check if there is actually anything to do
-    if (ignore_parallax && ignore_complex_material && !upgrade_shaders) {
+    if (ignore_parallax && ignore_complex_material && ignore_truepbr && !upgrade_shaders) {
         spdlog::critical("There is nothing to do if both --ignore-parallax and --ignore-complex-material are set and --upgrade-shaders is not set.");
         exitWithUserInput(1);
     }
@@ -185,7 +188,7 @@ void mainRunner(int argc, char** argv)
     }
 
     // If true, NIF patching occurs
-    bool patch_meshes = !ignore_parallax || !ignore_complex_material;
+    bool patch_meshes = !ignore_parallax || !ignore_complex_material || !ignore_truepbr;
 
     //
     // Init
@@ -201,7 +204,7 @@ void mainRunner(int argc, char** argv)
 	BethesdaGame bg = BethesdaGame(bg_type, game_dir, true);
     ParallaxGenDirectory pgd = ParallaxGenDirectory(bg, EXE_PATH);
     ParallaxGenD3D pgd3d = ParallaxGenD3D(&pgd, output_dir, EXE_PATH);
-    ParallaxGen pg = ParallaxGen(output_dir, &pgd, &pgd3d, optimize_meshes, ignore_parallax, ignore_complex_material);
+    ParallaxGen pg = ParallaxGen(output_dir, &pgd, &pgd3d, optimize_meshes, ignore_parallax, ignore_complex_material, ignore_truepbr);
 
     // Check if GPU needs to be initialized
     if (upgrade_shaders) {
@@ -272,6 +275,10 @@ void mainRunner(int argc, char** argv)
 
     if (!ignore_complex_material) {
         pgd.findComplexMaterialMaps();
+    }
+
+    if (!ignore_truepbr) {
+        pgd.findTruePBRConfigs();
     }
 
     // Upgrade shaders if set

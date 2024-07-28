@@ -26,6 +26,7 @@ namespace ParallaxGenUtil
 	std::vector<std::byte> getFileBytes(const std::filesystem::path& file_path);
 
 	std::filesystem::path replaceLastOf(const std::filesystem::path& path, const std::wstring& to_replace, const std::wstring& replace_with);
+	std::string replaceLastOf(const std::string& path, const std::string& to_replace, const std::string& replace_with);
 
 	// concatenates two vectors without duplicates
 	template <typename T>

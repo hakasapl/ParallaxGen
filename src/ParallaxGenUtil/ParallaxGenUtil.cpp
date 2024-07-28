@@ -141,4 +141,15 @@ namespace ParallaxGenUtil {
 		path_str.replace(pos, to_replace.size(), replace_with);
 		return filesystem::path(path_str);
 	}
+
+	string replaceLastOf(const string& path, const string& to_replace, const string& replace_with) {
+		size_t pos = path.rfind(to_replace);
+		if (pos == wstring::npos) {
+			return path;
+		}
+
+		string out_path = path;
+		out_path.replace(pos, to_replace.size(), replace_with);
+		return out_path;
+	}
 }

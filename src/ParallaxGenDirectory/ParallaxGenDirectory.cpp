@@ -83,6 +83,52 @@ void ParallaxGenDirectory::findMeshes()
 	spdlog::info("Found {} meshes", meshes.size());
 }
 
+void ParallaxGenDirectory::findTruePBRConfigs()
+{
+	// Find True PBR configs
+	spdlog::info("Finding TruePBR configs");
+  
+  	// get relevant lists
+	vector<wstring> truepbr_allowlist = jsonArrayToWString(PG_config["truepbr_cfg_lookup"]["allowlist"]);
+	vector<wstring> truepbr_blocklist = jsonArrayToWString(PG_config["truepbr_cfg_lookup"]["blocklist"]);
+	vector<wstring> truepbr_archive_blocklist = jsonArrayToWString(PG_config["truepbr_cfg_lookup"]["archive_blocklist"]);
+  
+	auto config_files = findFilesBySuffix(".json", true, truepbr_allowlist, truepbr_blocklist, truepbr_archive_blocklist);
+
+	// loop through and parse configs
+	for (auto& config : config_files) {
+		// check if config is valid
+		auto config_file_bytes = getFile(config);
+		string config_file_str(reinterpret_cast<const char*>(config_file_bytes.data()), config_file_bytes.size());
+
+		try {
+			nlohmann::json j = nlohmann::json::parse(config_file_str);
+			// loop through each element
+			for (auto& element : j) {
+				// Preprocessing steps here
+				if (element.contains("texture")) {
+					element["match_diffuse"] = element["texture"];
+				}
+
+				// loop through filename fields
+				for (const auto& field : truePBR_filename_fields) {
+					if (element.contains(field)) {
+						element[field] = element[field].get<string>().insert(0, 1, '\\');
+					}
+				}
+
+				truePBRConfigs.push_back(element);
+			}
+		}
+		catch (nlohmann::json::parse_error& e) {
+			spdlog::error(L"Unable to parse TruePBR config file {}: {}", config.wstring(), convertToWstring(e.what()));
+      		continue;
+		}
+	}
+  
+	spdlog::info("Found {} TruePBR entries", truePBRConfigs.size());
+}
+
 void ParallaxGenDirectory::loadPGConfig(bool load_default)
 {
 	// Load default config
@@ -107,8 +153,8 @@ void ParallaxGenDirectory::loadPGConfig(bool load_default)
 			continue;
 		}
 	}
-
-	// Loop through each element in JSON
+  
+  	// Loop through each element in JSON
 	replaceForwardSlashes(PG_config);
 }
 
@@ -169,6 +215,11 @@ const vector<filesystem::path> ParallaxGenDirectory::getComplexMaterialMaps() co
 const vector<filesystem::path> ParallaxGenDirectory::getMeshes() const
 {
 	return meshes;
+}
+
+const vector<nlohmann::json> ParallaxGenDirectory::getTruePBRConfigs() const
+{
+	return truePBRConfigs;
 }
 
 void ParallaxGenDirectory::merge_json_smart(nlohmann::json& target, const nlohmann::json& source) {

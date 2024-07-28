@@ -16,7 +16,11 @@ private:
 	std::vector<std::filesystem::path> heightMaps;
 	std::vector<std::filesystem::path> complexMaterialMaps;
 	std::vector<std::filesystem::path> meshes;
+  std::vector<nlohmann::json> truePBRConfigs;
+  
 	nlohmann::json PG_config;
+
+	static inline const std::vector<std::string> truePBR_filename_fields = { "match_normal", "match_diffuse", "rename" };
 
 public:
 	static inline const std::filesystem::path default_cubemap_path = "textures\\cubemaps\\dynamic1pxcubemap_black.dds";
@@ -30,6 +34,8 @@ public:
 	void findComplexMaterialMaps();
 	// searches for meshes in the data directory
 	void findMeshes();
+	// find truepbr config files
+	void findTruePBRConfigs();
 
 	// get the parallax gen config
 	void loadPGConfig(bool load_default);
@@ -50,6 +56,7 @@ public:
 	const std::vector<std::filesystem::path> getHeightMaps() const;
 	const std::vector<std::filesystem::path> getComplexMaterialMaps() const;
 	const std::vector<std::filesystem::path> getMeshes() const;
+	const std::vector<nlohmann::json> getTruePBRConfigs() const;
 
 	// Helpers
 	static void merge_json_smart(nlohmann::json& target, const nlohmann::json& source);
