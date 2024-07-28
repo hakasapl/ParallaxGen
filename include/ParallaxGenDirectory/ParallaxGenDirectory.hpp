@@ -1,5 +1,4 @@
-#ifndef PARALLAXGENDIRECTORYITERATOR_H
-#define PARALLAXGENDIRECTORYITERATOR_H
+#pragma once
 
 #include <vector>
 #include <filesystem>
@@ -63,5 +62,3 @@ public:
 	static std::vector<std::wstring> jsonArrayToWString(const nlohmann::json& json_array);
 	static void replaceForwardSlashes(nlohmann::json& j);
 };
-
-#endif

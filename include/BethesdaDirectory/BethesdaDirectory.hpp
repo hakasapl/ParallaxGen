@@ -1,5 +1,4 @@
-#ifndef BETHESDADIRECTORY_H
-#define BETHESDADIRECTORY_H
+#pragma once
 
 #include <span>
 #include <cstddef>
@@ -105,5 +104,3 @@ private:
 	BethesdaFile getFileFromMap(const std::filesystem::path& file_path) const;
 	void updateFileMap(const std::filesystem::path& file_path, std::shared_ptr<BSAFile> bsa_file);
 };
-
-#endif

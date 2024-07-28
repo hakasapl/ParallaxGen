@@ -1,5 +1,4 @@
-#ifndef BETHESDAGAME_H
-#define BETHESDAGAME_H
+#pragma once
 
 #include <windows.h>
 #include <unordered_map>
@@ -109,5 +108,3 @@ private:
 	// gets the system path for a folder (from windows.h)
 	std::filesystem::path getSystemPath(const GUID& folder_id) const;
 };
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef PARALLAXGENUTIL_H
-#define PARALLAXGENUTIL_H
+#pragma once
 
 #include <filesystem>
 #include <windows.h>
@@ -9,10 +8,8 @@
 
 namespace ParallaxGenUtil
 {
-	// opens a file handle for a file
-	std::ifstream openFileHandle(const std::filesystem::path& file_path, const bool required);
-
 	// get a single value from ini file
+	// TODO move this to BethesdaDirectory
 	std::wstring readINIValue(const std::filesystem::path& ini_path, const std::wstring& section, const std::wstring& key, const bool logging, const bool first_ini_read);
 
 	// terminals usually auto exit when program ends, this function waits for user input before exiting
@@ -21,10 +18,13 @@ namespace ParallaxGenUtil
 	// converts a string to a wstring
 	std::wstring convertToWstring(const std::string str);
 
+	// converts a wide string to a utf-8 narrow string
 	std::string wstring_to_utf8(const std::wstring& str);
 
+	// Get the file bytes of a file
 	std::vector<std::byte> getFileBytes(const std::filesystem::path& file_path);
 
+	// Replace last of helpers for string and path
 	std::filesystem::path replaceLastOf(const std::filesystem::path& path, const std::wstring& to_replace, const std::wstring& replace_with);
 	std::string replaceLastOf(const std::string& path, const std::string& to_replace, const std::string& replace_with);
 
@@ -49,5 +49,3 @@ namespace ParallaxGenUtil
 		}
 	}
 }
-
-#endif // !PARALLAXGENUTIL_H

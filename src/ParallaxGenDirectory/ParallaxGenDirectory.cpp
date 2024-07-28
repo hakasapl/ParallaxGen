@@ -131,6 +131,8 @@ void ParallaxGenDirectory::findTruePBRConfigs()
 
 void ParallaxGenDirectory::loadPGConfig(bool load_default)
 {
+	spdlog::info("Loading ParallaxGen configs from load order");
+
 	// Load default config
 	if (load_default) {
 		filesystem::path def_conf_path = EXE_PATH / "cfg/default.json";
@@ -143,19 +145,23 @@ void ParallaxGenDirectory::loadPGConfig(bool load_default)
 	}
 
 	// Load configs from load order
+	size_t cfg_count = 0;
 	auto pg_configs = findFilesBySuffix(".json", true, { LO_PGCONFIG_PATH + L"\\*" });
 	for (auto& cur_cfg : pg_configs) {
 		try {
 			auto parsed_json = nlohmann::json::parse(getFile(cur_cfg));
 			merge_json_smart(PG_config, parsed_json);
+			cfg_count++;
 		} catch (nlohmann::json::parse_error& e) {
 			spdlog::warn(L"Failed to parse ParallaxGen config file {}: {}", cur_cfg.wstring(), convertToWstring(e.what()));
 			continue;
 		}
 	}
-  
+
   	// Loop through each element in JSON
 	replaceForwardSlashes(PG_config);
+
+	spdlog::info("Loaded {} ParallaxGen configs from load order", cfg_count);
 }
 
 void ParallaxGenDirectory::addHeightMap(filesystem::path path)

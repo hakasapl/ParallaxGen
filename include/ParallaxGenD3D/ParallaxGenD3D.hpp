@@ -1,5 +1,4 @@
-#ifndef PARALLAXGEND3D_H
-#define PARALLAXGEND3D_H
+#pragma once
 
 #include <d3d11.h>
 #include <DirectXTex.h>
@@ -87,5 +86,3 @@ private:
     bool getDDSMetadata(const std::filesystem::path& dds_path, DirectX::TexMetadata& dds_meta);
     static DirectX::ScratchImage LoadRawPixelsToScratchImage(const std::vector<unsigned char> rawPixels, size_t width, size_t height, DXGI_FORMAT format, int channels);
 };
-
-#endif

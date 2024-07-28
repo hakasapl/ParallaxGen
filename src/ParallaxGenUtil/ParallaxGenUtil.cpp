@@ -76,17 +76,6 @@ namespace ParallaxGenUtil {
 		return L"";
 	}
 
-	ifstream openFileHandle(const fs::path& file_path, const bool required = false) {
-		ifstream file(file_path);
-		if (!file.is_open()) {
-			if (required) {
-				throw runtime_error("Unable to open file: " + file_path.string());
-			}
-		}
-
-		return file;
-	}
-
 	void exitWithUserInput(const int exit_code)
 	{
 		cout << "Press any key to exit...";
