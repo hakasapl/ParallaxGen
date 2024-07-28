@@ -3,6 +3,7 @@
 ## [0.5.0] - UNRELEASED
 
 - Initial TruePBR implementation
+- Added allowlist and blocklist support
 
 ## [0.4.7] - 2024-07-27
 

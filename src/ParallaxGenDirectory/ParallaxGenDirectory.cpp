@@ -3,19 +3,29 @@
 #include <spdlog/spdlog.h>
 #include <DirectXTex.h>
 #include <boost/algorithm/string.hpp>
+#include <set>
 
 #include "ParallaxGenUtil/ParallaxGenUtil.hpp"
 
 using namespace std;
 using namespace ParallaxGenUtil;
 
-ParallaxGenDirectory::ParallaxGenDirectory(BethesdaGame bg) : BethesdaDirectory(bg, true) {}
+ParallaxGenDirectory::ParallaxGenDirectory(BethesdaGame bg, filesystem::path EXE_PATH) : BethesdaDirectory(bg, true) {
+	this->EXE_PATH = EXE_PATH;
+}
 
 void ParallaxGenDirectory::findHeightMaps()
 {
 	// find height maps
 	spdlog::info("Finding parallax height maps");
-	heightMaps = findFilesBySuffix("_p.dds", true, vector<wstring>(), L"textures");
+
+	// Get relevant lists from config
+	vector<wstring> parallax_allowlist = jsonArrayToWString(PG_config["parallax_lookup"]["allowlist"]);
+	vector<wstring> parallax_blocklist = jsonArrayToWString(PG_config["parallax_lookup"]["blocklist"]);
+	vector<wstring> parallax_archive_blocklist = jsonArrayToWString(PG_config["parallax_lookup"]["archive_blocklist"]);
+
+	// Find heightmaps
+	heightMaps = findFilesBySuffix("_p.dds", true, parallax_allowlist, parallax_blocklist, parallax_archive_blocklist);
 	spdlog::info("Found {} height maps", heightMaps.size());
 }
 
@@ -25,8 +35,13 @@ void ParallaxGenDirectory::findComplexMaterialMaps()
 
 	spdlog::info("Finding complex material maps");
 
+	// Get relevant lists from config
+	vector<wstring> complex_material_allowlist = jsonArrayToWString(PG_config["complexmaterial_lookup"]["allowlist"]);
+	vector<wstring> complex_material_blocklist = jsonArrayToWString(PG_config["complexmaterial_lookup"]["blocklist"]);
+	vector<wstring> complex_material_archive_blocklist = jsonArrayToWString(PG_config["complexmaterial_lookup"]["archive_blocklist"]);
+
 	// find complex material maps
-	vector<filesystem::path> env_maps = findFilesBySuffix("_m.dds", true, vector<wstring>(), L"textures");
+	vector<filesystem::path> env_maps = findFilesBySuffix("_m.dds", true, complex_material_allowlist, complex_material_blocklist, complex_material_archive_blocklist);
 
 	// loop through env maps
 	for (filesystem::path env_map : env_maps) {
@@ -58,7 +73,13 @@ void ParallaxGenDirectory::findMeshes()
 {
 	// find meshes
 	spdlog::info("Finding meshes");
-	meshes = findFilesBySuffix(".nif", true, mesh_blocklist, L"meshes");
+
+	// get relevant lists
+	vector<wstring> mesh_allowlist = jsonArrayToWString(PG_config["nif_lookup"]["allowlist"]);
+	vector<wstring> mesh_blocklist = jsonArrayToWString(PG_config["nif_lookup"]["blocklist"]);
+	vector<wstring> mesh_archive_blocklist = jsonArrayToWString(PG_config["nif_lookup"]["archive_blocklist"]);
+
+	meshes = findFilesBySuffix(".nif", true, mesh_allowlist, mesh_blocklist, mesh_archive_blocklist);
 	spdlog::info("Found {} meshes", meshes.size());
 }
 
@@ -66,7 +87,13 @@ void ParallaxGenDirectory::findTruePBRConfigs()
 {
 	// Find True PBR configs
 	spdlog::info("Finding TruePBR configs");
-	auto config_files = findFilesBySuffix(".json", true, vector<wstring>(), L"pbrnifpatcher");
+  
+  // get relevant lists
+	vector<wstring> truepbr_allowlist = jsonArrayToWString(PG_config["truepbr_cfg_lookup"]["allowlist"]);
+	vector<wstring> truepbr_blocklist = jsonArrayToWString(PG_config["truepbr_cfg_lookup"]["blocklist"]);
+	vector<wstring> truepbr_archive_blocklist = jsonArrayToWString(PG_config["truepbr_cfg_lookup"]["archive_blocklist"]);
+  
+	auto config_files = findFilesBySuffix(".json", true, truepbr_allowlist, truepbr_blocklist, truepbr_archive_blocklist);
 
 	// loop through and parse configs
 	for (auto& config : config_files) {
@@ -95,11 +122,40 @@ void ParallaxGenDirectory::findTruePBRConfigs()
 		}
 		catch (nlohmann::json::parse_error& e) {
 			spdlog::error(L"Unable to parse TruePBR config file {}: {}", config.wstring(), convertToWstring(e.what()));
+      continue;
+		}
+	}
+  
+	spdlog::info("Found {} TruePBR entries", truePBRConfigs.size());
+}
+
+void ParallaxGenDirectory::loadPGConfig(bool load_default)
+{
+	// Load default config
+	if (load_default) {
+		filesystem::path def_conf_path = EXE_PATH / "cfg/default.json";
+		if (!filesystem::exists(def_conf_path)) {
+			spdlog::error(L"Default config not found at {}", def_conf_path.wstring());
+			exitWithUserInput(1);
+		}
+
+		PG_config.merge_patch(nlohmann::json::parse(getFileBytes(def_conf_path)));
+	}
+
+	// Load configs from load order
+	auto pg_configs = findFilesBySuffix(".json", true, { LO_PGCONFIG_PATH + L"\\*" });
+	for (auto& cur_cfg : pg_configs) {
+		try {
+			auto parsed_json = nlohmann::json::parse(getFile(cur_cfg));
+			merge_json_smart(PG_config, parsed_json);
+		} catch (nlohmann::json::parse_error& e) {
+			spdlog::warn(L"Failed to parse ParallaxGen config file {}: {}", cur_cfg.wstring(), convertToWstring(e.what()));
 			continue;
 		}
 	}
-
-	spdlog::info("Found {} TruePBR configs", truePBRConfigs.size());
+  
+  // Loop through each element in JSON
+	replaceForwardSlashes(PG_config);
 }
 
 void ParallaxGenDirectory::addHeightMap(filesystem::path path)
@@ -164,4 +220,60 @@ const vector<filesystem::path> ParallaxGenDirectory::getMeshes() const
 const vector<nlohmann::json> ParallaxGenDirectory::getTruePBRConfigs() const
 {
 	return truePBRConfigs;
+}
+
+void ParallaxGenDirectory::merge_json_smart(nlohmann::json& target, const nlohmann::json& source) {
+    // recursively merge json objects while preseving lists
+	for (auto& [key, value] : source.items()) {
+		if (value.is_object()) {
+			if (!target.contains(key)) {
+				target[key] = nlohmann::json::object();
+			}
+			merge_json_smart(target[key], value);
+		} else if (value.is_array()) {
+			if (!target.contains(key)) {
+				target[key] = nlohmann::json::array();
+			}
+			for (const auto& item : value) {
+				if (std::find(target[key].begin(), target[key].end(), item) == target[key].end()) {
+					target[key].push_back(item);
+				}
+			}
+		} else {
+			target[key] = value;
+		}
+	}
+}
+
+vector<wstring> ParallaxGenDirectory::jsonArrayToWString(const nlohmann::json& json_array) {
+    vector<wstring> result;
+
+    if (json_array.is_array()) {
+        for (const auto& item : json_array) {
+            if (item.is_string()) {
+                result.push_back(convertToWstring(item.get<string>()));
+            }
+        }
+    }
+
+    return result;
+}
+
+void ParallaxGenDirectory::replaceForwardSlashes(nlohmann::json& j) {
+    if (j.is_string()) {
+        std::string& str = j.get_ref<std::string&>();
+        for (auto& ch : str) {
+            if (ch == '/') {
+                ch = '\\';
+            }
+        }
+    } else if (j.is_object()) {
+        for (auto& item : j.items()) {
+            replaceForwardSlashes(item.value());
+        }
+    } else if (j.is_array()) {
+        for (auto& element : j) {
+            replaceForwardSlashes(element);
+        }
+    }
 }

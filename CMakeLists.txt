@@ -114,27 +114,14 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Microsoft::DirectXTex
     ${DirectXTK_LIBS}
     Microsoft::DirectXTK
+    Shlwapi
     nlohmann_json::nlohmann_json
 )
 
-# Define a custom command to copy the assets directory
-add_custom_command(
-    OUTPUT assets
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/assets ${CMAKE_BINARY_DIR}/assets
-    DEPENDS ${SOURCE_DIR}
-    COMMENT "Copying assets directory to build directory"
-)
-
-# Define a custom command to copy the shaders directory
-add_custom_command(
-    OUTPUT shaders
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/shaders ${CMAKE_BINARY_DIR}/shaders
-    DEPENDS ${SOURCE_DIR}
-    COMMENT "Copying shaders directory to build directory"
-)
-
-add_custom_target(CopyFolders ALL DEPENDS assets shaders)
-add_dependencies(${PROJECT_NAME} CopyFolders)
+# Copy Folders
+file(COPY ${CMAKE_SOURCE_DIR}/assets DESTINATION ${CMAKE_BINARY_DIR}/)
+file(COPY ${CMAKE_SOURCE_DIR}/shaders DESTINATION ${CMAKE_BINARY_DIR}/)
+file(COPY ${CMAKE_SOURCE_DIR}/cfg DESTINATION ${CMAKE_BINARY_DIR}/)
 
 # Install the executable and DLLs
 install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION . )
@@ -149,3 +136,6 @@ install(DIRECTORY ${CMAKE_BINARY_DIR}/shaders DESTINATION . )
 
 # Copy assets to install
 install(DIRECTORY ${CMAKE_BINARY_DIR}/assets DESTINATION . )
+
+# Copy cfg to install
+install(DIRECTORY ${CMAKE_BINARY_DIR}/cfg DESTINATION . )
