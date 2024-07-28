@@ -595,6 +595,8 @@ ParallaxGenTask::PGResult ParallaxGen::applyTruePBRConfigOnShape(
 
 	// Prep
 	const auto shader_BSLSP = dynamic_cast<BSLightingShaderProperty*>(shader);
+	bool enable_truepbr = (!truepbr_data.contains("pbr") || truepbr_data["pbr"]) && !matched_path.empty();
+	bool enable_envmapping = truepbr_data.contains("env_mapping") && truepbr_data["env_mapping"] && !enable_truepbr;
 
 	// "delete" attribute
 	if (truepbr_data.contains("delete") && truepbr_data["delete"]) {
@@ -614,95 +616,141 @@ ParallaxGenTask::PGResult ParallaxGen::applyTruePBRConfigOnShape(
 	if (truepbr_data.contains("auto_uv")) {
 		vector<Triangle> tris;
 		shape->GetTriangles(tris);
-		shader_BSLSP->uvScale = auto_uv_scale(nif.GetUvsForShape(shape), nif.GetVertsForShape(shape), tris) / truepbr_data["auto_uv"];
-		nif_modified = true;
+		auto new_uv_scale = auto_uv_scale(nif.GetUvsForShape(shape), nif.GetVertsForShape(shape), tris) / truepbr_data["auto_uv"];
+		if (shader_BSLSP->uvScale != new_uv_scale) {
+			shader_BSLSP->uvScale = new_uv_scale;
+			nif_modified = true;
+		}
 	}
 
 	// "vertex_colors" attribute
 	if (truepbr_data.contains("vertex_colors")) {
-		shape->SetVertexColors(truepbr_data["vertex_colors"]);
-		if (truepbr_data["vertex_colors"]) {
-			shader_BSLSP->shaderFlags2 |= SLSF2_VERTEX_COLORS;
-		} else {
-			shader_BSLSP->shaderFlags2 &= ~SLSF2_VERTEX_COLORS;
+		auto new_vertex_colors = truepbr_data["vertex_colors"].get<bool>();
+		if (shape->HasVertexColors() != new_vertex_colors) {
+			shape->SetVertexColors(new_vertex_colors);
+			nif_modified = true;
 		}
 
-		nif_modified = true;
+		if (shader->HasVertexColors() != new_vertex_colors) {
+			shader->SetVertexColors(new_vertex_colors);
+			nif_modified = true;
+		}
 	}
 
 	// "specular_level" attribute
 	if (truepbr_data.contains("specular_level")) {
-		shader->SetGlossiness(truepbr_data["specular_level"]);
-		nif_modified = true;
+		auto new_specular_level = truepbr_data["specular_level"];
+		if (shader->GetGlossiness() != new_specular_level) {
+			shader->SetGlossiness(new_specular_level);
+			nif_modified = true;
+		}
 	}
 
 	// "subsurface_color" attribute
-	if (truepbr_data.contains("subsurface_color") && truepbr_data["subsurface_color"].size() > 2) {
-		shader->SetSpecularColor(Vector3(truepbr_data["subsurface_color"][0], truepbr_data["subsurface_color"][1], truepbr_data["subsurface_color"][2]));
-		nif_modified = true;
+	if (truepbr_data.contains("subsurface_color") && truepbr_data["subsurface_color"].size() >= 3) {
+		auto new_specular_color = Vector3(truepbr_data["subsurface_color"][0], truepbr_data["subsurface_color"][1], truepbr_data["subsurface_color"][2]);
+		if (shader->GetSpecularColor() != new_specular_color) {
+			shader->SetSpecularColor(new_specular_color);
+			nif_modified = true;
+		}
 	}
 
 	// "roughness_scale" attribute
 	if (truepbr_data.contains("roughness_scale")) {
-		shader->SetSpecularStrength(truepbr_data["roughness_scale"]);
-		nif_modified = true;
+		auto new_roughtness_scale = truepbr_data["roughness_scale"].get<float>();
+		if (shader->GetSpecularStrength() != new_roughtness_scale) {
+			shader->SetSpecularStrength(new_roughtness_scale);
+			nif_modified = true;
+		}
 	}
 
 	// "subsurface_opacity" attribute
 	if (truepbr_data.contains("subsurface_opacity")) {
-		shader_BSLSP->softlighting = truepbr_data["subsurface_opacity"];
-		nif_modified = true;
+		auto new_subsurface_opacity = truepbr_data["subsurface_opacity"].get<float>();
+		if (shader_BSLSP->softlighting != new_subsurface_opacity) {
+			shader_BSLSP->softlighting = new_subsurface_opacity;
+			nif_modified = true;
+		}
 	}
 
 	// "displacement_scale" attribute
 	if (truepbr_data.contains("displacement_scale")) {
-		shader_BSLSP->rimlightPower = truepbr_data["displacement_scale"];
-		nif_modified = true;
+		auto new_displacement_scale = truepbr_data["displacement_scale"].get<float>();
+		if (shader_BSLSP->rimlightPower != new_displacement_scale) {
+			shader_BSLSP->rimlightPower = new_displacement_scale;
+			nif_modified = true;
+		}
 	}
 
 	// "env_mapping" attribute
-	if (truepbr_data.contains("env_mapping") && truepbr_data["env_mapping"]) {
-		shader_BSLSP->bslspShaderType = BSLSP_ENVMAP;
-		shader_BSLSP->shaderFlags1 |= SLSF1_ENVIRONMENT_MAPPING;
-		shader_BSLSP->shaderFlags2 &= ~SLSF2_GLOW_MAP;
-		nif_modified = true;
+	if (enable_envmapping) {
+		if (shader->GetShaderType() != BSLSP_ENVMAP) {
+			shader->SetShaderType(BSLSP_ENVMAP);
+			nif_modified = true;
+		}
+
+		if (!(shader_BSLSP->shaderFlags1 & SSPF1::SLSF1_ENVIRONMENT_MAPPING)) {
+			shader_BSLSP->shaderFlags1 |= SSPF1::SLSF1_ENVIRONMENT_MAPPING;
+			nif_modified = true;
+		}
+
+		if (!(shader_BSLSP->shaderFlags2 & SSPF2::SLSF2_GLOW_MAP)) {
+			shader_BSLSP->shaderFlags2 |= SSPF2::SLSF2_GLOW_MAP;
+			nif_modified = true;
+		}
 	}
 
 	// "env_map_scale" attribute
-	if (truepbr_data.contains("env_map_scale") && shader_BSLSP->bslspShaderType == BSLSP_ENVMAP) {
-		shader_BSLSP->environmentMapScale = truepbr_data["env_map_scale"];
-		nif_modified = true;
+	if (truepbr_data.contains("env_map_scale") && enable_envmapping) {
+		auto new_env_map_scale = truepbr_data["env_map_scale"].get<float>();
+		if (shader_BSLSP->environmentMapScale != new_env_map_scale) {
+			shader_BSLSP->environmentMapScale = new_env_map_scale;
+			nif_modified = true;
+		}
 	}
 
 	// "env_map_scale_mult" attribute
-	if (truepbr_data.contains("env_map_scale_mult") && shader_BSLSP->bslspShaderType == BSLSP_ENVMAP) {
-		shader_BSLSP->environmentMapScale *= truepbr_data["env_map_scale_mult"];
+	if (truepbr_data.contains("env_map_scale_mult") && enable_envmapping) {
+		shader_BSLSP->environmentMapScale *= truepbr_data["env_map_scale_mult"].get<float>();
 		nif_modified = true;
 	}
 
 	// "cubemap" attribute
-	if (truepbr_data.contains("cubemap") && shader_BSLSP->bslspShaderType == BSLSP_ENVMAP && !flag(truepbr_data, "lock_cubemap")) {
-		string cubemap = truepbr_data["cubemap"];
-		nif.SetTextureSlot(shape, cubemap, 4);
-		nif_modified = true;
+	if (truepbr_data.contains("cubemap") && enable_envmapping && !flag(truepbr_data, "lock_cubemap")) {
+		auto new_cubemap = truepbr_data["cubemap"].get<string>();
+		string old_cubemap;
+		nif.GetTextureSlot(shape, old_cubemap, 4);
+		if (old_cubemap != new_cubemap) {
+			nif.SetTextureSlot(shape, new_cubemap, 4);
+			nif_modified = true;
+		}
 	}
 
 	// "emmissive_scale" attribute
 	if (truepbr_data.contains("emissive_scale")) {
-		shader->SetEmissiveMultiple(truepbr_data["emissive_scale"]);
-		nif_modified = true;
+		auto new_emissive_scale = truepbr_data["emissive_scale"].get<float>();
+		if (shader->GetEmissiveMultiple() != new_emissive_scale) {
+			shader->SetEmissiveMultiple(new_emissive_scale);
+			nif_modified = true;
+		}
 	}
 
 	// "emmissive_color" attribute
-	if (truepbr_data.contains("emissive_color") && truepbr_data["emissive_color"].size() > 3) {
-		shader->SetEmissiveColor(Color4(truepbr_data["emissive_color"][0], truepbr_data["emissive_color"][1], truepbr_data["emissive_color"][2], truepbr_data["emissive_color"][3]));
-		nif_modified = true;
+	if (truepbr_data.contains("emissive_color") && truepbr_data["emissive_color"].size() >= 4) {
+		auto new_emissive_color = Color4(truepbr_data["emissive_color"][0], truepbr_data["emissive_color"][1], truepbr_data["emissive_color"][2], truepbr_data["emissive_color"][3]);
+		if (shader->GetEmissiveColor() != new_emissive_color) {
+			shader->SetEmissiveColor(new_emissive_color);
+			nif_modified = true;
+		}
 	}
 
 	// "uv_scale" attribute
 	if (truepbr_data.contains("uv_scale")) {
-		shader_BSLSP->uvScale = Vector2(truepbr_data["uv_scale"], truepbr_data["uv_scale"]);
-		nif_modified = true;
+		auto new_uv_scale = Vector2(truepbr_data["uv_scale"], truepbr_data["uv_scale"]);
+		if (shader_BSLSP->uvScale != new_uv_scale) {
+			shader_BSLSP->uvScale = new_uv_scale;
+			nif_modified = true;
+		}
 	}
 
 	// "pbr" attribute
@@ -715,9 +763,13 @@ ParallaxGenTask::PGResult ParallaxGen::applyTruePBRConfigOnShape(
 	for (int i = 0; i < 8; i++) {
 		string slot_name = "slot" + to_string(i + 1);
 		if (truepbr_data.contains(slot_name)) {
-			string slot_path = truepbr_data[slot_name];
-			nif.SetTextureSlot(shape, slot_path, i);
-			nif_modified = true;
+			string new_slot = truepbr_data[slot_name];
+			string slot;
+			nif.GetTextureSlot(shape, slot, i);
+			if (slot != new_slot) {
+				nif.SetTextureSlot(shape, new_slot, i);
+				nif_modified = true;
+			}
 		}
 	}
 
@@ -739,7 +791,6 @@ ParallaxGenTask::PGResult ParallaxGen::enableTruePBROnShape(
 	// Prep
 	const auto shader_BSLSP = dynamic_cast<BSLightingShaderProperty*>(shader);
 
-	nif_modified = true;
 	string tex_path = string(matched_path);
 	if (!boost::istarts_with(tex_path, "textures\\pbr\\")) {
 		boost::replace_first(tex_path, "textures\\", "textures\\pbr\\");
@@ -757,38 +808,67 @@ ParallaxGenTask::PGResult ParallaxGen::enableTruePBROnShape(
 
 	// "lock_diffuse" attribute
 	if (!flag(truepbr_data, "lock_diffuse")) {
-		auto diffuse = tex_path + matched_field + ParallaxGen::default_suffixes[0][0];
-		nif.SetTextureSlot(shape, diffuse, 0);
+		auto new_diffuse = tex_path + matched_field + ParallaxGen::default_suffixes[0][0];
+
+		string diffuse;
+		nif.GetTextureSlot(shape, diffuse, 0);
+		if (!boost::iequals(diffuse, new_diffuse)) {
+			nif.SetTextureSlot(shape, new_diffuse, 0);
+			nif_modified = true;
+		}
 	}
 
 	// "lock_normal" attribute
 	if (!flag(truepbr_data, "lock_normal")) {
-		auto normal = tex_path + named_field + ParallaxGen::default_suffixes[1][0];
-		nif.SetTextureSlot(shape, normal, 1);
+		auto new_normal = tex_path + named_field + ParallaxGen::default_suffixes[1][0];
+
+		string normal;
+		nif.GetTextureSlot(shape, normal, 1);
+		if (!boost::iequals(normal, new_normal)) {
+			nif.SetTextureSlot(shape, new_normal, 1);
+			nif_modified = true;
+		}
 	}
 
-	// "emmisive" attribute
+	// "emissive" attribute
 	if (truepbr_data.contains("emissive") && !flag(truepbr_data, "lock_emissive"))
 	{
+		string new_glow;
 		if (truepbr_data["emissive"]) {
-			auto glow = tex_path + named_field + ParallaxGen::default_suffixes[2][0];
-			nif.SetTextureSlot(shape, glow, 2);
-			shader_BSLSP->shaderFlags1 |= SLSF1_EXTERNAL_EMITTANCE;
+			new_glow = tex_path + named_field + ParallaxGen::default_suffixes[2][0];
 		}
 		else {
-			nif.SetTextureSlot(shape, empty_path, 2);
-			shader_BSLSP->shaderFlags1 &= ~SLSF1_EXTERNAL_EMITTANCE;
+			new_glow = empty_path;
+
+			if(shader_BSLSP->shaderFlags1 & SSPF1::SLSF1_EXTERNAL_EMITTANCE) {
+				shader_BSLSP->shaderFlags1 &= ~SSPF1::SLSF1_EXTERNAL_EMITTANCE;
+				nif_modified = true;
+			}
+		}
+
+		string glow;
+		nif.GetTextureSlot(shape, glow, 2);
+		if (!boost::iequals(glow, new_glow)) {
+			nif.SetTextureSlot(shape, new_glow, 2);
+			nif_modified = true;
 		}
 	}
 
 	// "parallax" attribute
 	if (truepbr_data.contains("parallax") && !flag(truepbr_data, "lock_parallax")) {
+		string new_parallax;
 		if (truepbr_data["parallax"]) {
-			auto parallax = tex_path + named_field + ParallaxGen::default_suffixes[3][0];
-			nif.SetTextureSlot(shape, parallax, 3);
+			new_parallax = tex_path + named_field + ParallaxGen::default_suffixes[3][0];
 		}
 		else {
-			nif.SetTextureSlot(shape, empty_path, 3);
+			new_parallax = empty_path;
+		}
+
+		string parallax;
+		nif.GetTextureSlot(shape, parallax, 3);
+		if (!boost::iequals(parallax, new_parallax)) {
+			nif.SetTextureSlot(shape, new_parallax, 3);
+			nif_modified = true;
 		}
 	}
 
@@ -796,46 +876,82 @@ ParallaxGenTask::PGResult ParallaxGen::enableTruePBROnShape(
 
 	// "lock_rmaos" attribute
 	if (!flag(truepbr_data, "lock_rmaos")) {
-		auto rmaos = tex_path + named_field + "_rmaos.dds";
-		nif.SetTextureSlot(shape, rmaos, 5);
+		auto new_rmaos = tex_path + named_field + "_rmaos.dds";
+
+		string rmaos;
+		nif.GetTextureSlot(shape, rmaos, 5);
+		if (!boost::iequals(rmaos, new_rmaos)) {
+			nif.SetTextureSlot(shape, new_rmaos, 5);
+			nif_modified = true;
+		}
 	}
 
 	// "lock_cnr" attribute
 	if (!flag(truepbr_data, "lock_cnr")) {
 		// "coat_normal" attribute
+		string new_cnr;
+
 		if (truepbr_data.contains("coat_normal") && truepbr_data["coat_normal"]) {
-			auto cnr = tex_path + named_field + "_cnr.dds";
-			nif.SetTextureSlot(shape, cnr, 6);
+			new_cnr = tex_path + named_field + "_cnr.dds";
 		}
 		else {
-			nif.SetTextureSlot(shape, empty_path, 6);
+			new_cnr = empty_path;
+		}
+
+		string cnr;
+		nif.GetTextureSlot(shape, cnr, 6);
+		if (!boost::iequals(cnr, new_cnr)) {
+			nif.SetTextureSlot(shape, new_cnr, 6);
+			nif_modified = true;
 		}
 	}
 
 	// "lock_subsurface" attribute
 	if (!flag(truepbr_data, "lock_subsurface")) {
 		// "subsurface_foliage" attribute
+		string new_subsurface;
+
 		if ((truepbr_data.contains("subsurface_foliage") && truepbr_data["subsurface_foliage"]) ||
 			(truepbr_data.contains("subsurface") && truepbr_data["subsurface"]) ||
 			(truepbr_data.contains("coat_diffuse") && truepbr_data["coat_diffuse"])) {
-			auto subsurface = tex_path + named_field + ParallaxGen::default_suffixes[7][0];
-			nif.SetTextureSlot(shape, subsurface, 7);
+			new_subsurface = tex_path + named_field + ParallaxGen::default_suffixes[7][0];
 		}
 		else {
-			nif.SetTextureSlot(shape, empty_path, 7);
+			new_subsurface = empty_path;
+		}
+
+		string subsurface;
+		nif.GetTextureSlot(shape, subsurface, 7);
+		if (!boost::iequals(subsurface, new_subsurface)) {
+			nif.SetTextureSlot(shape, new_subsurface, 7);
+			nif_modified = true;
 		}
 	}
 
 	// revert to default shader type, remove flags used in other types
-	shader_BSLSP->bslspShaderType = BSLSP_DEFAULT;
-	shader_BSLSP->shaderFlags1 &= ~SLSF1_ENVIRONMENT_MAPPING;
-	shader_BSLSP->shaderFlags1 &= ~SLSF1_PARALLAX;
-	shader_BSLSP->shaderFlags2 &= ~SLSF2_GLOW_MAP;
+	if (shader_BSLSP->shaderFlags1 & SLSF1_ENVIRONMENT_MAPPING) {
+		shader_BSLSP->shaderFlags1 &= ~SLSF1_ENVIRONMENT_MAPPING;
+		nif_modified = true;
+	}
+
+	if (shader_BSLSP->shaderFlags1 & SLSF1_PARALLAX) {
+		shader_BSLSP->shaderFlags1 &= ~SLSF1_PARALLAX;
+		nif_modified = true;
+	}
+
+	if (shader_BSLSP->shaderFlags2 & SLSF2_GLOW_MAP) {
+		shader_BSLSP->shaderFlags2 &= ~SLSF2_GLOW_MAP;
+		nif_modified = true;
+	}
+
 	shader_BSLSP->shaderFlags2 &= ~SLSF2_BACK_LIGHTING;
-	shader_BSLSP->shaderFlags2 &= ~SLSF2_MULTI_LAYER_PARALLAX;
+	
 
 	// Enable PBR flag
-	shader_BSLSP->shaderFlags2 |= SLSF2_UNUSED01;
+	if (!(shader_BSLSP->shaderFlags2 & SLSF2_UNUSED01)) {
+		shader_BSLSP->shaderFlags2 |= SLSF2_UNUSED01;
+		nif_modified = true;
+	}
 
 	if (truepbr_data.contains("subsurface_foliage") && truepbr_data["subsurface_foliage"] && truepbr_data.contains("subsurface") && truepbr_data["subsurface"]) {
 		spdlog::error("Error: Subsurface and foliage shader chosen at once, undefined behavior!");
@@ -863,62 +979,123 @@ ParallaxGenTask::PGResult ParallaxGen::enableTruePBROnShape(
 
 	// "multilayer" attribute
 	if (truepbr_data.contains("multilayer") && truepbr_data["multilayer"]) {
-		shader_BSLSP->bslspShaderType = BSLSP_MULTILAYERPARALLAX;
-		shader_BSLSP->shaderFlags2 |= SLSF2_MULTI_LAYER_PARALLAX;
+		if (shader->GetShaderType() != BSLSP_MULTILAYERPARALLAX) {
+			shader->SetShaderType(BSLSP_MULTILAYERPARALLAX);
+			nif_modified = true;
+		}
+
+		if (!(shader_BSLSP->shaderFlags2 & SLSF2_MULTI_LAYER_PARALLAX)) {
+			shader_BSLSP->shaderFlags2 |= SLSF2_MULTI_LAYER_PARALLAX;
+			nif_modified = true;
+		}
 
 		// "coat_color" attribute
-		if (truepbr_data.contains("coat_color") && truepbr_data["coat_color"].size() > 2) {
-			shader->SetSpecularColor(Vector3(truepbr_data["coat_color"][0], truepbr_data["coat_color"][1], truepbr_data["coat_color"][2]));
+		if (truepbr_data.contains("coat_color") && truepbr_data["coat_color"].size() >= 3) {
+			auto new_coat_color = Vector3(truepbr_data["coat_color"][0], truepbr_data["coat_color"][1], truepbr_data["coat_color"][2]);
+			if (shader->GetSpecularColor() != new_coat_color) {
+				shader->SetSpecularColor(new_coat_color);
+				nif_modified = true;
+			}
 		}
 
 		// "coat_specular_level" attribute
 		if (truepbr_data.contains("coat_specular_level")) {
-			shader_BSLSP->parallaxRefractionScale = truepbr_data["coat_specular_level"];
+			auto new_coat_specular_level = truepbr_data["coat_specular_level"];
+			if (shader_BSLSP->parallaxRefractionScale != new_coat_specular_level) {
+				shader_BSLSP->parallaxRefractionScale = new_coat_specular_level;
+				nif_modified = true;
+			}
 		}
 
 		// "coat_roughness" attribute
 		if (truepbr_data.contains("coat_roughness")) {
-			shader_BSLSP->parallaxInnerLayerThickness = truepbr_data["coat_roughness"];
+			auto new_coat_roughtness = truepbr_data["coat_roughness"];
+			if (shader_BSLSP->parallaxInnerLayerThickness != new_coat_roughtness) {
+				shader_BSLSP->parallaxInnerLayerThickness = new_coat_roughtness;
+				nif_modified = true;
+			}
 		}
 
 		// "coat_strength" attribute
 		if (truepbr_data.contains("coat_strength")) {
-			shader_BSLSP->softlighting = truepbr_data["coat_strength"];
+			auto new_coat_strength = truepbr_data["coat_strength"];
+			if (shader_BSLSP->softlighting != new_coat_strength) {
+				shader_BSLSP->softlighting = new_coat_strength;
+				nif_modified = true;
+			}
 		}
 
 		// "coat_diffuse" attribute
 		if (truepbr_data.contains("coat_diffuse")) {
 			if (truepbr_data["coat_diffuse"]) {
-				shader_BSLSP->shaderFlags2 |= SLSF2_EFFECT_LIGHTING;
+				if (!(shader_BSLSP->shaderFlags2 & SLSF2_EFFECT_LIGHTING)) {
+					shader_BSLSP->shaderFlags2 |= SLSF2_EFFECT_LIGHTING;
+					nif_modified = true;
+				}
 			}
 			else {
-				shader_BSLSP->shaderFlags2 &= ~SLSF2_EFFECT_LIGHTING;
+				if (shader_BSLSP->shaderFlags2 & SLSF2_EFFECT_LIGHTING) {
+					shader_BSLSP->shaderFlags2 &= ~SLSF2_EFFECT_LIGHTING;
+					nif_modified = true;
+				}
 			}
 		}
 
 		// "coat_parallax" attribute
 		if (truepbr_data.contains("coat_parallax")) {
 			if (truepbr_data["coat_parallax"]) {
-				shader_BSLSP->shaderFlags2 |= SLSF2_SOFT_LIGHTING;
+				if (!(shader_BSLSP->shaderFlags2 & SLSF2_SOFT_LIGHTING)) {
+					shader_BSLSP->shaderFlags2 |= SLSF2_SOFT_LIGHTING;
+					nif_modified = true;
+				}
 			}
 			else {
-				shader_BSLSP->shaderFlags2 &= ~SLSF2_SOFT_LIGHTING;
+				if (shader_BSLSP->shaderFlags2 & SLSF2_SOFT_LIGHTING) {
+					shader_BSLSP->shaderFlags2 &= ~SLSF2_SOFT_LIGHTING;
+					nif_modified = true;
+				}
 			}
 		}
 
 		// "coat_normal" attribute
 		if (truepbr_data.contains("coat_normal")) {
 			if (truepbr_data["coat_normal"]) {
-				shader_BSLSP->shaderFlags2 |= SLSF2_BACK_LIGHTING;
+				if (!(shader_BSLSP->shaderFlags2 & SLSF2_BACK_LIGHTING)) {
+					shader_BSLSP->shaderFlags2 |= SLSF2_BACK_LIGHTING;
+					nif_modified = true;
+				}
 			}
 			else {
-				shader_BSLSP->shaderFlags2 &= ~SLSF2_BACK_LIGHTING;
+				if (shader_BSLSP->shaderFlags2 & SLSF2_BACK_LIGHTING) {
+					shader_BSLSP->shaderFlags2 &= ~SLSF2_BACK_LIGHTING;
+					nif_modified = true;
+				}
 			}
 		}
 
 		// "inner_uv_scale" attribute
 		if (truepbr_data.contains("inner_uv_scale")) {
-			shader_BSLSP->parallaxInnerLayerTextureScale = Vector2(truepbr_data["inner_uv_scale"], truepbr_data["inner_uv_scale"]);
+			auto new_inner_uv_scale = Vector2(truepbr_data["inner_uv_scale"], truepbr_data["inner_uv_scale"]);
+			if (shader_BSLSP->parallaxInnerLayerTextureScale != new_inner_uv_scale) {
+				shader_BSLSP->parallaxInnerLayerTextureScale = new_inner_uv_scale;
+				nif_modified = true;
+			}
+		}
+	} else {
+		// Revert to default shader type
+		if (shader->GetShaderType() != BSLSP_DEFAULT) {
+			shader->SetShaderType(BSLSP_DEFAULT);
+			nif_modified = true;
+		}
+
+		if (shader_BSLSP->shaderFlags2 & SLSF2_MULTI_LAYER_PARALLAX) {
+			shader_BSLSP->shaderFlags2 &= ~SLSF2_MULTI_LAYER_PARALLAX;
+			nif_modified = true;
+		}
+
+		if (shader_BSLSP->shaderFlags2 & SLSF2_BACK_LIGHTING) {
+			shader_BSLSP->shaderFlags2 &= ~SLSF2_BACK_LIGHTING;
+			nif_modified = true;
 		}
 	}
 
