@@ -305,10 +305,6 @@ ParallaxGenTask::PGResult ParallaxGen::processShape(const filesystem::path& nif_
 
 	auto search_prefixes = getSearchPrefixes(nif, shape);
 
-	if (nif_file.filename().wstring() == L"farmhouse01.nif") {
-		spdlog::debug("HERE");
-	}
-
 	// TRUEPBR CONFIG
 	bool enable_truepbr = false;
 	string matched_path;
@@ -357,21 +353,21 @@ ParallaxGenTask::PGResult ParallaxGen::shouldApplyTruePBRConfig(const filesystem
 
 	for (auto& truepbr_cfg : pgd->getTruePBRConfigs()) {
 		// "nif-filter" attribute
-		if (truepbr_cfg.contains("nif-filter") && boost::icontains(nif_file.string(), static_cast<string>(truepbr_cfg["nif-filter"]))) {
+		if (truepbr_cfg.contains("nif-filter") && boost::icontains(nif_file.wstring(), truepbr_cfg["nif-filter"].get<string>())) {
 			spdlog::trace(L"Rejecting shape {}: NIF filter", shape_block_id);
 			enable_result |= false;
 			continue;
 		}
 
 		// "path-contains" attribute
-		bool contains_match = truepbr_cfg.contains("path_contains") && boost::icontains(search_prefixes[0], static_cast<string>(truepbr_cfg["path_contains"]));
+		bool contains_match = truepbr_cfg.contains("path_contains") && boost::icontains(ParallaxGenUtil::convertToWstring(search_prefixes[0]), truepbr_cfg["path_contains"].get<string>());
 
 		bool name_match = false;
-		if (truepbr_cfg.contains("match_normal") && boost::iends_with(search_prefixes[1], static_cast<string>(truepbr_cfg["match_normal"]))) {
+		if (truepbr_cfg.contains("match_normal") && boost::iends_with(ParallaxGenUtil::convertToWstring(search_prefixes[1]), truepbr_cfg["match_normal"].get<string>())) {
 			name_match = true;
 			matched_path = search_prefixes[1];
 		}
-		if (truepbr_cfg.contains("match_diffuse") && boost::iends_with(search_prefixes[0], static_cast<string>(truepbr_cfg["match_diffuse"]))) {
+		if (truepbr_cfg.contains("match_diffuse") && boost::iends_with(ParallaxGenUtil::convertToWstring(search_prefixes[0]), truepbr_cfg["match_diffuse"].get<string>())) {
 			name_match = true;
 			matched_path = search_prefixes[0];
 		}

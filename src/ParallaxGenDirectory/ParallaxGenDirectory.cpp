@@ -86,7 +86,7 @@ void ParallaxGenDirectory::findTruePBRConfigs()
 				// loop through filename fields
 				for (const auto& field : truePBR_filename_fields) {
 					if (element.contains(field)) {
-						element[field] = static_cast<string>(element[field]).insert(0, 1, '\\');
+						element[field] = element[field].get<string>().insert(0, 1, '\\');
 					}
 				}
 
