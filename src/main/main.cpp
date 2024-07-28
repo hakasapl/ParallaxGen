@@ -120,6 +120,7 @@ void mainRunner(int argc, char** argv)
 
     // Vars that store CLI argument values
     // Default values are defined here
+    // TODO we should probably define a structure to hold CLI arguments
     int verbosity = 0;
     filesystem::path game_dir;
     string game_type = "skyrimse";

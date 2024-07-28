@@ -7,6 +7,7 @@
 #include "ParallaxGenUtil/ParallaxGenUtil.hpp"
 
 using namespace std;
+using namespace ParallaxGenUtil;
 namespace fs = std::filesystem;
 
 BethesdaGame::BethesdaGame(GameType game_type, const fs::path game_path, bool logging) {
@@ -30,7 +31,7 @@ BethesdaGame::BethesdaGame(GameType game_type, const fs::path game_path, bool lo
 		// If the game path is still empty, throw an exception
 		if (this->logging) {
 			spdlog::critical("Unable to locate game data path. Please specify the game data path manually using the -d argument.");
-			ParallaxGenUtil::exitWithUserInput(1);
+			exitWithUserInput(1);
 		} else {
 			throw runtime_error("Game path not found");
 		}
@@ -41,7 +42,7 @@ BethesdaGame::BethesdaGame(GameType game_type, const fs::path game_path, bool lo
 		// If the game path does not exist, throw an exception
 		if (this->logging) {
 			spdlog::critical(L"Game path does not exist: {}", this->game_path.wstring());
-			ParallaxGenUtil::exitWithUserInput(1);
+			exitWithUserInput(1);
 		} else {
 			throw runtime_error("Game path does not exist");
 		}
@@ -53,7 +54,7 @@ BethesdaGame::BethesdaGame(GameType game_type, const fs::path game_path, bool lo
 		// If the game data path does not contain Skyrim.esm, throw an exception
 		if (this->logging) {
 			spdlog::critical(L"Game data path does not contain Skyrim.esm, which probably means it's invalid: {}", this->game_data_path.wstring());
-			ParallaxGenUtil::exitWithUserInput(1);
+			exitWithUserInput(1);
 		} else {
 			throw runtime_error("Game data path does not contain Skyrim.esm");
 		}

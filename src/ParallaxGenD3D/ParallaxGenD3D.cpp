@@ -70,7 +70,7 @@ void ParallaxGenD3D::initGPU()
 	if (FAILED(hr)) {
         spdlog::error("D3D11 device creation failure error: {}", getHRESULTErrorMessage(hr));
         spdlog::critical("Unable to find any DX11 capable devices. Disable any GPU-accelerated features to continue.");
-        ParallaxGenUtil::exitWithUserInput(1);
+        exitWithUserInput(1);
 	}
 
     // Init Shaders
@@ -82,7 +82,7 @@ void ParallaxGenD3D::initShaders()
     // MergeToComplexMaterial.hlsl
     if (!createComputeShader(L"MergeToComplexMaterial.hlsl", shader_MergeToComplexMaterial)) {
         spdlog::critical("Failed to create compute shader. Exiting.");
-        ParallaxGenUtil::exitWithUserInput(1);
+        exitWithUserInput(1);
     }
 }
 
@@ -101,13 +101,13 @@ ComPtr<ID3DBlob> ParallaxGenD3D::compileShader(const std::filesystem::path& file
     HRESULT hr = D3DCompileFromFile(shader_abs_path.c_str(), nullptr, nullptr, "main", "cs_5_0", dwShaderFlags, 0, pCSBlob.ReleaseAndGetAddressOf(), pErrorBlob.ReleaseAndGetAddressOf());
     if (FAILED(hr)) {
         if (pErrorBlob) {
-            spdlog::critical(L"Failed to compile shader {}: {}, {}", filename.wstring(), ParallaxGenUtil::convertToWstring(getHRESULTErrorMessage(hr)), static_cast<wchar_t*>(pErrorBlob->GetBufferPointer()));
+            spdlog::critical(L"Failed to compile shader {}: {}, {}", filename.wstring(), convertToWstring(getHRESULTErrorMessage(hr)), static_cast<wchar_t*>(pErrorBlob->GetBufferPointer()));
             pErrorBlob.Reset();
         } else {
-            spdlog::critical(L"Failed to compile shader {}: {}", filename.wstring(), ParallaxGenUtil::convertToWstring(getHRESULTErrorMessage(hr)));
+            spdlog::critical(L"Failed to compile shader {}: {}", filename.wstring(), convertToWstring(getHRESULTErrorMessage(hr)));
         }
 
-        ParallaxGenUtil::exitWithUserInput(1);
+        exitWithUserInput(1);
     }
 
     spdlog::debug(L"Shader {} compiled successfully", filename.wstring());
