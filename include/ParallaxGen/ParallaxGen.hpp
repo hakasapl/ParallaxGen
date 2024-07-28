@@ -88,10 +88,11 @@ private:
 	// upgrades a height map to complex material
 	ParallaxGenTask::PGResult convertHeightMapToComplexMaterial(const std::filesystem::path& height_map) const;
     // processes a NIF file (enable parallax if needed)
-	ParallaxGenTask::PGResult processNIF(const std::filesystem::path& nif_file) const;
+	ParallaxGenTask::PGResult processNIF(const std::filesystem::path& nif_file, const std::vector<nlohmann::json>& tpbr_configs) const;
 	// processes a shape within a NIF file
 	ParallaxGenTask::PGResult processShape(
 		const std::filesystem::path& nif_file,
+		const std::vector<nlohmann::json>& tpbr_configs,
 		nifly::NifFile& nif,
 		const uint32_t shape_block_id,
 		nifly::NiShape* shape,
@@ -101,14 +102,14 @@ private:
 	// check if truepbr should be enabled on shape
 	ParallaxGenTask::PGResult shouldApplyTruePBRConfig(
 		const std::filesystem::path& nif_file,
+		const std::vector<nlohmann::json>& tpbr_configs,
 		nifly::NifFile& nif,
 		const uint32_t shape_block_id,
 		nifly::NiShape* shape,
 		nifly::NiShader* shader,
 		const std::array<std::string, 9>& search_prefixes,
 		bool& enable_result,
-		nlohmann::json& truepbr_data,
-		std::string& matched_path
+		std::vector<std::tuple<nlohmann::json, std::string>>& truepbr_data
 	) const;
 	// check if complex material should be enabled on shape
 	static inline const int cm_slot_search[2] = { 0, 1 };  // Checks match for diffuse first, then normal
@@ -192,4 +193,6 @@ private:
 	static nifly::Vector2 auto_uv_scale(const std::vector<nifly::Vector2>* uvs, const std::vector<nifly::Vector3>* verts, std::vector<nifly::Triangle>& tris);
 	// Checks if a json object has a key
 	static bool flag(nlohmann::json& json, const char* key);
+	// Get PBR texture paths given an array of matched prefixes
+	static std::array<std::string, 9> getTexturePaths(const std::array<std::string, 9>& matched_paths);
 };

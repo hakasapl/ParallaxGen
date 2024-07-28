@@ -35,6 +35,7 @@
 		    "**/effects/**",
 		    "**/interface/**",
 		    "**/loadscreenart/**",
+            "**/loadsscreens/**",
             "**/lod/**",
 		    "**/magic/**",
 		    "**/markers/**",

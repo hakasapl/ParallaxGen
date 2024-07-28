@@ -78,7 +78,7 @@ namespace ParallaxGenUtil {
 
 	void exitWithUserInput(const int exit_code)
 	{
-		cout << "Press any key to exit...";
+		cout << "Press ENTER to exit...";
 		cin.get();
 		exit(exit_code);
 	}

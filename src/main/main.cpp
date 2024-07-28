@@ -61,6 +61,7 @@ void addArguments(
     filesystem::path& game_dir,
     string& game_type,
     filesystem::path& output_dir,
+    bool& autostart,
     bool& upgrade_shaders,
     bool& optimize_meshes,
     bool& no_zip,
@@ -76,6 +77,7 @@ void addArguments(
     app.add_option("-d,--game-dir", game_dir, "Manually specify game directory");
     app.add_option("-g,--game-type", game_type, "Specify game type [" + AVAILABLE_GAME_TYPES_STR + "]");
     app.add_option("-o,--output-dir", output_dir, "Manually specify output directory");
+    app.add_flag("--autostart", autostart, "Start generation without user input");
     app.add_flag("--upgrade-shaders", upgrade_shaders, "Upgrade shaders to a better version whenever possible");
     app.add_flag("--optimize-meshes", optimize_meshes, "Optimize meshes before saving them");
     app.add_flag("--no-zip", no_zip, "Don't zip the output meshes (also enables --no-cleanup)");
@@ -125,6 +127,7 @@ void mainRunner(int argc, char** argv)
     filesystem::path game_dir;
     string game_type = "skyrimse";
     filesystem::path output_dir = EXE_PATH / "ParallaxGen_Output";
+    bool autostart = false;
     bool upgrade_shaders = false;
     bool optimize_meshes = false;
     bool no_zip = false;
@@ -136,7 +139,22 @@ void mainRunner(int argc, char** argv)
 
     // Parse CLI arguments
     CLI::App app{ "ParallaxGen: Auto convert meshes to parallax meshes" };
-    addArguments(app, verbosity, game_dir, game_type, output_dir, upgrade_shaders, optimize_meshes, no_zip, no_cleanup, no_default_config, ignore_parallax, ignore_complex_material, ignore_truepbr, AVAILABLE_GAME_TYPES_STR);
+    addArguments(
+        app,
+        verbosity,
+        game_dir,
+        game_type,
+        output_dir,
+        autostart,
+        upgrade_shaders,
+        optimize_meshes,
+        no_zip, no_cleanup,
+        no_default_config,
+        ignore_parallax,
+        ignore_complex_material,
+        ignore_truepbr,
+        AVAILABLE_GAME_TYPES_STR
+    );
 
     // Check if arguments are valid, otherwise print error to user
     try {
@@ -212,13 +230,6 @@ void mainRunner(int argc, char** argv)
         pgd3d.initGPU();
     }
 
-    // Check if ParallaxGen output already exists in data directory
-    const filesystem::path PARALLAXGEN_STATE_FILE_PATH = bg.getGameDataPath() / ParallaxGen::parallax_state_file;
-    if (filesystem::exists(PARALLAXGEN_STATE_FILE_PATH)) {
-        spdlog::critical("ParallaxGen meshes exist in your data directory, please delete before re-running.");
-        exitWithUserInput(1);
-    }
-
     // Create output directory
     try {
         filesystem::create_directories(output_dir);
@@ -238,11 +249,21 @@ void mainRunner(int argc, char** argv)
     //
 
     // User Input to Continue
-    cout << "Press ENTER to start ParallaxGen...";
-    cin.get();
+    if (!autostart) {
+        cout << "Press ENTER to start ParallaxGen...";
+        cin.get();
+    }
 
     // delete existing output
     pg.deleteOutputDir();
+
+    // Check if ParallaxGen output already exists in data directory
+    const filesystem::path PARALLAXGEN_STATE_FILE_PATH = bg.getGameDataPath() / ParallaxGen::parallax_state_file;
+    if (filesystem::exists(PARALLAXGEN_STATE_FILE_PATH)) {
+        spdlog::critical("ParallaxGen meshes exist in your data directory, please delete before re-running.");
+        exitWithUserInput(1);
+    }
+
     pg.initOutputDir();
 
     // Populate file map from data directory

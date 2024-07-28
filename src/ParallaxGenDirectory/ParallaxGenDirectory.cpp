@@ -85,6 +85,7 @@ void ParallaxGenDirectory::findMeshes()
 
 void ParallaxGenDirectory::findTruePBRConfigs()
 {
+	// TODO more logging here
 	// Find True PBR configs
 	spdlog::info("Finding TruePBR configs");
   
@@ -112,7 +113,7 @@ void ParallaxGenDirectory::findTruePBRConfigs()
 
 				// loop through filename fields
 				for (const auto& field : truePBR_filename_fields) {
-					if (element.contains(field)) {
+					if (element.contains(field) && !boost::istarts_with(element[field].get<string>(), "\\")) {
 						element[field] = element[field].get<string>().insert(0, 1, '\\');
 					}
 				}

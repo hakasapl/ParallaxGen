@@ -57,12 +57,13 @@ void ParallaxGen::upgradeShaders() const
 void ParallaxGen::patchMeshes() const
 {
 	auto meshes = pgd->getMeshes();
+	auto tpbr_configs = pgd->getTruePBRConfigs();
 
 	// Create task tracker
 	ParallaxGenTask task_tracker("Mesh Patcher", meshes.size());
 
 	for (filesystem::path mesh : meshes) {
-		task_tracker.completeJob(processNIF(mesh));
+		task_tracker.completeJob(processNIF(mesh, tpbr_configs));
 	}
 }
 
@@ -173,7 +174,7 @@ void ParallaxGen::initOutputDir() const {
 typedef BSLightingShaderPropertyShaderType BSLSP;
 typedef SkyrimShaderPropertyFlags1 SSPF1;
 typedef SkyrimShaderPropertyFlags2 SSPF2;
-ParallaxGenTask::PGResult ParallaxGen::processNIF(const filesystem::path& nif_file) const
+ParallaxGenTask::PGResult ParallaxGen::processNIF(const filesystem::path& nif_file, const vector<nlohmann::json>& tpbr_configs) const
 {
 	auto result = ParallaxGenTask::PGResult::SUCCESS;
 
@@ -243,7 +244,7 @@ ParallaxGenTask::PGResult ParallaxGen::processNIF(const filesystem::path& nif_fi
 		// Get shape's block ID in NIF (used for logging)
 		const auto shape_block_id = nif.GetBlockID(shape);
 
-		ParallaxGenTask::updatePGResult(result, processShape(nif_file, nif, shape_block_id, shape, nif_modified, has_attached_havok), ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
+		ParallaxGenTask::updatePGResult(result, processShape(nif_file, tpbr_configs, nif, shape_block_id, shape, nif_modified, has_attached_havok), ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
 		if (result == ParallaxGenTask::PGResult::SUCCESS) {
 			one_shape_success = true;
 		}
@@ -274,6 +275,7 @@ ParallaxGenTask::PGResult ParallaxGen::processNIF(const filesystem::path& nif_fi
 
 ParallaxGenTask::PGResult ParallaxGen::processShape(
 	const filesystem::path& nif_file,
+	const vector<nlohmann::json>& tpbr_configs,
 	NifFile& nif,
 	const uint32_t shape_block_id,
 	NiShape* shape,
@@ -320,20 +322,25 @@ ParallaxGenTask::PGResult ParallaxGen::processShape(
 
 	auto search_prefixes = getSearchPrefixes(nif, shape);
 
+	if (boost::icontains(nif_file.wstring(), L"farmhouse01")) {
+		spdlog::debug("HERE");
+	}
+
 	// TRUEPBR CONFIG
 	bool enable_truepbr = false;
-	string matched_path;
-	nlohmann::json truepbr_data;
-	ParallaxGenTask::updatePGResult(result, shouldApplyTruePBRConfig(nif_file, nif, shape_block_id, shape, shader, search_prefixes, enable_truepbr, truepbr_data, matched_path), ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
+	vector<tuple<nlohmann::json, string>> truepbr_data;
+	ParallaxGenTask::updatePGResult(result, shouldApplyTruePBRConfig(nif_file, tpbr_configs, nif, shape_block_id, shape, shader, search_prefixes, enable_truepbr, truepbr_data), ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
 	if (enable_truepbr) {
 		// Enable TruePBR on shape
-		ParallaxGenTask::updatePGResult(result, applyTruePBRConfigOnShape(nif, shape, shader, truepbr_data, matched_path, nif_modified));
+		for (auto& truepbr_cfg : truepbr_data) {
+			ParallaxGenTask::updatePGResult(result, applyTruePBRConfigOnShape(nif, shape, shader, get<0>(truepbr_cfg), get<1>(truepbr_cfg), nif_modified));
+		}
 		return result;
 	}
 
 	// COMPLEX MATERIAL
 	bool enable_cm = false;
-	matched_path = "";
+	string matched_path;
 	ParallaxGenTask::updatePGResult(result, shouldEnableComplexMaterial(nif_file, nif, shape_block_id, shape, shader, search_prefixes, enable_cm, matched_path), ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
 	if (enable_cm) {
 		// Determine if dynamic cubemaps should be set
@@ -359,14 +366,14 @@ ParallaxGenTask::PGResult ParallaxGen::processShape(
 
 ParallaxGenTask::PGResult ParallaxGen::shouldApplyTruePBRConfig(
 	const filesystem::path& nif_file,
+	const vector<nlohmann::json>& tpbr_configs,
 	NifFile& nif,
 	const uint32_t shape_block_id,
 	NiShape* shape,
 	NiShader* shader,
 	const array<string, 9>& search_prefixes,
 	bool& enable_result,
-	nlohmann::json& truepbr_data,
-	string& matched_path
+	vector<tuple<nlohmann::json, string>>& truepbr_data
 ) const
 {
 	auto result = ParallaxGenTask::PGResult::SUCCESS;
@@ -376,7 +383,9 @@ ParallaxGenTask::PGResult ParallaxGen::shouldApplyTruePBRConfig(
 		return result;
 	}
 
-	for (auto& truepbr_cfg : pgd->getTruePBRConfigs()) {
+	for (auto& truepbr_cfg : tpbr_configs) {
+		string matched_path;
+
 		// "nif-filter" attribute
 		if (truepbr_cfg.contains("nif-filter") && boost::icontains(nif_file.wstring(), truepbr_cfg["nif-filter"].get<string>())) {
 			spdlog::trace(L"Rejecting shape {}: NIF filter", shape_block_id);
@@ -385,14 +394,14 @@ ParallaxGenTask::PGResult ParallaxGen::shouldApplyTruePBRConfig(
 		}
 
 		// "path-contains" attribute
-		bool contains_match = truepbr_cfg.contains("path_contains") && boost::icontains(convertToWstring(search_prefixes[0]), truepbr_cfg["path_contains"].get<string>());
+		bool contains_match = truepbr_cfg.contains("path_contains") && boost::icontains(search_prefixes[0], truepbr_cfg["path_contains"].get<string>());
 
 		bool name_match = false;
-		if (truepbr_cfg.contains("match_normal") && boost::iends_with(convertToWstring(search_prefixes[1]), truepbr_cfg["match_normal"].get<string>())) {
+		if (truepbr_cfg.contains("match_normal") && boost::iends_with(search_prefixes[1], truepbr_cfg["match_normal"].get<string>())) {
 			name_match = true;
 			matched_path = search_prefixes[1];
 		}
-		if (truepbr_cfg.contains("match_diffuse") && boost::iends_with(convertToWstring(search_prefixes[0]), truepbr_cfg["match_diffuse"].get<string>())) {
+		if (truepbr_cfg.contains("match_diffuse") && boost::iends_with(search_prefixes[0], truepbr_cfg["match_diffuse"].get<string>())) {
 			name_match = true;
 			matched_path = search_prefixes[0];
 		}
@@ -404,7 +413,7 @@ ParallaxGenTask::PGResult ParallaxGen::shouldApplyTruePBRConfig(
 		}
 
 		enable_result = true;
-		truepbr_data.merge_patch(truepbr_cfg);
+		truepbr_data.push_back(make_tuple(truepbr_cfg, matched_path));
 	}
 
 	return result;
@@ -747,12 +756,16 @@ ParallaxGenTask::PGResult ParallaxGen::enableTruePBROnShape(
 	}
 
 	// "lock_diffuse" attribute
-	auto diffuse = flag(truepbr_data, "lock_diffuse") ? tex_path + matched_field + ParallaxGen::default_suffixes[0][0] : tex_path + named_field + ParallaxGen::default_suffixes[0][0];
-	nif.SetTextureSlot(shape, diffuse, 0);
+	if (!flag(truepbr_data, "lock_diffuse")) {
+		auto diffuse = tex_path + matched_field + ParallaxGen::default_suffixes[0][0];
+		nif.SetTextureSlot(shape, diffuse, 0);
+	}
 
 	// "lock_normal" attribute
-	auto normal = flag(truepbr_data, "lock_normal") ? tex_path + matched_field + ParallaxGen::default_suffixes[1][0] : tex_path + named_field + ParallaxGen::default_suffixes[1][0];
-	nif.SetTextureSlot(shape, normal, 1);
+	if (!flag(truepbr_data, "lock_normal")) {
+		auto normal = tex_path + named_field + ParallaxGen::default_suffixes[1][0];
+		nif.SetTextureSlot(shape, normal, 1);
+	}
 
 	// "emmisive" attribute
 	if (truepbr_data.contains("emissive") && !flag(truepbr_data, "lock_emissive"))
