@@ -1,9 +1,12 @@
 # Changelog
 
-## [0.5.0] - UNRELEASED
+## [0.5.0] - 2024-07-28
 
 - Initial TruePBR implementation
 - Added allowlist and blocklist support
+- Added --autostart CLI argument to skip the "Press Enter" prompt
+- Existing ParallaxGen meshes in load order is checked after output dir is deleted
+- Fixed exit prompt to refer to ENTER specifically
 
 ## [0.4.7] - 2024-07-27
 
