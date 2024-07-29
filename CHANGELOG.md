@@ -4,6 +4,8 @@
 
 - Removed loading screen exclusions from NIF config
 - findFilesBySuffix now is findFiles and uses globs exclusively
+- _resourcepack.bsa is now ignored for complex material
+- Creation club BSAs are now ignored for complex material
 
 ## [0.5.0] - 2024-07-28
 
