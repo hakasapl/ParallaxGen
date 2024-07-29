@@ -25,7 +25,7 @@ void ParallaxGenDirectory::findHeightMaps()
 	vector<wstring> parallax_archive_blocklist = jsonArrayToWString(PG_config["parallax_lookup"]["archive_blocklist"]);
 
 	// Find heightmaps
-	heightMaps = findFilesBySuffix("_p.dds", true, parallax_allowlist, parallax_blocklist, parallax_archive_blocklist);
+	heightMaps = findFiles(true, parallax_allowlist, parallax_blocklist, parallax_archive_blocklist);
 	spdlog::info("Found {} height maps", heightMaps.size());
 }
 
@@ -41,7 +41,7 @@ void ParallaxGenDirectory::findComplexMaterialMaps()
 	vector<wstring> complex_material_archive_blocklist = jsonArrayToWString(PG_config["complexmaterial_lookup"]["archive_blocklist"]);
 
 	// find complex material maps
-	vector<filesystem::path> env_maps = findFilesBySuffix("_m.dds", true, complex_material_allowlist, complex_material_blocklist, complex_material_archive_blocklist);
+	vector<filesystem::path> env_maps = findFiles(true, complex_material_allowlist, complex_material_blocklist, complex_material_archive_blocklist);
 
 	// loop through env maps
 	for (filesystem::path env_map : env_maps) {
@@ -79,7 +79,7 @@ void ParallaxGenDirectory::findMeshes()
 	vector<wstring> mesh_blocklist = jsonArrayToWString(PG_config["nif_lookup"]["blocklist"]);
 	vector<wstring> mesh_archive_blocklist = jsonArrayToWString(PG_config["nif_lookup"]["archive_blocklist"]);
 
-	meshes = findFilesBySuffix(".nif", true, mesh_allowlist, mesh_blocklist, mesh_archive_blocklist);
+	meshes = findFiles(true, mesh_allowlist, mesh_blocklist, mesh_archive_blocklist);
 	spdlog::info("Found {} meshes", meshes.size());
 }
 
@@ -94,7 +94,7 @@ void ParallaxGenDirectory::findTruePBRConfigs()
 	vector<wstring> truepbr_blocklist = jsonArrayToWString(PG_config["truepbr_cfg_lookup"]["blocklist"]);
 	vector<wstring> truepbr_archive_blocklist = jsonArrayToWString(PG_config["truepbr_cfg_lookup"]["archive_blocklist"]);
   
-	auto config_files = findFilesBySuffix(".json", true, truepbr_allowlist, truepbr_blocklist, truepbr_archive_blocklist);
+	auto config_files = findFiles(true, truepbr_allowlist, truepbr_blocklist, truepbr_archive_blocklist);
 
 	// loop through and parse configs
 	for (auto& config : config_files) {
@@ -147,7 +147,7 @@ void ParallaxGenDirectory::loadPGConfig(bool load_default)
 
 	// Load configs from load order
 	size_t cfg_count = 0;
-	auto pg_configs = findFilesBySuffix(".json", true, { LO_PGCONFIG_PATH + L"\\*" });
+	auto pg_configs = findFiles(true, { LO_PGCONFIG_PATH + L"\\**\\*.json" });
 	for (auto& cur_cfg : pg_configs) {
 		try {
 			auto parsed_json = nlohmann::json::parse(getFile(cur_cfg));

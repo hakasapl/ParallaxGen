@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.5.1] - UNRELEASED
+
+- Removed loading screen exclusions from NIF config
+- findFilesBySuffix now is findFiles and uses globs exclusively
+
 ## [0.5.0] - 2024-07-28
 
 - Initial TruePBR implementation

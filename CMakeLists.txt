@@ -17,7 +17,7 @@ set(PROJECT_NAME "ParallaxGen")
 set(PROJECT_URI "com.github.hakasapl.ParallaxGen")
 
 # Initialize Project
-set(PARALLAXGEN_VERSION 0.5.0)
+set(PARALLAXGEN_VERSION 0.5.1)
 project(${PROJECT_NAME} VERSION ${PARALLAXGEN_VERSION})
 
 # Define preprocessor macro with the version number

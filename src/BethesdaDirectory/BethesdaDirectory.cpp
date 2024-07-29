@@ -143,82 +143,59 @@ fs::path BethesdaDirectory::getDataPath() const
 	return data_dir;
 }
 
-vector<fs::path> BethesdaDirectory::findFilesBySuffix(const string_view suffix, const bool lower, const vector<wstring>& glob_list_allow, const vector<wstring>& glob_list_deny, const vector<wstring>& archive_list_deny) const
+vector<fs::path> BethesdaDirectory::findFiles(const bool lower, const vector<wstring>& glob_list_allow, const vector<wstring>& glob_list_deny, const vector<wstring>& archive_list_deny) const
 {
 	// find all keys in fileMap that match pattern
 	vector<fs::path> found_files;
+
+	// Create LPCWSTR vectors from wstrings
+	vector<LPCWSTR> glob_list_allow_cstr = convertWStringToLPCWSTRVector(glob_list_allow);
+	vector<LPCWSTR> glob_list_deny_cstr = convertWStringToLPCWSTRVector(glob_list_deny);
+	vector<LPCWSTR> archive_list_deny_cstr = convertWStringToLPCWSTRVector(archive_list_deny);
+
+	LPCWSTR last_winning_glob_allow = L"";
+	LPCWSTR last_winning_glob_deny = L"";
+	LPCWSTR last_winning_glob_archive_deny = L"";
 
 	// loop through filemap and match keys
 	for (const auto& [key, value] : fileMap) {
 		fs::path cur_file_path = value.path;
 
-		if (logging) {
-			spdlog::trace(L"Checking file for suffix {} match: {}", convertToWstring(string(suffix)), cur_file_path.wstring());
+		// Check globs
+		wstring key_str_ws = key.wstring();
+		LPCWSTR key_str = key_str_ws.c_str();
+
+		// Check allowlist
+		if (!glob_list_allow_cstr.empty() && !checkGlob(key_str, last_winning_glob_allow, glob_list_allow_cstr)) {
+			continue;
 		}
 
-        if (boost::algorithm::iends_with(key.wstring(), suffix)) {
-			// Check globs
-			bool allow = false;
+		// Check denylist
+		if (!glob_list_deny_cstr.empty() && checkGlob(key_str, last_winning_glob_deny, glob_list_deny_cstr)) {
+			continue;
+		}
 
-			wstring key_str_ws = key.wstring();
-			LPCWSTR key_str = key_str_ws.c_str();
+		// Verify BSA blocklist
+		if (value.bsa_file != nullptr) {
+			// Get BSA file
+			wstring bsa_file_ws = value.bsa_file->path.filename().wstring();
+			LPCWSTR bsa_file = bsa_file_ws.c_str();
 
-			// Check allowlist
-			if (glob_list_allow.empty()) {
-				allow = true;
-			}
-			else {
-				for (const wstring& glob : glob_list_allow) {
-					LPCWSTR glob_str = glob.c_str();
-					if (PathMatchSpecW(key_str, glob_str)) {
-						allow = true;
-						break;
-					}
-				}
-			}
-
-			// Check denylist
-			if (!glob_list_deny.empty()) {
-				for (const wstring& glob : glob_list_deny) {
-					LPCWSTR glob_str = glob.c_str();
-					if (PathMatchSpecW(key_str, glob_str)) {
-						allow = false;
-						break;
-					}
-				}
-			}
-
-			// Verify BSA blocklist
-			if (value.bsa_file != nullptr) {
-				// Get BSA file
-				wstring bsa_file_ws = value.bsa_file->path.filename().wstring();
-				LPCWSTR bsa_file = bsa_file_ws.c_str();
-
-				// This is a BSA file, check deny list
-				for (wstring deny : archive_list_deny) {
-					LPCWSTR glob_str = deny.c_str();
-					if (PathMatchSpecW(bsa_file, glob_str)) {
-						allow = false;
-						break;
-					}
-				}
-			}
-
-			// If not allowed, skip
-			if (!allow) {
+			if (checkGlob(bsa_file, last_winning_glob_archive_deny, archive_list_deny_cstr)) {
 				continue;
 			}
+		}
 
-			if (logging) {
-				spdlog::trace(L"Matched file by suffix: {}", cur_file_path.wstring());
-			}
+		// If not allowed, skip
+		if (logging) {
+			spdlog::trace(L"Matched file by glob: {}", cur_file_path.wstring());
+		}
 
-			if (lower) {
-				found_files.push_back(key);
-			}
-			else {
-				found_files.push_back(cur_file_path);
-			}
+		if (lower) {
+			found_files.push_back(key);
+		}
+		else {
+			found_files.push_back(cur_file_path);
 		}
 	}
 
@@ -600,6 +577,33 @@ bool BethesdaDirectory::checkIfAnyComponentIs(const fs::path path, const vector<
 			if (boost::iequals(component.wstring(), comp)) {
 				return true;
 			}
+		}
+	}
+
+	return false;
+}
+
+vector<LPCWSTR> BethesdaDirectory::convertWStringToLPCWSTRVector(const vector<wstring>& original)
+{
+	vector<LPCWSTR> output(original.size());
+	for (size_t i = 0; i < original.size(); i++) {
+		output[i] = original[i].c_str();
+	}
+
+	return output;
+}
+
+bool BethesdaDirectory::checkGlob(const LPCWSTR& str, LPCWSTR& winning_glob, const vector<LPCWSTR>& glob_list)
+{
+	if (winning_glob != L"" && PathMatchSpecW(str, winning_glob)) {
+		// no winning glob, check all globs
+		return true;
+	}
+
+	for (const auto& glob : glob_list) {
+		if (glob != winning_glob && PathMatchSpecW(str, glob)) {
+			winning_glob = glob;
+			return true;
 		}
 	}
 
