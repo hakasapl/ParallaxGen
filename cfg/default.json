@@ -8,7 +8,9 @@
     },
     "complexmaterial_lookup": {
         "archive_blocklist": [
-            "Skyrim - Textures*"
+            "Skyrim - Textures*",
+            "_ResourcePack.bsa",
+            "cc*"
         ],
         "allowlist": [
             "textures/**/*_m.dds",
