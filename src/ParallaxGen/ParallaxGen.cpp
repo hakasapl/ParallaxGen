@@ -439,12 +439,11 @@ ParallaxGenTask::PGResult ParallaxGen::shouldEnableComplexMaterial(
 	}
 
 	// Check if complex material file exists
-	filesystem::path cm_map;
 	for (int slot : cm_slot_search) {
-		cm_map = search_prefixes[slot] + ParallaxGen::default_suffixes[5][0];
-		if (pgd->isComplexMaterialMap(cm_map)) {
+		string found_match = pgd->getComplexMaterialMapFromBase(search_prefixes[slot]);
+		if (!found_match.empty()) {
 			// found complex material map
-			matched_path = search_prefixes[slot];
+			matched_path = found_match;
 			break;
 		}
 	}
@@ -474,7 +473,7 @@ ParallaxGenTask::PGResult ParallaxGen::shouldEnableComplexMaterial(
 	}
 
 	bool same_aspect = false;
-	ParallaxGenTask::updatePGResult(result, pgd3d->checkIfAspectRatioMatches(diffuse_map, cm_map, same_aspect), ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
+	ParallaxGenTask::updatePGResult(result, pgd3d->checkIfAspectRatioMatches(diffuse_map, matched_path, same_aspect), ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
 	if (!same_aspect) {
 		spdlog::trace(L"Rejecting shape {} in NIF file {}: Complex material map does not match diffuse map", shape_block_id, nif_file.wstring());
 		enable_result = false;
@@ -505,12 +504,11 @@ ParallaxGenTask::PGResult ParallaxGen::shouldEnableParallax(
 	}
 
 	// Check if complex material file exists
-	filesystem::path height_map;
 	for (int slot : parallax_slot_search) {
-		height_map = search_prefixes[slot] + ParallaxGen::default_suffixes[3][0];
-		if (pgd->isHeightMap(height_map)) {
+		string found_match = pgd->getHeightMapFromBase(search_prefixes[slot]);
+		if (!found_match.empty()) {
 			// found complex material map
-			matched_path = search_prefixes[slot];
+			matched_path = found_match;
 			break;
 		}
 	}
@@ -570,7 +568,7 @@ ParallaxGenTask::PGResult ParallaxGen::shouldEnableParallax(
 	}
 
 	bool same_aspect = false;
-	ParallaxGenTask::updatePGResult(result, pgd3d->checkIfAspectRatioMatches(diffuse_map, height_map, same_aspect), ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
+	ParallaxGenTask::updatePGResult(result, pgd3d->checkIfAspectRatioMatches(diffuse_map, matched_path, same_aspect), ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
 	if (!same_aspect) {
 		spdlog::trace(L"Rejecting shape {} in NIF file {}: Height map does not match diffuse map", shape_block_id, nif_file.wstring());
 		enable_result = false;
@@ -1143,7 +1141,7 @@ ParallaxGenTask::PGResult ParallaxGen::enableComplexMaterialOnShape(
 
 	string env_map;
 	uint32_t env_result = nif.GetTextureSlot(shape, env_map, 5);
-	string new_env_map = matched_path + ParallaxGen::default_suffixes[5][0];
+	string new_env_map = matched_path;
 	if (!boost::iequals(env_map, new_env_map)) {
 		// add height map
 		nif.SetTextureSlot(shape, new_env_map, 5);
@@ -1207,8 +1205,7 @@ ParallaxGenTask::PGResult ParallaxGen::enableParallaxOnShape(
 	// 5. set parallax heightmap texture
 	string height_map;
 	uint32_t height_result = nif.GetTextureSlot(shape, height_map, 3);
-	string new_height_map = matched_path + ParallaxGen::default_suffixes[3][0];
-
+	string new_height_map = matched_path;
 	if (!boost::iequals(height_map, new_height_map)) {
 		// add height map
 		nif.SetTextureSlot(shape, new_height_map, 3);

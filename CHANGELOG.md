@@ -6,6 +6,8 @@
 - findFilesBySuffix now is findFiles and uses globs exclusively
 - _resourcepack.bsa is now ignored for complex material
 - Creation club BSAs are now ignored for complex material
+- _em.dds files are now checked if they are complex material
+- Added JSON validation for ParallaxGen configs
 
 ## [0.5.0] - 2024-07-28
 

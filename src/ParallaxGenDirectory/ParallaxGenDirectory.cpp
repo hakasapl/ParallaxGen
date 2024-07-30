@@ -4,6 +4,7 @@
 #include <DirectXTex.h>
 #include <boost/algorithm/string.hpp>
 #include <set>
+#include <regex>
 
 #include "ParallaxGenUtil/ParallaxGenUtil.hpp"
 
@@ -140,7 +141,7 @@ void ParallaxGenDirectory::loadPGConfig(bool load_default)
 			exitWithUserInput(1);
 		}
 
-		PG_config.merge_patch(nlohmann::json::parse(getFileBytes(def_conf_path)));
+		merge_json_smart(PG_config, nlohmann::json::parse(getFileBytes(def_conf_path)), PG_config_validation);
 	}
 
 	// Load configs from load order
@@ -149,7 +150,7 @@ void ParallaxGenDirectory::loadPGConfig(bool load_default)
 	for (auto& cur_cfg : pg_configs) {
 		try {
 			auto parsed_json = nlohmann::json::parse(getFile(cur_cfg));
-			merge_json_smart(PG_config, parsed_json);
+			merge_json_smart(PG_config, parsed_json, PG_config_validation);
 			cfg_count++;
 		} catch (nlohmann::json::parse_error& e) {
 			spdlog::warn(L"Failed to parse ParallaxGen config file {}: {}", cur_cfg.wstring(), convertToWstring(e.what()));
@@ -227,27 +228,89 @@ const vector<nlohmann::json> ParallaxGenDirectory::getTruePBRConfigs() const
 	return truePBRConfigs;
 }
 
-void ParallaxGenDirectory::merge_json_smart(nlohmann::json& target, const nlohmann::json& source) {
+const string ParallaxGenDirectory::getHeightMapFromBase(const string& base) const
+{
+	return matchBase(base, heightMaps).string();
+}
+
+const string ParallaxGenDirectory::getComplexMaterialMapFromBase(const string& base) const
+{
+	return matchBase(base, complexMaterialMaps).string();
+}
+
+void ParallaxGenDirectory::merge_json_smart(nlohmann::json& target, const nlohmann::json& source, const nlohmann::json& validation) {
     // recursively merge json objects while preseving lists
 	for (auto& [key, value] : source.items()) {
 		if (value.is_object()) {
+			// This is a JSON object
 			if (!target.contains(key)) {
+				// Create an object if it doesn't exist in the target
 				target[key] = nlohmann::json::object();
 			}
-			merge_json_smart(target[key], value);
+		
+			// Recursion
+			if (!validation.contains(key)) {
+				// No validation for this key
+				spdlog::warn("Skipping unknown field in ParallaxGen config: {}", key);
+				continue;
+			}
+
+			merge_json_smart(target[key], value, validation[key]);
 		} else if (value.is_array()) {
+			// This is a list
+
 			if (!target.contains(key)) {
+				// Create an array if it doesn't exist in the target
 				target[key] = nlohmann::json::array();
 			}
+
+			// Loop through each item in array and add only if it doesn't already exist in the list
 			for (const auto& item : value) {
 				if (std::find(target[key].begin(), target[key].end(), item) == target[key].end()) {
+					// Validation
+					if (!validate_json(item, validation, key)) {
+						continue;
+					}
+
+					// Add item to target
 					target[key].push_back(item);
 				}
 			}
 		} else {
+			// This is a single object
+
+			// Validation
+			if (!validate_json(value, validation, key)) {
+				continue;
+			}
+
+			// Add item to target
 			target[key] = value;
 		}
 	}
+}
+
+bool ParallaxGenDirectory::validate_json(const nlohmann::json& item, const nlohmann::json& validation, const string& key)
+{
+	if (!validation.contains(key)) {
+		// No validation for this key
+		spdlog::warn("Skipping unknown field in ParallaxGen config: {}", key);
+		return false;
+	}
+
+	if (validation[key].is_string()) {
+		// regex check
+		regex chk_pattern(validation[key].get<string>());
+		string chk_str = item.get<string>();
+
+		// Check that regex matches, log if not and return
+		if (!regex_match(chk_str, chk_pattern)) {
+			spdlog::warn("Invalid value in ParallaxGen config key {}: {}. Value must match regex pattern {}", key, item.get<string>(), validation[key].get<string>());
+			return false;
+		}
+	}
+
+	return true;
 }
 
 vector<wstring> ParallaxGenDirectory::jsonArrayToWString(const nlohmann::json& json_array) {
@@ -281,4 +344,19 @@ void ParallaxGenDirectory::replaceForwardSlashes(nlohmann::json& j) {
             replaceForwardSlashes(element);
         }
     }
+}
+
+filesystem::path ParallaxGenDirectory::matchBase(const string& base, const vector<filesystem::path>& search_list) {
+	for (const auto& search : search_list) {
+		auto search_str = search.wstring();
+		if (boost::istarts_with(search_str, base)) {
+			size_t pos = search_str.find_last_of(L'_');
+			auto height_map_base = search_str.substr(0, pos);
+			if (pos != wstring::npos && boost::iequals(height_map_base, base)) {
+				return search;
+			}
+		}
+	}
+
+	return filesystem::path();
 }
