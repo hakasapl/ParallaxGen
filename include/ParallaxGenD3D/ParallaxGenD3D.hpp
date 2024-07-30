@@ -47,19 +47,20 @@ private:
     std::unordered_map<std::filesystem::path, DirectX::TexMetadata> dds_metadata_cache;
 
 public:
+    // Constructor
     ParallaxGenD3D(ParallaxGenDirectory* pgd, const std::filesystem::path output_dir, const std::filesystem::path exe_path);
 
-    ParallaxGenTask::PGResult checkIfAspectRatioMatches(const std::filesystem::path& dds_path_1, const std::filesystem::path& dds_path_2, bool& check_aspect);
-
-    // GPU functions
+    // Initialize GPU (also compiles shaders)
     void initGPU();
 
     // Attempt to upgrade vanilla parallax to complex material
     DirectX::ScratchImage upgradeToComplexMaterial(const std::filesystem::path& parallax_map, const std::filesystem::path& env_map) const;
 
-    // Other Helpers
-    static std::string getHRESULTErrorMessage(HRESULT hr);
+    // Checks if the aspect ratio of two DDS files match
+    ParallaxGenTask::PGResult checkIfAspectRatioMatches(const std::filesystem::path& dds_path_1, const std::filesystem::path& dds_path_2, bool& check_aspect);
 
+    // Gets the error message from an HRESULT for logging
+    static std::string getHRESULTErrorMessage(HRESULT hr);
 private:
     // GPU functions
     void initShaders();
@@ -67,7 +68,6 @@ private:
     bool createComputeShader(const std::wstring& shader_path, Microsoft::WRL::ComPtr<ID3D11ComputeShader>& cs_dest);
 
     // GPU Helpers
-    static bool isPowerOfTwo(unsigned int x);
     Microsoft::WRL::ComPtr<ID3D11Texture2D> createTexture2D(const DirectX::ScratchImage& texture) const;
     Microsoft::WRL::ComPtr<ID3D11Texture2D> createTexture2D(Microsoft::WRL::ComPtr<ID3D11Texture2D>& existing_texture) const;
     Microsoft::WRL::ComPtr<ID3D11Texture2D> createTexture2D(D3D11_TEXTURE2D_DESC& desc) const;
@@ -85,4 +85,5 @@ private:
     bool getDDS(const std::filesystem::path& dds_path, DirectX::ScratchImage& dds) const;
     bool getDDSMetadata(const std::filesystem::path& dds_path, DirectX::TexMetadata& dds_meta);
     static DirectX::ScratchImage LoadRawPixelsToScratchImage(const std::vector<unsigned char> rawPixels, size_t width, size_t height, DXGI_FORMAT format, int channels);
+    static bool isPowerOfTwo(unsigned int x);
 };
