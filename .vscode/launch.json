@@ -1,19 +1,19 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "Attach",
-            "type": "cppvsdbg",
-            "request": "attach",
-            "processId": "${command:pickProcess}"
-        },
-        {
-            "name": "Launch",
-            "type": "cppvsdbg",
-            "request": "launch",
-            "program": "${command:cmake.buildDirectory}/ParallaxGen.exe",
-            "cwd": "${command:cmake.buildDirectory}",
-            "console": "externalTerminal"
-        }
-    ]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Attach",
+      "type": "cppvsdbg",
+      "request": "attach",
+      "processId": "${command:pickProcess}"
+    },
+    {
+      "name": "Launch",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${command:cmake.buildDirectory}/ParallaxGen.exe",
+      "cwd": "${command:cmake.buildDirectory}",
+      "console": "externalTerminal"
+    }
+  ]
 }

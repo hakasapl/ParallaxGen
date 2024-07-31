@@ -1,14 +1,16 @@
 {
-    "version": "2.0.0",
-    "tasks": [
-        {
-            "type": "cmake",
-            "label": "CMake: configure",
-            "command": "configure",
-            "preset": "${command:cmake.activeConfigurePresetName}",
-            "problemMatcher": [],
-            "detail": "CMake template configure task",
-            "runOptions": { "runOn": "folderOpen" }
-        }
-    ]
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "cmake",
+      "label": "CMake: configure",
+      "command": "configure",
+      "preset": "${command:cmake.activeConfigurePresetName}",
+      "problemMatcher": [],
+      "detail": "CMake template configure task",
+      "runOptions": {
+        "runOn": "folderOpen"
+      }
+    }
+  ]
 }

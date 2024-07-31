@@ -5,11 +5,8 @@ install
 #vcpkg
 vcpkg_installed
 
-# VS code
+# IDE files
 .vs
 
-.vscode/*
-!.vscode/launch.json
-!.vscode/tasks.json
-
+# clangd cache
 .cache
