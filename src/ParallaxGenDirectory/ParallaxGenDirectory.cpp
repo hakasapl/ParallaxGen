@@ -346,6 +346,7 @@ void ParallaxGenDirectory::replaceForwardSlashes(nlohmann::json& j) {
     }
 }
 
+// TODO what about suffixes like 01MASK.dds?
 filesystem::path ParallaxGenDirectory::matchBase(const string& base, const vector<filesystem::path>& search_list) {
 	for (const auto& search : search_list) {
 		auto search_str = search.wstring();

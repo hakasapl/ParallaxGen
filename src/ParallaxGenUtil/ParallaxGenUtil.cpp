@@ -105,11 +105,20 @@ namespace ParallaxGenUtil {
 	}
 
 	vector<std::byte> getFileBytes(const fs::path& file_path) {
-		ifstream inputFile(file_path, ios_base::binary);
+		ifstream inputFile(file_path, ios::binary | ios::ate);
+		if (!inputFile.is_open()) {
+			// Unable to open file
+			return vector<std::byte>();
+		}
 
-		inputFile.seekg(0, ios_base::end);
 		auto length = inputFile.tellg();
-		inputFile.seekg(0, ios_base::beg);
+		if (length == -1) {
+			// Unable to find length
+			inputFile.close();
+			return vector<std::byte>();
+		}
+
+		inputFile.seekg(0, ios::beg);
 
 		// Make a buffer of the exact size of the file and read the data into it.
 		vector<std::byte> buffer(length);
