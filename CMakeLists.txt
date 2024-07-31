@@ -3,8 +3,6 @@
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 # For MSVC
 add_compile_options("/Zc:__cplusplus")
 
@@ -21,6 +19,9 @@ set(PROJECT_URI "com.github.hakasapl.ParallaxGen")
 # Initialize Project
 set(PARALLAXGEN_VERSION 0.5.1)
 project(${PROJECT_NAME} VERSION ${PARALLAXGEN_VERSION})
+
+# Export compile commands for use with clangd
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Define preprocessor macro with the version number
 add_compile_definitions(PARALLAXGEN_VERSION="${PARALLAXGEN_VERSION}")
@@ -124,9 +125,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 file(COPY ${CMAKE_SOURCE_DIR}/assets DESTINATION ${CMAKE_BINARY_DIR}/)
 file(COPY ${CMAKE_SOURCE_DIR}/shaders DESTINATION ${CMAKE_BINARY_DIR}/)
 file(COPY ${CMAKE_SOURCE_DIR}/cfg DESTINATION ${CMAKE_BINARY_DIR}/)
-
-# For clangd to find it
-file(COPY ${CMAKE_BINARY_DIR}/compile_commands.json DESTINATION ${CMAKE_BINARY_DIR}/../)
 
 # Install the executable and DLLs
 install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION . )
