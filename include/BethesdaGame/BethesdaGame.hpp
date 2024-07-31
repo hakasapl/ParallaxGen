@@ -1,110 +1,117 @@
 #pragma once
 
 #include <windows.h>
-#include <unordered_map>
+
 #include <filesystem>
 #include <string>
+#include <unordered_map>
 
 class BethesdaGame {
 public:
-	// GameType enum
-	enum class GameType {
-		SKYRIM_SE,
-		SKYRIM_GOG,
-		SKYRIM_VR,
-		SKYRIM,
-		ENDERAL,
-		ENDERAL_SE
-	};
+  // GameType enum
+  enum class GameType {
+    SKYRIM_SE,
+    SKYRIM_GOG,
+    SKYRIM_VR,
+    SKYRIM,
+    ENDERAL,
+    ENDERAL_SE
+  };
 
-	// StoreType enum (for now only Steam is used)
-	enum class StoreType {
-		STEAM,
-		WINDOWS_STORE,
-		EPIC_GAMES_STORE,
-		GOG
-	};
+  // StoreType enum (for now only Steam is used)
+  enum class StoreType { STEAM, WINDOWS_STORE, EPIC_GAMES_STORE, GOG };
 
-	// struct that stores location of ini and custom ini file for a game
-	struct ININame {
-		std::filesystem::path ini;
-		std::filesystem::path ini_prefs;
-		std::filesystem::path ini_custom;
-	};
+  // struct that stores location of ini and custom ini file for a game
+  struct ININame {
+    std::filesystem::path ini;
+    std::filesystem::path ini_prefs;
+    std::filesystem::path ini_custom;
+  };
 
 private:
-	// Define INI locations for each game
-	static inline const std::unordered_map<BethesdaGame::GameType, ININame> INILocations = {
-		{BethesdaGame::GameType::SKYRIM_SE, ININame{"skyrim.ini", "skyrimprefs.ini", "skyrimcustom.ini"}},
-		{BethesdaGame::GameType::SKYRIM_GOG, ININame{"skyrim.ini", "skyrimprefs.ini", "skyrimcustom.ini"}},
-		{BethesdaGame::GameType::SKYRIM_VR, ININame{"skyrim.ini", "skyrimprefs.ini", "skyrimcustom.ini"}},
-		{BethesdaGame::GameType::SKYRIM, ININame{"skyrim.ini", "skyrimprefs.ini", "skyrimcustom.ini"}},
-		{BethesdaGame::GameType::ENDERAL, ININame{"enderal.ini", "enderalprefs.ini", "enderalcustom.ini"}},
-		{BethesdaGame::GameType::ENDERAL_SE, ININame{"enderal.ini", "enderalprefs.ini", "enderalcustom.ini"}}
-	};
+  // Define INI locations for each game
+  static inline const std::unordered_map<BethesdaGame::GameType, ININame>
+      INILocations = {
+          {BethesdaGame::GameType::SKYRIM_SE,
+           ININame{"skyrim.ini", "skyrimprefs.ini", "skyrimcustom.ini"}},
+          {BethesdaGame::GameType::SKYRIM_GOG,
+           ININame{"skyrim.ini", "skyrimprefs.ini", "skyrimcustom.ini"}},
+          {BethesdaGame::GameType::SKYRIM_VR,
+           ININame{"skyrim.ini", "skyrimprefs.ini", "skyrimcustom.ini"}},
+          {BethesdaGame::GameType::SKYRIM,
+           ININame{"skyrim.ini", "skyrimprefs.ini", "skyrimcustom.ini"}},
+          {BethesdaGame::GameType::ENDERAL,
+           ININame{"enderal.ini", "enderalprefs.ini", "enderalcustom.ini"}},
+          {BethesdaGame::GameType::ENDERAL_SE,
+           ININame{"enderal.ini", "enderalprefs.ini", "enderalcustom.ini"}}};
 
-	// Define document folder location for each game
-	static inline const std::unordered_map<BethesdaGame::GameType, std::filesystem::path> DocumentLocations = {
-		{BethesdaGame::GameType::SKYRIM_SE, "My Games/Skyrim Special Edition"},
-		{BethesdaGame::GameType::SKYRIM_GOG, "My Games/Skyrim Special Edition GOG"},
-		{BethesdaGame::GameType::SKYRIM_VR, "My Games/Skyrim VR"},
-		{BethesdaGame::GameType::SKYRIM, "My Games/Skyrim"},
-		{BethesdaGame::GameType::ENDERAL, "My Games/Enderal"},
-		{BethesdaGame::GameType::ENDERAL_SE, "My Games/Enderal Special Edition"}
-	};
+  // Define document folder location for each game
+  static inline const std::unordered_map<BethesdaGame::GameType,
+                                         std::filesystem::path>
+      DocumentLocations = {
+          {BethesdaGame::GameType::SKYRIM_SE,
+           "My Games/Skyrim Special Edition"},
+          {BethesdaGame::GameType::SKYRIM_GOG,
+           "My Games/Skyrim Special Edition GOG"},
+          {BethesdaGame::GameType::SKYRIM_VR, "My Games/Skyrim VR"},
+          {BethesdaGame::GameType::SKYRIM, "My Games/Skyrim"},
+          {BethesdaGame::GameType::ENDERAL, "My Games/Enderal"},
+          {BethesdaGame::GameType::ENDERAL_SE,
+           "My Games/Enderal Special Edition"}};
 
-	// Define appdata folder location for each game
-	static inline const std::unordered_map<BethesdaGame::GameType, std::filesystem::path> AppDataLocations = {
-		{BethesdaGame::GameType::SKYRIM_SE, "Skyrim Special Edition"},
-		{BethesdaGame::GameType::SKYRIM_GOG, "Skyrim Special Edition GOG"},
-		{BethesdaGame::GameType::SKYRIM_VR, "Skyrim VR"},
-		{BethesdaGame::GameType::SKYRIM, "Skyrim"},
-		{BethesdaGame::GameType::ENDERAL, "Enderal"},
-		{BethesdaGame::GameType::ENDERAL_SE, "Enderal Special Edition"}
-	};
+  // Define appdata folder location for each game
+  static inline const std::unordered_map<BethesdaGame::GameType,
+                                         std::filesystem::path>
+      AppDataLocations = {
+          {BethesdaGame::GameType::SKYRIM_SE, "Skyrim Special Edition"},
+          {BethesdaGame::GameType::SKYRIM_GOG, "Skyrim Special Edition GOG"},
+          {BethesdaGame::GameType::SKYRIM_VR, "Skyrim VR"},
+          {BethesdaGame::GameType::SKYRIM, "Skyrim"},
+          {BethesdaGame::GameType::ENDERAL, "Enderal"},
+          {BethesdaGame::GameType::ENDERAL_SE, "Enderal Special Edition"}};
 
-	// stores the game type
-	GameType game_type;
+  // stores the game type
+  GameType game_type;
 
-	// stores game path and game data path (game path / data)
-	std::filesystem::path game_path;
-	std::filesystem::path game_data_path;
+  // stores game path and game data path (game path / data)
+  std::filesystem::path game_path;
+  std::filesystem::path game_data_path;
 
-	// stores whether logging is enabled
-	bool logging;
+  // stores whether logging is enabled
+  bool logging;
 
-	// stores the steam game ids for each game
-	inline static const std::unordered_map<BethesdaGame::GameType, int> steam_game_ids = {
-		{BethesdaGame::GameType::SKYRIM_SE, 489830},
-		{BethesdaGame::GameType::SKYRIM_VR, 611670},
-		{BethesdaGame::GameType::SKYRIM, 72850},
-		{BethesdaGame::GameType::ENDERAL, 933480},
-		{BethesdaGame::GameType::ENDERAL_SE, 976620}
-	};
+  // stores the steam game ids for each game
+  inline static const std::unordered_map<BethesdaGame::GameType, int>
+      steam_game_ids = {{BethesdaGame::GameType::SKYRIM_SE, 489830},
+                        {BethesdaGame::GameType::SKYRIM_VR, 611670},
+                        {BethesdaGame::GameType::SKYRIM, 72850},
+                        {BethesdaGame::GameType::ENDERAL, 933480},
+                        {BethesdaGame::GameType::ENDERAL_SE, 976620}};
 
-	inline static const std::string lookup_file = "Skyrim.esm";
+  inline static const std::string lookup_file = "Skyrim.esm";
 
 public:
-	// constructor
-	BethesdaGame(GameType game_type, const std::filesystem::path game_path, const bool logging = false);
+  // constructor
+  BethesdaGame(GameType game_type, const std::filesystem::path game_path,
+               const bool logging = false);
 
-	// get functions
-	GameType getGameType() const;
-	std::filesystem::path getGamePath() const;
-	std::filesystem::path getGameDataPath() const;
+  // get functions
+  GameType getGameType() const;
+  std::filesystem::path getGamePath() const;
+  std::filesystem::path getGameDataPath() const;
 
-	std::filesystem::path getGameDocumentPath() const;
-	std::filesystem::path getGameAppdataPath() const;
+  std::filesystem::path getGameDocumentPath() const;
+  std::filesystem::path getGameAppdataPath() const;
 
-	ININame getINIPaths() const;
-	std::filesystem::path getLoadOrderFile() const;
+  ININame getINIPaths() const;
+  std::filesystem::path getLoadOrderFile() const;
 
 private:
-	// locates the steam install locatino of steam
-	std::filesystem::path findGamePathFromSteam() const;
-	// returns the steam ID of the current game
-	int getSteamGameID() const;
+  // locates the steam install locatino of steam
+  std::filesystem::path findGamePathFromSteam() const;
+  // returns the steam ID of the current game
+  int getSteamGameID() const;
 
-	// gets the system path for a folder (from windows.h)
-	std::filesystem::path getSystemPath(const GUID& folder_id) const;
+  // gets the system path for a folder (from windows.h)
+  std::filesystem::path getSystemPath(const GUID &folder_id) const;
 };

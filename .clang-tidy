@@ -1,0 +1,15 @@
+---
+Checks: '-*,
+         boost-*,
+         bugprone-*,
+         cert-*,
+         concurrency-*,
+         cppcoreguidelines-*,
+         llvm-*,
+         misc-*,
+         modernize-*,
+         performance-*,
+         portability-*,
+         readability-*'
+FormatStyle: llvm
+HeaderFilterRegex: 'src/|include/'

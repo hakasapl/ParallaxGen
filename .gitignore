@@ -11,3 +11,5 @@ vcpkg_installed
 .vscode/*
 !.vscode/launch.json
 !.vscode/tasks.json
+
+.cache
