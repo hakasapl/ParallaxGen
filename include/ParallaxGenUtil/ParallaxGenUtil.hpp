@@ -35,6 +35,11 @@ std::string replaceLastOf(const std::string &path,
                           const std::string &to_replace,
                           const std::string &replace_with);
 
+template <typename T>
+bool isInVector(const std::vector<T> &vec, const T &test) {
+  return std::find(vec.begin(), vec.end(), test) != vec.end();
+}
+
 // concatenates two vectors without duplicates
 template <typename T>
 void concatenateVectorsWithoutDuplicates(std::vector<T> &vec1,
