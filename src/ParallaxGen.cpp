@@ -1,4 +1,4 @@
-#include "ParallaxGen/ParallaxGen.hpp"
+#include "ParallaxGen.hpp"
 
 #include <DirectXTex.h>
 #include <spdlog/spdlog.h>
@@ -10,7 +10,7 @@
 #include <fstream>
 #include <vector>
 
-#include "ParallaxGenUtil/ParallaxGenUtil.hpp"
+#include "ParallaxGenUtil.hpp"
 
 using namespace std;
 using namespace ParallaxGenUtil;

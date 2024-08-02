@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "BethesdaGame/BethesdaGame.hpp"
+#include "BethesdaGame.hpp"
 
 class BethesdaDirectory {
 private:

@@ -1,11 +1,11 @@
-#include "ParallaxGenD3D/ParallaxGenD3D.hpp"
+#include "ParallaxGenD3D.hpp"
 
 #include <comdef.h>
 #include <d3dcompiler.h>
 #include <spdlog/spdlog.h>
 
-#include "ParallaxGenTask/ParallaxGenTask.hpp"
-#include "ParallaxGenUtil/ParallaxGenUtil.hpp"
+#include "ParallaxGenTask.hpp"
+#include "ParallaxGenUtil.hpp"
 
 using namespace std;
 using namespace ParallaxGenUtil;

@@ -10,8 +10,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "ParallaxGenDirectory/ParallaxGenDirectory.hpp"
-#include "ParallaxGenTask/ParallaxGenTask.hpp"
+#include "ParallaxGenDirectory.hpp"
+#include "ParallaxGenTask.hpp"
 
 #define NUM_GPU_THREADS 16
 #define GPU_BUFFER_SIZE_MULTIPLE 16

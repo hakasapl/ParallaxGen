@@ -9,9 +9,9 @@
 #include <tuple>
 #include <unordered_map>
 
-#include "ParallaxGenD3D/ParallaxGenD3D.hpp"
-#include "ParallaxGenDirectory/ParallaxGenDirectory.hpp"
-#include "ParallaxGenTask/ParallaxGenTask.hpp"
+#include "ParallaxGenD3D.hpp"
+#include "ParallaxGenDirectory.hpp"
+#include "ParallaxGenTask.hpp"
 
 class ParallaxGen {
 private:

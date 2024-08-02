@@ -4,7 +4,7 @@
 #include <nlohmann/json.hpp>
 #include <vector>
 
-#include "BethesdaDirectory/BethesdaDirectory.hpp"
+#include "BethesdaDirectory.hpp"
 
 class ParallaxGenDirectory : public BethesdaDirectory {
 private:

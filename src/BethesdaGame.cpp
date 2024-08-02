@@ -1,10 +1,10 @@
-#include "BethesdaGame/BethesdaGame.hpp"
+#include "BethesdaGame.hpp"
 
 #include <knownfolders.h>
 #include <shlobj.h>
 #include <spdlog/spdlog.h>
 
-#include "ParallaxGenUtil/ParallaxGenUtil.hpp"
+#include "ParallaxGenUtil.hpp"
 
 using namespace std;
 using namespace ParallaxGenUtil;

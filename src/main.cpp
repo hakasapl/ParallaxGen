@@ -12,11 +12,11 @@
 #include <string>
 #include <unordered_map>
 
-#include "BethesdaGame/BethesdaGame.hpp"
-#include "ParallaxGen/ParallaxGen.hpp"
-#include "ParallaxGenD3D/ParallaxGenD3D.hpp"
-#include "ParallaxGenDirectory/ParallaxGenDirectory.hpp"
-#include "ParallaxGenUtil/ParallaxGenUtil.hpp"
+#include "BethesdaGame.hpp"
+#include "ParallaxGen.hpp"
+#include "ParallaxGenD3D.hpp"
+#include "ParallaxGenDirectory.hpp"
+#include "ParallaxGenUtil.hpp"
 
 using namespace std;
 using namespace ParallaxGenUtil;

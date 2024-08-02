@@ -1,4 +1,4 @@
-#include "ParallaxGenTask/ParallaxGenTask.hpp"
+#include "ParallaxGenTask.hpp"
 
 #include <spdlog/spdlog.h>
 

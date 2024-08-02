@@ -1,4 +1,4 @@
-#include "ParallaxGenDirectory/ParallaxGenDirectory.hpp"
+#include "ParallaxGenDirectory.hpp"
 
 #include <DirectXTex.h>
 #include <spdlog/spdlog.h>
@@ -6,7 +6,7 @@
 #include <boost/algorithm/string.hpp>
 #include <regex>
 
-#include "ParallaxGenUtil/ParallaxGenUtil.hpp"
+#include "ParallaxGenUtil.hpp"
 
 using namespace std;
 using namespace ParallaxGenUtil;

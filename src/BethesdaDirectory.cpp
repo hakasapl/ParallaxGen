@@ -1,4 +1,4 @@
-#include "BethesdaDirectory/BethesdaDirectory.hpp"
+#include "BethesdaDirectory.hpp"
 
 #include <shlwapi.h>
 #include <spdlog/spdlog.h>
@@ -13,7 +13,7 @@
 #include <cstdio>
 #include <utility>
 
-#include "ParallaxGenUtil/ParallaxGenUtil.hpp"
+#include "ParallaxGenUtil.hpp"
 
 using namespace std;
 using namespace ParallaxGenUtil;

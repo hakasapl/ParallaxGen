@@ -37,24 +37,24 @@ add_compile_definitions(_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR)
 
 # Add Executables
 set(HEADERS
-    "include/BethesdaGame/BethesdaGame.hpp"
-    "include/BethesdaDirectory/BethesdaDirectory.hpp"
-    "include/ParallaxGen/ParallaxGen.hpp"
-    "include/ParallaxGenD3D/ParallaxGenD3D.hpp"
-    "include/ParallaxGenTask/ParallaxGenTask.hpp"
-    "include/ParallaxGenUtil/ParallaxGenUtil.hpp"
-    "include/ParallaxGenDirectory/ParallaxGenDirectory.hpp"
+    "include/BethesdaGame.hpp"
+    "include/BethesdaDirectory.hpp"
+    "include/ParallaxGen.hpp"
+    "include/ParallaxGenD3D.hpp"
+    "include/ParallaxGenTask.hpp"
+    "include/ParallaxGenUtil.hpp"
+    "include/ParallaxGenDirectory.hpp"
 )
 
 set(SOURCES
-    "src/main/main.cpp"
-    "src/BethesdaGame/BethesdaGame.cpp"
-    "src/BethesdaDirectory/BethesdaDirectory.cpp"
-    "src/ParallaxGen/ParallaxGen.cpp"
-    "src/ParallaxGenD3D/ParallaxGenD3D.cpp"
-    "src/ParallaxGenTask/ParallaxGenTask.cpp"
-    "src/ParallaxGenUtil/ParallaxGenUtil.cpp"
-    "src/ParallaxGenDirectory/ParallaxGenDirectory.cpp"
+    "src/main.cpp"
+    "src/BethesdaGame.cpp"
+    "src/BethesdaDirectory.cpp"
+    "src/ParallaxGen.cpp"
+    "src/ParallaxGenD3D.cpp"
+    "src/ParallaxGenTask.cpp"
+    "src/ParallaxGenUtil.cpp"
+    "src/ParallaxGenDirectory.cpp"
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})

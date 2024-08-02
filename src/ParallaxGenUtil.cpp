@@ -1,4 +1,4 @@
-#include "ParallaxGenUtil/ParallaxGenUtil.hpp"
+#include "ParallaxGenUtil.hpp"
 
 #include <DirectXTex.h>
 #include <spdlog/spdlog.h>
