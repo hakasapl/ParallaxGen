@@ -8,9 +8,8 @@
 
 using namespace std;
 using namespace ParallaxGenUtil;
-namespace fs = std::filesystem;
 
-BethesdaGame::BethesdaGame(GameType GameType, const fs::path &GamePath,
+BethesdaGame::BethesdaGame(GameType GameType, const filesystem::path &GamePath,
                            const bool &Logging)
     : ObjGameType(GameType), Logging(Logging) {
   if (GamePath.empty()) {
@@ -34,7 +33,7 @@ BethesdaGame::BethesdaGame(GameType GameType, const fs::path &GamePath,
   }
 
   // check if path actually exists
-  if (!fs::exists(this->GamePath)) {
+  if (!filesystem::exists(this->GamePath)) {
     // If the game path does not exist, throw an exception
     if (this->Logging) {
       spdlog::critical(L"Game path does not exist: {}",
@@ -47,7 +46,7 @@ BethesdaGame::BethesdaGame(GameType GameType, const fs::path &GamePath,
 
   this->GameDataPath = this->GamePath / "Data";
 
-  if (!fs::exists(this->GameDataPath / getDataCheckFile())) {
+  if (!filesystem::exists(this->GameDataPath / getDataCheckFile())) {
     // If the game data path does not contain Skyrim.esm, throw an exception
     if (this->Logging) {
       spdlog::critical(
@@ -90,7 +89,7 @@ auto BethesdaGame::getINILocations() const -> ININame {
   return {};
 }
 
-auto BethesdaGame::getDocumentLocation() const -> fs::path {
+auto BethesdaGame::getDocumentLocation() const -> filesystem::path {
   if (ObjGameType == BethesdaGame::GameType::SKYRIM_SE) {
     return "My Games/Skyrim Special Edition";
   }
@@ -118,7 +117,7 @@ auto BethesdaGame::getDocumentLocation() const -> fs::path {
   return {};
 }
 
-auto BethesdaGame::getAppDataLocation() const -> fs::path {
+auto BethesdaGame::getAppDataLocation() const -> filesystem::path {
   if (ObjGameType == BethesdaGame::GameType::SKYRIM_SE) {
     return "Skyrim Special Edition";
   }
@@ -170,7 +169,7 @@ auto BethesdaGame::getSteamGameID() const -> int {
   return {};
 }
 
-auto BethesdaGame::getDataCheckFile() const -> fs::path {
+auto BethesdaGame::getDataCheckFile() const -> filesystem::path {
   if (ObjGameType == BethesdaGame::GameType::SKYRIM_SE) {
     return "Skyrim.esm";
   }
@@ -202,15 +201,17 @@ auto BethesdaGame::getGameType() const -> BethesdaGame::GameType {
   return ObjGameType;
 }
 
-auto BethesdaGame::getGamePath() const -> fs::path {
+auto BethesdaGame::getGamePath() const -> filesystem::path {
   // Get the game path from the registry
   // If the game is not found, return an empty string
   return GamePath;
 }
 
-auto BethesdaGame::getGameDataPath() const -> fs::path { return GameDataPath; }
+auto BethesdaGame::getGameDataPath() const -> filesystem::path {
+  return GameDataPath;
+}
 
-auto BethesdaGame::findGamePathFromSteam() const -> fs::path {
+auto BethesdaGame::findGamePathFromSteam() const -> filesystem::path {
   // Find the game path from the registry
   // If the game is not found, return an empty string
 
@@ -249,7 +250,7 @@ auto BethesdaGame::findGamePathFromSteam() const -> fs::path {
 
 auto BethesdaGame::getINIPaths() const -> BethesdaGame::ININame {
   BethesdaGame::ININame Output = getINILocations();
-  fs::path GameDocsPath = getGameDocumentPath();
+  filesystem::path GameDocsPath = getGameDocumentPath();
 
   // normal ini file
   Output.INI = GameDocsPath / Output.INI;
@@ -259,14 +260,14 @@ auto BethesdaGame::getINIPaths() const -> BethesdaGame::ININame {
   return Output;
 }
 
-auto BethesdaGame::getLoadOrderFile() const -> fs::path {
-  fs::path GameAppdataPath = getGameAppdataPath();
-  fs::path LoadOrderFile = GameAppdataPath / "loadorder.txt";
+auto BethesdaGame::getLoadOrderFile() const -> filesystem::path {
+  filesystem::path GameAppdataPath = getGameAppdataPath();
+  filesystem::path LoadOrderFile = GameAppdataPath / "loadorder.txt";
   return LoadOrderFile;
 }
 
-auto BethesdaGame::getGameDocumentPath() const -> fs::path {
-  fs::path DocPath = getSystemPath(FOLDERID_Documents);
+auto BethesdaGame::getGameDocumentPath() const -> filesystem::path {
+  filesystem::path DocPath = getSystemPath(FOLDERID_Documents);
   if (DocPath.empty()) {
     return {};
   }
@@ -275,8 +276,8 @@ auto BethesdaGame::getGameDocumentPath() const -> fs::path {
   return DocPath;
 }
 
-auto BethesdaGame::getGameAppdataPath() const -> fs::path {
-  fs::path AppDataPath = getSystemPath(FOLDERID_LocalAppData);
+auto BethesdaGame::getGameAppdataPath() const -> filesystem::path {
+  filesystem::path AppDataPath = getSystemPath(FOLDERID_LocalAppData);
   if (AppDataPath.empty()) {
     return {};
   }
@@ -285,7 +286,7 @@ auto BethesdaGame::getGameAppdataPath() const -> fs::path {
   return AppDataPath;
 }
 
-auto BethesdaGame::getSystemPath(const GUID &FolderID) -> fs::path {
+auto BethesdaGame::getSystemPath(const GUID &FolderID) -> filesystem::path {
   PWSTR Path = nullptr;
   HRESULT Result = SHGetKnownFolderPath(FolderID, 0, nullptr, &Path);
   if (SUCCEEDED(Result)) {
