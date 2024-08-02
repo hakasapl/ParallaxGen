@@ -693,8 +693,8 @@ auto ParallaxGenD3D::readBack(const ComPtr<ID3D11Texture2D> &GPUResource,
 
   std::vector<unsigned char> OutputData(
       reinterpret_cast<unsigned char *>(MappedResource.pData),
-      reinterpret_cast<unsigned char *>(MappedResource.pData) +
-          DataSize); // NOLINT
+      reinterpret_cast<unsigned char *>(MappedResource.pData) + // NOLINT
+          DataSize);                                            // NOLINT
 
   // Cleaup
   PtrContext->Unmap(StagingTex2D.Get(), 0); // cleanup map
