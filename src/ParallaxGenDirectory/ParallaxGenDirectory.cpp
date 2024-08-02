@@ -5,332 +5,375 @@
 
 #include <boost/algorithm/string.hpp>
 #include <regex>
-#include <set>
 
 #include "ParallaxGenUtil/ParallaxGenUtil.hpp"
 
 using namespace std;
 using namespace ParallaxGenUtil;
 
-ParallaxGenDirectory::ParallaxGenDirectory(BethesdaGame bg,
-                                           filesystem::path EXE_PATH)
-    : BethesdaDirectory(bg, true) {
-  this->EXE_PATH = EXE_PATH;
+ParallaxGenDirectory::ParallaxGenDirectory(BethesdaGame BG,
+                                           filesystem::path ExePath)
+    : BethesdaDirectory(BG, true), ExePath(std::move(ExePath)) {}
+
+auto ParallaxGenDirectory::getPGConfigPath() -> wstring {
+  static const wstring PGConfPath = L"parallaxgen";
+  return PGConfPath;
+}
+
+auto ParallaxGenDirectory::getPGConfigValidation() -> nlohmann::json {
+  static const string PGConfigValidationStr = R"(
+  {
+		"parallax_lookup": {
+			"archive_blocklist": "^[^\\/\\\\]*$",
+			"allowlist": ".*_.*\\.dds$",
+			"blocklist": ".*"
+		},
+		"complexmaterial_lookup": {
+			"archive_blocklist": "^[^\\/\\\\]*$",
+			"allowlist": ".*_.*\\.dds$",
+			"blocklist": ".*"
+		},
+		"truepbr_cfg_lookup": {
+			"archive_blocklist": "^[^\\/\\\\]*$",
+			"allowlist": ".*\\.json$",
+			"blocklist": ".*"
+		},
+		"nif_lookup": {
+			"archive_blocklist": "^[^\\/\\\\]*$",
+			"allowlist": ".*\\.nif$",
+			"blocklist": ".*"
+		}
+	}
+  )";
+  static const nlohmann::json PGConfigValidation =
+      nlohmann::json::parse(PGConfigValidationStr);
+  return PGConfigValidation;
+}
+
+auto ParallaxGenDirectory::getTruePBRConfigFilenameFields() -> vector<string> {
+  static const vector<string> PGConfigFilenameFields = {
+      "match_normal", "match_diffuse", "rename"};
+  return PGConfigFilenameFields;
+}
+
+auto ParallaxGenDirectory::getDefaultCubemapPath() -> filesystem::path {
+  static const filesystem::path DefCubemapPath =
+      "textures\\cubemaps\\dynamic1pxcubemap_black.dds";
+  return DefCubemapPath;
 }
 
 void ParallaxGenDirectory::findHeightMaps() {
   // find height maps
   spdlog::info("Finding parallax height maps");
 
-  // Get relevant lists from config
-  vector<wstring> parallax_allowlist =
-      jsonArrayToWString(PG_config["parallax_lookup"]["allowlist"]);
-  vector<wstring> parallax_blocklist =
-      jsonArrayToWString(PG_config["parallax_lookup"]["blocklist"]);
-  vector<wstring> parallax_archive_blocklist =
-      jsonArrayToWString(PG_config["parallax_lookup"]["archive_blocklist"]);
+  // Get relevant lists from Config
+  vector<wstring> ParallaxAllowlist =
+      jsonArrayToWString(PGConfig["parallax_lookup"]["allowlist"]);
+  vector<wstring> ParallaxBlocklist =
+      jsonArrayToWString(PGConfig["parallax_lookup"]["blocklist"]);
+  vector<wstring> ParallaxArchiveBlocklist =
+      jsonArrayToWString(PGConfig["parallax_lookup"]["archive_blocklist"]);
 
   // Find heightmaps
-  heightMaps = findFiles(true, parallax_allowlist, parallax_blocklist,
-                         parallax_archive_blocklist);
-  spdlog::info("Found {} height maps", heightMaps.size());
+  HeightMaps = findFiles(true, ParallaxAllowlist, ParallaxBlocklist,
+                         ParallaxArchiveBlocklist);
+  spdlog::info("Found {} height maps", HeightMaps.size());
 }
 
 void ParallaxGenDirectory::findComplexMaterialMaps() {
   spdlog::info("Finding complex material maps");
 
-  // Get relevant lists from config
-  vector<wstring> complex_material_allowlist =
-      jsonArrayToWString(PG_config["complexmaterial_lookup"]["allowlist"]);
-  vector<wstring> complex_material_blocklist =
-      jsonArrayToWString(PG_config["complexmaterial_lookup"]["blocklist"]);
-  vector<wstring> complex_material_archive_blocklist = jsonArrayToWString(
-      PG_config["complexmaterial_lookup"]["archive_blocklist"]);
+  // Get relevant lists from Config
+  vector<wstring> ComplexMaterialAllowlist =
+      jsonArrayToWString(PGConfig["complexmaterial_lookup"]["allowlist"]);
+  vector<wstring> ComplexMaterialBlocklist =
+      jsonArrayToWString(PGConfig["complexmaterial_lookup"]["blocklist"]);
+  vector<wstring> ComplexMaterialArchiveBlocklist = jsonArrayToWString(
+      PGConfig["complexmaterial_lookup"]["archive_blocklist"]);
 
   // find complex material maps
-  vector<filesystem::path> env_maps =
-      findFiles(true, complex_material_allowlist, complex_material_blocklist,
-                complex_material_archive_blocklist);
+  vector<filesystem::path> EnvMaps =
+      findFiles(true, ComplexMaterialAllowlist, ComplexMaterialBlocklist,
+                ComplexMaterialArchiveBlocklist);
 
   // loop through env maps
-  for (filesystem::path env_map : env_maps) {
+  for (const auto &EnvMap : EnvMaps) {
     // check if env map is actually a complex material map
-    const vector<std::byte> env_map_data = getFile(env_map);
+    const vector<std::byte> EnvMapData = getFile(EnvMap);
 
     // load image into directxtex
-    DirectX::ScratchImage image;
-    HRESULT hr =
-        DirectX::LoadFromDDSMemory(env_map_data.data(), env_map_data.size(),
-                                   DirectX::DDS_FLAGS_NONE, nullptr, image);
-    if (FAILED(hr)) {
+    DirectX::ScratchImage Image;
+    HRESULT HR =
+        DirectX::LoadFromDDSMemory(EnvMapData.data(), EnvMapData.size(),
+                                   DirectX::DDS_FLAGS_NONE, nullptr, Image);
+    if (FAILED(HR)) {
       spdlog::warn(L"Failed to load DDS from memory: {} - skipping",
-                   env_map.wstring());
+                   EnvMap.wstring());
       continue;
     }
 
     // check if image is a complex material map
-    if (!image.IsAlphaAllOpaque()) {
+    if (!Image.IsAlphaAllOpaque()) {
       // if alpha channel is used, there is parallax data
       // this won't work on complex matterial maps that don't make use of
       // complex parallax I'm not sure there's a way to check for those other
       // cases
-      spdlog::trace(L"Adding {} as a complex material map", env_map.wstring());
-      complexMaterialMaps.push_back(env_map);
+      spdlog::trace(L"Adding {} as a complex material map", EnvMap.wstring());
+      ComplexMaterialMaps.push_back(EnvMap);
     }
   }
 
-  spdlog::info("Found {} complex material maps", complexMaterialMaps.size());
+  spdlog::info("Found {} complex material maps", ComplexMaterialMaps.size());
 }
 
 void ParallaxGenDirectory::findMeshes() {
-  // find meshes
-  spdlog::info("Finding meshes");
+  // find Meshes
+  spdlog::info("Finding Meshes");
 
   // get relevant lists
-  vector<wstring> mesh_allowlist =
-      jsonArrayToWString(PG_config["nif_lookup"]["allowlist"]);
-  vector<wstring> mesh_blocklist =
-      jsonArrayToWString(PG_config["nif_lookup"]["blocklist"]);
-  vector<wstring> mesh_archive_blocklist =
-      jsonArrayToWString(PG_config["nif_lookup"]["archive_blocklist"]);
+  vector<wstring> MeshAllowlist =
+      jsonArrayToWString(PGConfig["nif_lookup"]["allowlist"]);
+  vector<wstring> MeshBlocklist =
+      jsonArrayToWString(PGConfig["nif_lookup"]["blocklist"]);
+  vector<wstring> MeshArchiveBlocklist =
+      jsonArrayToWString(PGConfig["nif_lookup"]["archive_blocklist"]);
 
-  meshes =
-      findFiles(true, mesh_allowlist, mesh_blocklist, mesh_archive_blocklist);
-  spdlog::info("Found {} meshes", meshes.size());
+  Meshes = findFiles(true, MeshAllowlist, MeshBlocklist, MeshArchiveBlocklist);
+  spdlog::info("Found {} Meshes", Meshes.size());
 }
 
 void ParallaxGenDirectory::findTruePBRConfigs() {
   // TODO more logging here
-  // Find True PBR configs
-  spdlog::info("Finding TruePBR configs");
+  // Find True PBR Configs
+  spdlog::info("Finding TruePBR Configs");
 
   // get relevant lists
-  vector<wstring> truepbr_allowlist =
-      jsonArrayToWString(PG_config["truepbr_cfg_lookup"]["allowlist"]);
-  vector<wstring> truepbr_blocklist =
-      jsonArrayToWString(PG_config["truepbr_cfg_lookup"]["blocklist"]);
-  vector<wstring> truepbr_archive_blocklist =
-      jsonArrayToWString(PG_config["truepbr_cfg_lookup"]["archive_blocklist"]);
+  vector<wstring> TruePBRAllowlist =
+      jsonArrayToWString(PGConfig["truepbr_cfg_lookup"]["allowlist"]);
+  vector<wstring> TruePBRBlocklist =
+      jsonArrayToWString(PGConfig["truepbr_cfg_lookup"]["blocklist"]);
+  vector<wstring> TruePBRArchiveBlocklist =
+      jsonArrayToWString(PGConfig["truepbr_cfg_lookup"]["archive_blocklist"]);
 
-  auto config_files = findFiles(true, truepbr_allowlist, truepbr_blocklist,
-                                truepbr_archive_blocklist);
+  auto ConfigFiles = findFiles(true, TruePBRAllowlist, TruePBRBlocklist,
+                               TruePBRArchiveBlocklist);
 
-  // loop through and parse configs
-  for (auto &config : config_files) {
-    // check if config is valid
-    auto config_file_bytes = getFile(config);
-    string config_file_str(
-        reinterpret_cast<const char *>(config_file_bytes.data()),
-        config_file_bytes.size());
+  // loop through and parse Configs
+  for (auto &Config : ConfigFiles) {
+    // check if Config is valid
+    auto ConfigFileBytes = getFile(Config);
+    string ConfigFileStr(reinterpret_cast<const char *>(ConfigFileBytes.data()),
+                         ConfigFileBytes.size());
 
     try {
-      nlohmann::json j = nlohmann::json::parse(config_file_str);
-      // loop through each element
-      for (auto &element : j) {
+      nlohmann::json J = nlohmann::json::parse(ConfigFileStr);
+      // loop through each Element
+      for (auto &Element : J) {
         // Preprocessing steps here
-        if (element.contains("texture")) {
-          element["match_diffuse"] = element["texture"];
+        if (Element.contains("texture")) {
+          Element["match_diffuse"] = Element["texture"];
         }
 
-        // loop through filename fields
-        for (const auto &field : truePBR_filename_fields) {
-          if (element.contains(field) &&
-              !boost::istarts_with(element[field].get<string>(), "\\")) {
-            element[field] = element[field].get<string>().insert(0, 1, '\\');
+        // loop through filename Fields
+        for (const auto &Field : getTruePBRConfigFilenameFields()) {
+          if (Element.contains(Field) &&
+              !boost::istarts_with(Element[Field].get<string>(), "\\")) {
+            Element[Field] = Element[Field].get<string>().insert(0, 1, '\\');
           }
         }
 
-        truePBRConfigs.push_back(element);
+        TruePBRConfigs.push_back(Element);
       }
-    } catch (nlohmann::json::parse_error &e) {
-      spdlog::error(L"Unable to parse TruePBR config file {}: {}",
-                    config.wstring(), stringToWstring(e.what()));
+    } catch (nlohmann::json::parse_error &E) {
+      spdlog::error(L"Unable to parse TruePBR Config file {}: {}",
+                    Config.wstring(), stringToWstring(E.what()));
       continue;
     }
   }
 
-  spdlog::info("Found {} TruePBR entries", truePBRConfigs.size());
+  spdlog::info("Found {} TruePBR entries", TruePBRConfigs.size());
 }
 
-void ParallaxGenDirectory::loadPGConfig(bool load_default) {
-  spdlog::info("Loading ParallaxGen configs from load order");
+void ParallaxGenDirectory::loadPGConfig(const bool &LoadDefault) {
+  spdlog::info("Loading ParallaxGen Configs from load order");
 
-  // Load default config
-  if (load_default) {
-    filesystem::path def_conf_path = EXE_PATH / "cfg/default.json";
-    if (!filesystem::exists(def_conf_path)) {
-      spdlog::error(L"Default config not found at {}", def_conf_path.wstring());
+  // Load default Config
+  if (LoadDefault) {
+    filesystem::path DefConfPath = ExePath / "cfg/default.json";
+    if (!filesystem::exists(DefConfPath)) {
+      spdlog::error(L"Default Config not found at {}", DefConfPath.wstring());
       exitWithUserInput(1);
     }
 
-    merge_json_smart(PG_config,
-                     nlohmann::json::parse(getFileBytes(def_conf_path)),
-                     PG_config_validation);
+    mergeJSONSmart(PGConfig, nlohmann::json::parse(getFileBytes(DefConfPath)),
+                   getPGConfigValidation());
   }
 
-  // Load configs from load order
-  size_t cfg_count = 0;
-  auto pg_configs = findFiles(true, {LO_PGCONFIG_PATH + L"\\**.json"});
-  for (auto &cur_cfg : pg_configs) {
+  // Load Configs from load order
+  size_t CfgCount = 0;
+  auto PGConfigs = findFiles(true, {getPGConfigPath() + L"\\**.json"});
+  for (auto &CurCfg : PGConfigs) {
     try {
-      auto parsed_json = nlohmann::json::parse(getFile(cur_cfg));
-      merge_json_smart(PG_config, parsed_json, PG_config_validation);
-      cfg_count++;
-    } catch (nlohmann::json::parse_error &e) {
-      spdlog::warn(L"Failed to parse ParallaxGen config file {}: {}",
-                   cur_cfg.wstring(), stringToWstring(e.what()));
+      auto ParsedJson = nlohmann::json::parse(getFile(CurCfg));
+      mergeJSONSmart(PGConfig, ParsedJson, getPGConfigValidation());
+      CfgCount++;
+    } catch (nlohmann::json::parse_error &E) {
+      spdlog::warn(L"Failed to parse ParallaxGen Config file {}: {}",
+                   CurCfg.wstring(), stringToWstring(E.what()));
       continue;
     }
   }
 
-  // Loop through each element in JSON
-  replaceForwardSlashes(PG_config);
+  // Loop through each Element in JSON
+  replaceForwardSlashes(PGConfig);
 
-  spdlog::info("Loaded {} ParallaxGen configs from load order", cfg_count);
+  spdlog::info("Loaded {} ParallaxGen Configs from load order", CfgCount);
 }
 
-void ParallaxGenDirectory::addHeightMap(filesystem::path path) {
-  filesystem::path path_lower = getPathLower(path);
+void ParallaxGenDirectory::addHeightMap(const filesystem::path &Path) {
+  filesystem::path PathLower = getPathLower(Path);
 
   // add to vector
-  addUniqueElement(heightMaps, path_lower);
+  addUniqueElement(HeightMaps, PathLower);
 }
 
-void ParallaxGenDirectory::addComplexMaterialMap(filesystem::path path) {
-  filesystem::path path_lower = getPathLower(path);
+void ParallaxGenDirectory::addComplexMaterialMap(const filesystem::path &Path) {
+  filesystem::path PathLower = getPathLower(Path);
 
   // add to vector
-  addUniqueElement(complexMaterialMaps, path_lower);
+  addUniqueElement(ComplexMaterialMaps, PathLower);
 }
 
-void ParallaxGenDirectory::addMesh(filesystem::path path) {
-  filesystem::path path_lower = getPathLower(path);
+void ParallaxGenDirectory::addMesh(const filesystem::path &Path) {
+  filesystem::path PathLower = getPathLower(Path);
 
   // add to vector
-  addUniqueElement(meshes, path_lower);
+  addUniqueElement(Meshes, PathLower);
 }
 
-bool ParallaxGenDirectory::isHeightMap(filesystem::path path) const {
-  return find(heightMaps.begin(), heightMaps.end(), getPathLower(path)) !=
-         heightMaps.end();
+auto ParallaxGenDirectory::isHeightMap(const filesystem::path &Path) const
+    -> bool {
+  return find(HeightMaps.begin(), HeightMaps.end(), getPathLower(Path)) !=
+         HeightMaps.end();
 }
 
-bool ParallaxGenDirectory::isComplexMaterialMap(filesystem::path path) const {
-  return find(complexMaterialMaps.begin(), complexMaterialMaps.end(),
-              getPathLower(path)) != complexMaterialMaps.end();
+auto ParallaxGenDirectory::isComplexMaterialMap(
+    const filesystem::path &Path) const -> bool {
+  return find(ComplexMaterialMaps.begin(), ComplexMaterialMaps.end(),
+              getPathLower(Path)) != ComplexMaterialMaps.end();
 }
 
-bool ParallaxGenDirectory::isMesh(filesystem::path path) const {
-  return find(meshes.begin(), meshes.end(), getPathLower(path)) != meshes.end();
+auto ParallaxGenDirectory::isMesh(const filesystem::path &Path) const -> bool {
+  return find(Meshes.begin(), Meshes.end(), getPathLower(Path)) != Meshes.end();
 }
 
-bool ParallaxGenDirectory::defCubemapExists() {
-  return isFile(default_cubemap_path);
+auto ParallaxGenDirectory::defCubemapExists() -> bool {
+  return isFile(getDefaultCubemapPath());
 }
 
-const vector<filesystem::path> ParallaxGenDirectory::getHeightMaps() const {
-  return heightMaps;
+auto ParallaxGenDirectory::getHeightMaps() const -> vector<filesystem::path> {
+  return HeightMaps;
 }
 
-const vector<filesystem::path>
-ParallaxGenDirectory::getComplexMaterialMaps() const {
-  return complexMaterialMaps;
+auto ParallaxGenDirectory::getComplexMaterialMaps() const
+    -> vector<filesystem::path> {
+  return ComplexMaterialMaps;
 }
 
-const vector<filesystem::path> ParallaxGenDirectory::getMeshes() const {
-  return meshes;
+auto ParallaxGenDirectory::getMeshes() const -> vector<filesystem::path> {
+  return Meshes;
 }
 
-const vector<nlohmann::json> ParallaxGenDirectory::getTruePBRConfigs() const {
-  return truePBRConfigs;
+auto ParallaxGenDirectory::getTruePBRConfigs() const -> vector<nlohmann::json> {
+  return TruePBRConfigs;
 }
 
-const string
-ParallaxGenDirectory::getHeightMapFromBase(const string &base) const {
-  return matchBase(base, heightMaps).string();
+auto ParallaxGenDirectory::getHeightMapFromBase(const string &Base) const
+    -> string {
+  return matchBase(Base, HeightMaps).string();
 }
 
-const string
-ParallaxGenDirectory::getComplexMaterialMapFromBase(const string &base) const {
-  return matchBase(base, complexMaterialMaps).string();
+auto ParallaxGenDirectory::getComplexMaterialMapFromBase(
+    const string &Base) const -> string {
+  return matchBase(Base, ComplexMaterialMaps).string();
 }
 
-void ParallaxGenDirectory::merge_json_smart(nlohmann::json &target,
-                                            const nlohmann::json &source,
-                                            const nlohmann::json &validation) {
+void ParallaxGenDirectory::mergeJSONSmart(nlohmann::json &Target,
+                                          const nlohmann::json &Source,
+                                          const nlohmann::json &Validation) {
   // recursively merge json objects while preseving lists
-  for (auto &[key, value] : source.items()) {
-    if (value.is_object()) {
+  for (const auto &[Key, Value] : Source.items()) {
+    if (Value.is_object()) {
       // This is a JSON object
-      if (!target.contains(key)) {
-        // Create an object if it doesn't exist in the target
-        target[key] = nlohmann::json::object();
+      if (!Target.contains(Key)) {
+        // Create an object if it doesn't exist in the Target
+        Target[Key] = nlohmann::json::object();
       }
 
       // Recursion
-      if (!validation.contains(key)) {
-        // No validation for this key
-        spdlog::warn("Skipping unknown field in ParallaxGen config: {}", key);
+      if (!Validation.contains(Key)) {
+        // No Validation for this Key
+        spdlog::warn("Skipping unknown Field in ParallaxGen Config: {}", Key);
         continue;
       }
 
-      merge_json_smart(target[key], value, validation[key]);
-    } else if (value.is_array()) {
+      mergeJSONSmart(Target[Key], Value, Validation[Key]);
+    } else if (Value.is_array()) {
       // This is a list
 
-      if (!target.contains(key)) {
-        // Create an array if it doesn't exist in the target
-        target[key] = nlohmann::json::array();
+      if (!Target.contains(Key)) {
+        // Create an array if it doesn't exist in the Target
+        Target[Key] = nlohmann::json::array();
       }
 
       // Loop through each item in array and add only if it doesn't already
       // exist in the list
-      for (const auto &item : value) {
-        if (std::find(target[key].begin(), target[key].end(), item) ==
-            target[key].end()) {
+      for (const auto &Item : Value) {
+        if (std::find(Target[Key].begin(), Target[Key].end(), Item) ==
+            Target[Key].end()) {
           // Validation
-          if (!validate_json(item, validation, key)) {
+          if (!validateJSON(Item, Validation, Key)) {
             continue;
           }
 
-          // Add item to target
-          target[key].push_back(item);
+          // Add item to Target
+          Target[Key].push_back(Item);
         }
       }
     } else {
       // This is a single object
 
       // Validation
-      if (!validate_json(value, validation, key)) {
+      if (!validateJSON(Value, Validation, Key)) {
         continue;
       }
 
-      // Add item to target
-      target[key] = value;
+      // Add item to Target
+      Target[Key] = Value;
     }
   }
 }
 
-bool ParallaxGenDirectory::validate_json(const nlohmann::json &item,
-                                         const nlohmann::json &validation,
-                                         const string &key) {
-  if (!validation.contains(key)) {
-    // No validation for this key
-    spdlog::warn("Skipping unknown field in ParallaxGen config: {}", key);
+auto ParallaxGenDirectory::validateJSON(const nlohmann::json &Item,
+                                        const nlohmann::json &Validation,
+                                        const string &Key) -> bool {
+  if (!Validation.contains(Key)) {
+    // No Validation for this Key
+    spdlog::warn("Skipping unknown Field in ParallaxGen Config: {}", Key);
     return false;
   }
 
-  if (validation[key].is_string()) {
+  if (Validation[Key].is_string()) {
     // regex check
-    regex chk_pattern(validation[key].get<string>());
-    string chk_str = item.get<string>();
+    regex CHKPattern(Validation[Key].get<string>());
+    string CHKPatternStr = Item.get<string>();
 
     // Check that regex matches, log if not and return
-    if (!regex_match(chk_str, chk_pattern)) {
+    if (!regex_match(CHKPatternStr, CHKPattern)) {
       spdlog::warn(
-          "Invalid value in ParallaxGen config key {}: {}. Value must match "
+          "Invalid Value in ParallaxGen Config Key {}: {}. Value must match "
           "regex pattern {}",
-          key, item.get<string>(), validation[key].get<string>());
+          Key, Item.get<string>(), Validation[Key].get<string>());
       return false;
     }
   }
@@ -338,51 +381,51 @@ bool ParallaxGenDirectory::validate_json(const nlohmann::json &item,
   return true;
 }
 
-vector<wstring>
-ParallaxGenDirectory::jsonArrayToWString(const nlohmann::json &json_array) {
-  vector<wstring> result;
+auto ParallaxGenDirectory::jsonArrayToWString(const nlohmann::json &JSONArray)
+    -> vector<wstring> {
+  vector<wstring> Result;
 
-  if (json_array.is_array()) {
-    for (const auto &item : json_array) {
-      if (item.is_string()) {
-        result.push_back(stringToWstring(item.get<string>()));
+  if (JSONArray.is_array()) {
+    for (const auto &Item : JSONArray) {
+      if (Item.is_string()) {
+        Result.push_back(stringToWstring(Item.get<string>()));
       }
     }
   }
 
-  return result;
+  return Result;
 }
 
-void ParallaxGenDirectory::replaceForwardSlashes(nlohmann::json &j) {
-  if (j.is_string()) {
-    std::string &str = j.get_ref<std::string &>();
-    for (auto &ch : str) {
-      if (ch == '/') {
-        ch = '\\';
+void ParallaxGenDirectory::replaceForwardSlashes(nlohmann::json &JSON) {
+  if (JSON.is_string()) {
+    auto &Str = JSON.get_ref<string &>();
+    for (auto &Ch : Str) {
+      if (Ch == '/') {
+        Ch = '\\';
       }
     }
-  } else if (j.is_object()) {
-    for (auto &item : j.items()) {
-      replaceForwardSlashes(item.value());
+  } else if (JSON.is_object()) {
+    for (const auto &Item : JSON.items()) {
+      replaceForwardSlashes(Item.value());
     }
-  } else if (j.is_array()) {
-    for (auto &element : j) {
-      replaceForwardSlashes(element);
+  } else if (JSON.is_array()) {
+    for (auto &Element : JSON) {
+      replaceForwardSlashes(Element);
     }
   }
 }
 
 // TODO what about suffixes like 01MASK.dds?
-filesystem::path
-ParallaxGenDirectory::matchBase(const string &base,
-                                const vector<filesystem::path> &search_list) {
-  for (const auto &search : search_list) {
-    auto search_str = search.wstring();
-    if (boost::istarts_with(search_str, base)) {
-      size_t pos = search_str.find_last_of(L'_');
-      auto height_map_base = search_str.substr(0, pos);
-      if (pos != wstring::npos && boost::iequals(height_map_base, base)) {
-        return search;
+auto ParallaxGenDirectory::matchBase(const string &Base,
+                                     const vector<filesystem::path> &SearchList)
+    -> filesystem::path {
+  for (const auto &Search : SearchList) {
+    auto SearchStr = Search.wstring();
+    if (boost::istarts_with(SearchStr, Base)) {
+      size_t Pos = SearchStr.find_last_of(L'_');
+      auto MapBase = SearchStr.substr(0, Pos);
+      if (Pos != wstring::npos && boost::iequals(MapBase, Base)) {
+        return Search;
       }
     }
   }

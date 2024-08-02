@@ -1212,7 +1212,7 @@ ParallaxGenTask::PGResult ParallaxGen::enableComplexMaterialOnShape(
     // add cubemap to slot
     string cubemap;
     uint32_t cubemap_result = nif.GetTextureSlot(shape, cubemap, 4);
-    string new_cubemap = ParallaxGenDirectory::default_cubemap_path.string();
+    string new_cubemap = ParallaxGenDirectory::getDefaultCubemapPath().string();
 
     if (!boost::iequals(cubemap, new_cubemap)) {
       // only fill if dyn cubemap not already there

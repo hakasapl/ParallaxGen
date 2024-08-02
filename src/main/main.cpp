@@ -287,7 +287,8 @@ void mainRunner(int ArgC, char **ArgV) {
 
       // Create Directory
       filesystem::path OutputCubemapPath =
-          OutputDir / ParallaxGenDirectory::default_cubemap_path.parent_path();
+          OutputDir /
+          ParallaxGenDirectory::getDefaultCubemapPath().parent_path();
       filesystem::create_directories(OutputCubemapPath);
 
       boost::filesystem::path AssetPath =
@@ -295,7 +296,7 @@ void mainRunner(int ArgC, char **ArgV) {
           L"assets/dynamic1pxcubemap_black_ENB.dds";
       boost::filesystem::path OutputPath =
           boost::filesystem::path(OutputDir) /
-          ParallaxGenDirectory::default_cubemap_path;
+          ParallaxGenDirectory::getDefaultCubemapPath();
 
       // Move File
       boost::filesystem::copy_file(
