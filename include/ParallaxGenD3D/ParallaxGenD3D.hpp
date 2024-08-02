@@ -13,29 +13,34 @@
 #include "ParallaxGenDirectory/ParallaxGenDirectory.hpp"
 #include "ParallaxGenTask/ParallaxGenTask.hpp"
 
+#define NUM_GPU_THREADS 16
+#define GPU_BUFFER_SIZE_MULTIPLE 16
+#define MAX_CHANNEL_VALUE 255
+
 class ParallaxGenD3D {
 private:
-  ParallaxGenDirectory *pgd;
+  ParallaxGenDirectory *PGD;
 
-  std::filesystem::path output_dir;
-
-  std::filesystem::path exe_path;
+  std::filesystem::path OutputDir;
+  std::filesystem::path ExePath;
 
   // GPU objects
-  Microsoft::WRL::ComPtr<ID3D11Device> pDevice;         // GPU device
-  Microsoft::WRL::ComPtr<ID3D11DeviceContext> pContext; // GPU context
-  const D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
-  const UINT NUM_GPU_THREADS = 16;
+  Microsoft::WRL::ComPtr<ID3D11Device> PtrDevice;         // GPU device
+  Microsoft::WRL::ComPtr<ID3D11DeviceContext> PtrContext; // GPU context
 
-  Microsoft::WRL::ComPtr<ID3D11ComputeShader> shader_MergeToComplexMaterial;
-  struct shader_MergeToComplexMaterial_params {
+  static inline const D3D_FEATURE_LEVEL FeatureLevel =
+      D3D_FEATURE_LEVEL_11_0; // DX11
+
+  // Each shader gets some things defined here
+  Microsoft::WRL::ComPtr<ID3D11ComputeShader> ShaderMergeToComplexMaterial;
+  struct ShaderMergeToComplexMaterialParams {
     DirectX::XMFLOAT2 EnvMapScalingFactor;
     DirectX::XMFLOAT2 ParallaxMapScalingFactor;
     BOOL EnvMapAvailable;
     BOOL ParallaxMapAvailable;
-    UINT intScalingFactor;
+    UINT IntScalingFactor;
   };
-  struct shader_MergeToComplexMaterial_outputbuffer {
+  struct ShaderMergeToComplexMaterialOutputBuffer {
     UINT MinEnvValue;
     UINT MaxEnvValue;
     UINT MinParallaxValue;
@@ -43,75 +48,105 @@ private:
   };
 
   std::unordered_map<std::filesystem::path, DirectX::TexMetadata>
-      dds_metadata_cache;
+      DDSMetaDataCache;
 
 public:
   // Constructor
-  ParallaxGenD3D(ParallaxGenDirectory *pgd,
-                 const std::filesystem::path output_dir,
-                 const std::filesystem::path exe_path);
+  ParallaxGenD3D(ParallaxGenDirectory *PGD, std::filesystem::path OutputDir,
+                 std::filesystem::path ExePath);
 
   // Initialize GPU (also compiles shaders)
   void initGPU();
 
   // Attempt to upgrade vanilla parallax to complex material
-  DirectX::ScratchImage
-  upgradeToComplexMaterial(const std::filesystem::path &parallax_map,
-                           const std::filesystem::path &env_map) const;
+  [[nodiscard]] auto upgradeToComplexMaterial(
+      const std::filesystem::path &ParallaxMap,
+      const std::filesystem::path &EnvMap) const -> DirectX::ScratchImage;
 
   // Checks if the aspect ratio of two DDS files match
-  ParallaxGenTask::PGResult
-  checkIfAspectRatioMatches(const std::filesystem::path &dds_path_1,
-                            const std::filesystem::path &dds_path_2,
-                            bool &check_aspect);
+  auto
+  checkIfAspectRatioMatches(const std::filesystem::path &DDSPath1,
+                            const std::filesystem::path &DDSPath2,
+                            bool &CheckAspect) -> ParallaxGenTask::PGResult;
 
   // Gets the error message from an HRESULT for logging
-  static std::string getHRESULTErrorMessage(HRESULT hr);
+  static auto getHRESULTErrorMessage(HRESULT HR) -> std::string;
 
 private:
   // GPU functions
   void initShaders();
-  Microsoft::WRL::ComPtr<ID3DBlob>
-  compileShader(const std::filesystem::path &filename);
-  bool
-  createComputeShader(const std::wstring &shader_path,
-                      Microsoft::WRL::ComPtr<ID3D11ComputeShader> &cs_dest);
+
+  auto compileShader(const std::filesystem::path &Filename,
+                     Microsoft::WRL::ComPtr<ID3DBlob> &ShaderBlob) const
+      -> ParallaxGenTask::PGResult;
+
+  auto
+  createComputeShader(const std::wstring &ShaderPath,
+                      Microsoft::WRL::ComPtr<ID3D11ComputeShader> &ShaderDest)
+      -> ParallaxGenTask::PGResult;
 
   // GPU Helpers
-  Microsoft::WRL::ComPtr<ID3D11Texture2D>
-  createTexture2D(const DirectX::ScratchImage &texture) const;
-  Microsoft::WRL::ComPtr<ID3D11Texture2D> createTexture2D(
-      Microsoft::WRL::ComPtr<ID3D11Texture2D> &existing_texture) const;
-  Microsoft::WRL::ComPtr<ID3D11Texture2D>
-  createTexture2D(D3D11_TEXTURE2D_DESC &desc) const;
-  Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> createShaderResourceView(
-      const Microsoft::WRL::ComPtr<ID3D11Texture2D> &texture) const;
-  Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> createUnorderedAccessView(
-      const Microsoft::WRL::ComPtr<ID3D11Texture2D> &texture) const;
-  Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView>
-  createUnorderedAccessView(Microsoft::WRL::ComPtr<ID3D11Resource> gpu_resource,
-                            const D3D11_UNORDERED_ACCESS_VIEW_DESC &desc) const;
-  Microsoft::WRL::ComPtr<ID3D11Buffer>
-  createBuffer(const void *data, D3D11_BUFFER_DESC &desc) const;
-  Microsoft::WRL::ComPtr<ID3D11Buffer>
-  createConstantBuffer(const void *data, const UINT size) const;
-  bool BlockingDispatch(UINT ThreadGroupCountX, UINT ThreadGroupCountY,
-                        UINT ThreadGroupCountZ) const;
-  std::vector<unsigned char>
-  readBack(const Microsoft::WRL::ComPtr<ID3D11Texture2D> &gpu_resource,
-           const int channels) const;
+  auto createTexture2D(const DirectX::ScratchImage &Texture,
+                       Microsoft::WRL::ComPtr<ID3D11Texture2D> &Dest) const
+      -> ParallaxGenTask::PGResult;
+
+  auto createTexture2D(Microsoft::WRL::ComPtr<ID3D11Texture2D> &ExistingTexture,
+                       Microsoft::WRL::ComPtr<ID3D11Texture2D> &Dest) const
+      -> ParallaxGenTask::PGResult;
+
+  auto createTexture2D(D3D11_TEXTURE2D_DESC &Desc,
+                       Microsoft::WRL::ComPtr<ID3D11Texture2D> &Dest) const
+      -> ParallaxGenTask::PGResult;
+
+  auto createShaderResourceView(
+      const Microsoft::WRL::ComPtr<ID3D11Texture2D> &Texture,
+      Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> &Dest) const
+      -> ParallaxGenTask::PGResult;
+
+  auto createUnorderedAccessView(
+      const Microsoft::WRL::ComPtr<ID3D11Texture2D> &Texture,
+      Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> &Dest) const
+      -> ParallaxGenTask::PGResult;
+
+  auto createUnorderedAccessView(
+      const Microsoft::WRL::ComPtr<ID3D11Resource> &GPUResource,
+      const D3D11_UNORDERED_ACCESS_VIEW_DESC &Desc,
+      Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> &Dest) const
+      -> ParallaxGenTask::PGResult;
+
+  auto createBuffer(const void *Data, D3D11_BUFFER_DESC &Desc,
+                    Microsoft::WRL::ComPtr<ID3D11Buffer> &Dest) const
+      -> ParallaxGenTask::PGResult;
+
+  auto createConstantBuffer(const void *Data, const UINT &Size,
+                            Microsoft::WRL::ComPtr<ID3D11Buffer> &Dest) const
+      -> ParallaxGenTask::PGResult;
+
+  auto
+  BlockingDispatch(UINT ThreadGroupCountX, UINT ThreadGroupCountY, // NOLINT
+                   UINT ThreadGroupCountZ) const -> ParallaxGenTask::PGResult;
+
+  [[nodiscard]] auto
+  readBack(const Microsoft::WRL::ComPtr<ID3D11Texture2D> &GPUResource,
+           const int &Channels) const -> std::vector<unsigned char>;
+
   template <typename T>
-  std::vector<T>
-  readBack(const Microsoft::WRL::ComPtr<ID3D11Buffer> &gpu_resource) const;
+  [[nodiscard]] auto
+  readBack(const Microsoft::WRL::ComPtr<ID3D11Buffer> &GPUResource) const
+      -> std::vector<T>;
 
   // Texture Helpers
-  bool getDDS(const std::filesystem::path &dds_path,
-              DirectX::ScratchImage &dds) const;
-  bool getDDSMetadata(const std::filesystem::path &dds_path,
-                      DirectX::TexMetadata &dds_meta);
-  static DirectX::ScratchImage
-  LoadRawPixelsToScratchImage(const std::vector<unsigned char> rawPixels,
-                              size_t width, size_t height, DXGI_FORMAT format,
-                              int channels);
-  static bool isPowerOfTwo(unsigned int x);
+  auto getDDS(const std::filesystem::path &DDSPath,
+              DirectX::ScratchImage &DDS) const -> ParallaxGenTask::PGResult;
+
+  auto
+  getDDSMetadata(const std::filesystem::path &DDSPath,
+                 DirectX::TexMetadata &DDSMeta) -> ParallaxGenTask::PGResult;
+
+  static auto
+  loadRawPixelsToScratchImage(const std::vector<unsigned char> &RawPixels,
+                              const size_t &Width, const size_t &Height,
+                              DXGI_FORMAT Format) -> DirectX::ScratchImage;
+
+  static auto isPowerOfTwo(unsigned int X) -> bool;
 };
