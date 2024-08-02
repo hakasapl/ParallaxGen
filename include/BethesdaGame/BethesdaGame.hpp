@@ -3,8 +3,15 @@
 #include <windows.h>
 
 #include <filesystem>
-#include <string>
-#include <unordered_map>
+
+// Steam game ID definitions
+#define STEAMGAMEID_SKYRIM_SE 489830
+#define STEAMGAMEID_SKYRIM_VR 611670
+#define STEAMGAMEID_SKYRIM 72850
+#define STEAMGAMEID_ENDERAL 933480
+#define STEAMGAMEID_ENDERAL_SE 976620
+
+#define REG_BUFFER_SIZE 1024
 
 class BethesdaGame {
 public:
@@ -23,95 +30,48 @@ public:
 
   // struct that stores location of ini and custom ini file for a game
   struct ININame {
-    std::filesystem::path ini;
-    std::filesystem::path ini_prefs;
-    std::filesystem::path ini_custom;
+    std::filesystem::path INI;
+    std::filesystem::path INIPrefs;
+    std::filesystem::path INICustom;
   };
 
 private:
-  // Define INI locations for each game
-  static inline const std::unordered_map<BethesdaGame::GameType, ININame>
-      INILocations = {
-          {BethesdaGame::GameType::SKYRIM_SE,
-           ININame{"skyrim.ini", "skyrimprefs.ini", "skyrimcustom.ini"}},
-          {BethesdaGame::GameType::SKYRIM_GOG,
-           ININame{"skyrim.ini", "skyrimprefs.ini", "skyrimcustom.ini"}},
-          {BethesdaGame::GameType::SKYRIM_VR,
-           ININame{"skyrim.ini", "skyrimprefs.ini", "skyrimcustom.ini"}},
-          {BethesdaGame::GameType::SKYRIM,
-           ININame{"skyrim.ini", "skyrimprefs.ini", "skyrimcustom.ini"}},
-          {BethesdaGame::GameType::ENDERAL,
-           ININame{"enderal.ini", "enderalprefs.ini", "enderalcustom.ini"}},
-          {BethesdaGame::GameType::ENDERAL_SE,
-           ININame{"enderal.ini", "enderalprefs.ini", "enderalcustom.ini"}}};
-
-  // Define document folder location for each game
-  static inline const std::unordered_map<BethesdaGame::GameType,
-                                         std::filesystem::path>
-      DocumentLocations = {
-          {BethesdaGame::GameType::SKYRIM_SE,
-           "My Games/Skyrim Special Edition"},
-          {BethesdaGame::GameType::SKYRIM_GOG,
-           "My Games/Skyrim Special Edition GOG"},
-          {BethesdaGame::GameType::SKYRIM_VR, "My Games/Skyrim VR"},
-          {BethesdaGame::GameType::SKYRIM, "My Games/Skyrim"},
-          {BethesdaGame::GameType::ENDERAL, "My Games/Enderal"},
-          {BethesdaGame::GameType::ENDERAL_SE,
-           "My Games/Enderal Special Edition"}};
-
-  // Define appdata folder location for each game
-  static inline const std::unordered_map<BethesdaGame::GameType,
-                                         std::filesystem::path>
-      AppDataLocations = {
-          {BethesdaGame::GameType::SKYRIM_SE, "Skyrim Special Edition"},
-          {BethesdaGame::GameType::SKYRIM_GOG, "Skyrim Special Edition GOG"},
-          {BethesdaGame::GameType::SKYRIM_VR, "Skyrim VR"},
-          {BethesdaGame::GameType::SKYRIM, "Skyrim"},
-          {BethesdaGame::GameType::ENDERAL, "Enderal"},
-          {BethesdaGame::GameType::ENDERAL_SE, "Enderal Special Edition"}};
+  [[nodiscard]] auto getINILocations() const -> ININame;
+  [[nodiscard]] auto getDocumentLocation() const -> std::filesystem::path;
+  [[nodiscard]] auto getAppDataLocation() const -> std::filesystem::path;
+  [[nodiscard]] auto getSteamGameID() const -> int;
+  [[nodiscard]] auto getDataCheckFile() const -> std::filesystem::path;
 
   // stores the game type
-  GameType game_type;
+  GameType ObjGameType;
 
   // stores game path and game data path (game path / data)
-  std::filesystem::path game_path;
-  std::filesystem::path game_data_path;
+  std::filesystem::path GamePath;
+  std::filesystem::path GameDataPath;
 
   // stores whether logging is enabled
-  bool logging;
-
-  // stores the steam game ids for each game
-  inline static const std::unordered_map<BethesdaGame::GameType, int>
-      steam_game_ids = {{BethesdaGame::GameType::SKYRIM_SE, 489830},
-                        {BethesdaGame::GameType::SKYRIM_VR, 611670},
-                        {BethesdaGame::GameType::SKYRIM, 72850},
-                        {BethesdaGame::GameType::ENDERAL, 933480},
-                        {BethesdaGame::GameType::ENDERAL_SE, 976620}};
-
-  inline static const std::string lookup_file = "Skyrim.esm";
+  bool Logging;
 
 public:
   // constructor
-  BethesdaGame(GameType game_type, const std::filesystem::path game_path,
-               const bool logging = false);
+  BethesdaGame(enum GameType GameType, const std::filesystem::path &GamePath,
+               const bool &Logging = false);
 
   // get functions
-  GameType getGameType() const;
-  std::filesystem::path getGamePath() const;
-  std::filesystem::path getGameDataPath() const;
+  [[nodiscard]] auto getGameType() const -> GameType;
+  [[nodiscard]] auto getGamePath() const -> std::filesystem::path;
+  [[nodiscard]] auto getGameDataPath() const -> std::filesystem::path;
 
-  std::filesystem::path getGameDocumentPath() const;
-  std::filesystem::path getGameAppdataPath() const;
+  [[nodiscard]] auto getGameDocumentPath() const -> std::filesystem::path;
+  [[nodiscard]] auto getGameAppdataPath() const -> std::filesystem::path;
 
-  ININame getINIPaths() const;
-  std::filesystem::path getLoadOrderFile() const;
+  [[nodiscard]] auto getINIPaths() const -> ININame;
+  [[nodiscard]] auto getLoadOrderFile() const -> std::filesystem::path;
 
 private:
   // locates the steam install locatino of steam
-  std::filesystem::path findGamePathFromSteam() const;
-  // returns the steam ID of the current game
-  int getSteamGameID() const;
+  [[nodiscard]] auto findGamePathFromSteam() const -> std::filesystem::path;
 
   // gets the system path for a folder (from windows.h)
-  std::filesystem::path getSystemPath(const GUID &folder_id) const;
+  static auto getSystemPath(const GUID &FolderID) -> std::filesystem::path;
 };

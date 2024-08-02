@@ -432,7 +432,7 @@ auto BethesdaDirectory::getBSAFilesFromINIs() const -> vector<wstring> {
   // find ini paths
   BethesdaGame::ININame INILocs = BG.getINIPaths();
 
-  vector<fs::path> INIFileOrder = {INILocs.ini, INILocs.ini_custom};
+  vector<fs::path> INIFileOrder = {INILocs.INI, INILocs.INICustom};
 
   // loop through each field
   bool FirstINIRead = true;
