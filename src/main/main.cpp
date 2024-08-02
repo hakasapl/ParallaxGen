@@ -103,7 +103,7 @@ auto getGameTypeMap() -> unordered_map<string, BethesdaGame::GameType> {
   return GameTypeMap;
 }
 
-void mainRunner(int ArgC, char **ArgV) { // NOLINT
+void mainRunner(int ArgC, char **ArgV) {
   // Find location of ParallaxGen.exe
   const filesystem::path ExePath = getExecutablePath().parent_path();
 

@@ -144,7 +144,7 @@ void ParallaxGenDirectory::findTruePBRConfigs() {
       }
     } catch (nlohmann::json::parse_error &e) {
       spdlog::error(L"Unable to parse TruePBR config file {}: {}",
-                    config.wstring(), convertToWstring(e.what()));
+                    config.wstring(), stringToWstring(e.what()));
       continue;
     }
   }
@@ -170,7 +170,7 @@ void ParallaxGenDirectory::loadPGConfig(bool load_default) {
 
   // Load configs from load order
   size_t cfg_count = 0;
-  auto pg_configs = findFiles(true, {LO_PGCONFIG_PATH + L"\\**\\*.json"});
+  auto pg_configs = findFiles(true, {LO_PGCONFIG_PATH + L"\\**.json"});
   for (auto &cur_cfg : pg_configs) {
     try {
       auto parsed_json = nlohmann::json::parse(getFile(cur_cfg));
@@ -178,7 +178,7 @@ void ParallaxGenDirectory::loadPGConfig(bool load_default) {
       cfg_count++;
     } catch (nlohmann::json::parse_error &e) {
       spdlog::warn(L"Failed to parse ParallaxGen config file {}: {}",
-                   cur_cfg.wstring(), convertToWstring(e.what()));
+                   cur_cfg.wstring(), stringToWstring(e.what()));
       continue;
     }
   }
@@ -345,7 +345,7 @@ ParallaxGenDirectory::jsonArrayToWString(const nlohmann::json &json_array) {
   if (json_array.is_array()) {
     for (const auto &item : json_array) {
       if (item.is_string()) {
-        result.push_back(convertToWstring(item.get<string>()));
+        result.push_back(stringToWstring(item.get<string>()));
       }
     }
   }

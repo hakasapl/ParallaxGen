@@ -115,12 +115,12 @@ ParallaxGenD3D::compileShader(const std::filesystem::path &filename) {
     if (pErrorBlob) {
       spdlog::critical(L"Failed to compile shader {}: {}, {}",
                        filename.wstring(),
-                       convertToWstring(getHRESULTErrorMessage(hr)),
+                       stringToWstring(getHRESULTErrorMessage(hr)),
                        static_cast<wchar_t *>(pErrorBlob->GetBufferPointer()));
       pErrorBlob.Reset();
     } else {
       spdlog::critical(L"Failed to compile shader {}: {}", filename.wstring(),
-                       convertToWstring(getHRESULTErrorMessage(hr)));
+                       stringToWstring(getHRESULTErrorMessage(hr)));
     }
 
     exitWithUserInput(1);
@@ -755,7 +755,7 @@ bool ParallaxGenD3D::getDDS(const filesystem::path &dds_path,
 
   if (FAILED(hr)) {
     spdlog::error(L"Failed to load DDS file from {}: {}", dds_path.wstring(),
-                  convertToWstring(getHRESULTErrorMessage(hr)));
+                  stringToWstring(getHRESULTErrorMessage(hr)));
     return false;
   }
 
@@ -799,7 +799,7 @@ bool ParallaxGenD3D::getDDSMetadata(const filesystem::path &dds_path,
   if (FAILED(hr)) {
     spdlog::error(L"Failed to load DDS file metadata from {}: {}",
                   dds_path.wstring(),
-                  convertToWstring(getHRESULTErrorMessage(hr)));
+                  stringToWstring(getHRESULTErrorMessage(hr)));
     return false;
   }
 

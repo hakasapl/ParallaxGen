@@ -4,61 +4,57 @@
 
 #include <algorithm>
 #include <filesystem>
-#include <random>
 #include <unordered_set>
 
 namespace ParallaxGenUtil {
-// get a single value from ini file
-// TODO move this to BethesdaDirectory
-std::wstring readINIValue(const std::filesystem::path &ini_path,
-                          const std::wstring &section, const std::wstring &key,
-                          const bool logging, const bool first_ini_read);
-
 // terminals usually auto exit when program ends, this function waits for user
 // input before exiting
-void exitWithUserInput(const int exit_code);
+void exitWithUserInput(const int &ExitCode = 0);
 
 // converts a string to a wstring
-std::wstring convertToWstring(const std::string str);
+auto stringToWstring(const std::string &Str) -> std::wstring;
 
 // converts a wide string to a utf-8 narrow string
-std::string wstring_to_utf8(const std::wstring &str);
+auto wstringToString(const std::wstring &Str) -> std::string;
 
 // Get the file bytes of a file
-std::vector<std::byte> getFileBytes(const std::filesystem::path &file_path);
+auto getFileBytes(const std::filesystem::path &FilePath)
+    -> std::vector<std::byte>;
 
 // Replace last of helpers for string and path
-std::filesystem::path replaceLastOf(const std::filesystem::path &path,
-                                    const std::wstring &to_replace,
-                                    const std::wstring &replace_with);
-std::string replaceLastOf(const std::string &path,
-                          const std::string &to_replace,
-                          const std::string &replace_with);
+auto replaceLastOf(const std::filesystem::path &Path,
+                   const std::wstring &ToReplace,
+                   const std::wstring &ReplaceWith) -> std::filesystem::path;
+auto replaceLastOf(const std::string &Path, const std::string &ToReplace,
+                   const std::string &ReplaceWith) -> std::string;
+
+// Template Functions
 
 template <typename T>
-bool isInVector(const std::vector<T> &vec, const T &test) {
-  return std::find(vec.begin(), vec.end(), test) != vec.end();
+auto isInVector(const std::vector<T> &Vec, const T &Test) -> bool {
+  return std::find(Vec.begin(), Vec.end(), Test) != Vec.end();
 }
 
 // concatenates two vectors without duplicates
 template <typename T>
-void concatenateVectorsWithoutDuplicates(std::vector<T> &vec1,
-                                         const std::vector<T> &vec2) {
-  std::unordered_set<T> set(vec1.begin(), vec1.end());
+void concatenateVectorsWithoutDuplicates(std::vector<T> &Vec1,
+                                         const std::vector<T> &Vec2) {
+  std::unordered_set<T> Set(Vec1.begin(), Vec1.end());
 
-  for (const auto &element : vec2) {
-    if (set.find(element) == set.end()) {
-      vec1.push_back(element);
-      set.insert(element);
+  for (const auto &Element : Vec2) {
+    if (Set.find(Element) == Set.end()) {
+      Vec1.push_back(Element);
+      Set.insert(Element);
     }
   }
 };
 
 // adds an element to a vector if it is not already present
 template <typename T>
-void addUniqueElement(std::vector<T> &vec, const T &element) {
-  if (std::find(vec.begin(), vec.end(), element) == vec.end()) {
-    vec.push_back(element);
+void addUniqueElement(std::vector<T> &Vec, const T &Element) {
+  if (std::find(Vec.begin(), Vec.end(), Element) == Vec.end()) {
+    Vec.push_back(Element);
   }
 }
+
 } // namespace ParallaxGenUtil

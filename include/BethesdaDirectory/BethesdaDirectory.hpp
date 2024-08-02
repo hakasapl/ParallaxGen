@@ -306,4 +306,9 @@ private:
    */
   static auto checkGlob(const LPCWSTR &Str, LPCWSTR &WinningGlob,
                         const std::vector<LPCWSTR> &GlobList) -> bool;
+
+  static auto readINIValue(const std::filesystem::path &INIPath,
+                           const std::wstring &Section, const std::wstring &Key,
+                           const bool &Logging,
+                           const bool &FirstINIRead) -> std::wstring;
 };

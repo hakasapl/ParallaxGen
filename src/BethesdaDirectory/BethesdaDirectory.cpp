@@ -106,8 +106,8 @@ auto BethesdaDirectory::getFile(const fs::path &RelPath) const
     bsa::tes4::version BSAVersion = BSAStruct->Version;
     bsa::tes4::archive BSAObj = BSAStruct->Archive;
 
-    string ParentPath = wstring_to_utf8(RelPath.parent_path().wstring());
-    string Filename = wstring_to_utf8(RelPath.filename().wstring());
+    string ParentPath = wstringToString(RelPath.parent_path().wstring());
+    string Filename = wstringToString(RelPath.filename().wstring());
 
     const auto File = BSAObj[ParentPath][Filename];
     if (File) {
@@ -118,7 +118,7 @@ auto BethesdaDirectory::getFile(const fs::path &RelPath) const
       } catch (const std::exception &E) {
         if (Logging) {
           spdlog::error(L"Failed to read file {}: {}", RelPath.wstring(),
-                        convertToWstring(E.what()));
+                        stringToWstring(E.what()));
         }
       }
 
@@ -320,7 +320,7 @@ void BethesdaDirectory::addBSAToFileMap(const wstring &BSAName) {
     } catch (const std::exception &E) {
       if (Logging) {
         spdlog::warn(L"Failed to get file pointer from BSA, skipping {}: {}",
-                     BSAName, convertToWstring(E.what()));
+                     BSAName, stringToWstring(E.what()));
       }
       continue;
     }
@@ -440,12 +440,12 @@ auto BethesdaDirectory::getBSAFilesFromINIs() const -> vector<wstring> {
     // loop through each ini file
     wstring INIVal;
     for (const auto &INIPath : INIFileOrder) {
-      wstring CurVal = readINIValue(
-          INIPath, L"Archive", convertToWstring(Field), Logging, FirstINIRead);
+      wstring CurVal = readINIValue(INIPath, L"Archive", stringToWstring(Field),
+                                    Logging, FirstINIRead);
 
       if (Logging) {
         spdlog::trace(L"Found ini key pair from INI {}: {}: {}",
-                      INIPath.wstring(), convertToWstring(Field), CurVal);
+                      INIPath.wstring(), stringToWstring(Field), CurVal);
       }
 
       if (CurVal.empty()) {
@@ -463,7 +463,7 @@ auto BethesdaDirectory::getBSAFilesFromINIs() const -> vector<wstring> {
 
     if (Logging) {
       spdlog::trace(L"Found BSA files from INI field {}: {}",
-                    convertToWstring(Field), INIVal);
+                    stringToWstring(Field), INIVal);
     }
 
     // split into components
@@ -618,4 +618,72 @@ auto BethesdaDirectory::checkGlob(const LPCWSTR &Str, LPCWSTR &WinningGlob,
   }
 
   return false;
+}
+
+auto BethesdaDirectory::readINIValue(const filesystem::path &INIPath,
+                                     const wstring &Section, const wstring &Key,
+                                     const bool &Logging,
+                                     const bool &FirstINIRead) -> wstring {
+  if (!fs::exists(INIPath)) {
+    if (Logging && FirstINIRead) {
+      spdlog::warn(L"INI file does not exist (ignoring): {}",
+                   INIPath.wstring());
+    }
+    return L"";
+  }
+
+  wifstream F(INIPath);
+  if (!F.is_open()) {
+    if (Logging && FirstINIRead) {
+      spdlog::warn(L"Unable to open INI (ignoring): {}", INIPath.wstring());
+    }
+    return L"";
+  }
+
+  wstring CurLine;
+  wstring CurSection;
+  bool FoundSection = false;
+
+  while (getline(F, CurLine)) {
+    boost::trim(CurLine);
+
+    // ignore comments
+    if (CurLine.empty() || CurLine[0] == ';' || CurLine[0] == '#') {
+      continue;
+    }
+
+    // Check if it's a section
+    if (CurLine.front() == '[' && CurLine.back() == ']') {
+      CurSection = CurLine.substr(1, CurLine.size() - 2);
+      continue;
+    }
+
+    // Check if it's the correct section
+    if (boost::iequals(CurSection, Section)) {
+      FoundSection = true;
+    }
+
+    if (!boost::iequals(CurSection, Section)) {
+      // exit if already checked section
+      if (FoundSection) {
+        break;
+      }
+      continue;
+    }
+
+    // check key
+    size_t Pos = CurLine.find('=');
+    if (Pos != std::string::npos) {
+      // found key value pair
+      wstring CurKey = CurLine.substr(0, Pos);
+      boost::trim(CurKey);
+      if (boost::iequals(CurKey, Key)) {
+        wstring CurValue = CurLine.substr(Pos + 1);
+        boost::trim(CurValue);
+        return CurValue;
+      }
+    }
+  }
+
+  return L"";
 }

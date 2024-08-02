@@ -2,6 +2,7 @@
 Checks: '-*,
          boost-*,
          bugprone-*,
+         -bugprone-easily-swappable-parameters,
          cert-*,
          concurrency-*,
          cppcoreguidelines-*,
@@ -11,7 +12,8 @@ Checks: '-*,
          performance-*,
          portability-*,
          readability-*,
-         -readability-identifier-length'
+         -readability-identifier-length,
+         -readability-function-cognitive-complexity'
 FormatStyle: llvm
 HeaderFilterRegex: 'src/|include/'
 CheckOptions:

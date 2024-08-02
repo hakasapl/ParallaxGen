@@ -97,7 +97,7 @@ ParallaxGenTask::PGResult ParallaxGen::convertHeightMapToComplexMaterial(
     if (FAILED(hr)) {
       spdlog::error(
           L"Unable to save complex material {}: {}", output_path.wstring(),
-          convertToWstring(ParallaxGenD3D::getHRESULTErrorMessage(hr)));
+          stringToWstring(ParallaxGenD3D::getHRESULTErrorMessage(hr)));
       result = ParallaxGenTask::PGResult::FAILURE;
       return result;
     }
@@ -131,7 +131,7 @@ void ParallaxGen::deleteMeshes() const {
         spdlog::trace(L"Deleted directory {}", entry.path().wstring());
       } catch (const exception &e) {
         spdlog::error(L"Error deleting directory {}: {}",
-                      entry.path().wstring(), convertToWstring(e.what()));
+                      entry.path().wstring(), stringToWstring(e.what()));
       }
     }
 
@@ -141,7 +141,7 @@ void ParallaxGen::deleteMeshes() const {
         filesystem::remove(entry.path());
       } catch (const exception &e) {
         spdlog::error(L"Error deleting state file {}: {}",
-                      entry.path().wstring(), convertToWstring(e.what()));
+                      entry.path().wstring(), stringToWstring(e.what()));
       }
     }
   }
@@ -158,7 +158,7 @@ void ParallaxGen::deleteOutputDir() const {
       }
     } catch (const exception &e) {
       spdlog::critical(L"Error deleting output directory {}: {}",
-                       output_dir.wstring(), convertToWstring(e.what()));
+                       output_dir.wstring(), stringToWstring(e.what()));
       exitWithUserInput(1);
     }
   }
@@ -212,7 +212,7 @@ ParallaxGen::processNIF(const filesystem::path &nif_file,
     nif.Load(nif_stream);
   } catch (const exception &e) {
     spdlog::error(L"Error reading NIF file: {}, {}", nif_file.wstring(),
-                  convertToWstring(e.what()));
+                  stringToWstring(e.what()));
     result = ParallaxGenTask::PGResult::FAILURE;
     return result;
   }
@@ -498,7 +498,7 @@ ParallaxGenTask::PGResult ParallaxGen::shouldEnableComplexMaterial(
   if (!diffuse_map.empty() && !pgd->isFile(diffuse_map)) {
     // no diffuse map
     spdlog::trace(L"Rejecting shape {}: Diffuse map missing: {}",
-                  shape_block_id, convertToWstring(diffuse_map));
+                  shape_block_id, stringToWstring(diffuse_map));
     enable_result = false;
     return result;
   }
@@ -604,7 +604,7 @@ ParallaxGenTask::PGResult ParallaxGen::shouldEnableParallax(
   if (!diffuse_map.empty() && !pgd->isFile(diffuse_map)) {
     // no diffuse map
     spdlog::trace(L"Rejecting shape {}: Diffuse map missing: {}",
-                  shape_block_id, convertToWstring(diffuse_map));
+                  shape_block_id, stringToWstring(diffuse_map));
     enable_result = false;
     return result;
   }
@@ -1314,7 +1314,7 @@ void ParallaxGen::addFileToZip(mz_zip_archive &zip,
   // get relative path
   filesystem::path zip_relative_path = filePath.lexically_relative(output_dir);
 
-  string zip_file_path = wstring_to_utf8(zip_relative_path.wstring());
+  string zip_file_path = wstringToString(zip_relative_path.wstring());
 
   // add file to zip
   if (!mz_zip_writer_add_mem(&zip, zip_file_path.c_str(), buffer.data(),
@@ -1344,7 +1344,7 @@ void ParallaxGen::zipDirectory(const filesystem::path &dirPath,
   }
 
   // initialize file
-  string zip_path_string = wstring_to_utf8(zipPath);
+  string zip_path_string = wstringToString(zipPath);
   if (!mz_zip_writer_init_file(&zip, zip_path_string.c_str(), 0)) {
     spdlog::critical(L"Error creating zip file: {}", zipPath.wstring());
     exitWithUserInput(1);

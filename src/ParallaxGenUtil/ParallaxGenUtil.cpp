@@ -4,7 +4,6 @@
 #include <spdlog/spdlog.h>
 
 #include <boost/algorithm/string.hpp>
-#include <codecvt>
 #include <fstream>
 #include <iostream>
 
@@ -12,151 +11,85 @@ using namespace std;
 namespace fs = filesystem;
 
 namespace ParallaxGenUtil {
-wstring readINIValue(const fs::path &ini_path, const wstring &section,
-                     const wstring &key, const bool logging,
-                     const bool first_ini_read) {
-  if (!fs::exists(ini_path)) {
-    if (logging && first_ini_read) {
-      spdlog::warn(L"INI file does not exist (ignoring): {}",
-                   ini_path.wstring());
-    }
-    return L"";
-  }
-
-  wifstream f(ini_path);
-  if (!f.is_open()) {
-    if (logging && first_ini_read) {
-      spdlog::warn(L"Unable to open INI (ignoring): {}", ini_path.wstring());
-    }
-    return L"";
-  }
-
-  wstring cur_line;
-  wstring cur_section;
-  bool foundSection = false;
-
-  while (getline(f, cur_line)) {
-    boost::trim(cur_line);
-
-    // ignore comments
-    if (cur_line.empty() || cur_line[0] == ';' || cur_line[0] == '#') {
-      continue;
-    }
-
-    // Check if it's a section
-    if (cur_line.front() == '[' && cur_line.back() == ']') {
-      cur_section = cur_line.substr(1, cur_line.size() - 2);
-      continue;
-    }
-
-    // Check if it's the correct section
-    if (boost::iequals(cur_section, section)) {
-      foundSection = true;
-    }
-
-    if (!boost::iequals(cur_section, section)) {
-      // exit if already checked section
-      if (foundSection) {
-        break;
-      }
-      continue;
-    }
-
-    // check key
-    size_t pos = cur_line.find('=');
-    if (pos != std::string::npos) {
-      // found key value pair
-      wstring cur_key = cur_line.substr(0, pos);
-      boost::trim(cur_key);
-      if (boost::iequals(cur_key, key)) {
-        wstring cur_value = cur_line.substr(pos + 1);
-        boost::trim(cur_value);
-        return cur_value;
-      }
-    }
-  }
-
-  return L"";
-}
-
-void exitWithUserInput(const int exit_code) {
+void exitWithUserInput(const int &ExitCode) {
   cout << "Press ENTER to exit...";
   cin.get();
-  exit(exit_code);
+  exit(ExitCode); // NOLINT
 }
 
-wstring convertToWstring(const string str) {
-  size_t length = str.length() + 1; // Including null terminator
-  std::vector<wchar_t> wbuffer(length);
-  size_t convertedChars = 0;
+auto stringToWstring(const string &Str) -> wstring {
+  size_t Length = Str.length() + 1; // Including null terminator
+  std::vector<wchar_t> WBuffer(Length);
+  size_t ConvertedChars = 0;
 
-  errno_t err = mbstowcs_s(&convertedChars, wbuffer.data(), wbuffer.size(),
-                           str.c_str(), length - 1);
-  if (err != 0) {
+  errno_t Err = mbstowcs_s(&ConvertedChars, WBuffer.data(), WBuffer.size(),
+                           Str.c_str(), Length - 1);
+  if (Err != 0) {
     throw std::runtime_error("Conversion failed");
   }
 
-  return std::wstring(wbuffer.data());
+  return std::wstring(WBuffer.data());
 }
 
-string wstring_to_utf8(const wstring &str) {
-  if (str.empty())
-    return std::string();
-  int size_needed = WideCharToMultiByte(CP_UTF8, 0, &str[0], (int)str.size(),
-                                        NULL, 0, NULL, NULL);
-  std::string str_to(size_needed, 0);
-  WideCharToMultiByte(CP_UTF8, 0, &str[0], (int)str.size(), &str_to[0],
-                      size_needed, NULL, NULL);
-  return str_to;
+auto wstringToString(const wstring &Str) -> string {
+  if (Str.empty()) {
+    return {};
+  }
+
+  int SizeNeeded = WideCharToMultiByte(CP_UTF8, 0, Str.data(), (int)Str.size(),
+                                       nullptr, 0, nullptr, nullptr);
+  string StrTo(SizeNeeded, 0);
+  WideCharToMultiByte(CP_UTF8, 0, Str.data(), (int)Str.size(), StrTo.data(),
+                      SizeNeeded, nullptr, nullptr);
+  return StrTo;
 }
 
-vector<std::byte> getFileBytes(const fs::path &file_path) {
-  ifstream inputFile(file_path, ios::binary | ios::ate);
-  if (!inputFile.is_open()) {
+auto getFileBytes(const fs::path &FilePath) -> vector<std::byte> {
+  ifstream InputFile(FilePath, ios::binary | ios::ate);
+  if (!InputFile.is_open()) {
     // Unable to open file
-    return vector<std::byte>();
+    return {};
   }
 
-  auto length = inputFile.tellg();
-  if (length == -1) {
+  auto Length = InputFile.tellg();
+  if (Length == -1) {
     // Unable to find length
-    inputFile.close();
-    return vector<std::byte>();
+    InputFile.close();
+    return {};
   }
 
-  inputFile.seekg(0, ios::beg);
+  InputFile.seekg(0, ios::beg);
 
   // Make a buffer of the exact size of the file and read the data into it.
-  vector<std::byte> buffer(length);
-  inputFile.read(reinterpret_cast<char *>(buffer.data()), length);
+  vector<std::byte> Buffer(Length);
+  InputFile.read(reinterpret_cast<char *>(Buffer.data()), Length); // NOLINT
 
-  inputFile.close();
+  InputFile.close();
 
-  return buffer;
+  return Buffer;
 }
 
-filesystem::path replaceLastOf(const filesystem::path &path,
-                               const wstring &to_replace,
-                               const wstring &replace_with) {
-  wstring path_str = path.wstring();
-  size_t pos = path_str.rfind(to_replace);
-  if (pos == wstring::npos) {
-    return path;
+auto replaceLastOf(const filesystem::path &Path, const wstring &ToReplace,
+                   const wstring &ReplaceWith) -> filesystem::path {
+  wstring PathStr = Path.wstring();
+  size_t Pos = PathStr.rfind(ToReplace);
+  if (Pos == wstring::npos) {
+    return Path;
   }
 
-  path_str.replace(pos, to_replace.size(), replace_with);
-  return filesystem::path(path_str);
+  PathStr.replace(Pos, ToReplace.size(), ReplaceWith);
+  return PathStr;
 }
 
-string replaceLastOf(const string &path, const string &to_replace,
-                     const string &replace_with) {
-  size_t pos = path.rfind(to_replace);
-  if (pos == wstring::npos) {
-    return path;
+auto replaceLastOf(const string &Path, const string &ToReplace,
+                   const string &ReplaceWith) -> string {
+  size_t Pos = Path.rfind(ToReplace);
+  if (Pos == wstring::npos) {
+    return Path;
   }
 
-  string out_path = path;
-  out_path.replace(pos, to_replace.size(), replace_with);
-  return out_path;
+  string OutPath = Path;
+  OutPath.replace(Pos, ToReplace.size(), ReplaceWith);
+  return OutPath;
 }
 } // namespace ParallaxGenUtil
