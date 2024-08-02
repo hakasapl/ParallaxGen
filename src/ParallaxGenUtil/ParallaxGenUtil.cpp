@@ -8,8 +8,6 @@
 #include <iostream>
 
 using namespace std;
-namespace fs = filesystem;
-
 namespace ParallaxGenUtil {
 void exitWithUserInput(const int &ExitCode) {
   cout << "Press ENTER to exit...";
@@ -44,7 +42,7 @@ auto wstringToString(const wstring &Str) -> string {
   return StrTo;
 }
 
-auto getFileBytes(const fs::path &FilePath) -> vector<std::byte> {
+auto getFileBytes(const filesystem::path &FilePath) -> vector<std::byte> {
   ifstream InputFile(FilePath, ios::binary | ios::ate);
   if (!InputFile.is_open()) {
     // Unable to open file
