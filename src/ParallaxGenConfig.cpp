@@ -46,7 +46,9 @@ auto ParallaxGenConfig::getConfigValidation() -> nlohmann::json {
           }
         },
         "required": [
-          "allowlist"
+          "allowlist",
+          "blocklist",
+          "archive_blocklist"
         ]
       },
       "parallax_processing": {
@@ -90,7 +92,9 @@ auto ParallaxGenConfig::getConfigValidation() -> nlohmann::json {
           }
         },
         "required": [
-          "allowlist"
+          "allowlist",
+          "blocklist",
+          "archive_blocklist"
         ]
       },
       "complexmaterial_processing": {
@@ -112,7 +116,8 @@ auto ParallaxGenConfig::getConfigValidation() -> nlohmann::json {
           }
         },
         "required": [
-          "lookup_order"
+          "lookup_order",
+          "dyncubemap_blocklist"
         ]
       },
       "truepbr_cfg_lookup": {
@@ -140,7 +145,9 @@ auto ParallaxGenConfig::getConfigValidation() -> nlohmann::json {
           }
         },
         "required": [
-          "allowlist"
+          "allowlist",
+          "blocklist",
+          "archive_blocklist"
         ]
       },
       "truepbr_cfg_processing": {
@@ -184,7 +191,9 @@ auto ParallaxGenConfig::getConfigValidation() -> nlohmann::json {
           }
         },
         "required": [
-          "allowlist"
+          "allowlist",
+          "blocklist",
+          "archive_blocklist"
         ]
       },
       "suffixes": {
@@ -244,7 +253,18 @@ auto ParallaxGenConfig::getConfigValidation() -> nlohmann::json {
               "type": "string"
             }
           }
-        }
+        },
+        "required": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8"
+        ]
       }
     },
     "required": [

@@ -23,8 +23,9 @@ public:
 private:
   auto validateConfig() -> bool;
 
-  static void mergeJSONSmart(nlohmann::json &Target,
-                             const nlohmann::json &Source);
+  void addMissingFields(const nlohmann::json &Schema, nlohmann::json &Target);
+
+  static void mergeJSONSmart(nlohmann::json &Target, const nlohmann::json &Source);
 
   static void replaceForwardSlashes(nlohmann::json &JSON);
 };
