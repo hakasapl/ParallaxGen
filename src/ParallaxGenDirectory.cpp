@@ -10,12 +10,10 @@
 using namespace std;
 using namespace ParallaxGenUtil;
 
-ParallaxGenDirectory::ParallaxGenDirectory(BethesdaGame BG)
-    : BethesdaDirectory(BG, true) {}
+ParallaxGenDirectory::ParallaxGenDirectory(BethesdaGame BG) : BethesdaDirectory(BG, true) {}
 
 auto ParallaxGenDirectory::getTruePBRConfigFilenameFields() -> vector<string> {
-  static const vector<string> PGConfigFilenameFields = {
-      "match_normal", "match_diffuse", "rename"};
+  static const vector<string> PGConfigFilenameFields = {"match_normal", "match_diffuse", "rename"};
   return PGConfigFilenameFields;
 }
 
@@ -25,14 +23,12 @@ auto ParallaxGenDirectory::getConfigPath() -> wstring {
 }
 
 auto ParallaxGenDirectory::getDefaultCubemapPath() -> filesystem::path {
-  static const filesystem::path DefCubemapPath =
-      "textures\\cubemaps\\dynamic1pxcubemap_black.dds";
+  static const filesystem::path DefCubemapPath = "textures\\cubemaps\\dynamic1pxcubemap_black.dds";
   return DefCubemapPath;
 }
 
-void ParallaxGenDirectory::findHeightMaps(
-    const vector<wstring> &Allowlist, const vector<wstring> &Blocklist,
-    const vector<wstring> &ArchiveBlocklist) {
+void ParallaxGenDirectory::findHeightMaps(const vector<wstring> &Allowlist, const vector<wstring> &Blocklist,
+                                          const vector<wstring> &ArchiveBlocklist) {
   // find height maps
   spdlog::info("Finding parallax height maps");
   // Find heightmaps
@@ -40,13 +36,11 @@ void ParallaxGenDirectory::findHeightMaps(
   spdlog::info("Found {} height maps", HeightMaps.size());
 }
 
-void ParallaxGenDirectory::findComplexMaterialMaps(
-    const vector<wstring> &Allowlist, const vector<wstring> &Blocklist,
-    const vector<wstring> &ArchiveBlocklist) {
+void ParallaxGenDirectory::findComplexMaterialMaps(const vector<wstring> &Allowlist, const vector<wstring> &Blocklist,
+                                                   const vector<wstring> &ArchiveBlocklist) {
   spdlog::info("Finding complex material maps");
   // find complex material maps
-  vector<filesystem::path> EnvMaps =
-      findFiles(true, Allowlist, Blocklist, ArchiveBlocklist);
+  vector<filesystem::path> EnvMaps = findFiles(true, Allowlist, Blocklist, ArchiveBlocklist);
 
   // loop through env maps
   for (const auto &EnvMap : EnvMaps) {
@@ -56,11 +50,9 @@ void ParallaxGenDirectory::findComplexMaterialMaps(
     // load image into directxtex
     DirectX::ScratchImage Image;
     HRESULT HR =
-        DirectX::LoadFromDDSMemory(EnvMapData.data(), EnvMapData.size(),
-                                   DirectX::DDS_FLAGS_NONE, nullptr, Image);
+        DirectX::LoadFromDDSMemory(EnvMapData.data(), EnvMapData.size(), DirectX::DDS_FLAGS_NONE, nullptr, Image);
     if (FAILED(HR)) {
-      spdlog::warn(L"Failed to load DDS from memory: {} - skipping",
-                   EnvMap.wstring());
+      spdlog::warn(L"Failed to load DDS from memory: {} - skipping", EnvMap.wstring());
       continue;
     }
 
@@ -78,8 +70,7 @@ void ParallaxGenDirectory::findComplexMaterialMaps(
   spdlog::info("Found {} complex material maps", ComplexMaterialMaps.size());
 }
 
-void ParallaxGenDirectory::findMeshes(const vector<wstring> &Allowlist,
-                                      const vector<wstring> &Blocklist,
+void ParallaxGenDirectory::findMeshes(const vector<wstring> &Allowlist, const vector<wstring> &Blocklist,
                                       const vector<wstring> &ArchiveBlocklist) {
   // find Meshes
   spdlog::info("Finding Meshes");
@@ -87,9 +78,8 @@ void ParallaxGenDirectory::findMeshes(const vector<wstring> &Allowlist,
   spdlog::info("Found {} Meshes", Meshes.size());
 }
 
-void ParallaxGenDirectory::findTruePBRConfigs(
-    const vector<wstring> &Allowlist, const vector<wstring> &Blocklist,
-    const vector<wstring> &ArchiveBlocklist) {
+void ParallaxGenDirectory::findTruePBRConfigs(const vector<wstring> &Allowlist, const vector<wstring> &Blocklist,
+                                              const vector<wstring> &ArchiveBlocklist) {
   // TODO more logging here
   // Find True PBR Configs
   spdlog::info("Finding TruePBR Configs");
@@ -99,8 +89,7 @@ void ParallaxGenDirectory::findTruePBRConfigs(
   for (auto &Config : ConfigFiles) {
     // check if Config is valid
     auto ConfigFileBytes = getFile(Config);
-    string ConfigFileStr(reinterpret_cast<const char *>(ConfigFileBytes.data()),
-                         ConfigFileBytes.size());
+    string ConfigFileStr(reinterpret_cast<const char *>(ConfigFileBytes.data()), ConfigFileBytes.size());
 
     try {
       nlohmann::json J = nlohmann::json::parse(ConfigFileStr);
@@ -113,8 +102,7 @@ void ParallaxGenDirectory::findTruePBRConfigs(
 
         // loop through filename Fields
         for (const auto &Field : getTruePBRConfigFilenameFields()) {
-          if (Element.contains(Field) &&
-              !boost::istarts_with(Element[Field].get<string>(), "\\")) {
+          if (Element.contains(Field) && !boost::istarts_with(Element[Field].get<string>(), "\\")) {
             Element[Field] = Element[Field].get<string>().insert(0, 1, '\\');
           }
         }
@@ -122,8 +110,7 @@ void ParallaxGenDirectory::findTruePBRConfigs(
         TruePBRConfigs.push_back(Element);
       }
     } catch (nlohmann::json::parse_error &E) {
-      spdlog::error(L"Unable to parse TruePBR Config file {}: {}",
-                    Config.wstring(), stringToWstring(E.what()));
+      spdlog::error(L"Unable to parse TruePBR Config file {}: {}", Config.wstring(), stringToWstring(E.what()));
       continue;
     }
   }
@@ -159,60 +146,40 @@ void ParallaxGenDirectory::addMesh(const filesystem::path &Path) {
   addUniqueElement(Meshes, PathLower);
 }
 
-auto ParallaxGenDirectory::isHeightMap(const filesystem::path &Path) const
-    -> bool {
-  return find(HeightMaps.begin(), HeightMaps.end(), getPathLower(Path)) !=
-         HeightMaps.end();
+auto ParallaxGenDirectory::isHeightMap(const filesystem::path &Path) const -> bool {
+  return find(HeightMaps.begin(), HeightMaps.end(), getPathLower(Path)) != HeightMaps.end();
 }
 
-auto ParallaxGenDirectory::isComplexMaterialMap(
-    const filesystem::path &Path) const -> bool {
-  return find(ComplexMaterialMaps.begin(), ComplexMaterialMaps.end(),
-              getPathLower(Path)) != ComplexMaterialMaps.end();
+auto ParallaxGenDirectory::isComplexMaterialMap(const filesystem::path &Path) const -> bool {
+  return find(ComplexMaterialMaps.begin(), ComplexMaterialMaps.end(), getPathLower(Path)) != ComplexMaterialMaps.end();
 }
 
 auto ParallaxGenDirectory::isMesh(const filesystem::path &Path) const -> bool {
   return find(Meshes.begin(), Meshes.end(), getPathLower(Path)) != Meshes.end();
 }
 
-auto ParallaxGenDirectory::defCubemapExists() -> bool {
-  return isFile(getDefaultCubemapPath());
-}
+auto ParallaxGenDirectory::defCubemapExists() -> bool { return isFile(getDefaultCubemapPath()); }
 
-auto ParallaxGenDirectory::getHeightMaps() const -> vector<filesystem::path> {
-  return HeightMaps;
-}
+auto ParallaxGenDirectory::getHeightMaps() const -> vector<filesystem::path> { return HeightMaps; }
 
-auto ParallaxGenDirectory::getComplexMaterialMaps() const
-    -> vector<filesystem::path> {
-  return ComplexMaterialMaps;
-}
+auto ParallaxGenDirectory::getComplexMaterialMaps() const -> vector<filesystem::path> { return ComplexMaterialMaps; }
 
-auto ParallaxGenDirectory::getMeshes() const -> vector<filesystem::path> {
-  return Meshes;
-}
+auto ParallaxGenDirectory::getMeshes() const -> vector<filesystem::path> { return Meshes; }
 
-auto ParallaxGenDirectory::getTruePBRConfigs() const -> vector<nlohmann::json> {
-  return TruePBRConfigs;
-}
+auto ParallaxGenDirectory::getTruePBRConfigs() const -> vector<nlohmann::json> { return TruePBRConfigs; }
 
-auto ParallaxGenDirectory::getPGConfigs() const -> vector<filesystem::path> {
-  return PGConfigs;
-}
+auto ParallaxGenDirectory::getPGConfigs() const -> vector<filesystem::path> { return PGConfigs; }
 
-auto ParallaxGenDirectory::getHeightMapFromBase(const string &Base) const
-    -> string {
+auto ParallaxGenDirectory::getHeightMapFromBase(const string &Base) const -> string {
   return matchBase(Base, HeightMaps).string();
 }
 
-auto ParallaxGenDirectory::getComplexMaterialMapFromBase(
-    const string &Base) const -> string {
+auto ParallaxGenDirectory::getComplexMaterialMapFromBase(const string &Base) const -> string {
   return matchBase(Base, ComplexMaterialMaps).string();
 }
 
 auto ParallaxGenDirectory::matchBase(const string &Base,
-                                     const vector<filesystem::path> &SearchList)
-    -> filesystem::path {
+                                     const vector<filesystem::path> &SearchList) -> filesystem::path {
   for (const auto &Search : SearchList) {
     auto SearchStr = Search.wstring();
     if (boost::istarts_with(SearchStr, Base)) {
@@ -228,11 +195,11 @@ auto ParallaxGenDirectory::matchBase(const string &Base,
 }
 
 auto ParallaxGenDirectory::getBase(const filesystem::path &Path) -> string {
-  auto PathStr = Path.string();
-  size_t Pos = PathStr.find_last_of(L'_');
+  auto FileStem = Path.stem().string();
+  size_t Pos = FileStem.find_last_of('_');
   if (Pos == string::npos) {
-    return {};
+    return (Path.parent_path() / Path.stem()).string();
   }
 
-  return PathStr.substr(0, Pos);
+  return (Path.parent_path() / FileStem.substr(0, Pos)).string();
 }

@@ -39,24 +39,33 @@ add_compile_definitions(_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR)
 set(HEADERS
     "include/BethesdaGame.hpp"
     "include/BethesdaDirectory.hpp"
+    "include/Defs.hpp"
+    "include/NIFUtil.hpp"
     "include/ParallaxGen.hpp"
     "include/ParallaxGenConfig.hpp"
     "include/ParallaxGenD3D.hpp"
     "include/ParallaxGenTask.hpp"
     "include/ParallaxGenUtil.hpp"
     "include/ParallaxGenDirectory.hpp"
+    "include/patchers/PatcherComplexMaterial.hpp"
+    "include/patchers/PatcherTruePBR.hpp"
+    "include/patchers/PatcherVanillaParallax.hpp"
 )
 
 set(SOURCES
     "src/main.cpp"
     "src/BethesdaGame.cpp"
     "src/BethesdaDirectory.cpp"
+    "src/NIFUtil.cpp"
     "src/ParallaxGen.cpp"
     "src/ParallaxGenConfig.cpp"
     "src/ParallaxGenD3D.cpp"
     "src/ParallaxGenTask.cpp"
     "src/ParallaxGenUtil.cpp"
     "src/ParallaxGenDirectory.cpp"
+    "src/patchers/PatcherComplexMaterial.cpp"
+    "src/patchers/PatcherTruePBR.cpp"
+    "src/patchers/PatcherVanillaParallax.cpp"
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
