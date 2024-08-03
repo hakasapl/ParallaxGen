@@ -5,6 +5,7 @@
 #include <string>
 
 #include "Defs.hpp"
+#include "ParallaxGenConfig.hpp"
 #include "ParallaxGenD3D.hpp"
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenTask.hpp"
@@ -16,12 +17,13 @@ private:
   std::vector<int> SlotSearch;
   std::vector<std::wstring> DynCubemapBlocklist;
   ParallaxGenDirectory *PGD;
+  ParallaxGenConfig *PGC;
   ParallaxGenD3D *PGD3D;
 
 public:
   PatcherComplexMaterial(std::filesystem::path NIFPath, nifly::NifFile *NIF, std::vector<int> SlotSearch,
-                         std::vector<std::wstring> DynCubemapBlocklist, ParallaxGenDirectory *PGD,
-                         ParallaxGenD3D *PGD3D);
+                         std::vector<std::wstring> DynCubemapBlocklist, ParallaxGenConfig *PGC,
+                         ParallaxGenDirectory *PGD, ParallaxGenD3D *PGD3D);
 
   // check if complex material should be enabled on shape
   auto shouldEnableComplexMaterial(nifly::NiShape *NIFShape,

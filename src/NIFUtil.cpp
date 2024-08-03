@@ -3,6 +3,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include "ParallaxGenDirectory.hpp"
+#include "ParallaxGenUtil.hpp"
 
 using namespace std;
 
@@ -103,7 +104,49 @@ auto NIFUtil::setTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, cons
   }
 }
 
-auto NIFUtil::getSearchPrefixes(NifFile &NIF, nifly::NiShape *NIFShape) -> array<string, NUM_TEXTURE_SLOTS> {
+auto NIFUtil::getTexBase(const wstring &TexPath, const NIFUtil::TextureSlots &Slot,
+                         ParallaxGenConfig *PGC) -> std::wstring {
+  auto SuffixList = ParallaxGenUtil::stringVecToWstringVec(
+      PGC->getConfig()["suffixes"][to_string(static_cast<unsigned int>(Slot))].get<vector<string>>());
+
+  // Loop through SuffixList
+  for (const auto &Suffix : SuffixList) {
+    // Check if the texture path ends with the suffix
+    if (boost::iends_with(TexPath, Suffix)) {
+      // Remove the suffix from the texture path
+      return TexPath.substr(0, TexPath.size() - Suffix.size());
+    }
+  }
+
+  return {};
+}
+
+auto NIFUtil::getTexMatch(const wstring &Base, const NIFUtil::TextureSlots &Slot, ParallaxGenConfig *PGC,
+                          ParallaxGenDirectory *PGD) -> std::filesystem::path {
+  vector<filesystem::path> SearchList;
+  switch (Slot) {
+  case TextureSlots::Parallax:
+    SearchList = PGD->getHeightMaps();
+    break;
+  case TextureSlots::EnvMask:
+    SearchList = PGD->getComplexMaterialMaps();
+    break;
+  default:
+    return {};
+  }
+
+  for (const auto &Search : SearchList) {
+    auto SearchBase = getTexBase(Search.wstring(), Slot, PGC);
+    if (boost::iequals(SearchBase, Base)) {
+      return Search;
+    }
+  }
+
+  return {};
+}
+
+auto NIFUtil::getSearchPrefixes(NifFile &NIF, nifly::NiShape *NIFShape,
+                                ParallaxGenConfig *PGC) -> array<string, NUM_TEXTURE_SLOTS> {
   array<string, NUM_TEXTURE_SLOTS> OutPrefixes;
 
   // Loop through each texture Slot
@@ -117,7 +160,8 @@ auto NIFUtil::getSearchPrefixes(NifFile &NIF, nifly::NiShape *NIFShape) -> array
     }
 
     // Get default suffixes
-    OutPrefixes[I] = ParallaxGenDirectory::getBase(Texture);
+    const auto TexBase = getTexBase(ParallaxGenUtil::stringToWstring(Texture), static_cast<TextureSlots>(I), PGC);
+    OutPrefixes[I] = ParallaxGenUtil::wstringToString(TexBase);
   }
 
   return OutPrefixes;

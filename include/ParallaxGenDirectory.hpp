@@ -24,21 +24,16 @@ public:
   ParallaxGenDirectory(BethesdaGame BG);
 
   // searches for height maps in the data directory
-  void findHeightMaps(const std::vector<std::wstring> &Allowlist,
-                      const std::vector<std::wstring> &Blocklist,
+  void findHeightMaps(const std::vector<std::wstring> &Allowlist, const std::vector<std::wstring> &Blocklist,
                       const std::vector<std::wstring> &ArchiveBlocklist);
   // searches for complex material maps in the data directory
-  void
-  findComplexMaterialMaps(const std::vector<std::wstring> &Allowlist,
-                          const std::vector<std::wstring> &Blocklist,
-                          const std::vector<std::wstring> &ArchiveBlocklist);
+  void findComplexMaterialMaps(const std::vector<std::wstring> &Allowlist, const std::vector<std::wstring> &Blocklist,
+                               const std::vector<std::wstring> &ArchiveBlocklist);
   // searches for Meshes in the data directory
-  void findMeshes(const std::vector<std::wstring> &Allowlist,
-                  const std::vector<std::wstring> &Blocklist,
+  void findMeshes(const std::vector<std::wstring> &Allowlist, const std::vector<std::wstring> &Blocklist,
                   const std::vector<std::wstring> &ArchiveBlocklist);
   // find truepbr config files
-  void findTruePBRConfigs(const std::vector<std::wstring> &Allowlist,
-                          const std::vector<std::wstring> &Blocklist,
+  void findTruePBRConfigs(const std::vector<std::wstring> &Allowlist, const std::vector<std::wstring> &Blocklist,
                           const std::vector<std::wstring> &ArchiveBlocklist);
   // get the parallax gen config
   void findPGConfigs();
@@ -51,39 +46,22 @@ public:
   void addMesh(const std::filesystem::path &Path);
 
   // is methods
-  [[nodiscard]] auto
-  isHeightMap(const std::filesystem::path &Path) const -> bool;
+  [[nodiscard]] auto isHeightMap(const std::filesystem::path &Path) const -> bool;
 
-  [[nodiscard]] auto
-  isComplexMaterialMap(const std::filesystem::path &Path) const -> bool;
+  [[nodiscard]] auto isComplexMaterialMap(const std::filesystem::path &Path) const -> bool;
 
   [[nodiscard]] auto isMesh(const std::filesystem::path &Path) const -> bool;
 
   [[nodiscard]] auto defCubemapExists() -> bool;
 
   // get methods
-  [[nodiscard]] auto
-  getHeightMaps() const -> std::vector<std::filesystem::path>;
+  [[nodiscard]] auto getHeightMaps() const -> std::vector<std::filesystem::path>;
 
-  [[nodiscard]] auto
-  getComplexMaterialMaps() const -> std::vector<std::filesystem::path>;
+  [[nodiscard]] auto getComplexMaterialMaps() const -> std::vector<std::filesystem::path>;
 
   [[nodiscard]] auto getMeshes() const -> std::vector<std::filesystem::path>;
 
   [[nodiscard]] auto getTruePBRConfigs() const -> std::vector<nlohmann::json>;
 
   [[nodiscard]] auto getPGConfigs() const -> std::vector<std::filesystem::path>;
-
-  [[nodiscard]] auto
-  getHeightMapFromBase(const std::string &Base) const -> std::string;
-
-  [[nodiscard]] auto
-  getComplexMaterialMapFromBase(const std::string &Base) const -> std::string;
-
-  // Helpers
-  static auto matchBase(const std::string &Base,
-                        const std::vector<std::filesystem::path> &SearchList)
-      -> std::filesystem::path;
-
-  static auto getBase(const std::filesystem::path &Path) -> std::string;
 };

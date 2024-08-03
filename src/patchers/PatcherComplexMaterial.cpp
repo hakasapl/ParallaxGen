@@ -6,16 +6,17 @@
 #include <spdlog/spdlog.h>
 
 #include "NIFUtil.hpp"
+#include "ParallaxGenConfig.hpp"
 #include "ParallaxGenUtil.hpp"
 
 using namespace std;
 using namespace ParallaxGenUtil;
 
 PatcherComplexMaterial::PatcherComplexMaterial(filesystem::path NIFPath, nifly::NifFile *NIF, vector<int> SlotSearch,
-                                               vector<wstring> DynCubemapBlocklist, ParallaxGenDirectory *PGD,
-                                               ParallaxGenD3D *PGD3D)
+                                               vector<wstring> DynCubemapBlocklist, ParallaxGenConfig *PGC,
+                                               ParallaxGenDirectory *PGD, ParallaxGenD3D *PGD3D)
     : NIFPath(std::move(NIFPath)), NIF(NIF), SlotSearch(std::move(SlotSearch)),
-      DynCubemapBlocklist(std::move(DynCubemapBlocklist)), PGD(PGD), PGD3D(PGD3D) {}
+      DynCubemapBlocklist(std::move(DynCubemapBlocklist)), PGD(PGD), PGC(PGC), PGD3D(PGD3D) {}
 
 auto PatcherComplexMaterial::shouldEnableComplexMaterial(NiShape *NIFShape,
                                                          const array<string, NUM_TEXTURE_SLOTS> &SearchPrefixes,
@@ -31,7 +32,8 @@ auto PatcherComplexMaterial::shouldEnableComplexMaterial(NiShape *NIFShape,
 
   // Check if complex material file exists
   for (int Slot : SlotSearch) {
-    string FoundMatch = PGD->getComplexMaterialMapFromBase(SearchPrefixes[Slot]);
+    string FoundMatch = wstringToString(
+        NIFUtil::getTexMatch(stringToWstring(SearchPrefixes[Slot]), NIFUtil::TextureSlots::EnvMask, PGC, PGD));
     if (!FoundMatch.empty()) {
       // found complex material map
       MatchedPath = FoundMatch;

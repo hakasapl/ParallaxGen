@@ -58,13 +58,15 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Replace "_p" with "_m" in the stem
-  filesystem::path EnvMask = replaceLastOf(HeightMap, L"_p.dds", L"_m.dds");
-  filesystem::path ComplexMap = EnvMask;
-
-  if (PGD->isComplexMaterialMap(EnvMask)) {
-    // load order already has a complex material, skip this one
+  wstring TexBase = NIFUtil::getTexBase(HeightMap, NIFUtil::TextureSlots::Parallax, PGC);
+  wstring ExistingCM = NIFUtil::getTexMatch(TexBase, NIFUtil::TextureSlots::EnvMask, PGC, PGD);
+  if (!ExistingCM.empty()) {
+    // complex material already exists
     return Result;
   }
+
+  auto EnvMask = filesystem::path(TexBase) / "_m.dds";
+  const auto ComplexMap = EnvMask;
 
   if (!PGD->isFile(EnvMask)) {
     // no env map
@@ -210,8 +212,8 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile,
   auto SlotSearchCM = PGC->getConfig()["complexmaterial_processing"]["lookup_order"].get<vector<int>>();
   auto DynCubeBlocklist = stringVecToWstringVec(
       PGC->getConfig()["complexmaterial_processing"]["dyncubemap_blocklist"].get<vector<string>>());
-  PatcherVanillaParallax PatchVP(NIFFile, &NIF, SlotSearchVP, PGD, PGD3D);
-  PatcherComplexMaterial PatchCM(NIFFile, &NIF, SlotSearchCM, DynCubeBlocklist, PGD, PGD3D);
+  PatcherVanillaParallax PatchVP(NIFFile, &NIF, SlotSearchVP, PGC, PGD, PGD3D);
+  PatcherComplexMaterial PatchCM(NIFFile, &NIF, SlotSearchCM, DynCubeBlocklist, PGC, PGD, PGD3D);
   PatcherTruePBR PatchTPBR(NIFFile, &NIF);
 
   // Patch each shape in NIF
@@ -293,7 +295,7 @@ auto ParallaxGen::processShape(const vector<nlohmann::json> &TPBRConfigs, NifFil
     return Result;
   }
 
-  auto SearchPrefixes = NIFUtil::getSearchPrefixes(NIF, NIFShape);
+  auto SearchPrefixes = NIFUtil::getSearchPrefixes(NIF, NIFShape, PGC);
   string MatchedPath;
 
   // TRUEPBR CONFIG

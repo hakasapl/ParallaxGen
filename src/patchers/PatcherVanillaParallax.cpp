@@ -12,8 +12,8 @@ using namespace std;
 using namespace ParallaxGenUtil;
 
 PatcherVanillaParallax::PatcherVanillaParallax(filesystem::path NIFPath, nifly::NifFile *NIF, vector<int> SlotSearch,
-                                               ParallaxGenDirectory *PGD, ParallaxGenD3D *PGD3D)
-    : NIFPath(std::move(NIFPath)), NIF(NIF), SlotSearch(std::move(SlotSearch)), PGD(PGD), PGD3D(PGD3D) {
+                                               ParallaxGenConfig *PGC, ParallaxGenDirectory *PGD, ParallaxGenD3D *PGD3D)
+    : NIFPath(std::move(NIFPath)), NIF(NIF), SlotSearch(std::move(SlotSearch)), PGD(PGD), PGC(PGC), PGD3D(PGD3D) {
   // Determine if NIF has attached havok animations
   vector<NiObject *> NIFBlockTree;
   NIF->GetTree(NIFBlockTree);
@@ -40,7 +40,8 @@ auto PatcherVanillaParallax::shouldEnableParallax(NiShape *NIFShape,
 
   // Check if complex material file exists
   for (int Slot : SlotSearch) {
-    string FoundMatch = PGD->getHeightMapFromBase(SearchPrefixes[Slot]);
+    string FoundMatch = wstringToString(
+        NIFUtil::getTexMatch(stringToWstring(SearchPrefixes[Slot]), NIFUtil::TextureSlots::Parallax, PGC, PGD));
     if (!FoundMatch.empty()) {
       // found complex material map
       MatchedPath = FoundMatch;
@@ -85,7 +86,6 @@ auto PatcherVanillaParallax::shouldEnableParallax(NiShape *NIFShape,
   }
 
   // decals don't work with regular Parallax
-  auto *CurBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
   if (NIFUtil::hasShaderFlag(NIFShaderBSLSP, SLSF1_DECAL) ||
       NIFUtil::hasShaderFlag(NIFShaderBSLSP, SLSF1_DYNAMIC_DECAL)) {
     spdlog::trace(L"Rejecting shape {} in NIF file {}: Decal shape", ShapeBlockID, NIFPath.wstring());

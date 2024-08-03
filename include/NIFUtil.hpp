@@ -5,6 +5,9 @@
 #include <NifFile.hpp>
 #include <Shaders.hpp>
 
+#include "ParallaxGenConfig.hpp"
+#include "ParallaxGenDirectory.hpp"
+
 namespace NIFUtil {
 enum class TextureSlots : unsigned int {
   Diffuse = 0,
@@ -45,7 +48,11 @@ auto configureShaderFlag(nifly::BSLightingShaderProperty *NIFShaderBSLSP, const 
 // Texture slot helpers
 auto setTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, const TextureSlots &Slot,
                     const std::string &TexturePath, bool &Changed) -> void;
+auto getTexBase(const std::wstring &TexPath, const NIFUtil::TextureSlots &Slot, ParallaxGenConfig *PGC) -> std::wstring;
+auto getTexMatch(const std::wstring &Base, const NIFUtil::TextureSlots &Slot, ParallaxGenConfig *PGC,
+                 ParallaxGenDirectory *PGD) -> std::filesystem::path;
 // Gets all the texture prefixes for a textureset. ie. _n.dds is removed etc. for each slot
-auto getSearchPrefixes(nifly::NifFile &NIF, nifly::NiShape *NIFShape) -> std::array<std::string, NUM_TEXTURE_SLOTS>;
+auto getSearchPrefixes(nifly::NifFile &NIF, nifly::NiShape *NIFShape,
+                       ParallaxGenConfig *PGC) -> std::array<std::string, NUM_TEXTURE_SLOTS>;
 
 } // namespace NIFUtil

@@ -11,8 +11,7 @@
 using namespace std;
 using namespace ParallaxGenUtil;
 
-ParallaxGenConfig::ParallaxGenConfig(ParallaxGenDirectory *PGD,
-                                     std::filesystem::path ExePath)
+ParallaxGenConfig::ParallaxGenConfig(ParallaxGenDirectory *PGD, std::filesystem::path ExePath)
     : PGD(PGD), ExePath(std::move(ExePath)) {}
 
 auto ParallaxGenConfig::getConfigValidation() -> nlohmann::json {
@@ -29,7 +28,7 @@ auto ParallaxGenConfig::getConfigValidation() -> nlohmann::json {
             "type": "array",
             "items": {
               "type": "string",
-              "pattern": ".*_.*\\.dds$"
+              "pattern": ".*\\.dds$"
             }
           },
           "blocklist": {
@@ -73,7 +72,7 @@ auto ParallaxGenConfig::getConfigValidation() -> nlohmann::json {
             "type": "array",
             "items": {
               "type": "string",
-              "pattern": ".*_.*\\.dds$"
+              "pattern": ".*\\.dds$"
             }
           },
           "blocklist": {
@@ -187,6 +186,65 @@ auto ParallaxGenConfig::getConfigValidation() -> nlohmann::json {
         "required": [
           "allowlist"
         ]
+      },
+      "suffixes": {
+        "type": "object",
+        "properties": {
+          "0": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "1": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "2": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "3": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "4": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "5": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "6": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "7": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "8": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
       }
     },
     "required": [
@@ -196,7 +254,8 @@ auto ParallaxGenConfig::getConfigValidation() -> nlohmann::json {
       "complexmaterial_processing",
       "truepbr_cfg_lookup",
       "truepbr_cfg_processing",
-      "nif_lookup"
+      "nif_lookup",
+      "suffixes"
     ]
   }
   )"_json;
@@ -210,12 +269,9 @@ void ParallaxGenConfig::loadConfig(const bool &LoadNative) {
   if (LoadNative) {
     filesystem::path DefConfPath = ExePath / "cfg";
     // Loop through all files in DefConfPath recursively directoryiterator
-    for (const auto &Entry :
-         filesystem::recursive_directory_iterator(DefConfPath)) {
-      if (filesystem::is_regular_file(Entry) &&
-          Entry.path().filename().extension() == ".json") {
-        spdlog::debug(L"Loading ParallaxGen Config: {}",
-                      Entry.path().wstring());
+    for (const auto &Entry : filesystem::recursive_directory_iterator(DefConfPath)) {
+      if (filesystem::is_regular_file(Entry) && Entry.path().filename().extension() == ".json") {
+        spdlog::debug(L"Loading ParallaxGen Config: {}", Entry.path().wstring());
         try {
           const auto J = nlohmann::json::parse(getFileBytes(Entry.path()));
           mergeJSONSmart(PGConfig, J);
@@ -255,9 +311,7 @@ void ParallaxGenConfig::loadConfig(const bool &LoadNative) {
   spdlog::info("Loaded {} ParallaxGen configs successfully", NumConfigs);
 }
 
-auto ParallaxGenConfig::getConfig() const -> const nlohmann::json & {
-  return PGConfig;
-}
+auto ParallaxGenConfig::getConfig() const -> const nlohmann::json & { return PGConfig; }
 
 auto ParallaxGenConfig::validateConfig() -> bool {
   // Validate PGConfig against schema
@@ -280,8 +334,7 @@ auto ParallaxGenConfig::validateConfig() -> bool {
   return true;
 }
 
-void ParallaxGenConfig::mergeJSONSmart(nlohmann::json &Target,
-                                       const nlohmann::json &Source) {
+void ParallaxGenConfig::mergeJSONSmart(nlohmann::json &Target, const nlohmann::json &Source) {
   // recursively merge json objects while preseving lists
   for (const auto &[Key, Value] : Source.items()) {
     if (Value.is_object()) {
@@ -303,8 +356,7 @@ void ParallaxGenConfig::mergeJSONSmart(nlohmann::json &Target,
       // Loop through each item in array and add only if it doesn't already
       // exist in the list
       for (const auto &Item : Value) {
-        if (std::find(Target[Key].begin(), Target[Key].end(), Item) ==
-            Target[Key].end()) {
+        if (std::find(Target[Key].begin(), Target[Key].end(), Item) == Target[Key].end()) {
           // Add item to Target
           Target[Key].push_back(Item);
         }

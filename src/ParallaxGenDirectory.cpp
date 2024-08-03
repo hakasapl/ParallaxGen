@@ -3,6 +3,7 @@
 #include <DirectXTex.h>
 #include <boost/algorithm/string.hpp>
 
+#include <boost/algorithm/string/predicate.hpp>
 #include <spdlog/spdlog.h>
 
 #include "ParallaxGenUtil.hpp"
@@ -169,37 +170,3 @@ auto ParallaxGenDirectory::getMeshes() const -> vector<filesystem::path> { retur
 auto ParallaxGenDirectory::getTruePBRConfigs() const -> vector<nlohmann::json> { return TruePBRConfigs; }
 
 auto ParallaxGenDirectory::getPGConfigs() const -> vector<filesystem::path> { return PGConfigs; }
-
-auto ParallaxGenDirectory::getHeightMapFromBase(const string &Base) const -> string {
-  return matchBase(Base, HeightMaps).string();
-}
-
-auto ParallaxGenDirectory::getComplexMaterialMapFromBase(const string &Base) const -> string {
-  return matchBase(Base, ComplexMaterialMaps).string();
-}
-
-auto ParallaxGenDirectory::matchBase(const string &Base,
-                                     const vector<filesystem::path> &SearchList) -> filesystem::path {
-  for (const auto &Search : SearchList) {
-    auto SearchStr = Search.wstring();
-    if (boost::istarts_with(SearchStr, Base)) {
-      size_t Pos = SearchStr.find_last_of(L'_');
-      auto MapBase = SearchStr.substr(0, Pos);
-      if (Pos != wstring::npos && boost::iequals(MapBase, Base)) {
-        return Search;
-      }
-    }
-  }
-
-  return {};
-}
-
-auto ParallaxGenDirectory::getBase(const filesystem::path &Path) -> string {
-  auto FileStem = Path.stem().string();
-  size_t Pos = FileStem.find_last_of('_');
-  if (Pos == string::npos) {
-    return (Path.parent_path() / Path.stem()).string();
-  }
-
-  return (Path.parent_path() / FileStem.substr(0, Pos)).string();
-}

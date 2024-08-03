@@ -20,7 +20,8 @@
     ],
     "allowlist": [
       "textures/**_m.dds",
-      "textures/**_em.dds"
+      "textures/**_em.dds",
+      "textures/**mask.dds"
     ],
     "blocklist": []
   },
@@ -66,5 +67,38 @@
       "**/sky/**",
       "**/water/**"
     ]
+  },
+  "suffixes": {
+    "0": [
+      ".dds"
+    ],
+    "1": [
+      "_n.dds"
+    ],
+    "2": [
+      "_g.dds"
+    ],
+    "3": [
+      "_p.dds"
+    ],
+    "4": [
+      "_e.dds"
+    ],
+    "5": [
+      "_m.dds",
+      "_em.dds",
+      "mask.dds",
+      "_rmaos.dds"
+    ],
+    "6": [
+      "_s.dds",
+      "_cnr.dds"
+    ],
+    "7": [
+      "_b.dds",
+      "_bl.dds",
+      "_s.dds"
+    ],
+    "8": []
   }
 }
