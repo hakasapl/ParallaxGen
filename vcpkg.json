@@ -14,6 +14,8 @@
     },
     "directxtk",
     "miniz",
+    "nlohmann-json",
+    "json-schema-validator",
     {
       "name": "rsm-bsa",
       "features": [
@@ -25,7 +27,6 @@
       "features": [
         "wchar"
       ]
-    },
-    "nlohmann-json"
+    }
   ]
 }

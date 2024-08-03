@@ -54,6 +54,20 @@ auto BethesdaDirectory::getExtensionBlocklist() -> vector<wstring> {
   return ExtensionBlocklist;
 }
 
+auto BethesdaDirectory::checkGlob(const wstring &Str,
+                                  const vector<wstring> &GlobList) -> bool {
+  // convert wstring vector to LPCWSTR vector
+  vector<LPCWSTR> GlobListCstr = convertWStringToLPCWSTRVector(GlobList);
+
+  // convert wstring to LPCWSTR
+  LPCWSTR StrCstr = Str.c_str();
+
+  // check if string matches any glob
+  return std::ranges::any_of(GlobListCstr, [&](LPCWSTR Glob) {
+    return PathMatchSpecW(StrCstr, Glob);
+  });
+}
+
 void BethesdaDirectory::populateFileMap() {
   // clear map before populating
   FileMap.clear();

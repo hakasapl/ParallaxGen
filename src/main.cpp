@@ -14,6 +14,7 @@
 
 #include "BethesdaGame.hpp"
 #include "ParallaxGen.hpp"
+#include "ParallaxGenConfig.hpp"
 #include "ParallaxGenD3D.hpp"
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenUtil.hpp"
@@ -221,10 +222,11 @@ void mainRunner(int ArgC, char **ArgV) {
 
   // Create relevant objects
   BethesdaGame BG = BethesdaGame(BGType, GameDir, true);
-  ParallaxGenDirectory PGD = ParallaxGenDirectory(BG, ExePath);
+  ParallaxGenDirectory PGD = ParallaxGenDirectory(BG);
+  ParallaxGenConfig PGC = ParallaxGenConfig(&PGD, ExePath);
   ParallaxGenD3D PGD3D = ParallaxGenD3D(&PGD, OutputDir, ExePath);
   ParallaxGen PG =
-      ParallaxGen(OutputDir, &PGD, &PGD3D, OptimizeMeshes, IgnoreParallax,
+      ParallaxGen(OutputDir, &PGD, &PGC, &PGD3D, OptimizeMeshes, IgnoreParallax,
                   IgnoreComplexMaterial, IgnoreTruepbr);
 
   // Check if GPU needs to be initialized
@@ -263,7 +265,7 @@ void mainRunner(int ArgC, char **ArgV) {
 
   // Check if ParallaxGen output already exists in data directory
   const filesystem::path PGStateFilePath =
-      BG.getGameDataPath() / ParallaxGen::parallax_state_file;
+      BG.getGameDataPath() / ParallaxGen::getStateFileName();
   if (filesystem::exists(PGStateFilePath)) {
     spdlog::critical(
         "ParallaxGen meshes exist in your data directory, please delete before "
@@ -277,7 +279,8 @@ void mainRunner(int ArgC, char **ArgV) {
   PGD.populateFileMap();
 
   // Load configs
-  PGD.loadPGConfig(!NoDefaultConfig);
+  PGD.findPGConfigs();
+  PGC.loadConfig(!NoDefaultConfig);
 
   // Install default cubemap file if needed
   if (!IgnoreComplexMaterial) {
@@ -307,15 +310,38 @@ void mainRunner(int ArgC, char **ArgV) {
 
   // Build file vectors
   if (!IgnoreParallax || (IgnoreParallax && UpgradeShaders)) {
-    PGD.findHeightMaps();
+    PGD.findHeightMaps(
+        stringVecToWstringVec(PGC.getConfig()["parallax_lookup"]["allowlist"]
+                                  .get<vector<string>>()),
+        stringVecToWstringVec(PGC.getConfig()["parallax_lookup"]["blocklist"]
+                                  .get<vector<string>>()),
+        stringVecToWstringVec(
+            PGC.getConfig()["parallax_lookup"]["archive_blocklist"]
+                .get<vector<string>>()));
   }
 
   if (!IgnoreComplexMaterial) {
-    PGD.findComplexMaterialMaps();
+    PGD.findComplexMaterialMaps(
+        stringVecToWstringVec(
+            PGC.getConfig()["complexmaterial_lookup"]["allowlist"]
+                .get<vector<string>>()),
+        stringVecToWstringVec(
+            PGC.getConfig()["complexmaterial_lookup"]["blocklist"]
+                .get<vector<string>>()),
+        stringVecToWstringVec(
+            PGC.getConfig()["complexmaterial_lookup"]["archive_blocklist"]
+                .get<vector<string>>()));
   }
 
   if (!IgnoreTruepbr) {
-    PGD.findTruePBRConfigs();
+    PGD.findTruePBRConfigs(
+        stringVecToWstringVec(PGC.getConfig()["truepbr_cfg_lookup"]["allowlist"]
+                                  .get<vector<string>>()),
+        stringVecToWstringVec(PGC.getConfig()["truepbr_cfg_lookup"]["blocklist"]
+                                  .get<vector<string>>()),
+        stringVecToWstringVec(
+            PGC.getConfig()["truepbr_cfg_lookup"]["archive_blocklist"]
+                .get<vector<string>>()));
   }
 
   // Upgrade shaders if set
@@ -325,7 +351,13 @@ void mainRunner(int ArgC, char **ArgV) {
 
   // Patch meshes if set
   if (PatchMeshes) {
-    PGD.findMeshes();
+    PGD.findMeshes(
+        stringVecToWstringVec(
+            PGC.getConfig()["nif_lookup"]["allowlist"].get<vector<string>>()),
+        stringVecToWstringVec(
+            PGC.getConfig()["nif_lookup"]["blocklist"].get<vector<string>>()),
+        stringVecToWstringVec(PGC.getConfig()["nif_lookup"]["archive_blocklist"]
+                                  .get<vector<string>>()));
     PG.patchMeshes();
   }
 

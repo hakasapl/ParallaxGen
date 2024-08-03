@@ -213,6 +213,17 @@ public:
   checkIfAnyComponentIs(const std::filesystem::path &Path,
                         const std::vector<std::wstring> &Components) -> bool;
 
+  /**
+   * @brief Check if any glob in list matches string
+   *
+   * @param Str String to check
+   * @param GlobList Globs to check
+   * @return true if any match
+   * @return false if none match
+   */
+  static auto checkGlob(const std::wstring &Str,
+                        const std::vector<std::wstring> &GlobList) -> bool;
+
 private:
   /**
    * @brief Looks through each BSA and adds files to the file map

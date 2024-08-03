@@ -8,38 +8,40 @@
 
 class ParallaxGenDirectory : public BethesdaDirectory {
 private:
-  std::filesystem::path ExePath;
-
   std::vector<std::filesystem::path> HeightMaps;
   std::vector<std::filesystem::path> ComplexMaterialMaps;
   std::vector<std::filesystem::path> Meshes;
+  std::vector<std::filesystem::path> PGConfigs;
   std::vector<nlohmann::json> TruePBRConfigs;
 
-  nlohmann::json PGConfig;
-
-  static auto getPGConfigPath() -> std::wstring;
-
   static auto getTruePBRConfigFilenameFields() -> std::vector<std::string>;
-
-  static auto getPGConfigValidation() -> nlohmann::json;
+  static auto getConfigPath() -> std::wstring;
 
 public:
   static auto getDefaultCubemapPath() -> std::filesystem::path;
 
   // constructor - calls the BethesdaDirectory constructor
-  ParallaxGenDirectory(BethesdaGame BG, std::filesystem::path ExePath);
+  ParallaxGenDirectory(BethesdaGame BG);
 
   // searches for height maps in the data directory
-  void findHeightMaps();
+  void findHeightMaps(const std::vector<std::wstring> &Allowlist,
+                      const std::vector<std::wstring> &Blocklist,
+                      const std::vector<std::wstring> &ArchiveBlocklist);
   // searches for complex material maps in the data directory
-  void findComplexMaterialMaps();
+  void
+  findComplexMaterialMaps(const std::vector<std::wstring> &Allowlist,
+                          const std::vector<std::wstring> &Blocklist,
+                          const std::vector<std::wstring> &ArchiveBlocklist);
   // searches for Meshes in the data directory
-  void findMeshes();
+  void findMeshes(const std::vector<std::wstring> &Allowlist,
+                  const std::vector<std::wstring> &Blocklist,
+                  const std::vector<std::wstring> &ArchiveBlocklist);
   // find truepbr config files
-  void findTruePBRConfigs();
-
+  void findTruePBRConfigs(const std::vector<std::wstring> &Allowlist,
+                          const std::vector<std::wstring> &Blocklist,
+                          const std::vector<std::wstring> &ArchiveBlocklist);
   // get the parallax gen config
-  void loadPGConfig(const bool &LoadDefault = true);
+  void findPGConfigs();
 
   // add methods
   void addHeightMap(const std::filesystem::path &Path);
@@ -70,6 +72,8 @@ public:
 
   [[nodiscard]] auto getTruePBRConfigs() const -> std::vector<nlohmann::json>;
 
+  [[nodiscard]] auto getPGConfigs() const -> std::vector<std::filesystem::path>;
+
   [[nodiscard]] auto
   getHeightMapFromBase(const std::string &Base) const -> std::string;
 
@@ -77,20 +81,9 @@ public:
   getComplexMaterialMapFromBase(const std::string &Base) const -> std::string;
 
   // Helpers
-  static void mergeJSONSmart(nlohmann::json &Target,
-                             const nlohmann::json &Source,
-                             const nlohmann::json &Validation);
-
-  static auto validateJSON(const nlohmann::json &Item,
-                           const nlohmann::json &Validation,
-                           const std::string &Key) -> bool;
-
-  static auto jsonArrayToWString(const nlohmann::json &JSONArray)
-      -> std::vector<std::wstring>;
-
-  static void replaceForwardSlashes(nlohmann::json &JSON);
-
   static auto matchBase(const std::string &Base,
                         const std::vector<std::filesystem::path> &SearchList)
       -> std::filesystem::path;
+
+  static auto getBase(const std::filesystem::path &Path) -> std::string;
 };

@@ -10,138 +10,131 @@
 #include <fstream>
 #include <vector>
 
+#include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenUtil.hpp"
 
 using namespace std;
 using namespace ParallaxGenUtil;
 using namespace nifly;
 
-ParallaxGen::ParallaxGen(const filesystem::path output_dir,
-                         ParallaxGenDirectory *pgd, ParallaxGenD3D *pgd3d,
-                         const bool optimize_meshes, const bool ignore_parallax,
-                         const bool ignore_complex_material,
-                         const bool ignore_truepbr) {
+ParallaxGen::ParallaxGen(filesystem::path OutputDir, ParallaxGenDirectory *PGD,
+                         ParallaxGenConfig *PGC, ParallaxGenD3D *PGD3D,
+                         const bool &OptimizeMeshes, const bool &IgnoreParallax,
+                         const bool &IgnoreCM, const bool &IgnoreTruePBR)
+    : OutputDir(std::move(OutputDir)), PGD(PGD), PGC(PGC), PGD3D(PGD3D),
+      IgnoreParallax(IgnoreParallax), IgnoreCM(IgnoreCM),
+      IgnoreTruePBR(IgnoreTruePBR) {
   // constructor
 
-  // set output directory
-  this->output_dir = output_dir;
-  this->pgd = pgd;
-  this->pgd3d = pgd3d;
-
   // set optimize meshes flag
-  nif_save_options.optimize = optimize_meshes;
-
-  // set ignore flags
-  this->ignore_parallax = ignore_parallax;
-  this->ignore_complex_material = ignore_complex_material;
-  this->ignore_truepbr = ignore_truepbr;
+  NIFSaveOptions.optimize = OptimizeMeshes;
 }
 
-void ParallaxGen::upgradeShaders() const {
+void ParallaxGen::upgradeShaders() {
   // Get height maps (vanilla _p.dds files)
-  auto heightMaps = pgd->getHeightMaps();
+  auto HeightMaps = PGD->getHeightMaps();
 
   // Define task parameters
-  ParallaxGenTask task_tracker("Shader Upgrades", heightMaps.size());
+  ParallaxGenTask TaskTracker("Shader Upgrades", HeightMaps.size());
 
-  for (filesystem::path height_map : heightMaps) {
-    task_tracker.completeJob(convertHeightMapToComplexMaterial(height_map));
+  for (const auto &HeightMap : HeightMaps) {
+    TaskTracker.completeJob(convertHeightMapToComplexMaterial(HeightMap));
   }
 }
 
-void ParallaxGen::patchMeshes() const {
-  auto meshes = pgd->getMeshes();
-  auto tpbr_configs = pgd->getTruePBRConfigs();
+void ParallaxGen::patchMeshes() {
+  auto Meshes = PGD->getMeshes();
+  auto TPBRConfigs = PGD->getTruePBRConfigs();
 
   // Create task tracker
-  ParallaxGenTask task_tracker("Mesh Patcher", meshes.size());
+  ParallaxGenTask TaskTracker("Mesh Patcher", Meshes.size());
 
-  for (filesystem::path mesh : meshes) {
-    task_tracker.completeJob(processNIF(mesh, tpbr_configs));
+  for (const auto &NIF : Meshes) {
+    TaskTracker.completeJob(processNIF(NIF, TPBRConfigs));
   }
 }
 
-ParallaxGenTask::PGResult ParallaxGen::convertHeightMapToComplexMaterial(
-    const filesystem::path &height_map) const {
-  spdlog::trace(L"Upgrading height map: {}", height_map.wstring());
+auto ParallaxGen::convertHeightMapToComplexMaterial(
+    const filesystem::path &HeightMap) -> ParallaxGenTask::PGResult {
+  spdlog::trace(L"Upgrading height map: {}", HeightMap.wstring());
 
-  auto result = ParallaxGenTask::PGResult::SUCCESS;
+  auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Replace "_p" with "_m" in the stem
-  filesystem::path env_mask = replaceLastOf(height_map, L"_p.dds", L"_m.dds");
-  filesystem::path complex_map = env_mask;
+  filesystem::path EnvMask = replaceLastOf(HeightMap, L"_p.dds", L"_m.dds");
+  filesystem::path ComplexMap = EnvMask;
 
-  if (pgd->isComplexMaterialMap(env_mask)) {
+  if (PGD->isComplexMaterialMap(EnvMask)) {
     // load order already has a complex material, skip this one
-    return result;
+    return Result;
   }
 
-  if (!pgd->isFile(env_mask)) {
+  if (!PGD->isFile(EnvMask)) {
     // no env map
-    env_mask = filesystem::path();
+    EnvMask = filesystem::path();
   }
 
   // upgrade to complex material
-  DirectX::ScratchImage new_ComplexMap =
-      pgd3d->upgradeToComplexMaterial(height_map, env_mask);
+  DirectX::ScratchImage NewComplexMap =
+      PGD3D->upgradeToComplexMaterial(HeightMap, EnvMask);
 
   // save to file
-  if (new_ComplexMap.GetImageCount() > 0) {
-    filesystem::path output_path = output_dir / complex_map;
-    filesystem::create_directories(output_path.parent_path());
+  if (NewComplexMap.GetImageCount() > 0) {
+    filesystem::path OutputPath = OutputDir / ComplexMap;
+    filesystem::create_directories(OutputPath.parent_path());
 
-    HRESULT hr = DirectX::SaveToDDSFile(
-        new_ComplexMap.GetImages(), new_ComplexMap.GetImageCount(),
-        new_ComplexMap.GetMetadata(), DirectX::DDS_FLAGS_NONE,
-        output_path.c_str());
-    if (FAILED(hr)) {
+    HRESULT HR = DirectX::SaveToDDSFile(
+        NewComplexMap.GetImages(), NewComplexMap.GetImageCount(),
+        NewComplexMap.GetMetadata(), DirectX::DDS_FLAGS_NONE,
+        OutputPath.c_str());
+    if (FAILED(HR)) {
       spdlog::error(
-          L"Unable to save complex material {}: {}", output_path.wstring(),
-          stringToWstring(ParallaxGenD3D::getHRESULTErrorMessage(hr)));
-      result = ParallaxGenTask::PGResult::FAILURE;
-      return result;
+          L"Unable to save complex material {}: {}", OutputPath.wstring(),
+          stringToWstring(ParallaxGenD3D::getHRESULTErrorMessage(HR)));
+      Result = ParallaxGenTask::PGResult::FAILURE;
+      return Result;
     }
 
     // add newly created file to complexMaterialMaps for later processing
-    pgd->addComplexMaterialMap(complex_map);
+    PGD->addComplexMaterialMap(ComplexMap);
 
-    spdlog::debug(L"Generated complex material map: {}", complex_map.wstring());
+    spdlog::debug(L"Generated complex material map: {}", ComplexMap.wstring());
   } else {
-    result = ParallaxGenTask::PGResult::FAILURE;
+    Result = ParallaxGenTask::PGResult::FAILURE;
   }
 
-  return result;
+  return Result;
 }
 
 void ParallaxGen::zipMeshes() const {
-  // zip meshes
+  // Zip meshes
   spdlog::info("Zipping meshes...");
-  zipDirectory(output_dir, output_dir / "ParallaxGen_Output.zip");
+  zipDirectory(OutputDir, OutputDir / "ParallaxGen_Output.Zip");
 }
 
 void ParallaxGen::deleteMeshes() const {
   // delete meshes
   spdlog::info("Cleaning up meshes generated by ParallaxGen...");
   // Iterate through the folder
-  for (const auto &entry : filesystem::directory_iterator(output_dir)) {
-    if (filesystem::is_directory(entry.path())) {
+  for (const auto &Entry : filesystem::directory_iterator(OutputDir)) {
+    if (filesystem::is_directory(Entry.path())) {
       // Remove the directory and all its contents
       try {
-        filesystem::remove_all(entry.path());
-        spdlog::trace(L"Deleted directory {}", entry.path().wstring());
-      } catch (const exception &e) {
+        filesystem::remove_all(Entry.path());
+        spdlog::trace(L"Deleted directory {}", Entry.path().wstring());
+      } catch (const exception &E) {
         spdlog::error(L"Error deleting directory {}: {}",
-                      entry.path().wstring(), stringToWstring(e.what()));
+                      Entry.path().wstring(), stringToWstring(E.what()));
       }
     }
 
     // remove state file
-    if (entry.path().filename().wstring() == L"PARALLAXGEN_DONTDELETE") {
+    if (Entry.path().filename().wstring() == getStateFileName()) {
       try {
-        filesystem::remove(entry.path());
-      } catch (const exception &e) {
+        filesystem::remove(Entry.path());
+      } catch (const exception &E) {
         spdlog::error(L"Error deleting state file {}: {}",
-                      entry.path().wstring(), stringToWstring(e.what()));
+                      Entry.path().wstring(), stringToWstring(E.what()));
       }
     }
   }
@@ -149,1264 +142,1283 @@ void ParallaxGen::deleteMeshes() const {
 
 void ParallaxGen::deleteOutputDir() const {
   // delete output directory
-  if (filesystem::exists(output_dir) && filesystem::is_directory(output_dir)) {
+  if (filesystem::exists(OutputDir) && filesystem::is_directory(OutputDir)) {
     spdlog::info("Deleting existing ParallaxGen output...");
 
     try {
-      for (const auto &entry : filesystem::directory_iterator(output_dir)) {
-        filesystem::remove_all(entry.path());
+      for (const auto &Entry : filesystem::directory_iterator(OutputDir)) {
+        filesystem::remove_all(Entry.path());
       }
-    } catch (const exception &e) {
+    } catch (const exception &E) {
       spdlog::critical(L"Error deleting output directory {}: {}",
-                       output_dir.wstring(), stringToWstring(e.what()));
+                       OutputDir.wstring(), stringToWstring(E.what()));
       exitWithUserInput(1);
     }
   }
 }
 
+auto ParallaxGen::getStateFileName() -> filesystem::path {
+  return "PARALLAXGEN_DONTDELETE";
+}
+
 void ParallaxGen::initOutputDir() const {
   // create state file
-  ofstream state_file(output_dir / parallax_state_file);
-  state_file.close();
+  ofstream StateFile(OutputDir / getStateFileName());
+  StateFile.close();
 }
 
 // shorten some enum names
-typedef BSLightingShaderPropertyShaderType BSLSP;
-typedef SkyrimShaderPropertyFlags1 SSPF1;
-typedef SkyrimShaderPropertyFlags2 SSPF2;
-ParallaxGenTask::PGResult
-ParallaxGen::processNIF(const filesystem::path &nif_file,
-                        const vector<nlohmann::json> &tpbr_configs) const {
-  auto result = ParallaxGenTask::PGResult::SUCCESS;
+using BSLSP = BSLightingShaderPropertyShaderType;
+using SSPF1 = SkyrimShaderPropertyFlags1;
+using SSPF2 = SkyrimShaderPropertyFlags2;
+auto ParallaxGen::processNIF(const filesystem::path &NIFFile,
+                             const vector<nlohmann::json> &TPBRConfigs)
+    -> ParallaxGenTask::PGResult {
+  auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Determine output path for patched NIF
-  const filesystem::path output_file = output_dir / nif_file;
-  if (filesystem::exists(output_file)) {
+  const filesystem::path OutputFile = OutputDir / NIFFile;
+  if (filesystem::exists(OutputFile)) {
     spdlog::error(L"Unable to process NIF file, file already exists: {}",
-                  nif_file.wstring());
-    result = ParallaxGenTask::PGResult::FAILURE;
-    return result;
+                  NIFFile.wstring());
+    Result = ParallaxGenTask::PGResult::FAILURE;
+    return Result;
   }
 
   // Get NIF Bytes
-  vector<std::byte> nif_file_data = pgd->getFile(nif_file);
-  if (nif_file_data.empty()) {
-    spdlog::error(L"Unable to read NIF file: {}", nif_file.wstring());
-    result = ParallaxGenTask::PGResult::FAILURE;
-    return result;
+  vector<std::byte> NIFFileData = PGD->getFile(NIFFile);
+  if (NIFFileData.empty()) {
+    spdlog::error(L"Unable to read NIF file: {}", NIFFile.wstring());
+    Result = ParallaxGenTask::PGResult::FAILURE;
+    return Result;
   }
 
   // Convert Byte Vector to Stream
-  boost::iostreams::array_source nif_array_source(
-      reinterpret_cast<const char *>(nif_file_data.data()),
-      nif_file_data.size());
-  boost::iostreams::stream<boost::iostreams::array_source> nif_stream(
-      nif_array_source);
+  boost::iostreams::array_source NIFArraySource(
+      reinterpret_cast<const char *>(NIFFileData.data()), NIFFileData.size());
+  boost::iostreams::stream<boost::iostreams::array_source> NIFStream(
+      NIFArraySource);
 
   // NIF file object
-  NifFile nif;
+  NifFile NIF;
 
   try {
     // try block for loading nif
     // TODO if NIF is a loose file nifly should load it directly
-    nif.Load(nif_stream);
-  } catch (const exception &e) {
-    spdlog::error(L"Error reading NIF file: {}, {}", nif_file.wstring(),
-                  stringToWstring(e.what()));
-    result = ParallaxGenTask::PGResult::FAILURE;
-    return result;
+    NIF.Load(NIFStream);
+  } catch (const exception &E) {
+    spdlog::error(L"Error reading NIF file: {}, {}", NIFFile.wstring(),
+                  stringToWstring(E.what()));
+    Result = ParallaxGenTask::PGResult::FAILURE;
+    return Result;
   }
 
-  if (!nif.IsValid()) {
-    spdlog::error(L"Invalid NIF file (ignoring): {}", nif_file.wstring());
-    result = ParallaxGenTask::PGResult::FAILURE;
-    return result;
+  if (!NIF.IsValid()) {
+    spdlog::error(L"Invalid NIF file (ignoring): {}", NIFFile.wstring());
+    Result = ParallaxGenTask::PGResult::FAILURE;
+    return Result;
   }
 
   // Stores whether the NIF has been modified throughout the patching process
-  bool nif_modified = false;
+  bool NIFModified = false;
 
   //
   // GLOBAL CHECKS IN NIF
   //
 
   // Determine if NIF has attached havok animations
-  bool has_attached_havok = false;
-  vector<NiObject *> block_tree;
-  nif.GetTree(block_tree);
+  bool HasAttachedHavok = false;
+  vector<NiObject *> NIFBlockTree;
+  NIF.GetTree(NIFBlockTree);
 
-  for (NiObject *block : block_tree) {
-    if (block->GetBlockName() == "BSBehaviorGraphExtraData") {
-      has_attached_havok = true;
+  for (NiObject *NIFBlock : NIFBlockTree) {
+    if (boost::iequals(NIFBlock->GetBlockName(), "BSBehaviorGraphExtraData")) {
+      HasAttachedHavok = true;
     }
   }
 
   // Patch each shape in NIF
-  size_t num_shapes = 0;
-  bool one_shape_success = false;
-  for (NiShape *shape : nif.GetShapes()) {
-    num_shapes++;
+  size_t NumShapes = 0;
+  bool OneShapeSuccess = false;
+  for (NiShape *NIFShape : NIF.GetShapes()) {
+    NumShapes++;
     // Get shape's block ID in NIF (used for logging)
-    const auto shape_block_id = nif.GetBlockID(shape);
+    const auto ShapeBlockID = NIF.GetBlockID(NIFShape);
 
     ParallaxGenTask::updatePGResult(
-        result,
-        processShape(nif_file, tpbr_configs, nif, shape_block_id, shape,
-                     nif_modified, has_attached_havok),
+        Result,
+        processShape(NIFFile, TPBRConfigs, NIF, ShapeBlockID, NIFShape,
+                     NIFModified, HasAttachedHavok),
         ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
-    if (result == ParallaxGenTask::PGResult::SUCCESS) {
-      one_shape_success = true;
+    if (Result == ParallaxGenTask::PGResult::SUCCESS) {
+      OneShapeSuccess = true;
     }
   }
 
-  if (!one_shape_success && num_shapes > 0) {
+  if (!OneShapeSuccess && NumShapes > 0) {
     // No shapes were successfully processed
-    result = ParallaxGenTask::PGResult::FAILURE;
-    return result;
+    Result = ParallaxGenTask::PGResult::FAILURE;
+    return Result;
   }
 
   // Save patched NIF if it was modified
-  if (nif_modified) {
-    spdlog::debug(L"NIF Patched: {}", nif_file.wstring());
+  if (NIFModified) {
+    spdlog::debug(L"NIF Patched: {}", NIFFile.wstring());
 
     // create directories if required
-    filesystem::create_directories(output_file.parent_path());
+    filesystem::create_directories(OutputFile.parent_path());
 
-    if (nif.Save(output_file, nif_save_options)) {
-      spdlog::error(L"Unable to save NIF file: {}", nif_file.wstring());
-      result = ParallaxGenTask::PGResult::FAILURE;
-      return result;
+    if (NIF.Save(OutputFile, NIFSaveOptions) != 0) {
+      spdlog::error(L"Unable to save NIF file: {}", NIFFile.wstring());
+      Result = ParallaxGenTask::PGResult::FAILURE;
+      return Result;
     }
   }
 
-  return result;
+  return Result;
 }
 
-ParallaxGenTask::PGResult
-ParallaxGen::processShape(const filesystem::path &nif_file,
-                          const vector<nlohmann::json> &tpbr_configs,
-                          NifFile &nif, const uint32_t shape_block_id,
-                          NiShape *shape, bool &nif_modified,
-                          const bool has_attached_havok) const {
-  auto result = ParallaxGenTask::PGResult::SUCCESS;
+auto ParallaxGen::processShape(
+    const filesystem::path &NIFFile, const vector<nlohmann::json> &TPBRConfigs,
+    NifFile &NIF, const uint32_t &ShapeBlockID, NiShape *NIFShape,
+    bool &NIFModified,
+    const bool &HasAttachedHavok) -> ParallaxGenTask::PGResult {
+  auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Check for exclusions
-  // get shader type
-  if (!shape->HasShaderProperty()) {
-    spdlog::trace(L"Rejecting shape {}: No shader property", shape_block_id);
-    return result;
+  // get NIFShader type
+  if (!NIFShape->HasShaderProperty()) {
+    spdlog::trace(L"Rejecting shape {}: No NIFShader property", ShapeBlockID);
+    return Result;
   }
 
   // only allow BSLightingShaderProperty blocks
-  string shape_block_name = shape->GetBlockName();
-  if (shape_block_name != "NiTriShape" && shape_block_name != "BSTriShape") {
+  string NIFShapeName = NIFShape->GetBlockName();
+  if (NIFShapeName != "NiTriShape" && NIFShapeName != "BSTriShape") {
     spdlog::trace(L"Rejecting shape {}: Incorrect shape block type",
-                  shape_block_id);
-    return result;
+                  ShapeBlockID);
+    return Result;
   }
 
-  // get shader from shape
-  NiShader *shader = nif.GetShader(shape);
-  if (shader == nullptr) {
-    // skip if no shader
-    spdlog::trace(L"Rejecting shape {}: No shader", shape_block_id);
-    return result;
+  // get NIFShader from shape
+  NiShader *NIFShader = NIF.GetShader(NIFShape);
+  if (NIFShader == nullptr) {
+    // skip if no NIFShader
+    spdlog::trace(L"Rejecting shape {}: No NIFShader", ShapeBlockID);
+    return Result;
   }
 
-  // check that shader has a texture set
-  if (!shader->HasTextureSet()) {
-    spdlog::trace(L"Rejecting shape {}: No texture set", shape_block_id);
-    return result;
+  // check that NIFShader has a texture set
+  if (!NIFShader->HasTextureSet()) {
+    spdlog::trace(L"Rejecting shape {}: No texture set", ShapeBlockID);
+    return Result;
   }
 
-  // check that shader is a BSLightingShaderProperty
-  string shader_block_name = shader->GetBlockName();
-  if (shader_block_name != "BSLightingShaderProperty") {
-    spdlog::trace(L"Rejecting shape {}: Incorrect shader block type",
-                  shape_block_id);
-    return result;
+  // check that NIFShader is a BSLightingShaderProperty
+  string NIFShaderName = NIFShader->GetBlockName();
+  if (NIFShaderName != "BSLightingShaderProperty") {
+    spdlog::trace(L"Rejecting shape {}: Incorrect NIFShader block type",
+                  ShapeBlockID);
+    return Result;
   }
 
-  auto search_prefixes = getSearchPrefixes(nif, shape);
-
-  if (boost::icontains(nif_file.wstring(), L"farmhouse01")) {
-    spdlog::debug("HERE");
-  }
+  auto SearchPrefixes = getSearchPrefixes(NIF, NIFShape);
 
   // TRUEPBR CONFIG
-  bool enable_truepbr = false;
-  vector<tuple<nlohmann::json, string>> truepbr_data;
+  bool EnableTruePBR = false;
+  vector<tuple<nlohmann::json, string>> TruePBRData;
   ParallaxGenTask::updatePGResult(
-      result,
-      shouldApplyTruePBRConfig(nif_file, tpbr_configs, nif, shape_block_id,
-                               shape, shader, search_prefixes, enable_truepbr,
-                               truepbr_data),
+      Result,
+      shouldApplyTruePBRConfig(NIFFile, TPBRConfigs, ShapeBlockID,
+                               SearchPrefixes, EnableTruePBR, TruePBRData),
       ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
-  if (enable_truepbr) {
+  if (EnableTruePBR) {
     // Enable TruePBR on shape
-    for (auto &truepbr_cfg : truepbr_data) {
+    for (auto &TruePBRCFG : TruePBRData) {
       ParallaxGenTask::updatePGResult(
-          result,
-          applyTruePBRConfigOnShape(nif, shape, shader, get<0>(truepbr_cfg),
-                                    get<1>(truepbr_cfg), nif_modified));
+          Result, applyTruePBRConfigOnShape(NIF, NIFShape, NIFShader,
+                                            get<0>(TruePBRCFG),
+                                            get<1>(TruePBRCFG), NIFModified));
     }
-    return result;
+    return Result;
   }
 
   // COMPLEX MATERIAL
-  bool enable_cm = false;
-  string matched_path;
+  bool EnableCM = false;
+  string MatchedPath;
   ParallaxGenTask::updatePGResult(
-      result,
-      shouldEnableComplexMaterial(nif_file, nif, shape_block_id, shape, shader,
-                                  search_prefixes, enable_cm, matched_path),
+      Result,
+      shouldEnableComplexMaterial(NIFFile, NIF, ShapeBlockID, NIFShape,
+                                  NIFShader, SearchPrefixes, EnableCM,
+                                  MatchedPath),
       ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
-  if (enable_cm) {
+  if (EnableCM) {
     // Determine if dynamic cubemaps should be set
-    bool dynCubemaps =
-        !pgd->checkIfAnyComponentIs(nif_file, dynCubemap_ignore_list) &&
-        !pgd->checkIfAnyComponentIs(matched_path, dynCubemap_ignore_list);
+    const auto &DynMapIgnoreList = stringVecToWstringVec(
+        PGC->getConfig()["complexmaterial_processing"]["dyncubemap_blocklist"]
+            .get<vector<string>>());
+    bool ApplyDynCubemaps = !(
+        ParallaxGenDirectory::checkGlob(NIFFile.wstring(), DynMapIgnoreList) ||
+        ParallaxGenDirectory::checkGlob(stringToWstring(MatchedPath),
+                                        DynMapIgnoreList));
 
     // Enable complex material on shape
     ParallaxGenTask::updatePGResult(
-        result, enableComplexMaterialOnShape(nif, shape, shader, matched_path,
-                                             dynCubemaps, nif_modified));
-    return result;
+        Result,
+        enableComplexMaterialOnShape(NIF, NIFShape, NIFShader, MatchedPath,
+                                     ApplyDynCubemaps, NIFModified));
+    return Result;
   }
 
   // VANILLA PARALLAX
-  bool enable_parallax = false;
-  matched_path = "";
+  bool EnableParallax = false;
+  MatchedPath = "";
   ParallaxGenTask::updatePGResult(
-      result,
-      shouldEnableParallax(nif_file, nif, shape_block_id, shape, shader,
-                           search_prefixes, has_attached_havok, enable_parallax,
-                           matched_path),
+      Result,
+      shouldEnableParallax(NIFFile, NIF, ShapeBlockID, NIFShape, NIFShader,
+                           SearchPrefixes, HasAttachedHavok, EnableParallax,
+                           MatchedPath),
       ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
-  if (enable_parallax) {
-    // Enable parallax on shape
+  if (EnableParallax) {
+    // Enable Parallax on shape
     ParallaxGenTask::updatePGResult(
-        result,
-        enableParallaxOnShape(nif, shape, shader, matched_path, nif_modified));
-    return result;
+        Result, enableParallaxOnShape(NIF, NIFShape, NIFShader, MatchedPath,
+                                      NIFModified));
+    return Result;
   }
 
-  return result;
+  return Result;
 }
 
-ParallaxGenTask::PGResult ParallaxGen::shouldApplyTruePBRConfig(
-    const filesystem::path &nif_file,
-    const vector<nlohmann::json> &tpbr_configs, NifFile &nif,
-    const uint32_t shape_block_id, NiShape *shape, NiShader *shader,
-    const array<string, 9> &search_prefixes, bool &enable_result,
-    vector<tuple<nlohmann::json, string>> &truepbr_data) const {
-  auto result = ParallaxGenTask::PGResult::SUCCESS;
+auto ParallaxGen::shouldApplyTruePBRConfig(
+    const filesystem::path &NIFFile, const vector<nlohmann::json> &TPBRConfigs,
+    const uint32_t &ShapeBlockID,
+    const array<string, NUM_TEXTURE_SLOTS> &SearchPrefixes, bool &EnableResult,
+    vector<tuple<nlohmann::json, string>> &TruePBRData) const
+    -> ParallaxGenTask::PGResult {
+  auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
-  if (ignore_truepbr) {
-    enable_result = false;
-    return result;
+  if (IgnoreTruePBR) {
+    EnableResult = false;
+    return Result;
   }
 
-  for (auto &truepbr_cfg : tpbr_configs) {
-    string matched_path;
+  for (const auto &TruePBRCFG : TPBRConfigs) {
+    string MatchedPath;
 
     // "nif-filter" attribute
-    if (truepbr_cfg.contains("nif-filter") &&
-        boost::icontains(nif_file.wstring(),
-                         truepbr_cfg["nif-filter"].get<string>())) {
-      spdlog::trace(L"Rejecting shape {}: NIF filter", shape_block_id);
-      enable_result |= false;
+    if (TruePBRCFG.contains("nif-filter") &&
+        boost::icontains(NIFFile.wstring(),
+                         TruePBRCFG["nif-filter"].get<string>())) {
+      spdlog::trace(L"Rejecting shape {}: NIF filter", ShapeBlockID);
+      EnableResult |= false;
       continue;
     }
 
     // "path-contains" attribute
-    bool contains_match =
-        truepbr_cfg.contains("path_contains") &&
-        boost::icontains(search_prefixes[0],
-                         truepbr_cfg["path_contains"].get<string>());
+    bool ContainsMatch =
+        TruePBRCFG.contains("path_contains") &&
+        boost::icontains(SearchPrefixes[0],
+                         TruePBRCFG["path_contains"].get<string>());
 
-    bool name_match = false;
-    if (truepbr_cfg.contains("match_normal") &&
-        boost::iends_with(search_prefixes[1],
-                          truepbr_cfg["match_normal"].get<string>())) {
-      name_match = true;
-      matched_path = search_prefixes[1];
+    bool NameMatch = false;
+    if (TruePBRCFG.contains("match_Normal") &&
+        boost::iends_with(SearchPrefixes[1],
+                          TruePBRCFG["match_Normal"].get<string>())) {
+      NameMatch = true;
+      MatchedPath = SearchPrefixes[1];
     }
-    if (truepbr_cfg.contains("match_diffuse") &&
-        boost::iends_with(search_prefixes[0],
-                          truepbr_cfg["match_diffuse"].get<string>())) {
-      name_match = true;
-      matched_path = search_prefixes[0];
+    if (TruePBRCFG.contains("match_Diffuse") &&
+        boost::iends_with(SearchPrefixes[0],
+                          TruePBRCFG["match_Diffuse"].get<string>())) {
+      NameMatch = true;
+      MatchedPath = SearchPrefixes[0];
     }
 
-    if (!contains_match && !name_match) {
-      spdlog::trace(L"Rejecting shape {}: No matches", shape_block_id);
-      enable_result |= false;
+    if (!ContainsMatch && !NameMatch) {
+      spdlog::trace(L"Rejecting shape {}: No matches", ShapeBlockID);
+      EnableResult |= false;
       continue;
     }
 
-    enable_result = true;
-    truepbr_data.push_back(make_tuple(truepbr_cfg, matched_path));
+    EnableResult = true;
+    TruePBRData.emplace_back(TruePBRCFG, MatchedPath);
   }
 
-  return result;
+  return Result;
 }
 
-ParallaxGenTask::PGResult ParallaxGen::shouldEnableComplexMaterial(
-    const filesystem::path &nif_file, NifFile &nif,
-    const uint32_t shape_block_id, NiShape *shape, NiShader *shader,
-    const array<string, 9> &search_prefixes, bool &enable_result,
-    string &matched_path) const {
-  auto result = ParallaxGenTask::PGResult::SUCCESS;
-  enable_result = true; // Start with default true
+auto ParallaxGen::shouldEnableComplexMaterial(
+    const filesystem::path &NIFFile, NifFile &NIF, const uint32_t &ShapeBlockID,
+    NiShape *NIFShape, NiShader *NIFShader,
+    const array<string, NUM_TEXTURE_SLOTS> &SearchPrefixes, bool &EnableResult,
+    string &MatchedPath) const -> ParallaxGenTask::PGResult {
+  auto Result = ParallaxGenTask::PGResult::SUCCESS;
+  EnableResult = true; // Start with default true
 
-  if (ignore_complex_material) {
-    enable_result = false;
-    return result;
+  if (IgnoreCM) {
+    EnableResult = false;
+    return Result;
   }
 
   // Check if complex material file exists
-  for (int slot : cm_slot_search) {
-    string found_match =
-        pgd->getComplexMaterialMapFromBase(search_prefixes[slot]);
-    if (!found_match.empty()) {
+  vector<int> CMSlotSearch =
+      PGC->getConfig()["complexmaterial_processing"]["lookup_order"]
+          .get<vector<int>>();
+  for (int Slot : CMSlotSearch) {
+    string FoundMatch =
+        PGD->getComplexMaterialMapFromBase(SearchPrefixes[Slot]);
+    if (!FoundMatch.empty()) {
       // found complex material map
-      matched_path = found_match;
+      MatchedPath = FoundMatch;
       break;
     }
   }
 
-  if (matched_path.empty()) {
+  if (MatchedPath.empty()) {
     // no complex material map
-    enable_result = false;
-    return result;
+    EnableResult = false;
+    return Result;
   }
 
-  // Get shader type
-  BSLSP shader_type = static_cast<BSLSP>(shader->GetShaderType());
-  if (shader_type != BSLSP::BSLSP_DEFAULT &&
-      shader_type != BSLSP::BSLSP_ENVMAP &&
-      shader_type != BSLSP::BSLSP_PARALLAX) {
-    spdlog::trace(L"Rejecting shape {}: Incorrect shader type", shape_block_id);
-    enable_result = false;
-    return result;
+  // Get NIFShader type
+  auto NIFShaderType = static_cast<BSLSP>(NIFShader->GetShaderType());
+  if (NIFShaderType != BSLSP::BSLSP_DEFAULT &&
+      NIFShaderType != BSLSP::BSLSP_ENVMAP &&
+      NIFShaderType != BSLSP::BSLSP_PARALLAX) {
+    spdlog::trace(L"Rejecting shape {}: Incorrect NIFShader type",
+                  ShapeBlockID);
+    EnableResult = false;
+    return Result;
   }
 
   // verify that maps match each other
-  string diffuse_map;
-  uint32_t diffuse_result = nif.GetTextureSlot(shape, diffuse_map, 0);
-  if (!diffuse_map.empty() && !pgd->isFile(diffuse_map)) {
-    // no diffuse map
-    spdlog::trace(L"Rejecting shape {}: Diffuse map missing: {}",
-                  shape_block_id, stringToWstring(diffuse_map));
-    enable_result = false;
-    return result;
+  string DiffuseMap;
+  NIF.GetTextureSlot(NIFShape, DiffuseMap, 0);
+  if (!DiffuseMap.empty() && !PGD->isFile(DiffuseMap)) {
+    // no Diffuse map
+    spdlog::trace(L"Rejecting shape {}: Diffuse map missing: {}", ShapeBlockID,
+                  stringToWstring(DiffuseMap));
+    EnableResult = false;
+    return Result;
   }
 
-  bool same_aspect = false;
+  bool SameAspect = false;
   ParallaxGenTask::updatePGResult(
-      result,
-      pgd3d->checkIfAspectRatioMatches(diffuse_map, matched_path, same_aspect),
+      Result,
+      PGD3D->checkIfAspectRatioMatches(DiffuseMap, MatchedPath, SameAspect),
       ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
-  if (!same_aspect) {
+  if (!SameAspect) {
     spdlog::trace(
         L"Rejecting shape {} in NIF file {}: Complex material map does not "
-        L"match diffuse map",
-        shape_block_id, nif_file.wstring());
-    enable_result = false;
-    return result;
+        L"match Diffuse map",
+        ShapeBlockID, NIFFile.wstring());
+    EnableResult = false;
+    return Result;
   }
 
-  return result;
+  return Result;
 }
 
-ParallaxGenTask::PGResult ParallaxGen::shouldEnableParallax(
-    const filesystem::path &nif_file, NifFile &nif,
-    const uint32_t shape_block_id, NiShape *shape, NiShader *shader,
-    const array<string, 9> &search_prefixes, const bool has_attached_havok,
-    bool &enable_result, string &matched_path) const {
-  auto result = ParallaxGenTask::PGResult::SUCCESS;
-  enable_result = true; // Start with default true
+auto ParallaxGen::shouldEnableParallax(
+    const filesystem::path &NIFFile, NifFile &NIF, const uint32_t &ShapeBlockID,
+    NiShape *NIFShape, NiShader *NIFShader,
+    const array<string, NUM_TEXTURE_SLOTS> &SearchPrefixes,
+    const bool &HasAttachedHavok, bool &EnableResult,
+    string &MatchedPath) const -> ParallaxGenTask::PGResult {
+  auto Result = ParallaxGenTask::PGResult::SUCCESS;
+  EnableResult = true; // Start with default true
 
-  if (ignore_parallax) {
-    enable_result = false;
-    return result;
+  if (IgnoreParallax) {
+    EnableResult = false;
+    return Result;
   }
 
   // Check if complex material file exists
-  for (int slot : parallax_slot_search) {
-    string found_match = pgd->getHeightMapFromBase(search_prefixes[slot]);
-    if (!found_match.empty()) {
+  vector<int> ParallaxSlotSearch =
+      PGC->getConfig()["parallax_processing"]["lookup_order"]
+          .get<vector<int>>();
+  for (int Slot : ParallaxSlotSearch) {
+    string FoundMatch = PGD->getHeightMapFromBase(SearchPrefixes[Slot]);
+    if (!FoundMatch.empty()) {
       // found complex material map
-      matched_path = found_match;
+      MatchedPath = FoundMatch;
       break;
     }
   }
 
-  if (matched_path.empty()) {
+  if (MatchedPath.empty()) {
     // no complex material map
-    enable_result = false;
-    return result;
+    EnableResult = false;
+    return Result;
   }
 
-  // Check if nif has attached havok (results in crashes for vanilla parallax)
-  if (has_attached_havok) {
+  // Check if nif has attached havok (Results in crashes for vanilla Parallax)
+  if (HasAttachedHavok) {
     spdlog::trace(L"Rejecting NIF file {} due to attached havok animations",
-                  nif_file.wstring());
-    enable_result = false;
-    return result;
+                  NIFFile.wstring());
+    EnableResult = false;
+    return Result;
   }
 
-  // ignore skinned meshes, these don't support parallax
-  if (shape->HasSkinInstance() || shape->IsSkinned()) {
-    spdlog::trace(L"Rejecting shape {}: Skinned mesh", shape_block_id,
-                  nif_file.wstring());
-    enable_result = false;
-    return result;
+  // ignore skinned meshes, these don't support Parallax
+  if (NIFShape->HasSkinInstance() || NIFShape->IsSkinned()) {
+    spdlog::trace(L"Rejecting shape {}: Skinned mesh", ShapeBlockID,
+                  NIFFile.wstring());
+    EnableResult = false;
+    return Result;
   }
 
-  // Enable regular parallax for this shape!
-  BSLSP shader_type = static_cast<BSLSP>(shader->GetShaderType());
-  if (shader_type != BSLSP::BSLSP_DEFAULT &&
-      shader_type != BSLSP::BSLSP_PARALLAX) {
-    // don't overwrite existing shaders
-    spdlog::trace(L"Rejecting shape {} in NIF file {}: Incorrect shader type",
-                  shape_block_id, nif_file.wstring());
-    enable_result = false;
-    return result;
+  // Enable regular Parallax for this shape!
+  BSLSP NIFShaderType = static_cast<BSLSP>(NIFShader->GetShaderType());
+  if (NIFShaderType != BSLSP::BSLSP_DEFAULT &&
+      NIFShaderType != BSLSP::BSLSP_PARALLAX) {
+    // don't overwrite existing NIFShaders
+    spdlog::trace(
+        L"Rejecting shape {} in NIF file {}: Incorrect NIFShader type",
+        ShapeBlockID, NIFFile.wstring());
+    EnableResult = false;
+    return Result;
   }
 
-  // decals don't work with regular parallax
-  BSLightingShaderProperty *cur_bslsp =
-      dynamic_cast<BSLightingShaderProperty *>(shader);
-  if (cur_bslsp->shaderFlags1 & SSPF1::SLSF1_DECAL ||
-      cur_bslsp->shaderFlags1 & SSPF1::SLSF1_DYNAMIC_DECAL) {
+  // decals don't work with regular Parallax
+  auto *CurBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
+  if (((CurBSLSP->shaderFlags1 & SSPF1::SLSF1_DECAL) != 0U) ||
+      ((CurBSLSP->shaderFlags1 & SSPF1::SLSF1_DYNAMIC_DECAL) != 0U)) {
     spdlog::trace(L"Rejecting shape {} in NIF file {}: Decal shape",
-                  shape_block_id, nif_file.wstring());
-    enable_result = false;
-    return result;
+                  ShapeBlockID, NIFFile.wstring());
+    EnableResult = false;
+    return Result;
   }
 
-  // Mesh lighting doesn't work with regular parallax
-  if (cur_bslsp->shaderFlags2 & SSPF2::SLSF2_SOFT_LIGHTING ||
-      cur_bslsp->shaderFlags2 & SSPF2::SLSF2_RIM_LIGHTING ||
-      cur_bslsp->shaderFlags2 & SSPF2::SLSF2_BACK_LIGHTING) {
+  // Mesh lighting doesn't work with regular Parallax
+  if (((CurBSLSP->shaderFlags2 & SSPF2::SLSF2_SOFT_LIGHTING) != 0U) ||
+      ((CurBSLSP->shaderFlags2 & SSPF2::SLSF2_RIM_LIGHTING) != 0U) ||
+      ((CurBSLSP->shaderFlags2 & SSPF2::SLSF2_BACK_LIGHTING) != 0U)) {
     spdlog::trace(L"Rejecting shape {} in NIF file {}: Lighting on shape",
-                  shape_block_id, nif_file.wstring());
-    enable_result = false;
-    return result;
+                  ShapeBlockID, NIFFile.wstring());
+    EnableResult = false;
+    return Result;
   }
 
   // verify that maps match each other (this is somewhat expense so it happens
   // last)
-  string diffuse_map;
-  uint32_t diffuse_result = nif.GetTextureSlot(shape, diffuse_map, 0);
-  if (!diffuse_map.empty() && !pgd->isFile(diffuse_map)) {
-    // no diffuse map
-    spdlog::trace(L"Rejecting shape {}: Diffuse map missing: {}",
-                  shape_block_id, stringToWstring(diffuse_map));
-    enable_result = false;
-    return result;
+  string DiffuseMap;
+  NIF.GetTextureSlot(NIFShape, DiffuseMap, 0);
+  if (!DiffuseMap.empty() && !PGD->isFile(DiffuseMap)) {
+    // no Diffuse map
+    spdlog::trace(L"Rejecting shape {}: Diffuse map missing: {}", ShapeBlockID,
+                  stringToWstring(DiffuseMap));
+    EnableResult = false;
+    return Result;
   }
 
-  bool same_aspect = false;
+  bool SameAspect = false;
   ParallaxGenTask::updatePGResult(
-      result,
-      pgd3d->checkIfAspectRatioMatches(diffuse_map, matched_path, same_aspect),
+      Result,
+      PGD3D->checkIfAspectRatioMatches(DiffuseMap, MatchedPath, SameAspect),
       ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
-  if (!same_aspect) {
+  if (!SameAspect) {
     spdlog::trace(
-        L"Rejecting shape {} in NIF file {}: Height map does not match diffuse "
+        L"Rejecting shape {} in NIF file {}: Height map does not match Diffuse "
         L"map",
-        shape_block_id, nif_file.wstring());
-    enable_result = false;
-    return result;
+        ShapeBlockID, NIFFile.wstring());
+    EnableResult = false;
+    return Result;
   }
 
   // All checks passed
-  return result;
+  return Result;
 }
 
 ParallaxGenTask::PGResult ParallaxGen::applyTruePBRConfigOnShape(
-    NifFile &nif, NiShape *shape, NiShader *shader,
-    nlohmann::json &truepbr_data, const std::string &matched_path,
-    bool &nif_modified) const {
+    NifFile &NIF, NiShape *NIFShape, NiShader *NIFShader,
+    nlohmann::json &TruePBRData, const std::string &MatchedPath,
+    bool &NIFModified) {
   // enable TruePBR on shape
-  auto result = ParallaxGenTask::PGResult::SUCCESS;
+  auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Prep
-  const auto shader_BSLSP = dynamic_cast<BSLightingShaderProperty *>(shader);
-  bool enable_truepbr =
-      (!truepbr_data.contains("pbr") || truepbr_data["pbr"]) &&
-      !matched_path.empty();
-  bool enable_envmapping = truepbr_data.contains("env_mapping") &&
-                           truepbr_data["env_mapping"] && !enable_truepbr;
+  auto *const NIFShaderBSLSP =
+      dynamic_cast<BSLightingShaderProperty *>(NIFShader);
+  bool EnableTruePBR = (!TruePBRData.contains("pbr") || TruePBRData["pbr"]) &&
+                       !MatchedPath.empty();
+  bool EnableEnvMapping = TruePBRData.contains("EnvMapping") &&
+                          TruePBRData["EnvMapping"] && !EnableTruePBR;
 
   // "delete" attribute
-  if (truepbr_data.contains("delete") && truepbr_data["delete"]) {
-    nif.DeleteShape(shape);
-    nif_modified = true;
-    return result;
+  if (TruePBRData.contains("delete") && TruePBRData["delete"]) {
+    NIF.DeleteShape(NIFShape);
+    NIFModified = true;
+    return Result;
   }
 
   // "smooth_angle" attribute
-  if (truepbr_data.contains("smooth_angle")) {
-    nif.CalcNormalsForShape(shape, true, true, truepbr_data["smooth_angle"]);
-    nif.CalcTangentsForShape(shape);
-    nif_modified = true;
+  if (TruePBRData.contains("smooth_angle")) {
+    NIF.CalcNormalsForShape(NIFShape, true, true, TruePBRData["smooth_angle"]);
+    NIF.CalcTangentsForShape(NIFShape);
+    NIFModified = true;
   }
 
   // "auto_uv" attribute
-  if (truepbr_data.contains("auto_uv")) {
-    vector<Triangle> tris;
-    shape->GetTriangles(tris);
-    auto new_uv_scale = auto_uv_scale(nif.GetUvsForShape(shape),
-                                      nif.GetVertsForShape(shape), tris) /
-                        truepbr_data["auto_uv"];
-    if (shader_BSLSP->uvScale != new_uv_scale) {
-      shader_BSLSP->uvScale = new_uv_scale;
-      nif_modified = true;
+  if (TruePBRData.contains("auto_uv")) {
+    vector<Triangle> Tris;
+    NIFShape->GetTriangles(Tris);
+    auto NewUVScale = autoUVScale(NIF.GetUvsForShape(NIFShape),
+                                  NIF.GetVertsForShape(NIFShape), Tris) /
+                      TruePBRData["auto_uv"];
+    if (NIFShaderBSLSP->uvScale != NewUVScale) {
+      NIFShaderBSLSP->uvScale = NewUVScale;
+      NIFModified = true;
     }
   }
 
   // "vertex_colors" attribute
-  if (truepbr_data.contains("vertex_colors")) {
-    auto new_vertex_colors = truepbr_data["vertex_colors"].get<bool>();
-    if (shape->HasVertexColors() != new_vertex_colors) {
-      shape->SetVertexColors(new_vertex_colors);
-      nif_modified = true;
+  if (TruePBRData.contains("vertex_colors")) {
+    auto NewVertexColors = TruePBRData["vertex_colors"].get<bool>();
+    if (NIFShape->HasVertexColors() != NewVertexColors) {
+      NIFShape->SetVertexColors(NewVertexColors);
+      NIFModified = true;
     }
 
-    if (shader->HasVertexColors() != new_vertex_colors) {
-      shader->SetVertexColors(new_vertex_colors);
-      nif_modified = true;
+    if (NIFShader->HasVertexColors() != NewVertexColors) {
+      NIFShader->SetVertexColors(NewVertexColors);
+      NIFModified = true;
     }
   }
 
   // "specular_level" attribute
-  if (truepbr_data.contains("specular_level")) {
-    auto new_specular_level = truepbr_data["specular_level"];
-    if (shader->GetGlossiness() != new_specular_level) {
-      shader->SetGlossiness(new_specular_level);
-      nif_modified = true;
+  if (TruePBRData.contains("specular_level")) {
+    auto NewSpecularLevel = TruePBRData["specular_level"];
+    if (NIFShader->GetGlossiness() != NewSpecularLevel) {
+      NIFShader->SetGlossiness(NewSpecularLevel);
+      NIFModified = true;
     }
   }
 
   // "subsurface_color" attribute
-  if (truepbr_data.contains("subsurface_color") &&
-      truepbr_data["subsurface_color"].size() >= 3) {
-    auto new_specular_color = Vector3(truepbr_data["subsurface_color"][0],
-                                      truepbr_data["subsurface_color"][1],
-                                      truepbr_data["subsurface_color"][2]);
-    if (shader->GetSpecularColor() != new_specular_color) {
-      shader->SetSpecularColor(new_specular_color);
-      nif_modified = true;
+  if (TruePBRData.contains("subsurface_color") &&
+      TruePBRData["subsurface_color"].size() >= 3) {
+    auto NewSpecularColor = Vector3(TruePBRData["subsurface_color"][0],
+                                    TruePBRData["subsurface_color"][1],
+                                    TruePBRData["subsurface_color"][2]);
+    if (NIFShader->GetSpecularColor() != NewSpecularColor) {
+      NIFShader->SetSpecularColor(NewSpecularColor);
+      NIFModified = true;
     }
   }
 
   // "roughness_scale" attribute
-  if (truepbr_data.contains("roughness_scale")) {
-    auto new_roughtness_scale = truepbr_data["roughness_scale"].get<float>();
-    if (shader->GetSpecularStrength() != new_roughtness_scale) {
-      shader->SetSpecularStrength(new_roughtness_scale);
-      nif_modified = true;
+  if (TruePBRData.contains("roughness_scale")) {
+    auto NewRoughnessScale = TruePBRData["roughness_scale"].get<float>();
+    if (NIFShader->GetSpecularStrength() != NewRoughnessScale) {
+      NIFShader->SetSpecularStrength(NewRoughnessScale);
+      NIFModified = true;
     }
   }
 
   // "subsurface_opacity" attribute
-  if (truepbr_data.contains("subsurface_opacity")) {
-    auto new_subsurface_opacity =
-        truepbr_data["subsurface_opacity"].get<float>();
-    if (shader_BSLSP->softlighting != new_subsurface_opacity) {
-      shader_BSLSP->softlighting = new_subsurface_opacity;
-      nif_modified = true;
+  if (TruePBRData.contains("subsurface_opacity")) {
+    auto NewSubsurfaceOpacity = TruePBRData["subsurface_opacity"].get<float>();
+    if (NIFShaderBSLSP->softlighting != NewSubsurfaceOpacity) {
+      NIFShaderBSLSP->softlighting = NewSubsurfaceOpacity;
+      NIFModified = true;
     }
   }
 
   // "displacement_scale" attribute
-  if (truepbr_data.contains("displacement_scale")) {
-    auto new_displacement_scale =
-        truepbr_data["displacement_scale"].get<float>();
-    if (shader_BSLSP->rimlightPower != new_displacement_scale) {
-      shader_BSLSP->rimlightPower = new_displacement_scale;
-      nif_modified = true;
+  if (TruePBRData.contains("displacement_scale")) {
+    auto NewDisplacementScale = TruePBRData["displacement_scale"].get<float>();
+    if (NIFShaderBSLSP->rimlightPower != NewDisplacementScale) {
+      NIFShaderBSLSP->rimlightPower = NewDisplacementScale;
+      NIFModified = true;
     }
   }
 
-  // "env_mapping" attribute
-  if (enable_envmapping) {
-    if (shader->GetShaderType() != BSLSP_ENVMAP) {
-      shader->SetShaderType(BSLSP_ENVMAP);
-      nif_modified = true;
+  // "EnvMapping" attribute
+  if (EnableEnvMapping) {
+    if (NIFShader->GetShaderType() != BSLSP_ENVMAP) {
+      NIFShader->SetShaderType(BSLSP_ENVMAP);
+      NIFModified = true;
     }
 
-    if (!(shader_BSLSP->shaderFlags1 & SSPF1::SLSF1_ENVIRONMENT_MAPPING)) {
-      shader_BSLSP->shaderFlags1 |= SSPF1::SLSF1_ENVIRONMENT_MAPPING;
-      nif_modified = true;
+    if ((NIFShaderBSLSP->shaderFlags1 & SSPF1::SLSF1_ENVIRONMENT_MAPPING) ==
+        0U) {
+      NIFShaderBSLSP->shaderFlags1 |= SSPF1::SLSF1_ENVIRONMENT_MAPPING;
+      NIFModified = true;
     }
 
-    if (!(shader_BSLSP->shaderFlags2 & SSPF2::SLSF2_GLOW_MAP)) {
-      shader_BSLSP->shaderFlags2 |= SSPF2::SLSF2_GLOW_MAP;
-      nif_modified = true;
-    }
-  }
-
-  // "env_map_scale" attribute
-  if (truepbr_data.contains("env_map_scale") && enable_envmapping) {
-    auto new_env_map_scale = truepbr_data["env_map_scale"].get<float>();
-    if (shader_BSLSP->environmentMapScale != new_env_map_scale) {
-      shader_BSLSP->environmentMapScale = new_env_map_scale;
-      nif_modified = true;
+    if ((NIFShaderBSLSP->shaderFlags2 & SSPF2::SLSF2_GLOW_MAP) == 0U) {
+      NIFShaderBSLSP->shaderFlags2 |= SSPF2::SLSF2_GLOW_MAP;
+      NIFModified = true;
     }
   }
 
-  // "env_map_scale_mult" attribute
-  if (truepbr_data.contains("env_map_scale_mult") && enable_envmapping) {
-    shader_BSLSP->environmentMapScale *=
-        truepbr_data["env_map_scale_mult"].get<float>();
-    nif_modified = true;
+  // "EnvMap_scale" attribute
+  if (TruePBRData.contains("EnvMap_scale") && EnableEnvMapping) {
+    auto NewEnvMapScale = TruePBRData["EnvMap_scale"].get<float>();
+    if (NIFShaderBSLSP->environmentMapScale != NewEnvMapScale) {
+      NIFShaderBSLSP->environmentMapScale = NewEnvMapScale;
+      NIFModified = true;
+    }
+  }
+
+  // "EnvMap_scale_mult" attribute
+  if (TruePBRData.contains("EnvMap_scale_mult") && EnableEnvMapping) {
+    NIFShaderBSLSP->environmentMapScale *=
+        TruePBRData["EnvMap_scale_mult"].get<float>();
+    NIFModified = true;
   }
 
   // "cubemap" attribute
-  if (truepbr_data.contains("cubemap") && enable_envmapping &&
-      !flag(truepbr_data, "lock_cubemap")) {
-    auto new_cubemap = truepbr_data["cubemap"].get<string>();
-    string old_cubemap;
-    nif.GetTextureSlot(shape, old_cubemap, 4);
-    if (old_cubemap != new_cubemap) {
-      nif.SetTextureSlot(shape, new_cubemap, 4);
-      nif_modified = true;
+  if (TruePBRData.contains("cubemap") && EnableEnvMapping &&
+      !flag(TruePBRData, "lock_cubemap")) {
+    auto NewCubemap = TruePBRData["cubemap"].get<string>();
+    string OldCubemap;
+    NIF.GetTextureSlot(NIFShape, OldCubemap, 4);
+    if (OldCubemap != NewCubemap) {
+      NIF.SetTextureSlot(NIFShape, NewCubemap, 4);
+      NIFModified = true;
     }
   }
 
   // "emmissive_scale" attribute
-  if (truepbr_data.contains("emissive_scale")) {
-    auto new_emissive_scale = truepbr_data["emissive_scale"].get<float>();
-    if (shader->GetEmissiveMultiple() != new_emissive_scale) {
-      shader->SetEmissiveMultiple(new_emissive_scale);
-      nif_modified = true;
+  if (TruePBRData.contains("emissive_scale")) {
+    auto NewEmissiveScale = TruePBRData["emissive_scale"].get<float>();
+    if (NIFShader->GetEmissiveMultiple() != NewEmissiveScale) {
+      NIFShader->SetEmissiveMultiple(NewEmissiveScale);
+      NIFModified = true;
     }
   }
 
   // "emmissive_color" attribute
-  if (truepbr_data.contains("emissive_color") &&
-      truepbr_data["emissive_color"].size() >= 4) {
-    auto new_emissive_color = Color4(
-        truepbr_data["emissive_color"][0], truepbr_data["emissive_color"][1],
-        truepbr_data["emissive_color"][2], truepbr_data["emissive_color"][3]);
-    if (shader->GetEmissiveColor() != new_emissive_color) {
-      shader->SetEmissiveColor(new_emissive_color);
-      nif_modified = true;
+  if (TruePBRData.contains("emissive_color") &&
+      TruePBRData["emissive_color"].size() >= 4) {
+    auto NewEmissiveColor = Color4(
+        TruePBRData["emissive_color"][0], TruePBRData["emissive_color"][1],
+        TruePBRData["emissive_color"][2], TruePBRData["emissive_color"][3]);
+    if (NIFShader->GetEmissiveColor() != NewEmissiveColor) {
+      NIFShader->SetEmissiveColor(NewEmissiveColor);
+      NIFModified = true;
     }
   }
 
   // "uv_scale" attribute
-  if (truepbr_data.contains("uv_scale")) {
-    auto new_uv_scale =
-        Vector2(truepbr_data["uv_scale"], truepbr_data["uv_scale"]);
-    if (shader_BSLSP->uvScale != new_uv_scale) {
-      shader_BSLSP->uvScale = new_uv_scale;
-      nif_modified = true;
+  if (TruePBRData.contains("uv_scale")) {
+    auto NewUVScale = Vector2(TruePBRData["uv_scale"], TruePBRData["uv_scale"]);
+    if (NIFShaderBSLSP->uvScale != NewUVScale) {
+      NIFShaderBSLSP->uvScale = NewUVScale;
+      NIFModified = true;
     }
   }
 
   // "pbr" attribute
-  if ((!truepbr_data.contains("pbr") || truepbr_data["pbr"]) &&
-      !matched_path.empty()) {
+  if ((!TruePBRData.contains("pbr") || TruePBRData["pbr"]) &&
+      !MatchedPath.empty()) {
     // no pbr, we can return here
-    enableTruePBROnShape(nif, shape, shader, truepbr_data, matched_path,
-                         nif_modified);
+    enableTruePBROnShape(NIF, NIFShape, NIFShader, TruePBRData, MatchedPath,
+                         NIFModified);
   }
 
-  // "slotX" attributes
-  for (int i = 0; i < 8; i++) {
-    string slot_name = "slot" + to_string(i + 1);
-    if (truepbr_data.contains(slot_name)) {
-      string new_slot = truepbr_data[slot_name];
-      string slot;
-      nif.GetTextureSlot(shape, slot, i);
-      if (slot != new_slot) {
-        nif.SetTextureSlot(shape, new_slot, i);
-        nif_modified = true;
+  // "SlotX" attributes
+  for (int I = 0; I < NUM_TEXTURE_SLOTS - 1; I++) {
+    string SlotName = "Slot" + to_string(I + 1);
+    if (TruePBRData.contains(SlotName)) {
+      string NewSlot = TruePBRData[SlotName];
+      string Slot;
+      NIF.GetTextureSlot(NIFShape, Slot, I);
+      if (Slot != NewSlot) {
+        NIF.SetTextureSlot(NIFShape, NewSlot, I);
+        NIFModified = true;
       }
     }
   }
 
-  return result;
+  return Result;
 }
 
-ParallaxGenTask::PGResult ParallaxGen::enableTruePBROnShape(
-    NifFile &nif, NiShape *shape, NiShader *shader,
-    nlohmann::json &truepbr_data, const string &matched_path,
-    bool &nif_modified) const {
+auto ParallaxGen::enableTruePBROnShape(
+    NifFile &NIF, NiShape *NIFShape, NiShader *NIFShader,
+    nlohmann::json &TruePBRData, const string &MatchedPath,
+    bool &NIFModified) -> ParallaxGenTask::PGResult {
   // enable TruePBR on shape
-  auto result = ParallaxGenTask::PGResult::SUCCESS;
+  auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Prep
-  const auto shader_BSLSP = dynamic_cast<BSLightingShaderProperty *>(shader);
+  auto *const NIFShaderBSLSP =
+      dynamic_cast<BSLightingShaderProperty *>(NIFShader);
 
-  string tex_path = string(matched_path);
-  if (!boost::istarts_with(tex_path, "textures\\pbr\\")) {
-    boost::replace_first(tex_path, "textures\\", "textures\\pbr\\");
+  string TexPath = string(MatchedPath);
+  if (!boost::istarts_with(TexPath, "textures\\pbr\\")) {
+    boost::replace_first(TexPath, "textures\\", "textures\\pbr\\");
   }
 
   // Get PBR path, which is the path without the matched field
-  string matched_field = truepbr_data.contains("match_normal")
-                             ? truepbr_data["match_normal"]
-                             : truepbr_data["match_diffuse"];
-  tex_path.erase(tex_path.length() - matched_field.length(),
-                 matched_field.length());
+  string MatchedField = TruePBRData.contains("match_normal")
+                            ? TruePBRData["match_normal"]
+                            : TruePBRData["match_diffuse"];
+  TexPath.erase(TexPath.length() - MatchedField.length(),
+                MatchedField.length());
 
   // "rename" attribute
-  string named_field = matched_field;
-  if (truepbr_data.contains("rename")) {
-    named_field = truepbr_data["rename"];
+  string NamedField = MatchedField;
+  if (TruePBRData.contains("rename")) {
+    NamedField = TruePBRData["rename"];
   }
 
-  // "lock_diffuse" attribute
-  if (!flag(truepbr_data, "lock_diffuse")) {
-    auto new_diffuse =
-        tex_path + matched_field + ParallaxGen::default_suffixes[0][0];
+  // "lock_Diffuse" attribute
+  if (!flag(TruePBRData, "lock_diffuse")) {
+    auto NewDiffuse = TexPath + MatchedField + ".dds";
 
-    string diffuse;
-    nif.GetTextureSlot(shape, diffuse, 0);
-    if (!boost::iequals(diffuse, new_diffuse)) {
-      nif.SetTextureSlot(shape, new_diffuse, 0);
-      nif_modified = true;
+    string Diffuse;
+    NIF.GetTextureSlot(NIFShape, Diffuse,
+                       static_cast<unsigned int>(TextureSlots::Diffuse));
+    if (!boost::iequals(Diffuse, NewDiffuse)) {
+      NIF.SetTextureSlot(NIFShape, NewDiffuse,
+                         static_cast<unsigned int>(TextureSlots::Diffuse));
+      NIFModified = true;
     }
   }
 
-  // "lock_normal" attribute
-  if (!flag(truepbr_data, "lock_normal")) {
-    auto new_normal =
-        tex_path + named_field + ParallaxGen::default_suffixes[1][0];
+  // "lock_Normal" attribute
+  if (!flag(TruePBRData, "lock_normal")) {
+    auto NewNormal = TexPath + NamedField + "_n.dds";
 
-    string normal;
-    nif.GetTextureSlot(shape, normal, 1);
-    if (!boost::iequals(normal, new_normal)) {
-      nif.SetTextureSlot(shape, new_normal, 1);
-      nif_modified = true;
+    string Normal;
+    NIF.GetTextureSlot(NIFShape, Normal,
+                       static_cast<unsigned int>(TextureSlots::Normal));
+    if (!boost::iequals(Normal, NewNormal)) {
+      NIF.SetTextureSlot(NIFShape, NewNormal,
+                         static_cast<unsigned int>(TextureSlots::Normal));
+      NIFModified = true;
     }
   }
 
   // "emissive" attribute
-  if (truepbr_data.contains("emissive") &&
-      !flag(truepbr_data, "lock_emissive")) {
-    string new_glow;
-    if (truepbr_data["emissive"]) {
-      new_glow = tex_path + named_field + ParallaxGen::default_suffixes[2][0];
+  if (TruePBRData.contains("emissive") && !flag(TruePBRData, "lock_emissive")) {
+    string NewGlow;
+    if (TruePBRData["emissive"]) {
+      NewGlow = TexPath + NamedField + "_g.dds";
     } else {
-      new_glow = empty_path;
+      NewGlow = "";
 
-      if (shader_BSLSP->shaderFlags1 & SSPF1::SLSF1_EXTERNAL_EMITTANCE) {
-        shader_BSLSP->shaderFlags1 &= ~SSPF1::SLSF1_EXTERNAL_EMITTANCE;
-        nif_modified = true;
+      if ((NIFShaderBSLSP->shaderFlags1 & SSPF1::SLSF1_EXTERNAL_EMITTANCE) !=
+          0U) {
+        NIFShaderBSLSP->shaderFlags1 &= ~SSPF1::SLSF1_EXTERNAL_EMITTANCE;
+        NIFModified = true;
       }
     }
 
-    string glow;
-    nif.GetTextureSlot(shape, glow, 2);
-    if (!boost::iequals(glow, new_glow)) {
-      nif.SetTextureSlot(shape, new_glow, 2);
-      nif_modified = true;
+    string Glow;
+    NIF.GetTextureSlot(NIFShape, Glow,
+                       static_cast<unsigned int>(TextureSlots::Glow));
+    if (!boost::iequals(Glow, NewGlow)) {
+      NIF.SetTextureSlot(NIFShape, NewGlow,
+                         static_cast<unsigned int>(TextureSlots::Glow));
+      NIFModified = true;
     }
   }
 
-  // "parallax" attribute
-  if (truepbr_data.contains("parallax") &&
-      !flag(truepbr_data, "lock_parallax")) {
-    string new_parallax;
-    if (truepbr_data["parallax"]) {
-      new_parallax =
-          tex_path + named_field + ParallaxGen::default_suffixes[3][0];
+  // "Parallax" attribute
+  if (TruePBRData.contains("Parallax") && !flag(TruePBRData, "lock_Parallax")) {
+    string NewParallax;
+    if (TruePBRData["Parallax"]) {
+      NewParallax = TexPath + NamedField + "_p.dds";
     } else {
-      new_parallax = empty_path;
+      NewParallax = "";
     }
 
-    string parallax;
-    nif.GetTextureSlot(shape, parallax, 3);
-    if (!boost::iequals(parallax, new_parallax)) {
-      nif.SetTextureSlot(shape, new_parallax, 3);
-      nif_modified = true;
-    }
-  }
-
-  nif.SetTextureSlot(shape, empty_path, 4); // unused
-
-  // "lock_rmaos" attribute
-  if (!flag(truepbr_data, "lock_rmaos")) {
-    auto new_rmaos = tex_path + named_field + "_rmaos.dds";
-
-    string rmaos;
-    nif.GetTextureSlot(shape, rmaos, 5);
-    if (!boost::iequals(rmaos, new_rmaos)) {
-      nif.SetTextureSlot(shape, new_rmaos, 5);
-      nif_modified = true;
+    string Parallax;
+    NIF.GetTextureSlot(NIFShape, Parallax,
+                       static_cast<unsigned int>(TextureSlots::Parallax));
+    if (!boost::iequals(Parallax, NewParallax)) {
+      NIF.SetTextureSlot(NIFShape, NewParallax,
+                         static_cast<unsigned int>(TextureSlots::Parallax));
+      NIFModified = true;
     }
   }
 
-  // "lock_cnr" attribute
-  if (!flag(truepbr_data, "lock_cnr")) {
-    // "coat_normal" attribute
-    string new_cnr;
+  string Slot4;
+  NIF.SetTextureSlot(
+      NIFShape, Slot4,
+      static_cast<unsigned int>(TextureSlots::Cubemap)); // unused
 
-    if (truepbr_data.contains("coat_normal") && truepbr_data["coat_normal"]) {
-      new_cnr = tex_path + named_field + "_cnr.dds";
+  // "lock_RMAOS" attribute
+  if (!flag(TruePBRData, "lock_RMAOS")) {
+    auto NewRMAOS = TexPath + NamedField + "_RMAOS.dds";
+
+    string RMAOS;
+    NIF.GetTextureSlot(NIFShape, RMAOS,
+                       static_cast<unsigned int>(TextureSlots::EnvMask));
+    if (!boost::iequals(RMAOS, NewRMAOS)) {
+      NIF.SetTextureSlot(NIFShape, NewRMAOS,
+                         static_cast<unsigned int>(TextureSlots::EnvMask));
+      NIFModified = true;
+    }
+  }
+
+  // "lock_CNR" attribute
+  if (!flag(TruePBRData, "lock_CNR")) {
+    // "coat_Normal" attribute
+    string NewCNR;
+
+    if (TruePBRData.contains("coat_Normal") && TruePBRData["coat_Normal"]) {
+      NewCNR = TexPath + NamedField + "_CNR.dds";
     } else {
-      new_cnr = empty_path;
+      NewCNR = "";
     }
 
-    string cnr;
-    nif.GetTextureSlot(shape, cnr, 6);
-    if (!boost::iequals(cnr, new_cnr)) {
-      nif.SetTextureSlot(shape, new_cnr, 6);
-      nif_modified = true;
+    string CNR;
+    NIF.GetTextureSlot(NIFShape, CNR,
+                       static_cast<unsigned int>(TextureSlots::Tint));
+    if (!boost::iequals(CNR, NewCNR)) {
+      NIF.SetTextureSlot(NIFShape, NewCNR,
+                         static_cast<unsigned int>(TextureSlots::Tint));
+      NIFModified = true;
     }
   }
 
   // "lock_subsurface" attribute
-  if (!flag(truepbr_data, "lock_subsurface")) {
+  if (!flag(TruePBRData, "lock_subsurface")) {
     // "subsurface_foliage" attribute
-    string new_subsurface;
+    string NewSubsurface;
 
-    if ((truepbr_data.contains("subsurface_foliage") &&
-         truepbr_data["subsurface_foliage"]) ||
-        (truepbr_data.contains("subsurface") && truepbr_data["subsurface"]) ||
-        (truepbr_data.contains("coat_diffuse") &&
-         truepbr_data["coat_diffuse"])) {
-      new_subsurface =
-          tex_path + named_field + ParallaxGen::default_suffixes[7][0];
+    if ((TruePBRData.contains("subsurface_foliage") &&
+         TruePBRData["subsurface_foliage"]) ||
+        (TruePBRData.contains("subsurface") && TruePBRData["subsurface"]) ||
+        (TruePBRData.contains("coat_Diffuse") && TruePBRData["coat_Diffuse"])) {
+      NewSubsurface = TexPath + NamedField + "_s.dds";
     } else {
-      new_subsurface = empty_path;
+      NewSubsurface = "";
     }
 
-    string subsurface;
-    nif.GetTextureSlot(shape, subsurface, 7);
-    if (!boost::iequals(subsurface, new_subsurface)) {
-      nif.SetTextureSlot(shape, new_subsurface, 7);
-      nif_modified = true;
+    string Subsurface;
+    NIF.GetTextureSlot(NIFShape, Subsurface,
+                       static_cast<unsigned int>(TextureSlots::Backlight));
+    if (!boost::iequals(Subsurface, NewSubsurface)) {
+      NIF.SetTextureSlot(NIFShape, NewSubsurface,
+                         static_cast<unsigned int>(TextureSlots::Backlight));
+      NIFModified = true;
     }
   }
 
-  // revert to default shader type, remove flags used in other types
-  if (shader_BSLSP->shaderFlags1 & SLSF1_ENVIRONMENT_MAPPING) {
-    shader_BSLSP->shaderFlags1 &= ~SLSF1_ENVIRONMENT_MAPPING;
-    nif_modified = true;
+  // revert to default NIFShader type, remove flags used in other types
+  if ((NIFShaderBSLSP->shaderFlags1 & SLSF1_ENVIRONMENT_MAPPING) != 0U) {
+    NIFShaderBSLSP->shaderFlags1 &= ~SLSF1_ENVIRONMENT_MAPPING;
+    NIFModified = true;
   }
 
-  if (shader_BSLSP->shaderFlags1 & SLSF1_PARALLAX) {
-    shader_BSLSP->shaderFlags1 &= ~SLSF1_PARALLAX;
-    nif_modified = true;
+  if ((NIFShaderBSLSP->shaderFlags1 & SLSF1_PARALLAX) != 0U) {
+    NIFShaderBSLSP->shaderFlags1 &= ~SLSF1_PARALLAX;
+    NIFModified = true;
   }
 
-  if (shader_BSLSP->shaderFlags2 & SLSF2_GLOW_MAP) {
-    shader_BSLSP->shaderFlags2 &= ~SLSF2_GLOW_MAP;
-    nif_modified = true;
+  if ((NIFShaderBSLSP->shaderFlags2 & SLSF2_GLOW_MAP) != 0U) {
+    NIFShaderBSLSP->shaderFlags2 &= ~SLSF2_GLOW_MAP;
+    NIFModified = true;
   }
 
-  shader_BSLSP->shaderFlags2 &= ~SLSF2_BACK_LIGHTING;
+  NIFShaderBSLSP->shaderFlags2 &= ~SLSF2_BACK_LIGHTING;
 
   // Enable PBR flag
-  if (!(shader_BSLSP->shaderFlags2 & SLSF2_UNUSED01)) {
-    shader_BSLSP->shaderFlags2 |= SLSF2_UNUSED01;
-    nif_modified = true;
+  if ((NIFShaderBSLSP->shaderFlags2 & SLSF2_UNUSED01) == 0U) {
+    NIFShaderBSLSP->shaderFlags2 |= SLSF2_UNUSED01;
+    NIFModified = true;
   }
 
-  if (truepbr_data.contains("subsurface_foliage") &&
-      truepbr_data["subsurface_foliage"] &&
-      truepbr_data.contains("subsurface") && truepbr_data["subsurface"]) {
+  if (TruePBRData.contains("subsurface_foliage") &&
+      TruePBRData["subsurface_foliage"] && TruePBRData.contains("subsurface") &&
+      TruePBRData["subsurface"]) {
     spdlog::error(
-        "Error: Subsurface and foliage shader chosen at once, undefined "
+        "Error: Subsurface and foliage NIFShader chosen at once, undefined "
         "behavior!");
   }
 
   // "subsurface_foliage" attribute
-  if (truepbr_data.contains("subsurface_foliage")) {
-    if (truepbr_data["subsurface_foliage"]) {
-      shader_BSLSP->shaderFlags2 |= SLSF2_SOFT_LIGHTING;
+  if (TruePBRData.contains("subsurface_foliage")) {
+    if (TruePBRData["subsurface_foliage"]) {
+      NIFShaderBSLSP->shaderFlags2 |= SLSF2_SOFT_LIGHTING;
     } else {
-      shader_BSLSP->shaderFlags2 &= ~SLSF2_SOFT_LIGHTING;
+      NIFShaderBSLSP->shaderFlags2 &= ~SLSF2_SOFT_LIGHTING;
     }
   }
 
   // "subsurface" attribute
-  if (truepbr_data.contains("subsurface")) {
-    if (truepbr_data["subsurface"]) {
-      shader_BSLSP->shaderFlags2 |= SLSF2_RIM_LIGHTING;
+  if (TruePBRData.contains("subsurface")) {
+    if (TruePBRData["subsurface"]) {
+      NIFShaderBSLSP->shaderFlags2 |= SLSF2_RIM_LIGHTING;
     } else {
-      shader_BSLSP->shaderFlags2 &= ~SLSF2_RIM_LIGHTING;
+      NIFShaderBSLSP->shaderFlags2 &= ~SLSF2_RIM_LIGHTING;
     }
   }
 
   // "multilayer" attribute
-  if (truepbr_data.contains("multilayer") && truepbr_data["multilayer"]) {
-    if (shader->GetShaderType() != BSLSP_MULTILAYERPARALLAX) {
-      shader->SetShaderType(BSLSP_MULTILAYERPARALLAX);
-      nif_modified = true;
+  if (TruePBRData.contains("multilayer") && TruePBRData["multilayer"]) {
+    if (NIFShader->GetShaderType() != BSLSP_MULTILAYERPARALLAX) {
+      NIFShader->SetShaderType(BSLSP_MULTILAYERPARALLAX);
+      NIFModified = true;
     }
 
-    if (!(shader_BSLSP->shaderFlags2 & SLSF2_MULTI_LAYER_PARALLAX)) {
-      shader_BSLSP->shaderFlags2 |= SLSF2_MULTI_LAYER_PARALLAX;
-      nif_modified = true;
+    if ((NIFShaderBSLSP->shaderFlags2 & SLSF2_MULTI_LAYER_PARALLAX) == 0U) {
+      NIFShaderBSLSP->shaderFlags2 |= SLSF2_MULTI_LAYER_PARALLAX;
+      NIFModified = true;
     }
 
     // "coat_color" attribute
-    if (truepbr_data.contains("coat_color") &&
-        truepbr_data["coat_color"].size() >= 3) {
-      auto new_coat_color =
-          Vector3(truepbr_data["coat_color"][0], truepbr_data["coat_color"][1],
-                  truepbr_data["coat_color"][2]);
-      if (shader->GetSpecularColor() != new_coat_color) {
-        shader->SetSpecularColor(new_coat_color);
-        nif_modified = true;
+    if (TruePBRData.contains("coat_color") &&
+        TruePBRData["coat_color"].size() >= 3) {
+      auto NewCoatColor =
+          Vector3(TruePBRData["coat_color"][0], TruePBRData["coat_color"][1],
+                  TruePBRData["coat_color"][2]);
+      if (NIFShader->GetSpecularColor() != NewCoatColor) {
+        NIFShader->SetSpecularColor(NewCoatColor);
+        NIFModified = true;
       }
     }
 
     // "coat_specular_level" attribute
-    if (truepbr_data.contains("coat_specular_level")) {
-      auto new_coat_specular_level = truepbr_data["coat_specular_level"];
-      if (shader_BSLSP->parallaxRefractionScale != new_coat_specular_level) {
-        shader_BSLSP->parallaxRefractionScale = new_coat_specular_level;
-        nif_modified = true;
+    if (TruePBRData.contains("coat_specular_level")) {
+      auto NewCoatSpecularLevel = TruePBRData["coat_specular_level"];
+      if (NIFShaderBSLSP->parallaxRefractionScale != NewCoatSpecularLevel) {
+        NIFShaderBSLSP->parallaxRefractionScale = NewCoatSpecularLevel;
+        NIFModified = true;
       }
     }
 
     // "coat_roughness" attribute
-    if (truepbr_data.contains("coat_roughness")) {
-      auto new_coat_roughtness = truepbr_data["coat_roughness"];
-      if (shader_BSLSP->parallaxInnerLayerThickness != new_coat_roughtness) {
-        shader_BSLSP->parallaxInnerLayerThickness = new_coat_roughtness;
-        nif_modified = true;
+    if (TruePBRData.contains("coat_roughness")) {
+      auto NewCoatRoughness = TruePBRData["coat_roughness"];
+      if (NIFShaderBSLSP->parallaxInnerLayerThickness != NewCoatRoughness) {
+        NIFShaderBSLSP->parallaxInnerLayerThickness = NewCoatRoughness;
+        NIFModified = true;
       }
     }
 
     // "coat_strength" attribute
-    if (truepbr_data.contains("coat_strength")) {
-      auto new_coat_strength = truepbr_data["coat_strength"];
-      if (shader_BSLSP->softlighting != new_coat_strength) {
-        shader_BSLSP->softlighting = new_coat_strength;
-        nif_modified = true;
+    if (TruePBRData.contains("coat_strength")) {
+      auto NewCoatStrength = TruePBRData["coat_strength"];
+      if (NIFShaderBSLSP->softlighting != NewCoatStrength) {
+        NIFShaderBSLSP->softlighting = NewCoatStrength;
+        NIFModified = true;
       }
     }
 
-    // "coat_diffuse" attribute
-    if (truepbr_data.contains("coat_diffuse")) {
-      if (truepbr_data["coat_diffuse"]) {
-        if (!(shader_BSLSP->shaderFlags2 & SLSF2_EFFECT_LIGHTING)) {
-          shader_BSLSP->shaderFlags2 |= SLSF2_EFFECT_LIGHTING;
-          nif_modified = true;
+    // "coat_Diffuse" attribute
+    if (TruePBRData.contains("coat_Diffuse")) {
+      if (TruePBRData["coat_Diffuse"]) {
+        if ((NIFShaderBSLSP->shaderFlags2 & SLSF2_EFFECT_LIGHTING) == 0U) {
+          NIFShaderBSLSP->shaderFlags2 |= SLSF2_EFFECT_LIGHTING;
+          NIFModified = true;
         }
       } else {
-        if (shader_BSLSP->shaderFlags2 & SLSF2_EFFECT_LIGHTING) {
-          shader_BSLSP->shaderFlags2 &= ~SLSF2_EFFECT_LIGHTING;
-          nif_modified = true;
-        }
-      }
-    }
-
-    // "coat_parallax" attribute
-    if (truepbr_data.contains("coat_parallax")) {
-      if (truepbr_data["coat_parallax"]) {
-        if (!(shader_BSLSP->shaderFlags2 & SLSF2_SOFT_LIGHTING)) {
-          shader_BSLSP->shaderFlags2 |= SLSF2_SOFT_LIGHTING;
-          nif_modified = true;
-        }
-      } else {
-        if (shader_BSLSP->shaderFlags2 & SLSF2_SOFT_LIGHTING) {
-          shader_BSLSP->shaderFlags2 &= ~SLSF2_SOFT_LIGHTING;
-          nif_modified = true;
+        if ((NIFShaderBSLSP->shaderFlags2 & SLSF2_EFFECT_LIGHTING) != 0U) {
+          NIFShaderBSLSP->shaderFlags2 &= ~SLSF2_EFFECT_LIGHTING;
+          NIFModified = true;
         }
       }
     }
 
-    // "coat_normal" attribute
-    if (truepbr_data.contains("coat_normal")) {
-      if (truepbr_data["coat_normal"]) {
-        if (!(shader_BSLSP->shaderFlags2 & SLSF2_BACK_LIGHTING)) {
-          shader_BSLSP->shaderFlags2 |= SLSF2_BACK_LIGHTING;
-          nif_modified = true;
+    // "coat_Parallax" attribute
+    if (TruePBRData.contains("coat_Parallax")) {
+      if (TruePBRData["coat_Parallax"]) {
+        if ((NIFShaderBSLSP->shaderFlags2 & SLSF2_SOFT_LIGHTING) == 0U) {
+          NIFShaderBSLSP->shaderFlags2 |= SLSF2_SOFT_LIGHTING;
+          NIFModified = true;
         }
       } else {
-        if (shader_BSLSP->shaderFlags2 & SLSF2_BACK_LIGHTING) {
-          shader_BSLSP->shaderFlags2 &= ~SLSF2_BACK_LIGHTING;
-          nif_modified = true;
+        if ((NIFShaderBSLSP->shaderFlags2 & SLSF2_SOFT_LIGHTING) != 0U) {
+          NIFShaderBSLSP->shaderFlags2 &= ~SLSF2_SOFT_LIGHTING;
+          NIFModified = true;
+        }
+      }
+    }
+
+    // "coat_Normal" attribute
+    if (TruePBRData.contains("coat_Normal")) {
+      if (TruePBRData["coat_Normal"]) {
+        if ((NIFShaderBSLSP->shaderFlags2 & SLSF2_BACK_LIGHTING) == 0U) {
+          NIFShaderBSLSP->shaderFlags2 |= SLSF2_BACK_LIGHTING;
+          NIFModified = true;
+        }
+      } else {
+        if ((NIFShaderBSLSP->shaderFlags2 & SLSF2_BACK_LIGHTING) != 0U) {
+          NIFShaderBSLSP->shaderFlags2 &= ~SLSF2_BACK_LIGHTING;
+          NIFModified = true;
         }
       }
     }
 
     // "inner_uv_scale" attribute
-    if (truepbr_data.contains("inner_uv_scale")) {
-      auto new_inner_uv_scale = Vector2(truepbr_data["inner_uv_scale"],
-                                        truepbr_data["inner_uv_scale"]);
-      if (shader_BSLSP->parallaxInnerLayerTextureScale != new_inner_uv_scale) {
-        shader_BSLSP->parallaxInnerLayerTextureScale = new_inner_uv_scale;
-        nif_modified = true;
+    if (TruePBRData.contains("inner_uv_scale")) {
+      auto NewInnerUVScale =
+          Vector2(TruePBRData["inner_uv_scale"], TruePBRData["inner_uv_scale"]);
+      if (NIFShaderBSLSP->parallaxInnerLayerTextureScale != NewInnerUVScale) {
+        NIFShaderBSLSP->parallaxInnerLayerTextureScale = NewInnerUVScale;
+        NIFModified = true;
       }
     }
   } else {
-    // Revert to default shader type
-    if (shader->GetShaderType() != BSLSP_DEFAULT) {
-      shader->SetShaderType(BSLSP_DEFAULT);
-      nif_modified = true;
+    // Revert to default NIFShader type
+    if (NIFShader->GetShaderType() != BSLSP_DEFAULT) {
+      NIFShader->SetShaderType(BSLSP_DEFAULT);
+      NIFModified = true;
     }
 
-    if (shader_BSLSP->shaderFlags2 & SLSF2_MULTI_LAYER_PARALLAX) {
-      shader_BSLSP->shaderFlags2 &= ~SLSF2_MULTI_LAYER_PARALLAX;
-      nif_modified = true;
+    if ((NIFShaderBSLSP->shaderFlags2 & SLSF2_MULTI_LAYER_PARALLAX) != 0U) {
+      NIFShaderBSLSP->shaderFlags2 &= ~SLSF2_MULTI_LAYER_PARALLAX;
+      NIFModified = true;
     }
 
-    if (shader_BSLSP->shaderFlags2 & SLSF2_BACK_LIGHTING) {
-      shader_BSLSP->shaderFlags2 &= ~SLSF2_BACK_LIGHTING;
-      nif_modified = true;
+    if ((NIFShaderBSLSP->shaderFlags2 & SLSF2_BACK_LIGHTING) != 0U) {
+      NIFShaderBSLSP->shaderFlags2 &= ~SLSF2_BACK_LIGHTING;
+      NIFModified = true;
     }
   }
 
-  return result;
+  return Result;
 }
 
-ParallaxGenTask::PGResult ParallaxGen::enableComplexMaterialOnShape(
-    NifFile &nif, NiShape *shape, NiShader *shader, const string &matched_path,
-    bool dynCubemaps, bool &nif_modified) const {
+auto ParallaxGen::enableComplexMaterialOnShape(
+    NifFile &NIF, NiShape *NIFShape, NiShader *NIFShader,
+    const string &MatchedPath, const bool &ApplyDynCubemaps,
+    bool &NIFModified) -> ParallaxGenTask::PGResult {
   // enable complex material on shape
-  auto result = ParallaxGenTask::PGResult::SUCCESS;
+  auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
-  // 1. set shader type to env map
-  if (shader->GetShaderType() != BSLSP::BSLSP_ENVMAP) {
-    shader->SetShaderType(BSLSP::BSLSP_ENVMAP);
-    nif_modified = true;
+  // 1. set NIFShader type to env map
+  if (NIFShader->GetShaderType() != BSLSP::BSLSP_ENVMAP) {
+    NIFShader->SetShaderType(BSLSP::BSLSP_ENVMAP);
+    NIFModified = true;
   }
-  // 2. set shader flags
-  BSLightingShaderProperty *cur_bslsp =
-      dynamic_cast<BSLightingShaderProperty *>(shader);
-  if (cur_bslsp->shaderFlags1 & SSPF1::SLSF1_PARALLAX) {
-    // Complex material cannot have parallax shader flag
-    cur_bslsp->shaderFlags1 &= ~SSPF1::SLSF1_PARALLAX;
+  // 2. set NIFShader flags
+  auto *CurBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
+  if ((CurBSLSP->shaderFlags1 & SSPF1::SLSF1_PARALLAX) != 0U) {
+    // Complex material cannot have Parallax NIFShader flag
+    CurBSLSP->shaderFlags1 &= ~SSPF1::SLSF1_PARALLAX;
   }
 
-  if (!(cur_bslsp->shaderFlags1 & SSPF1::SLSF1_ENVIRONMENT_MAPPING)) {
-    cur_bslsp->shaderFlags1 |= SSPF1::SLSF1_ENVIRONMENT_MAPPING;
-    nif_modified = true;
+  if ((CurBSLSP->shaderFlags1 & SSPF1::SLSF1_ENVIRONMENT_MAPPING) == 0U) {
+    CurBSLSP->shaderFlags1 |= SSPF1::SLSF1_ENVIRONMENT_MAPPING;
+    NIFModified = true;
   }
 
   // 5. set complex material texture
-  string height_map;
-  uint32_t height_result = nif.GetTextureSlot(shape, height_map, 3);
-  if (height_result != 0 || !height_map.empty()) {
+  string HeightMap;
+  uint32_t HeightResult = NIF.GetTextureSlot(
+      NIFShape, HeightMap, static_cast<unsigned int>(TextureSlots::Parallax));
+  if (HeightResult != 0 || !HeightMap.empty()) {
     // remove height map
-    string new_height_map = "";
-    nif.SetTextureSlot(shape, new_height_map, 3);
-    nif_modified = true;
+    string NewHeightMap;
+    NIF.SetTextureSlot(NIFShape, NewHeightMap,
+                       static_cast<unsigned int>(TextureSlots::Parallax));
+    NIFModified = true;
   }
 
-  string env_map;
-  uint32_t env_result = nif.GetTextureSlot(shape, env_map, 5);
-  string new_env_map = matched_path;
-  if (!boost::iequals(env_map, new_env_map)) {
+  string EnvMap;
+  NIF.GetTextureSlot(NIFShape, EnvMap,
+                     static_cast<unsigned int>(TextureSlots::EnvMask));
+  string NewEnvMap = MatchedPath;
+  if (!boost::iequals(EnvMap, NewEnvMap)) {
     // add height map
-    nif.SetTextureSlot(shape, new_env_map, 5);
-    nif_modified = true;
+    NIF.SetTextureSlot(NIFShape, NewEnvMap,
+                       static_cast<unsigned int>(TextureSlots::EnvMask));
+    NIFModified = true;
   }
 
   // Dynamic cubemaps (if enabled)
-  if (dynCubemaps) {
-    // add cubemap to slot
-    string cubemap;
-    uint32_t cubemap_result = nif.GetTextureSlot(shape, cubemap, 4);
-    string new_cubemap = ParallaxGenDirectory::getDefaultCubemapPath().string();
+  if (ApplyDynCubemaps) {
+    // add cubemap to Slot
+    string Cubemap;
+    NIF.GetTextureSlot(NIFShape, Cubemap,
+                       static_cast<unsigned int>(TextureSlots::Cubemap));
+    string NewCubemap = ParallaxGenDirectory::getDefaultCubemapPath().string();
 
-    if (!boost::iequals(cubemap, new_cubemap)) {
+    if (!boost::iequals(Cubemap, NewCubemap)) {
       // only fill if dyn cubemap not already there
-      nif.SetTextureSlot(shape, new_cubemap, 4);
-      nif_modified = true;
+      NIF.SetTextureSlot(NIFShape, NewCubemap,
+                         static_cast<unsigned int>(TextureSlots::Cubemap));
+      NIFModified = true;
     }
   }
 
-  return result;
+  return Result;
 }
 
-ParallaxGenTask::PGResult
-ParallaxGen::enableParallaxOnShape(NifFile &nif, NiShape *shape,
-                                   NiShader *shader, const string &matched_path,
-                                   bool &nif_modified) const {
-  // enable parallax on shape
-  auto result = ParallaxGenTask::PGResult::SUCCESS;
+auto ParallaxGen::enableParallaxOnShape(
+    NifFile &NIF, NiShape *NIFShape, NiShader *NIFShader,
+    const string &MatchedPath, bool &NIFModified) -> ParallaxGenTask::PGResult {
+  // enable Parallax on shape
+  auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
-  // 1. set shader type to parallax
-  if (shader->GetShaderType() != BSLSP::BSLSP_PARALLAX) {
-    shader->SetShaderType(BSLSP::BSLSP_PARALLAX);
-    nif_modified = true;
+  // 1. set NIFShader type to Parallax
+  if (NIFShader->GetShaderType() != BSLSP::BSLSP_PARALLAX) {
+    NIFShader->SetShaderType(BSLSP::BSLSP_PARALLAX);
+    NIFModified = true;
   }
-  // 2. Set shader flags
-  BSLightingShaderProperty *cur_bslsp =
-      dynamic_cast<BSLightingShaderProperty *>(shader);
-  if (cur_bslsp->shaderFlags1 & SSPF1::SLSF1_ENVIRONMENT_MAPPING) {
-    // Vanilla parallax cannot have environment mapping flag
-    cur_bslsp->shaderFlags1 &= ~SSPF1::SLSF1_ENVIRONMENT_MAPPING;
+  // 2. Set NIFShader flags
+  auto *CurBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
+  if ((CurBSLSP->shaderFlags1 & SSPF1::SLSF1_ENVIRONMENT_MAPPING) != 0U) {
+    // Vanilla Parallax cannot have environment mapping flag
+    CurBSLSP->shaderFlags1 &= ~SSPF1::SLSF1_ENVIRONMENT_MAPPING;
   }
 
-  if (!(cur_bslsp->shaderFlags1 & SSPF1::SLSF1_PARALLAX)) {
-    cur_bslsp->shaderFlags1 |= SSPF1::SLSF1_PARALLAX;
-    nif_modified = true;
+  if ((CurBSLSP->shaderFlags1 & SSPF1::SLSF1_PARALLAX) == 0U) {
+    CurBSLSP->shaderFlags1 |= SSPF1::SLSF1_PARALLAX;
+    NIFModified = true;
   }
   // 3. set vertex colors for shape
-  if (!shape->HasVertexColors()) {
-    shape->SetVertexColors(true);
-    nif_modified = true;
+  if (!NIFShape->HasVertexColors()) {
+    NIFShape->SetVertexColors(true);
+    NIFModified = true;
   }
-  // 4. set vertex colors for shader
-  if (!shader->HasVertexColors()) {
-    shader->SetVertexColors(true);
-    nif_modified = true;
+  // 4. set vertex colors for NIFShader
+  if (!NIFShader->HasVertexColors()) {
+    NIFShader->SetVertexColors(true);
+    NIFModified = true;
   }
-  // 5. set parallax heightmap texture
-  string height_map;
-  uint32_t height_result = nif.GetTextureSlot(shape, height_map, 3);
-  string new_height_map = matched_path;
-  if (!boost::iequals(height_map, new_height_map)) {
+  // 5. set Parallax heightmap texture
+  string HeightMap;
+  NIF.GetTextureSlot(NIFShape, HeightMap,
+                     static_cast<unsigned int>(TextureSlots::Parallax));
+  string NewHeightMap = MatchedPath;
+  if (!boost::iequals(HeightMap, NewHeightMap)) {
     // add height map
-    nif.SetTextureSlot(shape, new_height_map, 3);
-    nif_modified = true;
+    NIF.SetTextureSlot(NIFShape, NewHeightMap,
+                       static_cast<unsigned int>(TextureSlots::Parallax));
+    NIFModified = true;
   }
 
-  return result;
+  return Result;
 }
 
-const array<string, 9> ParallaxGen::getSearchPrefixes(NifFile &nif,
-                                                      nifly::NiShape *shape) {
-  array<string, 9> out_prefixes;
+auto ParallaxGen::getSearchPrefixes(NifFile &NIF, nifly::NiShape *NIFShape)
+    -> array<string, NUM_TEXTURE_SLOTS> {
+  array<string, NUM_TEXTURE_SLOTS> OutPrefixes;
 
-  // Loop through each texture slot
-  for (uint32_t i = 0; i < 9; i++) {
-    string texture;
-    uint32_t result = nif.GetTextureSlot(shape, texture, i);
+  // Loop through each texture Slot
+  for (uint32_t I = 0; I < NUM_TEXTURE_SLOTS; I++) {
+    string Texture;
+    uint32_t Result = NIF.GetTextureSlot(NIFShape, Texture, I);
 
-    if (result == 0 || texture.empty()) {
-      // no texture in slot
+    if (Result == 0 || Texture.empty()) {
+      // no texture in Slot
       continue;
     }
 
     // Get default suffixes
-    auto i_endings = ParallaxGen::default_suffixes[i];
-    // loop through suffixes
-    for (string suffix : i_endings) {
-      if (boost::iends_with(texture, suffix)) {
-        string search_prefix = replaceLastOf(texture, suffix, "");
-        out_prefixes[i] = search_prefix;
-        break;
-      }
-    }
+    OutPrefixes[I] = ParallaxGenDirectory::getBase(Texture);
   }
 
-  return out_prefixes;
+  return OutPrefixes;
 }
 
-void ParallaxGen::addFileToZip(mz_zip_archive &zip,
-                               const filesystem::path &filePath,
-                               const filesystem::path &zipPath) const {
-  // ignore zip file itself
-  if (filePath == zipPath) {
+void ParallaxGen::addFileToZip(mz_zip_archive &Zip,
+                               const filesystem::path &FilePath,
+                               const filesystem::path &ZipPath) const {
+  // ignore Zip file itself
+  if (FilePath == ZipPath) {
     return;
   }
 
   // open file stream
-  vector<std::byte> buffer = getFileBytes(filePath);
+  vector<std::byte> Buffer = getFileBytes(FilePath);
 
   // get relative path
-  filesystem::path zip_relative_path = filePath.lexically_relative(output_dir);
+  filesystem::path ZipRelativePath = FilePath.lexically_relative(OutputDir);
 
-  string zip_file_path = wstringToString(zip_relative_path.wstring());
+  string ZipFilePath = wstringToString(ZipRelativePath.wstring());
 
-  // add file to zip
-  if (!mz_zip_writer_add_mem(&zip, zip_file_path.c_str(), buffer.data(),
-                             buffer.size(), MZ_NO_COMPRESSION)) {
-    spdlog::error(L"Error adding file to zip: {}", filePath.wstring());
+  // add file to Zip
+  if (mz_zip_writer_add_mem(&Zip, ZipFilePath.c_str(), Buffer.data(),
+                            Buffer.size(), MZ_NO_COMPRESSION) == 0) {
+    spdlog::error(L"Error adding file to Zip: {}", FilePath.wstring());
     exitWithUserInput(1);
   }
 }
 
-void ParallaxGen::zipDirectory(const filesystem::path &dirPath,
-                               const filesystem::path &zipPath) const {
-  mz_zip_archive zip;
+void ParallaxGen::zipDirectory(const filesystem::path &DirPath,
+                               const filesystem::path &ZipPath) const {
+  mz_zip_archive Zip;
 
   // init to 0
-  memset(&zip, 0, sizeof(zip));
+  memset(&Zip, 0, sizeof(Zip));
 
   // check if directory exists
-  if (!filesystem::exists(dirPath)) {
+  if (!filesystem::exists(DirPath)) {
     spdlog::info("No outputs were created");
     exitWithUserInput(0);
   }
 
   // Check if file already exists and delete
-  if (filesystem::exists(zipPath)) {
-    spdlog::info(L"Deleting existing output zip file: {}", zipPath.wstring());
-    filesystem::remove(zipPath);
+  if (filesystem::exists(ZipPath)) {
+    spdlog::info(L"Deleting existing output Zip file: {}", ZipPath.wstring());
+    filesystem::remove(ZipPath);
   }
 
   // initialize file
-  string zip_path_string = wstringToString(zipPath);
-  if (!mz_zip_writer_init_file(&zip, zip_path_string.c_str(), 0)) {
-    spdlog::critical(L"Error creating zip file: {}", zipPath.wstring());
+  string ZipPathString = wstringToString(ZipPath);
+  if (mz_zip_writer_init_file(&Zip, ZipPathString.c_str(), 0) == 0) {
+    spdlog::critical(L"Error creating Zip file: {}", ZipPath.wstring());
     exitWithUserInput(1);
   }
 
-  // add each file in directory to zip
-  for (const auto &entry : filesystem::recursive_directory_iterator(dirPath)) {
-    if (filesystem::is_regular_file(entry.path())) {
-      addFileToZip(zip, entry.path(), zipPath);
+  // add each file in directory to Zip
+  for (const auto &Entry : filesystem::recursive_directory_iterator(DirPath)) {
+    if (filesystem::is_regular_file(Entry.path())) {
+      addFileToZip(Zip, Entry.path(), ZipPath);
     }
   }
 
-  // finalize zip
-  if (!mz_zip_writer_finalize_archive(&zip)) {
-    spdlog::critical(L"Error finalizing zip archive: {}", zipPath.wstring());
+  // finalize Zip
+  if (mz_zip_writer_finalize_archive(&Zip) == 0) {
+    spdlog::critical(L"Error finalizing Zip archive: {}", ZipPath.wstring());
     exitWithUserInput(1);
   }
 
-  mz_zip_writer_end(&zip);
+  mz_zip_writer_end(&Zip);
 
   spdlog::info(L"Please import this file into your mod manager: {}",
-               zipPath.wstring());
+               ZipPath.wstring());
 }
 
 //
 // Helpers
 //
 
-Vector2 ParallaxGen::abs2(Vector2 v) { return Vector2(abs(v.u), abs(v.v)); }
+auto ParallaxGen::abs2(Vector2 V) -> Vector2 { return {abs(V.u), abs(V.v)}; }
 
-Vector2 ParallaxGen::auto_uv_scale(const vector<Vector2> *uvs,
-                                   const vector<Vector3> *verts,
-                                   vector<Triangle> &tris) {
-  Vector2 scale;
-  for (const Triangle &t : tris) {
-    auto v1 = (*verts)[t.p1];
-    auto v2 = (*verts)[t.p2];
-    auto v3 = (*verts)[t.p3];
-    auto uv1 = (*uvs)[t.p1];
-    auto uv2 = (*uvs)[t.p2];
-    auto uv3 = (*uvs)[t.p3];
+auto ParallaxGen::autoUVScale(const vector<Vector2> *UVs,
+                              const vector<Vector3> *Verts,
+                              vector<Triangle> &Tris) -> Vector2 {
+  Vector2 Scale;
+  for (const Triangle &T : Tris) {
+    auto V1 = (*Verts)[T.p1];
+    auto V2 = (*Verts)[T.p2];
+    auto V3 = (*Verts)[T.p3];
+    auto UV1 = (*UVs)[T.p1];
+    auto UV2 = (*UVs)[T.p2];
+    auto UV3 = (*UVs)[T.p3];
 
-    // auto cross = (v2 - v1).cross(v3 - v1);
-    // auto uv_cross = Vector3((uv2 - uv1).u, (uv2 - uv1).v,
-    // 0).cross(Vector3((uv3 - uv1).u, (uv3 - uv1).v, 0)); auto s =
+    // auto cross = (V2 - V1).cross(V3 - V1);
+    // auto uv_cross = Vector3((UV2 - UV1).u, (UV2 - UV1).v,
+    // 0).cross(Vector3((UV3 - UV1).u, (UV3 - UV1).v, 0)); auto s =
     // cross.length() / uv_cross.length(); scale += Vector2(s, s); auto s =
-    // (abs(uv2 - uv1) / (v2 - v1).length() + abs(uv3 - uv1) / (v3 -
-    // v1).length() + abs(uv2 - uv3) / (v2 - v3).length())/3; scale +=
+    // (abs(UV2 - UV1) / (V2 - V1).length() + abs(UV3 - UV1) / (V3 -
+    // V1).length() + abs(UV2 - UV3) / (V2 - V3).length())/3; scale +=
     // Vector2(1.0 / s.u, 1.0 / s.v);
-    auto s = (abs2(uv2 - uv1) + abs2(uv3 - uv1)) /
-             ((v2 - v1).length() + (v3 - v1).length());
-    scale += Vector2(1.0f / s.u, 1.0f / s.v);
+    auto S = (abs2(UV2 - UV1) + abs2(UV3 - UV1)) /
+             ((V2 - V1).length() + (V3 - V1).length());
+    Scale += Vector2(1.0F / S.u, 1.0F / S.v);
   }
 
-  scale *= 10.0 / 4.0;
-  scale /= static_cast<float>(tris.size());
-  scale.u = min(scale.u, scale.v);
-  scale.v = min(scale.u, scale.v);
+  Scale *= 10.0 / 4.0; // NOLINT
+  Scale /= static_cast<float>(Tris.size());
+  Scale.u = min(Scale.u, Scale.v);
+  Scale.v = min(Scale.u, Scale.v);
 
-  return scale;
+  return Scale;
 }
 
-bool ParallaxGen::flag(nlohmann::json &json, const char *key) {
-  return json.contains(key) && json[key];
+auto ParallaxGen::flag(nlohmann::json &JSON, const char *Key) -> bool {
+  return JSON.contains(Key) && JSON[Key];
 }

@@ -6,6 +6,12 @@
     ],
     "blocklist": []
   },
+  "parallax_processing": {
+    "lookup_order": [
+      0,
+      1
+    ]
+  },
   "complexmaterial_lookup": {
     "archive_blocklist": [
       "Skyrim - Textures*",
@@ -18,12 +24,28 @@
     ],
     "blocklist": []
   },
+  "complexmaterial_processing": {
+    "lookup_order": [
+      0,
+      1
+    ],
+    "dyncubemap_blocklist": [
+      "**/armor/**",
+      "**/weapons/**"
+    ]
+  },
   "truepbr_cfg_lookup": {
     "archive_blocklist": [],
     "allowlist": [
       "pbrnifpatcher/**.json"
     ],
     "blocklist": []
+  },
+  "truepbr_cfg_processing": {
+    "lookup_order": [
+      1,
+      0
+    ]
   },
   "nif_lookup": {
     "archive_blocklist": [],

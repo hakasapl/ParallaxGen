@@ -40,6 +40,7 @@ set(HEADERS
     "include/BethesdaGame.hpp"
     "include/BethesdaDirectory.hpp"
     "include/ParallaxGen.hpp"
+    "include/ParallaxGenConfig.hpp"
     "include/ParallaxGenD3D.hpp"
     "include/ParallaxGenTask.hpp"
     "include/ParallaxGenUtil.hpp"
@@ -51,6 +52,7 @@ set(SOURCES
     "src/BethesdaGame.cpp"
     "src/BethesdaDirectory.cpp"
     "src/ParallaxGen.cpp"
+    "src/ParallaxGenConfig.cpp"
     "src/ParallaxGenD3D.cpp"
     "src/ParallaxGenTask.cpp"
     "src/ParallaxGenUtil.cpp"
@@ -89,6 +91,7 @@ find_package(directxtk REQUIRED)
 find_package(directxtex REQUIRED CONFIG)
 find_package(miniz REQUIRED CONFIG)
 find_package(nlohmann_json REQUIRED CONFIG)
+find_package(nlohmann_json_schema_validator REQUIRED)
 
 setup_external("nifly" "${CMAKE_SOURCE_DIR}/external/nifly" "-DBUILD_TESTING=OFF")
 find_package(nifly REQUIRED CONFIG)
@@ -119,6 +122,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Microsoft::DirectXTK
     Shlwapi
     nlohmann_json::nlohmann_json
+    nlohmann_json_schema_validator::validator
 )
 
 # Copy Folders

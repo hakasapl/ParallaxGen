@@ -13,6 +13,8 @@ void exitWithUserInput(const int &ExitCode = 0);
 
 // converts a string to a wstring
 auto stringToWstring(const std::string &Str) -> std::wstring;
+auto stringVecToWstringVec(const std::vector<std::string> &StrVec)
+    -> std::vector<std::wstring>;
 
 // converts a wide string to a utf-8 narrow string
 auto wstringToString(const std::wstring &Str) -> std::string;

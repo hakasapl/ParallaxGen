@@ -29,6 +29,15 @@ auto stringToWstring(const string &Str) -> wstring {
   return std::wstring(WBuffer.data());
 }
 
+auto stringVecToWstringVec(const vector<string> &StrVec) -> vector<wstring> {
+  vector<wstring> WStrVec;
+  WStrVec.reserve(StrVec.size());
+  for (const auto &Str : StrVec) {
+    WStrVec.push_back(stringToWstring(Str));
+  }
+  return WStrVec;
+}
+
 auto wstringToString(const wstring &Str) -> string {
   if (Str.empty()) {
     return {};
