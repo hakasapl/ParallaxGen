@@ -42,13 +42,19 @@ void ParallaxGen::upgradeShaders() {
 
 void ParallaxGen::patchMeshes() {
   auto Meshes = PGD->getMeshes();
+
+  // Load configs that we need
   auto TPBRConfigs = PGD->getTruePBRConfigs();
+  auto SlotSearchVP = PGC->getConfig()["parallax_processing"]["lookup_order"].get<vector<int>>();
+  auto SlotSearchCM = PGC->getConfig()["complexmaterial_processing"]["lookup_order"].get<vector<int>>();
+  auto DynCubeBlocklist = stringVecToWstringVec(
+      PGC->getConfig()["complexmaterial_processing"]["dyncubemap_blocklist"].get<vector<string>>());
 
   // Create task tracker
   ParallaxGenTask TaskTracker("Mesh Patcher", Meshes.size());
 
   for (const auto &NIF : Meshes) {
-    TaskTracker.completeJob(processNIF(NIF, TPBRConfigs));
+    TaskTracker.completeJob(processNIF(NIF, TPBRConfigs, SlotSearchVP, SlotSearchCM, DynCubeBlocklist));
   }
 }
 
@@ -158,8 +164,9 @@ void ParallaxGen::initOutputDir() const {
 }
 
 // shorten some enum names
-auto ParallaxGen::processNIF(const filesystem::path &NIFFile,
-                             const vector<nlohmann::json> &TPBRConfigs) -> ParallaxGenTask::PGResult {
+auto ParallaxGen::processNIF(const filesystem::path &NIFFile, const vector<nlohmann::json> &TPBRConfigs,
+                             const vector<int> &SlotSearchVP, const vector<int> &SlotSearchCM,
+                             vector<wstring> &DynCubeBlocklist) -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Determine output path for patched NIF
@@ -170,29 +177,40 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile,
     return Result;
   }
 
-  // Get NIF Bytes
-  vector<std::byte> NIFFileData = PGD->getFile(NIFFile);
-  if (NIFFileData.empty()) {
-    spdlog::error(L"Unable to read NIF file: {}", NIFFile.wstring());
-    Result = ParallaxGenTask::PGResult::FAILURE;
-    return Result;
-  }
-
-  // Convert Byte Vector to Stream
-  boost::iostreams::array_source NIFArraySource(reinterpret_cast<const char *>(NIFFileData.data()), NIFFileData.size());
-  boost::iostreams::stream<boost::iostreams::array_source> NIFStream(NIFArraySource);
-
   // NIF file object
   NifFile NIF;
 
-  try {
-    // try block for loading nif
-    // TODO if NIF is a loose file nifly should load it directly
-    NIF.Load(NIFStream);
-  } catch (const exception &E) {
-    spdlog::error(L"Error reading NIF file: {}, {}", NIFFile.wstring(), stringToWstring(E.what()));
-    Result = ParallaxGenTask::PGResult::FAILURE;
-    return Result;
+  if (PGD->isLooseFile(NIFFile)) {
+    // Read directly from filesystem if loose file (faster)
+    try {
+      NIF.Load(PGD->getFullPath(NIFFile));
+    } catch (const exception &E) {
+      spdlog::error(L"Error reading NIF file from filesystem: {}, {}", NIFFile.wstring(), stringToWstring(E.what()));
+      Result = ParallaxGenTask::PGResult::FAILURE;
+      return Result;
+    }
+  } else {
+    // Get NIF Bytes
+    vector<std::byte> NIFFileData = PGD->getFile(NIFFile);
+    if (NIFFileData.empty()) {
+      spdlog::error(L"Unable to read NIF file: {}", NIFFile.wstring());
+      Result = ParallaxGenTask::PGResult::FAILURE;
+      return Result;
+    }
+
+    // Convert Byte Vector to Stream
+    boost::iostreams::array_source NIFArraySource(reinterpret_cast<const char *>(NIFFileData.data()),
+                                                  NIFFileData.size());
+    boost::iostreams::stream<boost::iostreams::array_source> NIFStream(NIFArraySource);
+
+    try {
+      // try block for loading nif
+      NIF.Load(NIFStream);
+    } catch (const exception &E) {
+      spdlog::error(L"Error reading NIF file from BSA: {}, {}", NIFFile.wstring(), stringToWstring(E.what()));
+      Result = ParallaxGenTask::PGResult::FAILURE;
+      return Result;
+    }
   }
 
   if (!NIF.IsValid()) {
@@ -205,10 +223,6 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile,
   bool NIFModified = false;
 
   // Create Patcher objects
-  auto SlotSearchVP = PGC->getConfig()["parallax_processing"]["lookup_order"].get<vector<int>>();
-  auto SlotSearchCM = PGC->getConfig()["complexmaterial_processing"]["lookup_order"].get<vector<int>>();
-  auto DynCubeBlocklist = stringVecToWstringVec(
-      PGC->getConfig()["complexmaterial_processing"]["dyncubemap_blocklist"].get<vector<string>>());
   PatcherVanillaParallax PatchVP(NIFFile, &NIF, SlotSearchVP, PGC, PGD, PGD3D);
   PatcherComplexMaterial PatchCM(NIFFile, &NIF, SlotSearchCM, DynCubeBlocklist, PGC, PGD, PGD3D);
   PatcherTruePBR PatchTPBR(NIFFile, &NIF);

@@ -62,8 +62,9 @@ private:
   auto convertHeightMapToComplexMaterial(const std::filesystem::path &HeightMap) -> ParallaxGenTask::PGResult;
 
   // processes a NIF file (enable parallax if needed)
-  auto processNIF(const std::filesystem::path &NIFFile,
-                  const std::vector<nlohmann::json> &TPBRConfigs) -> ParallaxGenTask::PGResult;
+  auto processNIF(const std::filesystem::path &NIFFile, const std::vector<nlohmann::json> &TPBRConfigs,
+                  const std::vector<int> &SlotSearchVP, const std::vector<int> &SlotSearchCM,
+                  std::vector<std::wstring> &DynCubeBlocklist) -> ParallaxGenTask::PGResult;
 
   // processes a shape within a NIF file
   auto processShape(const std::vector<nlohmann::json> &TPBRConfigs, nifly::NifFile &NIF, nifly::NiShape *NIFShape,
