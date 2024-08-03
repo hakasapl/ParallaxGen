@@ -45,6 +45,12 @@ public:
 
   void addMesh(const std::filesystem::path &Path);
 
+  void setHeightMaps(const std::vector<std::filesystem::path> &Paths);
+
+  void setComplexMaterialMaps(const std::vector<std::filesystem::path> &Paths);
+
+  void setMeshes(const std::vector<std::filesystem::path> &Paths);
+
   // is methods
   [[nodiscard]] auto isHeightMap(const std::filesystem::path &Path) const -> bool;
 

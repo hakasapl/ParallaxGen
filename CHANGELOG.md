@@ -7,7 +7,11 @@
 - _resourcepack.bsa is now ignored for complex material
 - Creation club BSAs are now ignored for complex material
 - _em.dds files are now checked if they are complex material
+- mask.dds files are not checked if they are complex material
+- User-defined generic suffixes is now possible
 - Added JSON validation for ParallaxGen configs
+- Complex material lookup is much smarter now
+- Added --no-gpu option to disable GPU use
 
 ## [0.5.0] - 2024-07-28
 

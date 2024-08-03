@@ -41,34 +41,9 @@ void ParallaxGenDirectory::findComplexMaterialMaps(const vector<wstring> &Allowl
                                                    const vector<wstring> &ArchiveBlocklist) {
   spdlog::info("Finding complex material maps");
   // find complex material maps
-  vector<filesystem::path> EnvMaps = findFiles(true, Allowlist, Blocklist, ArchiveBlocklist);
-
-  // loop through env maps
-  for (const auto &EnvMap : EnvMaps) {
-    // check if env map is actually a complex material map
-    const vector<std::byte> EnvMapData = getFile(EnvMap);
-
-    // load image into directxtex
-    DirectX::ScratchImage Image;
-    HRESULT HR =
-        DirectX::LoadFromDDSMemory(EnvMapData.data(), EnvMapData.size(), DirectX::DDS_FLAGS_NONE, nullptr, Image);
-    if (FAILED(HR)) {
-      spdlog::warn(L"Failed to load DDS from memory: {} - skipping", EnvMap.wstring());
-      continue;
-    }
-
-    // check if image is a complex material map
-    if (!Image.IsAlphaAllOpaque()) {
-      // if alpha channel is used, there is parallax data
-      // this won't work on complex matterial maps that don't make use of
-      // complex parallax I'm not sure there's a way to check for those other
-      // cases
-      spdlog::trace(L"Adding {} as a complex material map", EnvMap.wstring());
-      ComplexMaterialMaps.push_back(EnvMap);
-    }
-  }
-
-  spdlog::info("Found {} complex material maps", ComplexMaterialMaps.size());
+  // TODO find a way to have downstream stuff edit this directly instead of replacement
+  ComplexMaterialMaps = findFiles(true, Allowlist, Blocklist, ArchiveBlocklist);
+  // No conclusion because this is affected by D3D later
 }
 
 void ParallaxGenDirectory::findMeshes(const vector<wstring> &Allowlist, const vector<wstring> &Blocklist,
@@ -146,6 +121,14 @@ void ParallaxGenDirectory::addMesh(const filesystem::path &Path) {
   // add to vector
   addUniqueElement(Meshes, PathLower);
 }
+
+void ParallaxGenDirectory::setHeightMaps(const vector<filesystem::path> &Paths) { HeightMaps = Paths; }
+
+void ParallaxGenDirectory::setComplexMaterialMaps(const vector<filesystem::path> &Paths) {
+  ComplexMaterialMaps = Paths;
+}
+
+void ParallaxGenDirectory::setMeshes(const vector<filesystem::path> &Paths) { Meshes = Paths; }
 
 auto ParallaxGenDirectory::isHeightMap(const filesystem::path &Path) const -> bool {
   return find(HeightMaps.begin(), HeightMaps.end(), getPathLower(Path)) != HeightMaps.end();

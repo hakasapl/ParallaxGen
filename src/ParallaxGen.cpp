@@ -158,9 +158,6 @@ void ParallaxGen::initOutputDir() const {
 }
 
 // shorten some enum names
-using BSLSP = BSLightingShaderPropertyShaderType;
-using SSPF1 = SkyrimShaderPropertyFlags1;
-using SSPF2 = SkyrimShaderPropertyFlags2;
 auto ParallaxGen::processNIF(const filesystem::path &NIFFile,
                              const vector<nlohmann::json> &TPBRConfigs) -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
