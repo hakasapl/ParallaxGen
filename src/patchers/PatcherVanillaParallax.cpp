@@ -1,7 +1,5 @@
 #include "patchers/PatcherVanillaParallax.hpp"
 
-#include <NifFile.hpp>
-#include <Shaders.hpp>
 #include <boost/algorithm/string.hpp>
 #include <spdlog/spdlog.h>
 
@@ -25,10 +23,8 @@ PatcherVanillaParallax::PatcherVanillaParallax(filesystem::path NIFPath, nifly::
   }
 }
 
-auto PatcherVanillaParallax::shouldEnableParallax(NiShape *NIFShape,
-                                                  const array<string, NUM_TEXTURE_SLOTS> &SearchPrefixes,
-                                                  bool &EnableResult,
-                                                  string &MatchedPath) const -> ParallaxGenTask::PGResult {
+auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<string, NUM_TEXTURE_SLOTS> &SearchPrefixes,
+                                         bool &EnableResult, string &MatchedPath) const -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Prep
@@ -128,8 +124,8 @@ auto PatcherVanillaParallax::shouldEnableParallax(NiShape *NIFShape,
   return Result;
 }
 
-auto PatcherVanillaParallax::enableParallaxOnShape(NiShape *NIFShape, const string &MatchedPath,
-                                                   bool &NIFModified) -> ParallaxGenTask::PGResult {
+auto PatcherVanillaParallax::applyPatch(NiShape *NIFShape, const string &MatchedPath,
+                                        bool &NIFModified) -> ParallaxGenTask::PGResult {
   // enable Parallax on shape
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 

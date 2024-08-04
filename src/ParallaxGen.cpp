@@ -314,13 +314,13 @@ auto ParallaxGen::processShape(const vector<nlohmann::json> &TPBRConfigs, NifFil
     bool EnableTruePBR = false;
     vector<tuple<nlohmann::json, string>> TruePBRData;
     ParallaxGenTask::updatePGResult(
-        Result, PatchTPBR.shouldApplyTruePBRConfig(NIFShape, TPBRConfigs, SearchPrefixes, EnableTruePBR, TruePBRData),
+        Result, PatchTPBR.shouldApply(NIFShape, TPBRConfigs, SearchPrefixes, EnableTruePBR, TruePBRData),
         ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
     if (EnableTruePBR) {
       // Enable TruePBR on shape
       for (auto &TruePBRCFG : TruePBRData) {
         ParallaxGenTask::updatePGResult(
-            Result, PatchTPBR.applyTruePBRConfigOnShape(NIFShape, get<0>(TruePBRCFG), get<1>(TruePBRCFG), NIFModified));
+            Result, PatchTPBR.applyPatch(NIFShape, get<0>(TruePBRCFG), get<1>(TruePBRCFG), NIFModified));
       }
       return Result;
     }
@@ -332,12 +332,12 @@ auto ParallaxGen::processShape(const vector<nlohmann::json> &TPBRConfigs, NifFil
     bool EnableDynCubemaps = false;
     MatchedPath = "";
     ParallaxGenTask::updatePGResult(
-        Result, PatchCM.shouldEnableComplexMaterial(NIFShape, SearchPrefixes, EnableCM, EnableDynCubemaps, MatchedPath),
+        Result, PatchCM.shouldApply(NIFShape, SearchPrefixes, EnableCM, EnableDynCubemaps, MatchedPath),
         ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
     if (EnableCM) {
       // Enable complex material on shape
-      ParallaxGenTask::updatePGResult(
-          Result, PatchCM.enableComplexMaterialOnShape(NIFShape, MatchedPath, EnableDynCubemaps, NIFModified));
+      ParallaxGenTask::updatePGResult(Result,
+                                      PatchCM.applyPatch(NIFShape, MatchedPath, EnableDynCubemaps, NIFModified));
       return Result;
     }
   }
@@ -346,12 +346,11 @@ auto ParallaxGen::processShape(const vector<nlohmann::json> &TPBRConfigs, NifFil
   if (!IgnoreParallax) {
     bool EnableParallax = false;
     MatchedPath = "";
-    ParallaxGenTask::updatePGResult(Result,
-                                    PatchVP.shouldEnableParallax(NIFShape, SearchPrefixes, EnableParallax, MatchedPath),
+    ParallaxGenTask::updatePGResult(Result, PatchVP.shouldApply(NIFShape, SearchPrefixes, EnableParallax, MatchedPath),
                                     ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
     if (EnableParallax) {
       // Enable Parallax on shape
-      ParallaxGenTask::updatePGResult(Result, PatchVP.enableParallaxOnShape(NIFShape, MatchedPath, NIFModified));
+      ParallaxGenTask::updatePGResult(Result, PatchVP.applyPatch(NIFShape, MatchedPath, NIFModified));
       return Result;
     }
   }

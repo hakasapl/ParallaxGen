@@ -1,11 +1,8 @@
 #include "patchers/PatcherComplexMaterial.hpp"
 
-#include <NifFile.hpp>
-#include <Shaders.hpp>
 #include <boost/algorithm/string.hpp>
 #include <spdlog/spdlog.h>
 
-#include "NIFUtil.hpp"
 #include "ParallaxGenConfig.hpp"
 #include "ParallaxGenUtil.hpp"
 
@@ -18,10 +15,9 @@ PatcherComplexMaterial::PatcherComplexMaterial(filesystem::path NIFPath, nifly::
     : NIFPath(std::move(NIFPath)), NIF(NIF), SlotSearch(std::move(SlotSearch)),
       DynCubemapBlocklist(std::move(DynCubemapBlocklist)), PGD(PGD), PGC(PGC), PGD3D(PGD3D) {}
 
-auto PatcherComplexMaterial::shouldEnableComplexMaterial(NiShape *NIFShape,
-                                                         const array<string, NUM_TEXTURE_SLOTS> &SearchPrefixes,
-                                                         bool &EnableResult, bool &EnableDynCubemaps,
-                                                         string &MatchedPath) const -> ParallaxGenTask::PGResult {
+auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<string, NUM_TEXTURE_SLOTS> &SearchPrefixes,
+                                         bool &EnableResult, bool &EnableDynCubemaps,
+                                         string &MatchedPath) const -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Prep
@@ -83,9 +79,8 @@ auto PatcherComplexMaterial::shouldEnableComplexMaterial(NiShape *NIFShape,
   return Result;
 }
 
-auto PatcherComplexMaterial::enableComplexMaterialOnShape(NiShape *NIFShape, const string &MatchedPath,
-                                                          const bool &ApplyDynCubemaps,
-                                                          bool &NIFModified) const -> ParallaxGenTask::PGResult {
+auto PatcherComplexMaterial::applyPatch(NiShape *NIFShape, const string &MatchedPath, const bool &ApplyDynCubemaps,
+                                        bool &NIFModified) const -> ParallaxGenTask::PGResult {
   // enable complex material on shape
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 

@@ -1,12 +1,9 @@
 #pragma once
 
-#include <miniz.h>
-
 #include <NifFile.hpp>
-#include <array>
 #include <filesystem>
+#include <miniz.h>
 #include <nlohmann/json.hpp>
-#include <tuple>
 
 #include "ParallaxGenConfig.hpp"
 #include "ParallaxGenD3D.hpp"

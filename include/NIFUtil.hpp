@@ -1,12 +1,13 @@
 #pragma once
 
-#include "Defs.hpp"
 #include <Geometry.hpp>
 #include <NifFile.hpp>
 #include <Shaders.hpp>
 
 #include "ParallaxGenConfig.hpp"
 #include "ParallaxGenDirectory.hpp"
+
+#define NUM_TEXTURE_SLOTS 9
 
 namespace NIFUtil {
 enum class TextureSlots : unsigned int {

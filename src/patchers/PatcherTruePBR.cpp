@@ -1,20 +1,16 @@
 #include "patchers/PatcherTruePBR.hpp"
 
-#include <Geometry.hpp>
-#include <Shaders.hpp>
 #include <boost/algorithm/string.hpp>
 #include <spdlog/spdlog.h>
-
-#include "NIFUtil.hpp"
 
 using namespace std;
 
 PatcherTruePBR::PatcherTruePBR(filesystem::path NIFPath, nifly::NifFile *NIF) : NIFPath(std::move(NIFPath)), NIF(NIF) {}
 
-auto PatcherTruePBR::shouldApplyTruePBRConfig(
-    nifly::NiShape *NIFShape, const vector<nlohmann::json> &TPBRConfigs,
-    const array<string, NUM_TEXTURE_SLOTS> &SearchPrefixes, bool &EnableResult,
-    vector<tuple<nlohmann::json, string>> &TruePBRData) const -> ParallaxGenTask::PGResult {
+auto PatcherTruePBR::shouldApply(nifly::NiShape *NIFShape, const vector<nlohmann::json> &TPBRConfigs,
+                                 const array<string, NUM_TEXTURE_SLOTS> &SearchPrefixes, bool &EnableResult,
+                                 vector<tuple<nlohmann::json, string>> &TruePBRData) const
+    -> ParallaxGenTask::PGResult {
 
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
   const auto ShapeBlockID = NIF->GetBlockID(NIFShape);
@@ -59,9 +55,8 @@ auto PatcherTruePBR::shouldApplyTruePBRConfig(
   return Result;
 }
 
-auto PatcherTruePBR::applyTruePBRConfigOnShape(NiShape *NIFShape, nlohmann::json &TruePBRData,
-                                               const std::string &MatchedPath,
-                                               bool &NIFModified) const -> ParallaxGenTask::PGResult {
+auto PatcherTruePBR::applyPatch(NiShape *NIFShape, nlohmann::json &TruePBRData, const std::string &MatchedPath,
+                                bool &NIFModified) const -> ParallaxGenTask::PGResult {
 
   // enable TruePBR on shape
   auto Result = ParallaxGenTask::PGResult::SUCCESS;

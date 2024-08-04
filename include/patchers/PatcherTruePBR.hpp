@@ -5,7 +5,7 @@
 #include <nlohmann/json.hpp>
 #include <vector>
 
-#include "Defs.hpp"
+#include "NIFUtil.hpp"
 #include "ParallaxGenTask.hpp"
 
 class PatcherTruePBR {
@@ -17,15 +17,15 @@ public:
   PatcherTruePBR(std::filesystem::path NIFPath, nifly::NifFile *NIF);
 
   // check if truepbr should be enabled on shape
-  auto shouldApplyTruePBRConfig(nifly::NiShape *NIFShape, const std::vector<nlohmann::json> &TPBRConfigs,
-                                const std::array<std::string, NUM_TEXTURE_SLOTS> &SearchPrefixes, bool &EnableResult,
-                                std::vector<std::tuple<nlohmann::json, std::string>> &TruePBRData) const
-      -> ParallaxGenTask::PGResult;
+  auto
+  shouldApply(nifly::NiShape *NIFShape, const std::vector<nlohmann::json> &TPBRConfigs,
+              const std::array<std::string, NUM_TEXTURE_SLOTS> &SearchPrefixes, bool &EnableResult,
+              std::vector<std::tuple<nlohmann::json, std::string>> &TruePBRData) const -> ParallaxGenTask::PGResult;
 
   // applies truepbr config on a shape in a NIF (always applies with config, but
   // maybe PBR is disabled)
-  auto applyTruePBRConfigOnShape(nifly::NiShape *NIFShape, nlohmann::json &TruePBRData, const std::string &MatchedPath,
-                                 bool &NIFModified) const -> ParallaxGenTask::PGResult;
+  auto applyPatch(nifly::NiShape *NIFShape, nlohmann::json &TruePBRData, const std::string &MatchedPath,
+                  bool &NIFModified) const -> ParallaxGenTask::PGResult;
 
 private:
   // enables truepbr on a shape in a NIF (If PBR is enabled)

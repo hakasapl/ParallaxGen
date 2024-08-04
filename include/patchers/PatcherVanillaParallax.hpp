@@ -4,7 +4,7 @@
 #include <filesystem>
 #include <string>
 
-#include "Defs.hpp"
+#include "NIFUtil.hpp"
 #include "ParallaxGenConfig.hpp"
 #include "ParallaxGenD3D.hpp"
 #include "ParallaxGenDirectory.hpp"
@@ -26,10 +26,10 @@ public:
                          ParallaxGenConfig *PGC, ParallaxGenDirectory *PGD, ParallaxGenD3D *PGD3D);
 
   // check if vanilla parallax should be enabled on shape
-  auto shouldEnableParallax(nifly::NiShape *NIFShape, const std::array<std::string, NUM_TEXTURE_SLOTS> &SearchPrefixes,
-                            bool &EnableResult, std::string &MatchedPath) const -> ParallaxGenTask::PGResult;
+  auto shouldApply(nifly::NiShape *NIFShape, const std::array<std::string, NUM_TEXTURE_SLOTS> &SearchPrefixes,
+                   bool &EnableResult, std::string &MatchedPath) const -> ParallaxGenTask::PGResult;
 
   // enables parallax on a shape in a NIF
-  auto enableParallaxOnShape(nifly::NiShape *NIFShape, const std::string &MatchedPath,
-                             bool &NIFModified) -> ParallaxGenTask::PGResult;
+  auto applyPatch(nifly::NiShape *NIFShape, const std::string &MatchedPath,
+                  bool &NIFModified) -> ParallaxGenTask::PGResult;
 };
