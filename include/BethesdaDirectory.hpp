@@ -42,14 +42,12 @@ private:
   };
 
   // Class member variables
-  std::filesystem::path
-      DataDir; /**< Stores the path to the game data directory */
-  std::map<std::filesystem::path, BethesdaFile>
-      FileMap; /** < Stores the file map for every file found in the load order.
-                  Key is a lowercase path, value is a BethesdaFile */
-  bool Logging;    /** < Bool for whether logging is enabled or not */
-  BethesdaGame BG; /** < BethesdaGame which stores a BethesdaGame object
-                      corresponding to this load order */
+  std::filesystem::path DataDir;                         /**< Stores the path to the game data directory */
+  std::map<std::filesystem::path, BethesdaFile> FileMap; /** < Stores the file map for every file found in the load
+                                                            order. Key is a lowercase path, value is a BethesdaFile */
+  bool Logging;                                          /** < Bool for whether logging is enabled or not */
+  BethesdaGame BG;                                       /** < BethesdaGame which stores a BethesdaGame object
+                                                            corresponding to this load order */
 
   /**
    * @brief Returns a vector of strings that represent the fields in the INI
@@ -84,8 +82,7 @@ public:
    *
    * @return std::map<std::filesystem::path, BethesdaFile>
    */
-  [[nodiscard]] auto
-  getFileMap() const -> std::map<std::filesystem::path, BethesdaFile>;
+  [[nodiscard]] auto getFileMap() const -> std::map<std::filesystem::path, BethesdaFile>;
 
   /**
    * @brief Get the data directory path
@@ -100,8 +97,7 @@ public:
    * @param RelPath path to the file relative to the data directory
    * @return std::vector<std::byte> vector of bytes of the file
    */
-  [[nodiscard]] auto
-  getFile(const std::filesystem::path &RelPath) const -> std::vector<std::byte>;
+  [[nodiscard]] auto getFile(const std::filesystem::path &RelPath) const -> std::vector<std::byte>;
 
   /**
    * @brief Check if a file in the load order is a loose file
@@ -110,8 +106,7 @@ public:
    * @return true if file is a loose file
    * @return false if file is not a loose file or doesn't exist
    */
-  [[nodiscard]] auto
-  isLooseFile(const std::filesystem::path &RelPath) const -> bool;
+  [[nodiscard]] auto isLooseFile(const std::filesystem::path &RelPath) const -> bool;
 
   /**
    * @brief Check if a file in the load order is a BSA file
@@ -120,8 +115,7 @@ public:
    * @return true if file is a BSA file
    * @return false if file is not a BSA file or doesn't exist
    */
-  [[nodiscard]] auto
-  isBSAFile(const std::filesystem::path &RelPath) const -> bool;
+  [[nodiscard]] auto isBSAFile(const std::filesystem::path &RelPath) const -> bool;
 
   /**
    * @brief Check if a file exists in the load order
@@ -138,8 +132,7 @@ public:
    * @param RelPath path to the file relative to the data directory
    * @return std::filesystem::path absolute path to the file
    */
-  [[nodiscard]] auto getFullPath(const std::filesystem::path &RelPath) const
-      -> std::filesystem::path;
+  [[nodiscard]] auto getFullPath(const std::filesystem::path &RelPath) const -> std::filesystem::path;
 
   /**
    * @brief Find files in the load order
@@ -152,12 +145,10 @@ public:
    * @return std::vector<std::filesystem::path> vector of files that match the
    * criteria
    */
-  [[nodiscard]] auto
-  findFiles(const bool &Lower = false,
-            const std::vector<std::wstring> &GlobListAllow = {},
-            const std::vector<std::wstring> &GlobListDeny = {},
-            const std::vector<std::wstring> &ArchiveListDeny = {}) const
-      -> std::vector<std::filesystem::path>;
+  [[nodiscard]] auto findFiles(const bool &Lower = false, const std::vector<std::wstring> &GlobListAllow = {},
+                               const std::vector<std::wstring> &GlobListDeny = {},
+                               const std::vector<std::wstring> &ArchiveListDeny = {},
+                               const bool &LogFindings = false) const -> std::vector<std::filesystem::path>;
 
   /**
    * @brief Get the load order of BSAs
@@ -175,8 +166,7 @@ public:
    * @return std::vector<std::wstring> Names of plugins ordered by load order.
    * First element is loaded first.
    */
-  [[nodiscard]] auto getPluginLoadOrder(const bool &TrimExtension = false) const
-      -> std::vector<std::wstring>;
+  [[nodiscard]] auto getPluginLoadOrder(const bool &TrimExtension = false) const -> std::vector<std::wstring>;
 
   // Helpers
 
@@ -186,8 +176,7 @@ public:
    * @param Path Path to be made lowercase
    * @return std::filesystem::path lowercase path of the input
    */
-  static auto
-  getPathLower(const std::filesystem::path &Path) -> std::filesystem::path;
+  static auto getPathLower(const std::filesystem::path &Path) -> std::filesystem::path;
 
   /**
    * @brief Check if two paths are equal, ignoring case
@@ -197,9 +186,7 @@ public:
    * @return true if paths equal ignoring case
    * @return false if paths don't equal ignoring case
    */
-  static auto
-  pathEqualityIgnoreCase(const std::filesystem::path &Path1,
-                         const std::filesystem::path &Path2) -> bool;
+  static auto pathEqualityIgnoreCase(const std::filesystem::path &Path1, const std::filesystem::path &Path2) -> bool;
 
   /**
    * @brief Check if any component on a path is in a list of components
@@ -209,9 +196,8 @@ public:
    * @return true if any component is in the path
    * @return false if no component is in the path
    */
-  static auto
-  checkIfAnyComponentIs(const std::filesystem::path &Path,
-                        const std::vector<std::wstring> &Components) -> bool;
+  static auto checkIfAnyComponentIs(const std::filesystem::path &Path,
+                                    const std::vector<std::wstring> &Components) -> bool;
 
   /**
    * @brief Check if any glob in list matches string
@@ -221,8 +207,7 @@ public:
    * @return true if any match
    * @return false if none match
    */
-  static auto checkGlob(const std::wstring &Str,
-                        const std::vector<std::wstring> &GlobList) -> bool;
+  static auto checkGlob(const std::wstring &Str, const std::vector<std::wstring> &GlobList) -> bool;
 
 private:
   /**
@@ -265,8 +250,7 @@ private:
    *
    * @return std::vector<std::wstring> list of BSAs in the data directory
    */
-  [[nodiscard]] auto
-  getBSAFilesInDirectory() const -> std::vector<std::wstring>;
+  [[nodiscard]] auto getBSAFilesInDirectory() const -> std::vector<std::wstring>;
 
   /**
    * @brief gets BSA files that are loaded with a plugin
@@ -275,9 +259,8 @@ private:
    * @param PluginPrefix Plugin to check without extension
    * @return std::vector<std::wstring> list of BSAs loaded with plugin
    */
-  [[nodiscard]] auto findBSAFilesFromPluginName(
-      const std::vector<std::wstring> &BSAFileList,
-      const std::wstring &PluginPrefix) const -> std::vector<std::wstring>;
+  [[nodiscard]] auto findBSAFilesFromPluginName(const std::vector<std::wstring> &BSAFileList,
+                                                const std::wstring &PluginPrefix) const -> std::vector<std::wstring>;
 
   /**
    * @brief Get a file object from the file map
@@ -285,8 +268,7 @@ private:
    * @param FilePath Path to get the object for
    * @return BethesdaFile object of file in load order
    */
-  [[nodiscard]] auto
-  getFileFromMap(const std::filesystem::path &FilePath) const -> BethesdaFile;
+  [[nodiscard]] auto getFileFromMap(const std::filesystem::path &FilePath) const -> BethesdaFile;
 
   /**
    * @brief Update the file map with
@@ -294,8 +276,7 @@ private:
    * @param FilePath path to update or add
    * @param BSAFile BSA file or nullptr if it doesn't exist
    */
-  void updateFileMap(const std::filesystem::path &FilePath,
-                     std::shared_ptr<BSAFile> BSAFile);
+  void updateFileMap(const std::filesystem::path &FilePath, std::shared_ptr<BSAFile> BSAFile);
 
   /**
    * @brief Convert a list of wstrings to a LPCWSTRs
@@ -303,8 +284,8 @@ private:
    * @param Original original list of wstrings to convert
    * @return std::vector<LPCWSTR> list of LPCWSTRs
    */
-  [[nodiscard]] static auto convertWStringToLPCWSTRVector(
-      const std::vector<std::wstring> &Original) -> std::vector<LPCWSTR>;
+  [[nodiscard]] static auto
+  convertWStringToLPCWSTRVector(const std::vector<std::wstring> &Original) -> std::vector<LPCWSTR>;
 
   /**
    * @brief Checks whether a glob matches a provided list of globs
@@ -315,11 +296,8 @@ private:
    * @return true Any glob is the list mated
    * @return false No globs in the list matched
    */
-  static auto checkGlob(const LPCWSTR &Str, LPCWSTR &WinningGlob,
-                        const std::vector<LPCWSTR> &GlobList) -> bool;
+  static auto checkGlob(const LPCWSTR &Str, LPCWSTR &WinningGlob, const std::vector<LPCWSTR> &GlobList) -> bool;
 
-  static auto readINIValue(const std::filesystem::path &INIPath,
-                           const std::wstring &Section, const std::wstring &Key,
-                           const bool &Logging,
-                           const bool &FirstINIRead) -> std::wstring;
+  static auto readINIValue(const std::filesystem::path &INIPath, const std::wstring &Section, const std::wstring &Key,
+                           const bool &Logging, const bool &FirstINIRead) -> std::wstring;
 };

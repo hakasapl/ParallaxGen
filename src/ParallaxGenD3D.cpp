@@ -31,7 +31,7 @@ auto ParallaxGenD3D::findCMMaps() -> ParallaxGenTask::PGResult {
 
     if (Result) {
       ComplexMaterialMaps.push_back(EnvMask);
-      spdlog::debug(L"Found complex material map: {}", EnvMask.wstring());
+      spdlog::debug(L"Found File: {}", EnvMask.wstring());
     }
   }
 

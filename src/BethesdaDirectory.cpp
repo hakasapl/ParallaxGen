@@ -19,8 +19,7 @@ using namespace std;
 using namespace ParallaxGenUtil;
 namespace fs = filesystem;
 
-BethesdaDirectory::BethesdaDirectory(BethesdaGame &BG, const bool &Logging)
-    : Logging(Logging), BG(BG) {
+BethesdaDirectory::BethesdaDirectory(BethesdaGame &BG, const bool &Logging) : Logging(Logging), BG(BG) {
   // Assign instance vars
   DataDir = fs::path(this->BG.getGameDataPath());
 
@@ -36,9 +35,7 @@ BethesdaDirectory::BethesdaDirectory(BethesdaGame &BG, const bool &Logging)
 auto BethesdaDirectory::getINIBSAFields() -> vector<string> {
   // these fields will be searched in ini files for manually specified BSA
   // loading
-  static vector<string> INIBSAFields = {"sResourceArchiveList",
-                                        "sResourceArchiveList2",
-                                        "sResourceArchiveListBeta"};
+  static vector<string> INIBSAFields = {"sResourceArchiveList", "sResourceArchiveList2", "sResourceArchiveListBeta"};
 
   return INIBSAFields;
 }
@@ -48,14 +45,12 @@ auto BethesdaDirectory::getExtensionBlocklist() -> vector<wstring> {
   // allowed BSAs etc. to be hidden from the file map since this object is an
   // abstraction of the data directory that no longer factors BSAs for
   // downstream users
-  static vector<wstring> ExtensionBlocklist = {L".bsa", L".esp", L".esl",
-                                               L".esm"};
+  static vector<wstring> ExtensionBlocklist = {L".bsa", L".esp", L".esl", L".esm"};
 
   return ExtensionBlocklist;
 }
 
-auto BethesdaDirectory::checkGlob(const wstring &Str,
-                                  const vector<wstring> &GlobList) -> bool {
+auto BethesdaDirectory::checkGlob(const wstring &Str, const vector<wstring> &GlobList) -> bool {
   // convert wstring vector to LPCWSTR vector
   vector<LPCWSTR> GlobListCstr = convertWStringToLPCWSTRVector(GlobList);
 
@@ -63,9 +58,7 @@ auto BethesdaDirectory::checkGlob(const wstring &Str,
   LPCWSTR StrCstr = Str.c_str();
 
   // check if string matches any glob
-  return std::ranges::any_of(GlobListCstr, [&](LPCWSTR Glob) {
-    return PathMatchSpecW(StrCstr, Glob);
-  });
+  return std::ranges::any_of(GlobListCstr, [&](LPCWSTR Glob) { return PathMatchSpecW(StrCstr, Glob); });
 }
 
 void BethesdaDirectory::populateFileMap() {
@@ -79,13 +72,9 @@ void BethesdaDirectory::populateFileMap() {
   addLooseFilesToMap();
 }
 
-auto BethesdaDirectory::getFileMap() const
-    -> map<fs::path, BethesdaDirectory::BethesdaFile> {
-  return FileMap;
-}
+auto BethesdaDirectory::getFileMap() const -> map<fs::path, BethesdaDirectory::BethesdaFile> { return FileMap; }
 
-auto BethesdaDirectory::getFile(const fs::path &RelPath) const
-    -> vector<std::byte> {
+auto BethesdaDirectory::getFile(const fs::path &RelPath) const -> vector<std::byte> {
   // find bsa/loose file to open
   BethesdaFile File = getFileFromMap(RelPath);
   if (File.Path.empty()) {
@@ -99,8 +88,7 @@ auto BethesdaDirectory::getFile(const fs::path &RelPath) const
   shared_ptr<BSAFile> BSAStruct = File.BSAFile;
   if (BSAStruct == nullptr) {
     if (Logging) {
-      spdlog::trace(L"Reading loose file from BethesdaDirectory: {}",
-                    RelPath.wstring());
+      spdlog::trace(L"Reading loose file from BethesdaDirectory: {}", RelPath.wstring());
     }
 
     fs::path FilePath = DataDir / RelPath;
@@ -112,8 +100,7 @@ auto BethesdaDirectory::getFile(const fs::path &RelPath) const
     fs::path BSAPath = BSAStruct->Path;
 
     if (Logging) {
-      spdlog::trace(L"Reading BSA file from {}: {}", BSAPath.wstring(),
-                    RelPath.wstring());
+      spdlog::trace(L"Reading BSA file from {}: {}", BSAPath.wstring(), RelPath.wstring());
     }
 
     // this is a bsa archive file
@@ -131,8 +118,7 @@ auto BethesdaDirectory::getFile(const fs::path &RelPath) const
         File->write(AOS, BSAVersion);
       } catch (const std::exception &E) {
         if (Logging) {
-          spdlog::error(L"Failed to read file {}: {}", RelPath.wstring(),
-                        stringToWstring(E.what()));
+          spdlog::error(L"Failed to read file {}: {}", RelPath.wstring(), stringToWstring(E.what()));
         }
       }
 
@@ -165,26 +151,20 @@ auto BethesdaDirectory::isFile(const fs::path &RelPath) const -> bool {
   return !File.Path.empty();
 }
 
-auto BethesdaDirectory::getFullPath(const fs::path &RelPath) const -> fs::path {
-  return DataDir / RelPath;
-}
+auto BethesdaDirectory::getFullPath(const fs::path &RelPath) const -> fs::path { return DataDir / RelPath; }
 
 auto BethesdaDirectory::getDataPath() const -> fs::path { return DataDir; }
 
-auto BethesdaDirectory::findFiles(
-    const bool &Lower, const vector<wstring> &GlobListAllow,
-    const vector<wstring> &GlobListDeny,
-    const vector<wstring> &ArchiveListDeny) const -> vector<fs::path> {
+auto BethesdaDirectory::findFiles(const bool &Lower, const vector<wstring> &GlobListAllow,
+                                  const vector<wstring> &GlobListDeny, const vector<wstring> &ArchiveListDeny,
+                                  const bool &LogFindings) const -> vector<fs::path> {
   // find all keys in FileMap that match pattern
   vector<fs::path> FoundFiles;
 
   // Create LPCWSTR vectors from wstrings
-  vector<LPCWSTR> GlobListAllowCstr =
-      convertWStringToLPCWSTRVector(GlobListAllow);
-  vector<LPCWSTR> GlobListDenyCstr =
-      convertWStringToLPCWSTRVector(GlobListDeny);
-  vector<LPCWSTR> ArchiveListDenyCstr =
-      convertWStringToLPCWSTRVector(ArchiveListDeny);
+  vector<LPCWSTR> GlobListAllowCstr = convertWStringToLPCWSTRVector(GlobListAllow);
+  vector<LPCWSTR> GlobListDenyCstr = convertWStringToLPCWSTRVector(GlobListDeny);
+  vector<LPCWSTR> ArchiveListDenyCstr = convertWStringToLPCWSTRVector(ArchiveListDeny);
 
   LPCWSTR LastWinningGlobAllow = L"";
   LPCWSTR LastWinningGlobDeny = L"";
@@ -199,14 +179,12 @@ auto BethesdaDirectory::findFiles(
     LPCWSTR KeyCstr = KeyWStr.c_str();
 
     // Check allowlist
-    if (!GlobListAllowCstr.empty() &&
-        !checkGlob(KeyCstr, LastWinningGlobAllow, GlobListAllowCstr)) {
+    if (!GlobListAllowCstr.empty() && !checkGlob(KeyCstr, LastWinningGlobAllow, GlobListAllowCstr)) {
       continue;
     }
 
     // Check denylist
-    if (!GlobListDenyCstr.empty() &&
-        checkGlob(KeyCstr, LastWinningGlobDeny, GlobListDenyCstr)) {
+    if (!GlobListDenyCstr.empty() && checkGlob(KeyCstr, LastWinningGlobDeny, GlobListDenyCstr)) {
       continue;
     }
 
@@ -224,6 +202,10 @@ auto BethesdaDirectory::findFiles(
     // If not allowed, skip
     if (Logging) {
       spdlog::trace(L"Matched file by glob: {}", CurFilePath.wstring());
+    }
+
+    if (LogFindings) {
+      spdlog::debug(L"Found File: {}", CurFilePath.wstring());
     }
 
     if (Lower) {
@@ -256,22 +238,28 @@ void BethesdaDirectory::addLooseFilesToMap() {
     spdlog::info("Adding loose files to file map.");
   }
 
-  for (const auto &Entry : fs::recursive_directory_iterator(
-           DataDir, fs::directory_options::skip_permission_denied)) {
-    if (Entry.is_regular_file()) {
-      const fs::path &FilePath = Entry.path();
-      fs::path RelativePath = FilePath.lexically_relative(DataDir);
+  for (const auto &Entry : fs::recursive_directory_iterator(DataDir, fs::directory_options::skip_permission_denied)) {
+    try {
+      if (Entry.is_regular_file()) {
+        const fs::path &FilePath = Entry.path();
+        fs::path RelativePath = FilePath.lexically_relative(DataDir);
 
-      // check type of file, skip BSAs and ESPs
-      if (!isFileAllowed(FilePath)) {
-        continue;
+        // check type of file, skip BSAs and ESPs
+        if (!isFileAllowed(FilePath)) {
+          continue;
+        }
+
+        if (Logging) {
+          spdlog::trace(L"Adding loose file to map: {}", RelativePath.wstring());
+        }
+
+        updateFileMap(RelativePath, nullptr);
       }
-
+    } catch (const std::exception &E) {
       if (Logging) {
-        spdlog::trace(L"Adding loose file to map: {}", RelativePath.wstring());
+        spdlog::error(L"Failed to load file from iterator (Skipping): {}", stringToWstring(E.what()));
       }
-
-      updateFileMap(RelativePath, nullptr);
+      continue;
     }
   }
 }
@@ -289,8 +277,7 @@ void BethesdaDirectory::addBSAToFileMap(const wstring &BSAName) {
   // data folder)
   if (!fs::exists(BSAPath)) {
     if (Logging) {
-      spdlog::warn(L"Skipping BSA {} because it doesn't exist",
-                   BSAPath.wstring());
+      spdlog::warn(L"Skipping BSA {} because it doesn't exist", BSAPath.wstring());
     }
     return;
   }
@@ -301,11 +288,9 @@ void BethesdaDirectory::addBSAToFileMap(const wstring &BSAName) {
   shared_ptr<BSAFile> BSAStructPtr = make_shared<BSAFile>(BSAStruct);
 
   // loop iterator
-  for (auto BSAIter = BSAObj.begin(); BSAIter != BSAObj.end(); ++BSAIter) {
+  for (auto &FileEntry : BSAObj) {
     // get file entry from pointer
     try {
-      const auto &FileEntry = *BSAIter;
-
       // get folder name within the BSA vfs
       const fs::path FolderName = FileEntry.first.name();
 
@@ -324,8 +309,7 @@ void BethesdaDirectory::addBSAToFileMap(const wstring &BSAName) {
         }
 
         if (Logging) {
-          spdlog::trace(L"Adding file from BSA {} to file map: {}", BSAName,
-                        CurPath.wstring());
+          spdlog::trace(L"Adding file from BSA {} to file map: {}", BSAName, CurPath.wstring());
         }
 
         // add to filemap
@@ -333,8 +317,7 @@ void BethesdaDirectory::addBSAToFileMap(const wstring &BSAName) {
       }
     } catch (const std::exception &E) {
       if (Logging) {
-        spdlog::warn(L"Failed to get file pointer from BSA, skipping {}: {}",
-                     BSAName, stringToWstring(E.what()));
+        spdlog::error(L"Failed to get file pointer from BSA, skipping {}: {}", BSAName, stringToWstring(E.what()));
       }
       continue;
     }
@@ -354,8 +337,7 @@ auto BethesdaDirectory::getBSALoadOrder() const -> vector<wstring> {
   // loop through each esp in the priority list
   for (const auto &Plugin : LoadOrder) {
     // add any BSAs to list
-    vector<wstring> CurFoundBSAs =
-        findBSAFilesFromPluginName(AllBSAFiles, Plugin);
+    vector<wstring> CurFoundBSAs = findBSAFilesFromPluginName(AllBSAFiles, Plugin);
     concatenateVectorsWithoutDuplicates(OutBSAOrder, CurFoundBSAs);
   }
 
@@ -374,8 +356,7 @@ auto BethesdaDirectory::getBSALoadOrder() const -> vector<wstring> {
   return OutBSAOrder;
 }
 
-auto BethesdaDirectory::getPluginLoadOrder(const bool &TrimExtension) const
-    -> vector<wstring> {
+auto BethesdaDirectory::getPluginLoadOrder(const bool &TrimExtension) const -> vector<wstring> {
   if (Logging) {
     spdlog::debug("Reading plugin load order from loadorder.txt.");
   }
@@ -430,8 +411,7 @@ auto BethesdaDirectory::getPathLower(const fs::path &Path) -> fs::path {
   return fs::path(boost::to_lower_copy(Path.wstring()));
 }
 
-auto BethesdaDirectory::pathEqualityIgnoreCase(const fs::path &Path1,
-                                               const fs::path &Path2) -> bool {
+auto BethesdaDirectory::pathEqualityIgnoreCase(const fs::path &Path1, const fs::path &Path2) -> bool {
   return getPathLower(Path1) == getPathLower(Path2);
 }
 
@@ -454,12 +434,10 @@ auto BethesdaDirectory::getBSAFilesFromINIs() const -> vector<wstring> {
     // loop through each ini file
     wstring INIVal;
     for (const auto &INIPath : INIFileOrder) {
-      wstring CurVal = readINIValue(INIPath, L"Archive", stringToWstring(Field),
-                                    Logging, FirstINIRead);
+      wstring CurVal = readINIValue(INIPath, L"Archive", stringToWstring(Field), Logging, FirstINIRead);
 
       if (Logging) {
-        spdlog::trace(L"Found ini key pair from INI {}: {}: {}",
-                      INIPath.wstring(), stringToWstring(Field), CurVal);
+        spdlog::trace(L"Found ini key pair from INI {}: {}: {}", INIPath.wstring(), stringToWstring(Field), CurVal);
       }
 
       if (CurVal.empty()) {
@@ -476,8 +454,7 @@ auto BethesdaDirectory::getBSAFilesFromINIs() const -> vector<wstring> {
     }
 
     if (Logging) {
-      spdlog::trace(L"Found BSA files from INI field {}: {}",
-                    stringToWstring(Field), INIVal);
+      spdlog::trace(L"Found BSA files from INI field {}: {}", stringToWstring(Field), INIVal);
     }
 
     // split into components
@@ -518,12 +495,10 @@ auto BethesdaDirectory::getBSAFilesInDirectory() const -> vector<wstring> {
   return BSAFiles;
 }
 
-auto BethesdaDirectory::findBSAFilesFromPluginName(
-    const vector<wstring> &BSAFileList,
-    const wstring &PluginPrefix) const -> vector<wstring> {
+auto BethesdaDirectory::findBSAFilesFromPluginName(const vector<wstring> &BSAFileList,
+                                                   const wstring &PluginPrefix) const -> vector<wstring> {
   if (Logging) {
-    spdlog::trace(L"Finding BSA files that correspond to plugin {}",
-                  PluginPrefix);
+    spdlog::trace(L"Finding BSA files that correspond to plugin {}", PluginPrefix);
   }
 
   vector<wstring> BSAFilesFound;
@@ -554,8 +529,7 @@ auto BethesdaDirectory::findBSAFilesFromPluginName(
       }
 
       if (Logging) {
-        spdlog::trace(L"Found BSA file that corresponds to plugin {}: {}",
-                      PluginPrefix, BSA);
+        spdlog::trace(L"Found BSA file that corresponds to plugin {}: {}", PluginPrefix, BSA);
       }
 
       BSAFilesFound.push_back(BSA);
@@ -573,8 +547,7 @@ auto BethesdaDirectory::isFileAllowed(const fs::path &FilePath) -> bool {
 }
 
 // helpers
-auto BethesdaDirectory::getFileFromMap(const fs::path &FilePath) const
-    -> BethesdaDirectory::BethesdaFile {
+auto BethesdaDirectory::getFileFromMap(const fs::path &FilePath) const -> BethesdaDirectory::BethesdaFile {
   fs::path LowerPath = getPathLower(FilePath);
 
   if (FileMap.find(LowerPath) == FileMap.end()) {
@@ -584,8 +557,7 @@ auto BethesdaDirectory::getFileFromMap(const fs::path &FilePath) const
   return FileMap.at(LowerPath);
 }
 
-void BethesdaDirectory::updateFileMap(
-    const fs::path &FilePath, shared_ptr<BethesdaDirectory::BSAFile> BSAFile) {
+void BethesdaDirectory::updateFileMap(const fs::path &FilePath, shared_ptr<BethesdaDirectory::BSAFile> BSAFile) {
   fs::path LowerPath = getPathLower(FilePath);
 
   BethesdaFile NewBFile = {FilePath, std::move(BSAFile)};
@@ -593,8 +565,7 @@ void BethesdaDirectory::updateFileMap(
   FileMap[LowerPath] = NewBFile;
 }
 
-auto BethesdaDirectory::checkIfAnyComponentIs(
-    const fs::path &Path, const vector<wstring> &Components) -> bool {
+auto BethesdaDirectory::checkIfAnyComponentIs(const fs::path &Path, const vector<wstring> &Components) -> bool {
   for (const auto &Component : Path) {
     for (const auto &Comp : Components) {
       if (boost::iequals(Component.wstring(), Comp)) {
@@ -606,8 +577,7 @@ auto BethesdaDirectory::checkIfAnyComponentIs(
   return false;
 }
 
-auto BethesdaDirectory::convertWStringToLPCWSTRVector(
-    const vector<wstring> &Original) -> vector<LPCWSTR> {
+auto BethesdaDirectory::convertWStringToLPCWSTRVector(const vector<wstring> &Original) -> vector<LPCWSTR> {
   vector<LPCWSTR> Output(Original.size());
   for (size_t I = 0; I < Original.size(); I++) {
     Output[I] = Original[I].c_str();
@@ -616,10 +586,8 @@ auto BethesdaDirectory::convertWStringToLPCWSTRVector(
   return Output;
 }
 
-auto BethesdaDirectory::checkGlob(const LPCWSTR &Str, LPCWSTR &WinningGlob,
-                                  const vector<LPCWSTR> &GlobList) -> bool {
-  if (!boost::equals(WinningGlob, L"") &&
-      (PathMatchSpecW(Str, WinningGlob) != 0)) {
+auto BethesdaDirectory::checkGlob(const LPCWSTR &Str, LPCWSTR &WinningGlob, const vector<LPCWSTR> &GlobList) -> bool {
+  if (!boost::equals(WinningGlob, L"") && (PathMatchSpecW(Str, WinningGlob) != 0)) {
     // no winning glob, check all globs
     return true;
   }
@@ -634,14 +602,11 @@ auto BethesdaDirectory::checkGlob(const LPCWSTR &Str, LPCWSTR &WinningGlob,
   return false;
 }
 
-auto BethesdaDirectory::readINIValue(const filesystem::path &INIPath,
-                                     const wstring &Section, const wstring &Key,
-                                     const bool &Logging,
-                                     const bool &FirstINIRead) -> wstring {
+auto BethesdaDirectory::readINIValue(const filesystem::path &INIPath, const wstring &Section, const wstring &Key,
+                                     const bool &Logging, const bool &FirstINIRead) -> wstring {
   if (!fs::exists(INIPath)) {
     if (Logging && FirstINIRead) {
-      spdlog::warn(L"INI file does not exist (ignoring): {}",
-                   INIPath.wstring());
+      spdlog::warn(L"INI file does not exist (ignoring): {}", INIPath.wstring());
     }
     return L"";
   }

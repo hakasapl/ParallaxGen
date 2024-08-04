@@ -33,7 +33,7 @@ void ParallaxGenDirectory::findHeightMaps(const vector<wstring> &Allowlist, cons
   // find height maps
   spdlog::info("Finding parallax height maps");
   // Find heightmaps
-  HeightMaps = findFiles(true, Allowlist, Blocklist, ArchiveBlocklist);
+  HeightMaps = findFiles(true, Allowlist, Blocklist, ArchiveBlocklist, true);
   spdlog::info("Found {} height maps", HeightMaps.size());
 }
 
@@ -42,7 +42,7 @@ void ParallaxGenDirectory::findComplexMaterialMaps(const vector<wstring> &Allowl
   spdlog::info("Finding complex material maps");
   // find complex material maps
   // TODO find a way to have downstream stuff edit this directly instead of replacement
-  ComplexMaterialMaps = findFiles(true, Allowlist, Blocklist, ArchiveBlocklist);
+  ComplexMaterialMaps = findFiles(true, Allowlist, Blocklist, ArchiveBlocklist, false);
   // No conclusion because this is affected by D3D later
 }
 
@@ -50,7 +50,7 @@ void ParallaxGenDirectory::findMeshes(const vector<wstring> &Allowlist, const ve
                                       const vector<wstring> &ArchiveBlocklist) {
   // find Meshes
   spdlog::info("Finding Meshes");
-  Meshes = findFiles(true, Allowlist, Blocklist, ArchiveBlocklist);
+  Meshes = findFiles(true, Allowlist, Blocklist, ArchiveBlocklist, true);
   spdlog::info("Found {} Meshes", Meshes.size());
 }
 
@@ -59,7 +59,7 @@ void ParallaxGenDirectory::findTruePBRConfigs(const vector<wstring> &Allowlist, 
   // TODO more logging here
   // Find True PBR Configs
   spdlog::info("Finding TruePBR Configs");
-  auto ConfigFiles = findFiles(true, Allowlist, Blocklist, ArchiveBlocklist);
+  auto ConfigFiles = findFiles(true, Allowlist, Blocklist, ArchiveBlocklist, true);
 
   // loop through and parse Configs
   for (auto &Config : ConfigFiles) {
