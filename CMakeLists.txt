@@ -39,7 +39,6 @@ add_compile_definitions(_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR)
 set(HEADERS
     "include/BethesdaGame.hpp"
     "include/BethesdaDirectory.hpp"
-    "include/Defs.hpp"
     "include/NIFUtil.hpp"
     "include/ParallaxGen.hpp"
     "include/ParallaxGenConfig.hpp"
