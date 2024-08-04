@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.5.1] - UNRELEASED
+## [0.5.1] - 2024-08-04
 
 - Removed loading screen exclusions from NIF config
 - findFilesBySuffix now is findFiles and uses globs exclusively
