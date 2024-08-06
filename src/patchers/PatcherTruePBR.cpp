@@ -241,7 +241,7 @@ auto PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader
 
   // "lock_diffuse" attribute
   if (!flag(TruePBRData, "lock_diffuse")) {
-    auto NewDiffuse = TexPath + MatchedField + ".dds";
+    auto NewDiffuse = TexPath + NamedField + ".dds";
     NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::Diffuse, NewDiffuse, NIFModified);
   }
 
