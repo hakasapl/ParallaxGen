@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.5.2] - 2024-08-06
+
+- Fixed rename issue for truepbr patching
+- No longer checking for mask.dds files for CM
+
 ## [0.5.1] - 2024-08-04
 
 - Removed loading screen exclusions from NIF config
