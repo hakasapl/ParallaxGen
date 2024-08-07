@@ -26,7 +26,7 @@ auto ParallaxGenD3D::findCMMaps() -> ParallaxGenTask::PGResult {
   // loop through maps
   for (const auto &EnvMask : EnvMasks) {
     bool Result = false;
-    ParallaxGenTask::updatePGResult(PGResult, checkIfCMCPU(EnvMask, Result),
+    ParallaxGenTask::updatePGResult(PGResult, checkIfCM(EnvMask, Result),
                                     ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
 
     if (Result) {
@@ -40,7 +40,7 @@ auto ParallaxGenD3D::findCMMaps() -> ParallaxGenTask::PGResult {
   return ParallaxGenTask::PGResult::SUCCESS;
 }
 
-auto ParallaxGenD3D::checkIfCMCPU(const filesystem::path &DDSPath, bool &Result) -> ParallaxGenTask::PGResult {
+auto ParallaxGenD3D::checkIfCM(const filesystem::path &DDSPath, bool &Result) -> ParallaxGenTask::PGResult {
   // get metadata (should only pull headers, which is much faster)
   DirectX::TexMetadata DDSImageMeta{};
   auto PGResult = getDDSMetadata(DDSPath, DDSImageMeta);
@@ -170,6 +170,10 @@ auto ParallaxGenD3D::countAlphaValuesGPU(const DirectX::ScratchImage &Image) -> 
     return -1;
   }
 
+  // Clean Up Objects
+  InputTex.Reset();
+  InputSRV.Reset();
+
   // Clean up shader resources
   ID3D11ShaderResourceView *NullSRV[] = {nullptr, nullptr};
   PtrContext->CSSetShaderResources(0, 1, NullSRV);
@@ -180,6 +184,12 @@ auto ParallaxGenD3D::countAlphaValuesGPU(const DirectX::ScratchImage &Image) -> 
 
   // Read back data
   vector<unsigned int> Data = readBack<unsigned int>(OutputBuffer);
+
+  // Cleanup
+  OutputBuffer.Reset();
+  OutputBufferUAV.Reset();
+
+  PtrContext->Flush(); // Flush GPU to avoid leaks
 
   return static_cast<int>(Data[0]);
 }

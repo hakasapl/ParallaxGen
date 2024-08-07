@@ -75,7 +75,7 @@ public:
   static auto getHRESULTErrorMessage(HRESULT HR) -> std::string;
 
 private:
-  auto checkIfCMCPU(const std::filesystem::path &DDSPath, bool &Result) -> ParallaxGenTask::PGResult;
+  auto checkIfCM(const std::filesystem::path &DDSPath, bool &Result) -> ParallaxGenTask::PGResult;
   auto countAlphaValuesGPU(const DirectX::ScratchImage &Image) -> int;
   static auto countAlphaValuesCPU(const DirectX::ScratchImage &Image, const bool &BCCompressed) -> int;
 
