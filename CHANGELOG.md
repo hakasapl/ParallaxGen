@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.5.3] - UNRELEASED
+## [0.5.3] - 2024-08-07
 
 - BC1 is no longer considered for Complex Material
 - Fixed CM lookup memory leak on the GPU
