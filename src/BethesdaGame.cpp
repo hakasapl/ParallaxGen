@@ -9,8 +9,7 @@
 using namespace std;
 using namespace ParallaxGenUtil;
 
-BethesdaGame::BethesdaGame(GameType GameType, const filesystem::path &GamePath,
-                           const bool &Logging)
+BethesdaGame::BethesdaGame(GameType GameType, const filesystem::path &GamePath, const bool &Logging)
     : ObjGameType(GameType), Logging(Logging) {
   if (GamePath.empty()) {
     // If the game path is empty, find
@@ -23,9 +22,8 @@ BethesdaGame::BethesdaGame(GameType GameType, const filesystem::path &GamePath,
   if (this->GamePath.empty()) {
     // If the game path is still empty, throw an exception
     if (this->Logging) {
-      spdlog::critical(
-          "Unable to locate game data path. Please specify the game data path "
-          "manually using the -d argument.");
+      spdlog::critical("Unable to locate game data path. Please specify the game data path "
+                       "manually using the -d argument.");
       exitWithUserInput(1);
     } else {
       throw runtime_error("Game path not found");
@@ -36,8 +34,7 @@ BethesdaGame::BethesdaGame(GameType GameType, const filesystem::path &GamePath,
   if (!filesystem::exists(this->GamePath)) {
     // If the game path does not exist, throw an exception
     if (this->Logging) {
-      spdlog::critical(L"Game path does not exist: {}",
-                       this->GamePath.wstring());
+      spdlog::critical(L"Game path does not exist: {}", this->GamePath.wstring());
       exitWithUserInput(1);
     } else {
       throw runtime_error("Game path does not exist");
@@ -49,10 +46,9 @@ BethesdaGame::BethesdaGame(GameType GameType, const filesystem::path &GamePath,
   if (!filesystem::exists(this->GameDataPath / getDataCheckFile())) {
     // If the game data path does not contain Skyrim.esm, throw an exception
     if (this->Logging) {
-      spdlog::critical(
-          L"Game data path does not contain Skyrim.esm, which probably means "
-          L"it's invalid: {}",
-          this->GameDataPath.wstring());
+      spdlog::critical(L"Game data path does not contain Skyrim.esm, which probably means "
+                       L"it's invalid: {}",
+                       this->GameDataPath.wstring());
       exitWithUserInput(1);
     } else {
       throw runtime_error("Game data path does not contain Skyrim.esm");
@@ -197,9 +193,7 @@ auto BethesdaGame::getDataCheckFile() const -> filesystem::path {
   return {};
 }
 
-auto BethesdaGame::getGameType() const -> BethesdaGame::GameType {
-  return ObjGameType;
-}
+auto BethesdaGame::getGameType() const -> BethesdaGame::GameType { return ObjGameType; }
 
 auto BethesdaGame::getGamePath() const -> filesystem::path {
   // Get the game path from the registry
@@ -207,9 +201,7 @@ auto BethesdaGame::getGamePath() const -> filesystem::path {
   return GamePath;
 }
 
-auto BethesdaGame::getGameDataPath() const -> filesystem::path {
-  return GameDataPath;
-}
+auto BethesdaGame::getGameDataPath() const -> filesystem::path { return GameDataPath; }
 
 auto BethesdaGame::findGamePathFromSteam() const -> filesystem::path {
   // Find the game path from the registry
@@ -221,8 +213,7 @@ auto BethesdaGame::findGamePathFromSteam() const -> filesystem::path {
   }
 
   string RegPath =
-      R"(Software\Microsoft\Windows\CurrentVersion\Uninstall\Steam App )" +
-      to_string(this->getSteamGameID());
+      R"(Software\Microsoft\Windows\CurrentVersion\Uninstall\Steam App )" + to_string(this->getSteamGameID());
 
   HKEY HKey = nullptr;
 
@@ -230,12 +221,10 @@ auto BethesdaGame::findGamePathFromSteam() const -> filesystem::path {
   DWORD DataType = REG_SZ;
   DWORD DataSize = sizeof(Data);
 
-  LONG Result =
-      RegOpenKeyExA(HKEY_LOCAL_MACHINE, RegPath.c_str(), 0, KEY_READ, &HKey);
+  LONG Result = RegOpenKeyExA(HKEY_LOCAL_MACHINE, RegPath.c_str(), 0, KEY_READ, &HKey);
   if (Result == ERROR_SUCCESS) {
     // Query the value
-    Result = RegQueryValueExA(HKey, "InstallLocation", nullptr, &DataType,
-                              (LPBYTE)Data, &DataSize); // NOLINT
+    Result = RegQueryValueExA(HKey, "InstallLocation", nullptr, &DataType, (LPBYTE)Data, &DataSize); // NOLINT
     if (Result == ERROR_SUCCESS) {
       // Ensure null-terminated string
       Data[DataSize] = '\0'; // NOLINT

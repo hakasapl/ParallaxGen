@@ -20,8 +20,7 @@ auto stringToWstring(const string &Str) -> wstring {
   std::vector<wchar_t> WBuffer(Length);
   size_t ConvertedChars = 0;
 
-  errno_t Err = mbstowcs_s(&ConvertedChars, WBuffer.data(), WBuffer.size(),
-                           Str.c_str(), Length - 1);
+  errno_t Err = mbstowcs_s(&ConvertedChars, WBuffer.data(), WBuffer.size(), Str.c_str(), Length - 1);
   if (Err != 0) {
     throw std::runtime_error("Conversion failed");
   }
@@ -43,11 +42,9 @@ auto wstringToString(const wstring &Str) -> string {
     return {};
   }
 
-  int SizeNeeded = WideCharToMultiByte(CP_UTF8, 0, Str.data(), (int)Str.size(),
-                                       nullptr, 0, nullptr, nullptr);
+  int SizeNeeded = WideCharToMultiByte(CP_UTF8, 0, Str.data(), (int)Str.size(), nullptr, 0, nullptr, nullptr);
   string StrTo(SizeNeeded, 0);
-  WideCharToMultiByte(CP_UTF8, 0, Str.data(), (int)Str.size(), StrTo.data(),
-                      SizeNeeded, nullptr, nullptr);
+  WideCharToMultiByte(CP_UTF8, 0, Str.data(), (int)Str.size(), StrTo.data(), SizeNeeded, nullptr, nullptr);
   return StrTo;
 }
 
@@ -88,8 +85,7 @@ auto replaceLastOf(const filesystem::path &Path, const wstring &ToReplace,
   return PathStr;
 }
 
-auto replaceLastOf(const string &Path, const string &ToReplace,
-                   const string &ReplaceWith) -> string {
+auto replaceLastOf(const string &Path, const string &ToReplace, const string &ReplaceWith) -> string {
   size_t Pos = Path.rfind(ToReplace);
   if (Pos == wstring::npos) {
     return Path;

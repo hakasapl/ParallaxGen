@@ -16,10 +16,9 @@ private:
 
   std::unordered_map<PGResult, size_t> NumJobsCompleted;
 
-  std::unordered_map<PGResult, std::string> PGResultStr = {
-      {PGResult::SUCCESS, "COMPLETED"},
-      {PGResult::SUCCESS_WITH_WARNINGS, "COMPLETED WITH WARNINGS"},
-      {PGResult::FAILURE, "FAILED"}};
+  std::unordered_map<PGResult, std::string> PGResultStr = {{PGResult::SUCCESS, "COMPLETED"},
+                                                           {PGResult::SUCCESS_WITH_WARNINGS, "COMPLETED WITH WARNINGS"},
+                                                           {PGResult::FAILURE, "FAILED"}};
 
 public:
   ParallaxGenTask(std::string TaskName, const size_t &TotalJobs);

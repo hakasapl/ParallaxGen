@@ -16,14 +16,7 @@
 class BethesdaGame {
 public:
   // GameType enum
-  enum class GameType {
-    SKYRIM_SE,
-    SKYRIM_GOG,
-    SKYRIM_VR,
-    SKYRIM,
-    ENDERAL,
-    ENDERAL_SE
-  };
+  enum class GameType { SKYRIM_SE, SKYRIM_GOG, SKYRIM_VR, SKYRIM, ENDERAL, ENDERAL_SE };
 
   // StoreType enum (for now only Steam is used)
   enum class StoreType { STEAM, WINDOWS_STORE, EPIC_GAMES_STORE, GOG };
@@ -54,8 +47,7 @@ private:
 
 public:
   // constructor
-  BethesdaGame(enum GameType GameType, const std::filesystem::path &GamePath,
-               const bool &Logging = false);
+  BethesdaGame(enum GameType GameType, const std::filesystem::path &GamePath, const bool &Logging = false);
 
   // get functions
   [[nodiscard]] auto getGameType() const -> GameType;

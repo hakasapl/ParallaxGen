@@ -30,8 +30,7 @@ void ParallaxGenTask::printJobStatus(bool Force) {
   size_t Perc = CombinedJobs * FULL_PERCENTAGE / TotalJobs;
   if (Force || Perc != LastPerc) {
     LastPerc = Perc;
-    spdlog::info("{} Progress: {}/{} [{}%]", TaskName, CombinedJobs, TotalJobs,
-                 Perc);
+    spdlog::info("{} Progress: {}/{} [{}%]", TaskName, CombinedJobs, TotalJobs, Perc);
   }
 
   if (Perc == FULL_PERCENTAGE) {
@@ -62,9 +61,7 @@ auto ParallaxGenTask::getCompletedJobs() -> size_t {
   return Sum;
 }
 
-void ParallaxGenTask::updatePGResult(PGResult &Result,
-                                     const PGResult &CurrentResult,
-                                     const PGResult &Threshold) {
+void ParallaxGenTask::updatePGResult(PGResult &Result, const PGResult &CurrentResult, const PGResult &Threshold) {
   if (CurrentResult > Result) {
     if (CurrentResult > Threshold) {
       Result = Threshold;
