@@ -28,8 +28,7 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<string, 
 
   // Check if complex material file exists
   for (int Slot : SlotSearch) {
-    string FoundMatch =
-        wstringToString(NIFUtil::getTexMatch(SearchPrefixes[Slot], NIFUtil::TextureSlots::EnvMask, PGC, PGD));
+    string FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], NIFUtil::TextureSlots::EnvMask, PGC, PGD).string();
     if (!FoundMatch.empty()) {
       // found complex material map
       MatchedPath = FoundMatch;
@@ -56,7 +55,7 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<string, 
   NIF->GetTextureSlot(NIFShape, DiffuseMap, 0);
   if (!DiffuseMap.empty() && !PGD->isFile(DiffuseMap)) {
     // no Diffuse map
-    spdlog::trace(L"Rejecting shape {}: Diffuse map missing: {}", ShapeBlockID, stringToWstring(DiffuseMap));
+    spdlog::trace("Rejecting shape {}: Diffuse map missing: {}", ShapeBlockID, DiffuseMap);
     EnableResult = false;
     return Result;
   }

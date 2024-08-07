@@ -64,6 +64,7 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   string HeightMapStr;
+  // TODO technically this can work with wstring since no NIFs are involved, but the NIFUtil methods aren't compliant
   try {
     HeightMapStr = HeightMap.string();
   } catch (...) {

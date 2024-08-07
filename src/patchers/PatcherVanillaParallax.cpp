@@ -4,10 +4,8 @@
 #include <spdlog/spdlog.h>
 
 #include "NIFUtil.hpp"
-#include "ParallaxGenUtil.hpp"
 
 using namespace std;
-using namespace ParallaxGenUtil;
 
 PatcherVanillaParallax::PatcherVanillaParallax(filesystem::path NIFPath, nifly::NifFile *NIF, vector<int> SlotSearch,
                                                ParallaxGenConfig *PGC, ParallaxGenDirectory *PGD, ParallaxGenD3D *PGD3D)
@@ -36,8 +34,7 @@ auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<string, 
 
   // Check if complex material file exists
   for (int Slot : SlotSearch) {
-    string FoundMatch =
-        wstringToString(NIFUtil::getTexMatch(SearchPrefixes[Slot], NIFUtil::TextureSlots::Parallax, PGC, PGD));
+    string FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], NIFUtil::TextureSlots::Parallax, PGC, PGD).string();
     if (!FoundMatch.empty()) {
       // found complex material map
       MatchedPath = FoundMatch;
@@ -104,7 +101,7 @@ auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<string, 
   NIF->GetTextureSlot(NIFShape, DiffuseMap, static_cast<unsigned int>(NIFUtil::TextureSlots::Diffuse));
   if (!DiffuseMap.empty() && !PGD->isFile(DiffuseMap)) {
     // no Diffuse map
-    spdlog::trace(L"Rejecting shape {}: Diffuse map missing: {}", ShapeBlockID, stringToWstring(DiffuseMap));
+    spdlog::trace("Rejecting shape {}: Diffuse map missing: {}", ShapeBlockID, DiffuseMap);
     EnableResult = false;
     return Result;
   }
