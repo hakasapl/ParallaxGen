@@ -57,9 +57,6 @@ auto ParallaxGenD3D::checkIfCMCPU(const filesystem::path &DDSPath, bool &Result)
   bool BCCompressed = false;
   // Only check DDS with alpha channels
   switch (DDSImageMeta.format) {
-  case DXGI_FORMAT_BC1_UNORM:
-  case DXGI_FORMAT_BC1_UNORM_SRGB:
-  case DXGI_FORMAT_BC1_TYPELESS:
   case DXGI_FORMAT_BC2_UNORM:
   case DXGI_FORMAT_BC2_UNORM_SRGB:
   case DXGI_FORMAT_BC2_TYPELESS:
