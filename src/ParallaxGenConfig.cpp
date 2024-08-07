@@ -327,11 +327,24 @@ void ParallaxGenConfig::loadConfig(const bool &LoadNative) {
     exitWithUserInput(1);
   }
 
+  // Initialize Member Variables
+  for (const auto &JSON : PGConfig["suffixes"].items()) {
+    CfgSuffixes.push_back(JSON.value().get<vector<string>>());
+  }
+
   // Print number of configs loaded
   spdlog::info("Loaded {} ParallaxGen configs successfully", NumConfigs);
 }
 
 auto ParallaxGenConfig::getConfig() const -> const nlohmann::json & { return PGConfig; }
+
+auto ParallaxGenConfig::getSuffix(const unsigned int &Slot) const -> vector<string> {
+  if (Slot >= CfgSuffixes.size()) {
+    return {};
+  }
+
+  return CfgSuffixes[Slot];
+}
 
 auto ParallaxGenConfig::validateConfig() -> bool {
   // Validate PGConfig against schema

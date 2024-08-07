@@ -36,8 +36,8 @@ auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<string, 
 
   // Check if complex material file exists
   for (int Slot : SlotSearch) {
-    string FoundMatch = wstringToString(
-        NIFUtil::getTexMatch(stringToWstring(SearchPrefixes[Slot]), NIFUtil::TextureSlots::Parallax, PGC, PGD));
+    string FoundMatch =
+        wstringToString(NIFUtil::getTexMatch(SearchPrefixes[Slot], NIFUtil::TextureSlots::Parallax, PGC, PGD));
     if (!FoundMatch.empty()) {
       // found complex material map
       MatchedPath = FoundMatch;

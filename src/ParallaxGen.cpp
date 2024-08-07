@@ -63,20 +63,29 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
 
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
+  string HeightMapStr;
+  try {
+    HeightMapStr = HeightMap.string();
+  } catch (...) {
+    spdlog::error(L"Height map contains invalid characters (skipping): {}", HeightMap.wstring());
+    Result = ParallaxGenTask::PGResult::FAILURE;
+    return Result;
+  }
+
   // Replace "_p" with "_m" in the stem
-  wstring TexBase = NIFUtil::getTexBase(HeightMap, NIFUtil::TextureSlots::Parallax, PGC);
+  string TexBase = NIFUtil::getTexBase(HeightMapStr, NIFUtil::TextureSlots::Parallax, PGC);
   if (TexBase.empty()) {
     // no height map (this shouldn't happen)
     return Result;
   }
 
-  wstring ExistingCM = NIFUtil::getTexMatch(TexBase, NIFUtil::TextureSlots::EnvMask, PGC, PGD);
+  auto ExistingCM = NIFUtil::getTexMatch(TexBase, NIFUtil::TextureSlots::EnvMask, PGC, PGD);
   if (!ExistingCM.empty()) {
     // complex material already exists
     return Result;
   }
 
-  auto EnvMask = filesystem::path(TexBase + L"_m.dds");
+  auto EnvMask = filesystem::path(TexBase + "_m.dds");
   const auto ComplexMap = EnvMask;
 
   if (!PGD->isFile(EnvMask)) {

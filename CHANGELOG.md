@@ -4,6 +4,7 @@
 
 - BC1 is no longer considered for Complex Material
 - Fixed CM lookup memory leak on the GPU
+- UTF-16/8 optimizations
 
 ## [0.5.2] - 2024-08-06
 

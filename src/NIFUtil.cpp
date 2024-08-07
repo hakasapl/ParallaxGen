@@ -3,7 +3,6 @@
 #include <boost/algorithm/string.hpp>
 
 #include "ParallaxGenDirectory.hpp"
-#include "ParallaxGenUtil.hpp"
 
 using namespace std;
 
@@ -104,13 +103,10 @@ auto NIFUtil::setTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, cons
   }
 }
 
-auto NIFUtil::getTexBase(const wstring &TexPath, const NIFUtil::TextureSlots &Slot,
-                         ParallaxGenConfig *PGC) -> std::wstring {
-  auto SuffixList = ParallaxGenUtil::stringVecToWstringVec(
-      PGC->getConfig()["suffixes"][to_string(static_cast<unsigned int>(Slot))].get<vector<string>>());
-
+auto NIFUtil::getTexBase(const string &TexPath, const NIFUtil::TextureSlots &Slot,
+                         ParallaxGenConfig *PGC) -> std::string {
   // Loop through SuffixList
-  for (const auto &Suffix : SuffixList) {
+  for (const auto &Suffix : PGC->getSuffix(static_cast<unsigned int>(Slot))) {
     // Check if the texture path ends with the suffix
     if (boost::iends_with(TexPath, Suffix)) {
       // Remove the suffix from the texture path
@@ -121,7 +117,7 @@ auto NIFUtil::getTexBase(const wstring &TexPath, const NIFUtil::TextureSlots &Sl
   return {};
 }
 
-auto NIFUtil::getTexMatch(const wstring &Base, const NIFUtil::TextureSlots &Slot, ParallaxGenConfig *PGC,
+auto NIFUtil::getTexMatch(const string &Base, const NIFUtil::TextureSlots &Slot, ParallaxGenConfig *PGC,
                           ParallaxGenDirectory *PGD) -> std::filesystem::path {
   vector<filesystem::path> SearchList;
   switch (Slot) {
@@ -136,9 +132,17 @@ auto NIFUtil::getTexMatch(const wstring &Base, const NIFUtil::TextureSlots &Slot
   }
 
   for (const auto &Search : SearchList) {
-    auto SearchBase = getTexBase(Search.wstring(), Slot, PGC);
+    string SearchStr;
+    try {
+      SearchStr = Search.string();
+    } catch (...) {
+      // NIFs can't do wstrings anyway so we just move on
+      continue;
+    }
+
+    auto SearchBase = getTexBase(SearchStr, Slot, PGC);
     if (boost::iequals(SearchBase, Base)) {
-      return Search;
+      return SearchStr;
     }
   }
 
@@ -160,8 +164,8 @@ auto NIFUtil::getSearchPrefixes(NifFile &NIF, nifly::NiShape *NIFShape,
     }
 
     // Get default suffixes
-    const auto TexBase = getTexBase(ParallaxGenUtil::stringToWstring(Texture), static_cast<TextureSlots>(I), PGC);
-    OutPrefixes[I] = ParallaxGenUtil::wstringToString(TexBase);
+    const auto TexBase = getTexBase(Texture, static_cast<TextureSlots>(I), PGC);
+    OutPrefixes[I] = TexBase;
   }
 
   return OutPrefixes;
