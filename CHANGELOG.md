@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.5.3] - UNRELEASED
+
+- BC1 is no longer considered for Complex Material
+
 ## [0.5.2] - 2024-08-06
 
 - Fixed rename issue for truepbr patching
