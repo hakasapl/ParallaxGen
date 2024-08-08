@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.5.4] - UNRELEASED
+
+- Fixed complex material applying on PBR meshes
+- Fixed output zip file capitalization
+
 ## [0.5.3] - 2024-08-07
 
 - BC1 is no longer considered for Complex Material

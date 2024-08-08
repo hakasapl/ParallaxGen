@@ -23,6 +23,7 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<string, 
   // Prep
   const auto ShapeBlockID = NIF->GetBlockID(NIFShape);
   auto *NIFShader = NIF->GetShader(NIFShape);
+  auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
 
   EnableResult = true; // Start with default true
 
@@ -46,6 +47,13 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<string, 
   auto NIFShaderType = static_cast<nifly::BSLightingShaderPropertyShaderType>(NIFShader->GetShaderType());
   if (NIFShaderType != BSLSP_DEFAULT && NIFShaderType != BSLSP_ENVMAP && NIFShaderType != BSLSP_PARALLAX) {
     spdlog::trace(L"Rejecting shape {}: Incorrect NIFShader type", ShapeBlockID);
+    EnableResult = false;
+    return Result;
+  }
+
+  // Check if TruePBR is enabled
+  if (NIFUtil::hasShaderFlag(NIFShaderBSLSP, SLSF2_UNUSED01)) {
+    spdlog::trace(L"Rejecting shape {} in NIF file {}: TruePBR enabled", ShapeBlockID, NIFPath.wstring());
     EnableResult = false;
     return Result;
   }

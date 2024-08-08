@@ -125,7 +125,7 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
 void ParallaxGen::zipMeshes() const {
   // Zip meshes
   spdlog::info("Zipping meshes...");
-  zipDirectory(OutputDir, OutputDir / "ParallaxGen_Output.Zip");
+  zipDirectory(OutputDir, OutputDir / "ParallaxGen_Output.zip");
 }
 
 void ParallaxGen::deleteMeshes() const {
