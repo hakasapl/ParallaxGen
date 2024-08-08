@@ -1,9 +1,10 @@
 # Changelog
 
-## [0.5.4] - UNRELEASED
+## [0.5.4] - 2024-08-08
 
 - Fixed complex material applying on PBR meshes
 - Fixed output zip file capitalization
+- Added error handling for failing to load BSA
 
 ## [0.5.3] - 2024-08-07
 

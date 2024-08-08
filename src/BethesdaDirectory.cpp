@@ -230,7 +230,14 @@ void BethesdaDirectory::addBSAFilesToMap() {
   // Loop through each BSA file
   for (const auto &BSAName : BSAFiles) {
     // add bsa to file map
-    addBSAToFileMap(BSAName);
+    try {
+      addBSAToFileMap(BSAName);
+    } catch (const std::exception &E) {
+      if (Logging) {
+        spdlog::error(L"Failed to add BSA file {} to map (Skipping): {}", BSAName, stringToWstring(E.what()));
+      }
+      continue;
+    }
   }
 }
 
