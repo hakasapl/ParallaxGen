@@ -65,7 +65,7 @@ auto PatcherTruePBR::applyPatch(NiShape *NIFShape, nlohmann::json &TruePBRData, 
   auto *NIFShader = NIF->GetShader(NIFShape);
   auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
   bool EnableTruePBR = (!TruePBRData.contains("pbr") || TruePBRData["pbr"]) && !MatchedPath.empty();
-  bool EnableEnvMapping = TruePBRData.contains("EnvMapping") && TruePBRData["EnvMapping"] && !EnableTruePBR;
+  bool EnableEnvMapping = TruePBRData.contains("env_mapping") && TruePBRData["env_mapping"] && !EnableTruePBR;
 
   // "delete" attribute
   if (TruePBRData.contains("delete") && TruePBRData["delete"]) {
@@ -299,7 +299,7 @@ auto PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader
     string NewSubsurface;
     if ((TruePBRData.contains("subsurface_foliage") && TruePBRData["subsurface_foliage"].get<bool>()) ||
         (TruePBRData.contains("subsurface") && TruePBRData["subsurface"].get<bool>()) ||
-        (TruePBRData.contains("coat_Diffuse") && TruePBRData["coat_Diffuse"].get<bool>())) {
+        (TruePBRData.contains("coat_diffuse") && TruePBRData["coat_diffuse"].get<bool>())) {
       NewSubsurface = TexPath + NamedField + "_s.dds";
     }
 
