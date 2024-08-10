@@ -17,7 +17,7 @@ set(PROJECT_NAME "ParallaxGen")
 set(PROJECT_URI "com.github.hakasapl.ParallaxGen")
 
 # Initialize Project
-set(PARALLAXGEN_VERSION 0.5.4)
+set(PARALLAXGEN_VERSION 0.5.5)
 project(${PROJECT_NAME} VERSION ${PARALLAXGEN_VERSION})
 
 # Export compile commands for use with clangd

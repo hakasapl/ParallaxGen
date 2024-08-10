@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.5.5] - UNRELEASED
+
+- Fixed TruePBR nif_filter handling
+- Fixed TruePBR slotX handling
+
 ## [0.5.4] - 2024-08-08
 
 - Fixed complex material applying on PBR meshes

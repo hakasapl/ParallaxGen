@@ -19,8 +19,8 @@ auto PatcherTruePBR::shouldApply(nifly::NiShape *NIFShape, const vector<nlohmann
     string MatchedPath;
 
     // "nif-filter" attribute
-    if (TruePBRCFG.contains("nif-filter") &&
-        boost::icontains(NIFPath.wstring(), TruePBRCFG["nif-filter"].get<string>())) {
+    if (TruePBRCFG.contains("nif_filter") &&
+        !boost::icontains(NIFPath.wstring(), TruePBRCFG["nif_filter"].get<string>())) {
       spdlog::trace(L"Rejecting shape {}: NIF filter", ShapeBlockID);
       EnableResult |= false;
       continue;
@@ -204,7 +204,7 @@ auto PatcherTruePBR::applyPatch(NiShape *NIFShape, nlohmann::json &TruePBRData, 
 
   // "SlotX" attributes
   for (int I = 0; I < NUM_TEXTURE_SLOTS - 1; I++) {
-    string SlotName = "Slot" + to_string(I + 1);
+    string SlotName = "slot" + to_string(I + 1);
     if (TruePBRData.contains(SlotName)) {
       string NewSlot = TruePBRData[SlotName].get<string>();
       NIFUtil::setTextureSlot(NIF, NIFShape, static_cast<NIFUtil::TextureSlots>(I), NewSlot, NIFModified);
