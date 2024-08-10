@@ -63,7 +63,7 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<string, 
   NIF->GetTextureSlot(NIFShape, DiffuseMap, 0);
   if (!DiffuseMap.empty() && !PGD->isFile(DiffuseMap)) {
     // no Diffuse map
-    spdlog::trace("Rejecting shape {}: Diffuse map missing: {}", ShapeBlockID, DiffuseMap);
+    spdlog::trace("Rejecting shape {}: diffuse map missing: {}", ShapeBlockID, DiffuseMap);
     EnableResult = false;
     return Result;
   }
@@ -73,7 +73,7 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<string, 
                                   ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
   if (!SameAspect) {
     spdlog::trace(L"Rejecting shape {} in NIF file {}: Complex material map does not "
-                  L"match Diffuse map",
+                  L"match diffuse map",
                   ShapeBlockID, NIFPath.wstring());
     EnableResult = false;
     return Result;

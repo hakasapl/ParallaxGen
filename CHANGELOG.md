@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.5.5] - UNRELEASED
+## [0.5.5] - 2024-08-10
 
 - Fixed TruePBR nif_filter handling
 - Fixed TruePBR slotX handling
