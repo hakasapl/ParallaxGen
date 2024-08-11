@@ -18,14 +18,6 @@ auto PatcherTruePBR::shouldApply(nifly::NiShape *NIFShape, const vector<nlohmann
   for (const auto &TruePBRCFG : TPBRConfigs) {
     string MatchedPath;
 
-    // "nif-filter" attribute
-    if (TruePBRCFG.contains("nif_filter") &&
-        !boost::icontains(NIFPath.wstring(), TruePBRCFG["nif_filter"].get<string>())) {
-      spdlog::trace(L"Rejecting shape {}: NIF filter", ShapeBlockID);
-      EnableResult |= false;
-      continue;
-    }
-
     // "path-contains" attribute
     bool ContainsMatch = TruePBRCFG.contains("path_contains") &&
                          boost::icontains(SearchPrefixes[0], TruePBRCFG["path_contains"].get<string>());
@@ -44,6 +36,14 @@ auto PatcherTruePBR::shouldApply(nifly::NiShape *NIFShape, const vector<nlohmann
 
     if (!ContainsMatch && !NameMatch) {
       spdlog::trace(L"Rejecting shape {}: No matches", ShapeBlockID);
+      EnableResult |= false;
+      continue;
+    }
+
+    // "nif-filter" attribute
+    if (TruePBRCFG.contains("nif_filter") &&
+        !boost::icontains(NIFPath.wstring(), TruePBRCFG["nif_filter"].get<string>())) {
+      spdlog::trace(L"Rejecting shape {}: NIF filter", ShapeBlockID);
       EnableResult |= false;
       continue;
     }

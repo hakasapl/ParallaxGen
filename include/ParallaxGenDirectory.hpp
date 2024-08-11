@@ -8,7 +8,9 @@
 
 class ParallaxGenDirectory : public BethesdaDirectory {
 private:
+  std::vector<std::string> HeightMapsBases;
   std::vector<std::filesystem::path> HeightMaps;
+  std::vector<std::string> ComplexMaterialMapsBases;
   std::vector<std::filesystem::path> ComplexMaterialMaps;
   std::vector<std::filesystem::path> Meshes;
   std::vector<std::filesystem::path> PGConfigs;
@@ -38,6 +40,8 @@ public:
   // get the parallax gen config
   void findPGConfigs();
 
+  void buildBaseVectors(const std::vector<std::vector<std::string>> &Suffixes);
+
   // add methods
   void addHeightMap(const std::filesystem::path &Path);
 
@@ -61,13 +65,19 @@ public:
   [[nodiscard]] auto defCubemapExists() -> bool;
 
   // get methods
-  [[nodiscard]] auto getHeightMaps() const -> std::vector<std::filesystem::path>;
+  [[nodiscard]] auto getHeightMaps() const -> const std::vector<std::filesystem::path> &;
+  [[nodiscard]] auto getHeightMapsBases() const -> const std::vector<std::string> &;
 
-  [[nodiscard]] auto getComplexMaterialMaps() const -> std::vector<std::filesystem::path>;
+  [[nodiscard]] auto getComplexMaterialMaps() const -> const std::vector<std::filesystem::path> &;
+  [[nodiscard]] auto getComplexMaterialMapsBases() const -> const std::vector<std::string> &;
 
-  [[nodiscard]] auto getMeshes() const -> std::vector<std::filesystem::path>;
+  [[nodiscard]] auto getMeshes() const -> const std::vector<std::filesystem::path> &;
 
-  [[nodiscard]] auto getTruePBRConfigs() const -> std::vector<nlohmann::json>;
+  [[nodiscard]] auto getTruePBRConfigs() const -> const std::vector<nlohmann::json> &;
 
-  [[nodiscard]] auto getPGConfigs() const -> std::vector<std::filesystem::path>;
+  [[nodiscard]] auto getPGConfigs() const -> const std::vector<std::filesystem::path> &;
+
+private:
+  static void buildBaseVector(std::vector<std::string> &BaseVector, const std::vector<std::filesystem::path> &Files,
+                              const std::vector<std::string> &Suffixes);
 };

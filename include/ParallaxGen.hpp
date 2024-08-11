@@ -42,7 +42,7 @@ public:
   // upgrades textures whenever possible
   void upgradeShaders();
   // enables parallax on relevant meshes
-  void patchMeshes();
+  void patchMeshes(const bool &MultiThread = true);
   // zips all meshes and removes originals
   void zipMeshes() const;
   // deletes generated meshes
@@ -55,6 +55,11 @@ public:
   void initOutputDir() const;
 
 private:
+  void patchMeshBatch(const std::vector<std::filesystem::path> &Meshes, const size_t &Start, const size_t &End,
+                      ParallaxGenTask &TaskTracker, const std::vector<nlohmann::json> &TPBRConfigs,
+                      const std::vector<int> &SlotSearchVP, const std::vector<int> &SlotSearchCM,
+                      std::vector<std::wstring> &DynCubeBlocklist);
+
   // upgrades a height map to complex material
   auto convertHeightMapToComplexMaterial(const std::filesystem::path &HeightMap) -> ParallaxGenTask::PGResult;
 

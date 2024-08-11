@@ -30,20 +30,23 @@ auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<string, 
   auto *NIFShader = NIF->GetShader(NIFShape);
   auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
 
+  static const auto *SearchList = &PGD->getHeightMapsBases();
+  static const auto *TexList = &PGD->getHeightMaps();
+
   EnableResult = true; // Start with default true
 
-  // Check if complex material file exists
+  // Check if vanilla parallax file exists
   for (int Slot : SlotSearch) {
-    string FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], NIFUtil::TextureSlots::Parallax, PGC, PGD).string();
+    string FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], *SearchList, *TexList).string();
     if (!FoundMatch.empty()) {
-      // found complex material map
+      // found parallax map
       MatchedPath = FoundMatch;
       break;
     }
   }
 
   if (MatchedPath.empty()) {
-    // no complex material map
+    // no parallax map
     EnableResult = false;
     return Result;
   }

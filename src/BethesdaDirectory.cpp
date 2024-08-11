@@ -60,12 +60,14 @@ auto BethesdaDirectory::checkGlob(const wstring &Str, const vector<wstring> &Glo
   return std::ranges::any_of(GlobListCstr, [&](LPCWSTR Glob) { return PathMatchSpecW(StrCstr, Glob); });
 }
 
-void BethesdaDirectory::populateFileMap() {
+void BethesdaDirectory::populateFileMap(bool IncludeBSAs) {
   // clear map before populating
   FileMap.clear();
 
-  // add BSA files to file map
-  addBSAFilesToMap();
+  if (IncludeBSAs) {
+    // add BSA files to file map
+    addBSAFilesToMap();
+  }
 
   // add loose files to file map
   addLooseFilesToMap();

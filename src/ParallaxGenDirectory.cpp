@@ -2,10 +2,10 @@
 
 #include <DirectXTex.h>
 #include <boost/algorithm/string.hpp>
-
 #include <boost/algorithm/string/predicate.hpp>
 #include <spdlog/spdlog.h>
 
+#include "NIFUtil.hpp"
 #include "ParallaxGenUtil.hpp"
 
 using namespace std;
@@ -34,6 +34,7 @@ void ParallaxGenDirectory::findHeightMaps(const vector<wstring> &Allowlist, cons
   spdlog::info("Finding parallax height maps");
   // Find heightmaps
   HeightMaps = findFiles(true, Allowlist, Blocklist, ArchiveBlocklist, true);
+  sort(HeightMaps.begin(), HeightMaps.end());
   spdlog::info("Found {} height maps", HeightMaps.size());
 }
 
@@ -43,6 +44,7 @@ void ParallaxGenDirectory::findComplexMaterialMaps(const vector<wstring> &Allowl
   // find complex material maps
   // TODO find a way to have downstream stuff edit this directly instead of replacement
   ComplexMaterialMaps = findFiles(true, Allowlist, Blocklist, ArchiveBlocklist, false);
+  sort(ComplexMaterialMaps.begin(), ComplexMaterialMaps.end());
   // No conclusion because this is affected by D3D later
 }
 
@@ -101,6 +103,30 @@ void ParallaxGenDirectory::findPGConfigs() {
   spdlog::info("Found {} ParallaxGen configs in load order", PGConfigs.size());
 }
 
+void ParallaxGenDirectory::buildBaseVectors(const vector<vector<string>> &Suffixes) {
+  buildBaseVector(HeightMapsBases, HeightMaps, Suffixes[static_cast<int>(NIFUtil::TextureSlots::Parallax)]);
+  buildBaseVector(ComplexMaterialMapsBases, ComplexMaterialMaps,
+                  Suffixes[static_cast<int>(NIFUtil::TextureSlots::EnvMask)]);
+}
+
+void ParallaxGenDirectory::buildBaseVector(vector<string> &BaseVector, const vector<filesystem::path> &Files,
+                                           const vector<string> &Suffixes) {
+  // Create base vector
+  for (const auto &Elem : Files) {
+    string ElemStr;
+    try {
+      ElemStr = Elem.string();
+    } catch (...) {
+      // Keep the length consistent
+      BaseVector.emplace_back("");
+      continue;
+    }
+
+    auto ElemBase = NIFUtil::getTexBase(ElemStr, Suffixes);
+    BaseVector.push_back(ElemBase);
+  }
+}
+
 void ParallaxGenDirectory::addHeightMap(const filesystem::path &Path) {
   filesystem::path PathLower = getPathLower(Path);
 
@@ -144,12 +170,18 @@ auto ParallaxGenDirectory::isMesh(const filesystem::path &Path) const -> bool {
 
 auto ParallaxGenDirectory::defCubemapExists() -> bool { return isFile(getDefaultCubemapPath()); }
 
-auto ParallaxGenDirectory::getHeightMaps() const -> vector<filesystem::path> { return HeightMaps; }
+auto ParallaxGenDirectory::getHeightMaps() const -> const vector<filesystem::path> & { return HeightMaps; }
+auto ParallaxGenDirectory::getHeightMapsBases() const -> const vector<string> & { return HeightMapsBases; }
 
-auto ParallaxGenDirectory::getComplexMaterialMaps() const -> vector<filesystem::path> { return ComplexMaterialMaps; }
+auto ParallaxGenDirectory::getComplexMaterialMaps() const -> const vector<filesystem::path> & {
+  return ComplexMaterialMaps;
+}
+auto ParallaxGenDirectory::getComplexMaterialMapsBases() const -> const vector<string> & {
+  return ComplexMaterialMapsBases;
+}
 
-auto ParallaxGenDirectory::getMeshes() const -> vector<filesystem::path> { return Meshes; }
+auto ParallaxGenDirectory::getMeshes() const -> const vector<filesystem::path> & { return Meshes; }
 
-auto ParallaxGenDirectory::getTruePBRConfigs() const -> vector<nlohmann::json> { return TruePBRConfigs; }
+auto ParallaxGenDirectory::getTruePBRConfigs() const -> const vector<nlohmann::json> & { return TruePBRConfigs; }
 
-auto ParallaxGenDirectory::getPGConfigs() const -> vector<filesystem::path> { return PGConfigs; }
+auto ParallaxGenDirectory::getPGConfigs() const -> const vector<filesystem::path> & { return PGConfigs; }

@@ -197,74 +197,13 @@ auto ParallaxGenConfig::getConfigValidation() -> nlohmann::json {
         ]
       },
       "suffixes": {
-        "type": "object",
-        "properties": {
-          "0": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "1": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "2": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "3": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "4": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "5": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "6": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "7": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "8": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+        "type": "array",
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "string"
           }
-        },
-        "required": [
-          "0",
-          "1",
-          "2",
-          "3",
-          "4",
-          "5",
-          "6",
-          "7",
-          "8"
-        ]
+        }
       }
     },
     "required": [

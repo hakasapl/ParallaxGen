@@ -6,6 +6,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/iostreams/device/array.hpp>
 #include <boost/iostreams/stream.hpp>
+#include <boost/thread.hpp>
 #include <fstream>
 #include <vector>
 
@@ -40,7 +41,7 @@ void ParallaxGen::upgradeShaders() {
   }
 }
 
-void ParallaxGen::patchMeshes() {
+void ParallaxGen::patchMeshes(const bool &MultiThread) {
   auto Meshes = PGD->getMeshes();
 
   // Load configs that we need
@@ -53,8 +54,40 @@ void ParallaxGen::patchMeshes() {
   // Create task tracker
   ParallaxGenTask TaskTracker("Mesh Patcher", Meshes.size());
 
-  for (const auto &NIF : Meshes) {
-    TaskTracker.completeJob(processNIF(NIF, TPBRConfigs, SlotSearchVP, SlotSearchCM, DynCubeBlocklist));
+  // Create thread group
+  boost::thread_group ThreadGroup;
+
+  // Create threads
+  if (MultiThread) {
+#ifdef _DEBUG
+    size_t NumThreads = 1;
+#else
+    size_t NumThreads = boost::thread::hardware_concurrency();
+#endif
+
+    size_t BatchSize = Meshes.size() / NumThreads;
+    for (size_t I = 0; I < NumThreads; I++) {
+      size_t Start = I * BatchSize;
+      size_t End = (I == NumThreads - 1) ? Meshes.size() : (I + 1) * BatchSize;
+
+      ThreadGroup.create_thread(
+          [this, &Meshes, Start, End, &TaskTracker, &TPBRConfigs, &SlotSearchVP, &SlotSearchCM, &DynCubeBlocklist] {
+            patchMeshBatch(Meshes, Start, End, TaskTracker, TPBRConfigs, SlotSearchVP, SlotSearchCM, DynCubeBlocklist);
+          });
+    }
+
+    ThreadGroup.join_all(); // Wait for threads to complete
+  } else {
+    patchMeshBatch(Meshes, 0, Meshes.size(), TaskTracker, TPBRConfigs, SlotSearchVP, SlotSearchCM, DynCubeBlocklist);
+  }
+}
+
+void ParallaxGen::patchMeshBatch(const std::vector<std::filesystem::path> &Meshes, const size_t &Start,
+                                 const size_t &End, ParallaxGenTask &TaskTracker,
+                                 const std::vector<nlohmann::json> &TPBRConfigs, const std::vector<int> &SlotSearchVP,
+                                 const std::vector<int> &SlotSearchCM, std::vector<std::wstring> &DynCubeBlocklist) {
+  for (size_t I = Start; I < End; I++) {
+    TaskTracker.completeJob(processNIF(Meshes[I], TPBRConfigs, SlotSearchVP, SlotSearchCM, DynCubeBlocklist));
   }
 }
 
@@ -74,13 +107,16 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
   }
 
   // Replace "_p" with "_m" in the stem
-  string TexBase = NIFUtil::getTexBase(HeightMapStr, NIFUtil::TextureSlots::Parallax, PGC);
+  static const auto ParallaxSuffixes = PGC->getConfig()["suffixes"]["3"].get<vector<string>>();
+  string TexBase = NIFUtil::getTexBase(HeightMapStr, ParallaxSuffixes);
   if (TexBase.empty()) {
     // no height map (this shouldn't happen)
     return Result;
   }
 
-  auto ExistingCM = NIFUtil::getTexMatch(TexBase, NIFUtil::TextureSlots::EnvMask, PGC, PGD);
+  static const auto *CMBaseList = &PGD->getHeightMapsBases();
+  static const auto *CMList = &PGD->getComplexMaterialMaps();
+  auto ExistingCM = NIFUtil::getTexMatch(TexBase, *CMBaseList, *CMList);
   if (!ExistingCM.empty()) {
     // complex material already exists
     return Result;
@@ -321,7 +357,8 @@ auto ParallaxGen::processShape(const vector<nlohmann::json> &TPBRConfigs, NifFil
     return Result;
   }
 
-  auto SearchPrefixes = NIFUtil::getSearchPrefixes(NIF, NIFShape, PGC);
+  static const vector<vector<string>> Suffixes = PGC->getConfig()["suffixes"].get<vector<vector<string>>>();
+  auto SearchPrefixes = NIFUtil::getSearchPrefixes(NIF, NIFShape, Suffixes);
   string MatchedPath;
 
   // TRUEPBR CONFIG
