@@ -1,8 +1,8 @@
 #include "NIFUtil.hpp"
 #include <NifFile.hpp>
+#include <algorithm>
 #include <boost/algorithm/string.hpp>
-
-#include "ParallaxGenDirectory.hpp"
+#include <boost/algorithm/string/case_conv.hpp>
 
 using namespace std;
 
@@ -103,10 +103,9 @@ auto NIFUtil::setTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, cons
   }
 }
 
-auto NIFUtil::getTexBase(const string &TexPath, const NIFUtil::TextureSlots &Slot,
-                         ParallaxGenConfig *PGC) -> std::string {
+auto NIFUtil::getTexBase(const string &TexPath, const vector<string> &Suffixes) -> std::string {
   // Loop through SuffixList
-  for (const auto &Suffix : PGC->getSuffix(static_cast<unsigned int>(Slot))) {
+  for (const auto &Suffix : Suffixes) {
     // Check if the texture path ends with the suffix
     if (boost::iends_with(TexPath, Suffix)) {
       // Remove the suffix from the texture path
@@ -117,40 +116,29 @@ auto NIFUtil::getTexBase(const string &TexPath, const NIFUtil::TextureSlots &Slo
   return {};
 }
 
-auto NIFUtil::getTexMatch(const string &Base, const NIFUtil::TextureSlots &Slot, ParallaxGenConfig *PGC,
-                          ParallaxGenDirectory *PGD) -> std::filesystem::path {
-  vector<filesystem::path> SearchList;
-  switch (Slot) {
-  case TextureSlots::Parallax:
-    SearchList = PGD->getHeightMaps();
-    break;
-  case TextureSlots::EnvMask:
-    SearchList = PGD->getComplexMaterialMaps();
-    break;
-  default:
-    return {};
-  }
+auto NIFUtil::getTexMatch(const string &Base, const vector<string> &SearchList,
+                          const vector<filesystem::path> &TexList) -> std::filesystem::path {
+  // Binary search on base list
+  const string BaseLower = boost::to_lower_copy(Base);
+  const auto It = lower_bound(SearchList.begin(), SearchList.end(), BaseLower);
 
-  for (const auto &Search : SearchList) {
-    string SearchStr;
-    try {
-      SearchStr = Search.string();
-    } catch (...) {
-      // NIFs can't do wstrings anyway so we just move on
-      continue;
+  if (It != SearchList.end()) {
+    // Found a match
+    if (!boost::equals(*It, BaseLower)) {
+      // No exact match
+      return {};
     }
 
-    auto SearchBase = getTexBase(SearchStr, Slot, PGC);
-    if (boost::iequals(SearchBase, Base)) {
-      return SearchStr;
-    }
+    // Return matched texture
+    auto Idx = distance(SearchList.begin(), It);
+    return TexList[Idx];
   }
 
   return {};
 }
 
 auto NIFUtil::getSearchPrefixes(NifFile &NIF, nifly::NiShape *NIFShape,
-                                ParallaxGenConfig *PGC) -> array<string, NUM_TEXTURE_SLOTS> {
+                                const vector<vector<string>> &Suffixes) -> array<string, NUM_TEXTURE_SLOTS> {
   array<string, NUM_TEXTURE_SLOTS> OutPrefixes;
 
   // Loop through each texture Slot
@@ -164,7 +152,7 @@ auto NIFUtil::getSearchPrefixes(NifFile &NIF, nifly::NiShape *NIFShape,
     }
 
     // Get default suffixes
-    const auto TexBase = getTexBase(Texture, static_cast<TextureSlots>(I), PGC);
+    const auto TexBase = getTexBase(Texture, Suffixes[I]);
     OutPrefixes[I] = TexBase;
   }
 

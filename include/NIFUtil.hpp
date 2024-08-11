@@ -3,9 +3,7 @@
 #include <Geometry.hpp>
 #include <NifFile.hpp>
 #include <Shaders.hpp>
-
-#include "ParallaxGenConfig.hpp"
-#include "ParallaxGenDirectory.hpp"
+#include <array>
 
 #define NUM_TEXTURE_SLOTS 9
 
@@ -49,11 +47,12 @@ auto configureShaderFlag(nifly::BSLightingShaderProperty *NIFShaderBSLSP, const 
 // Texture slot helpers
 auto setTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, const TextureSlots &Slot,
                     const std::string &TexturePath, bool &Changed) -> void;
-auto getTexBase(const std::string &TexPath, const NIFUtil::TextureSlots &Slot, ParallaxGenConfig *PGC) -> std::string;
-auto getTexMatch(const std::string &Base, const NIFUtil::TextureSlots &Slot, ParallaxGenConfig *PGC,
-                 ParallaxGenDirectory *PGD) -> std::filesystem::path;
+auto getTexBase(const std::string &TexPath, const std::vector<std::string> &Suffixes) -> std::string;
+auto getTexMatch(const std::string &Base, const std::vector<std::string> &SearchList,
+                 const std::vector<std::filesystem::path> &TexList) -> std::filesystem::path;
 // Gets all the texture prefixes for a textureset. ie. _n.dds is removed etc. for each slot
 auto getSearchPrefixes(nifly::NifFile &NIF, nifly::NiShape *NIFShape,
-                       ParallaxGenConfig *PGC) -> std::array<std::string, NUM_TEXTURE_SLOTS>;
+                       const std::vector<std::vector<std::string>> &Suffixes)
+    -> std::array<std::string, NUM_TEXTURE_SLOTS>;
 
 } // namespace NIFUtil
