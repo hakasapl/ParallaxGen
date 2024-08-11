@@ -52,4 +52,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: parallaxgen-artifacts-${{ github.sha }}
-        path: ./install
+        path: build/install
