@@ -20,9 +20,6 @@ set(PROJECT_URI "com.github.hakasapl.ParallaxGen")
 set(PARALLAXGEN_VERSION 0.5.6)
 project(${PROJECT_NAME} VERSION ${PARALLAXGEN_VERSION})
 
-# Export compile commands for use with clangd
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 # Define preprocessor macro with the version number
 add_compile_definitions(PARALLAXGEN_VERSION="${PARALLAXGEN_VERSION}")
 
@@ -143,8 +140,13 @@ install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION . )
 install(FILES $<TARGET_RUNTIME_DLLS:${PROJECT_NAME}> DESTINATION . )
 
 # manual copy DLLs not caught by TARGET_RUNTIME_DLLS
-install(FILES ${CMAKE_BINARY_DIR}/lz4.dll DESTINATION . )
-install(FILES ${CMAKE_BINARY_DIR}/zlib1.dll DESTINATION . )
+if (${CMAKE_BUILD_TYPE} STREQUAL "Release" OR ${CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo" OR ${CMAKE_BUILD_TYPE} STREQUAL "MinSizeRel")
+    install(FILES ${CMAKE_BINARY_DIR}/lz4.dll DESTINATION . )
+    install(FILES ${CMAKE_BINARY_DIR}/zlib1.dll DESTINATION . )
+elseif(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+    install(FILES ${CMAKE_BINARY_DIR}/lz4d.dll DESTINATION . )
+    install(FILES ${CMAKE_BINARY_DIR}/zlib1d.dll DESTINATION . )
+endif()
 
 # Copy compiled shaders to install
 install(DIRECTORY ${CMAKE_BINARY_DIR}/shaders DESTINATION . )
