@@ -292,7 +292,7 @@ void addArguments(CLI::App &App, ParallaxGenCLIArgs &Args, const filesystem::pat
 
     // Check if output dir is set, otherwise set default
     if (Args.OutputDir.empty()) {
-      Args.OutputDir = ExePath / "ParallaxGenOutput";
+      Args.OutputDir = ExePath / "ParallaxGen_Output";
     } else {
       // Check if output dir is a directory
       if (!filesystem::is_directory(Args.OutputDir) && filesystem::exists(Args.OutputDir)) {
