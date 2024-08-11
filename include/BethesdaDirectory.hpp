@@ -75,7 +75,7 @@ public:
   /**
    * @brief Populate file map with all files in the load order
    */
-  void populateFileMap();
+  void populateFileMap(bool IncludeBSAs = true);
 
   /**
    * @brief Get the file map vector
