@@ -45,6 +45,7 @@ jobs:
 
     - name: Build and Install ParallaxGen
       run: |
+        cd build
         cmake --build . --target install --config Release
 
     - name: Upload Build Artifacts
