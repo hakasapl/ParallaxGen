@@ -5,6 +5,7 @@
     "boost-filesystem",
     "boost-iostreams",
     "boost-stacktrace",
+    "boost-thread",
     "cli11",
     {
       "name": "directxtex",
@@ -13,9 +14,9 @@
       ]
     },
     "directxtk",
+    "json-schema-validator",
     "miniz",
     "nlohmann-json",
-    "json-schema-validator",
     {
       "name": "rsm-bsa",
       "features": [
