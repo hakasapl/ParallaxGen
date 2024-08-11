@@ -14,7 +14,21 @@ Contributors are welcome. Thank you in advance! This is a CMake project with VCP
 * Install [CMake Tools](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cmake-tools) extension.
 * Install [C/C++](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools) extension for a debugger.
 * Install [clangd](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd) extension for the language server.
-* VS code must be run via the VS 2022 commandline (ie. `code .` from the CLI). This initializes all env vars to use MSVC toolchain.
+* Create a project-level `.vscode/cmake-kits.json`. You can get the name by editing the user-level kit file. The command in VS code is `CMake: Edit User-Local CMake Kits` to do so.
+
+  ```json
+  [
+    {
+      "name": "VS2022-VCPKG",
+      "visualStudio": "6f297109",  // << Change this to whatever is on your system
+      "visualStudioArchitecture": "x64",
+      "isTrusted": true,
+      "cmakeSettings": {
+        "CMAKE_TOOLCHAIN_FILE": "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/vcpkg/scripts/buildsystems/vcpkg.cmake"  // << Change this to where it is on your system
+      }
+    }
+  ]
+  ```
 
 ### Visual Studio 2022
 

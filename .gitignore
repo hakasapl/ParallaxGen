@@ -8,5 +8,7 @@ vcpkg_installed
 # IDE files
 .vs
 
+.vscode/cmake-kits.json
+
 # clangd cache
 .cache

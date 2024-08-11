@@ -28,24 +28,24 @@ jobs:
       with:
         key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
         path: |
-          build/x64-debug/vcpkg_installed
-          build/x64-release/vcpkg_installed
+          build/vcpkg_installed
 
     - name: Cache Externals
       uses: actions/cache@v3
       with:
         key: externals-${{ runner.os }}-${{ hashFiles('.gitmodules') }}
         path: |
-          build/x64-debug/external
-          build/x64-release/external
+          build/external
 
     - name: Configure CMake
       run: |
-        cmake --preset x64-release
+        mkdir build
+        cd build
+        cmake .. -G Ninja -DCMAKE_TOOLCHAIN_FILE="%VCPKG_ROOT%/scripts/buildsystems/vcpkg.cmake" -DCMAKE_INSTALL_PREFIX="./install"
 
     - name: Build and Install ParallaxGen
       run: |
-        cmake --build build/x64-release --target install
+        cmake .. --build . --config Release --target install
 
     - name: Upload Build Artifacts
       uses: actions/upload-artifact@v4
