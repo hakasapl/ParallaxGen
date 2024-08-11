@@ -381,7 +381,7 @@ auto BethesdaDirectory::getPluginLoadOrder(const bool &TrimExtension) const -> v
   if (!F.is_open()) {
     if (Logging) {
       spdlog::critical("Unable to open loadorder.txt");
-      exitWithUserInput(1);
+      exit(1);
     } else {
       throw runtime_error("Unable to open loadorder.txt");
     }

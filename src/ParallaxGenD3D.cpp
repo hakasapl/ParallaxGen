@@ -296,7 +296,7 @@ void ParallaxGenD3D::initGPU() {
     spdlog::error("D3D11 device creation failure error: {}", getHRESULTErrorMessage(HR));
     spdlog::critical("Unable to find any DX11 capable devices. Disable any GPU-accelerated "
                      "features to continue.");
-    exitWithUserInput(1);
+    exit(1);
   }
 
   // Init Shaders
@@ -311,14 +311,14 @@ void ParallaxGenD3D::initShaders() {
   PGResult = createComputeShader(L"MergeToComplexMaterial.hlsl", ShaderMergeToComplexMaterial);
   if (PGResult != ParallaxGenTask::PGResult::SUCCESS) {
     spdlog::critical("Failed to create compute shader. Exiting.");
-    exitWithUserInput(1);
+    exit(1);
   }
 
   // CountAlphaValues.hlsl
   PGResult = createComputeShader(L"CountAlphaValues.hlsl", ShaderCountAlphaValues);
   if (PGResult != ParallaxGenTask::PGResult::SUCCESS) {
     spdlog::critical("Failed to create compute shader. Exiting.");
-    exitWithUserInput(1);
+    exit(1);
   }
 }
 
@@ -347,7 +347,7 @@ auto ParallaxGenD3D::compileShader(const std::filesystem::path &Filename,
                        stringToWstring(getHRESULTErrorMessage(HR)));
     }
 
-    exitWithUserInput(1);
+    exit(1);
   }
 
   spdlog::debug(L"Shader {} compiled successfully", Filename.wstring());

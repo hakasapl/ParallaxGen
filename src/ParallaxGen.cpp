@@ -165,7 +165,7 @@ void ParallaxGen::deleteOutputDir() const {
       }
     } catch (const exception &E) {
       spdlog::critical(L"Error deleting output directory {}: {}", OutputDir.wstring(), stringToWstring(E.what()));
-      exitWithUserInput(1);
+      exit(1);
     }
   }
 }
@@ -390,8 +390,8 @@ void ParallaxGen::addFileToZip(mz_zip_archive &Zip, const filesystem::path &File
 
   // add file to Zip
   if (mz_zip_writer_add_mem(&Zip, ZipFilePath.c_str(), Buffer.data(), Buffer.size(), MZ_NO_COMPRESSION) == 0) {
-    spdlog::error(L"Error adding file to Zip: {}", FilePath.wstring());
-    exitWithUserInput(1);
+    spdlog::error(L"Error adding file to zip: {}", FilePath.wstring());
+    exit(1);
   }
 }
 
@@ -400,12 +400,6 @@ void ParallaxGen::zipDirectory(const filesystem::path &DirPath, const filesystem
 
   // init to 0
   memset(&Zip, 0, sizeof(Zip));
-
-  // check if directory exists
-  if (!filesystem::exists(DirPath)) {
-    spdlog::info("No outputs were created");
-    exitWithUserInput(0);
-  }
 
   // Check if file already exists and delete
   if (filesystem::exists(ZipPath)) {
@@ -417,7 +411,7 @@ void ParallaxGen::zipDirectory(const filesystem::path &DirPath, const filesystem
   string ZipPathString = wstringToString(ZipPath);
   if (mz_zip_writer_init_file(&Zip, ZipPathString.c_str(), 0) == 0) {
     spdlog::critical(L"Error creating Zip file: {}", ZipPath.wstring());
-    exitWithUserInput(1);
+    exit(1);
   }
 
   // add each file in directory to Zip
@@ -430,7 +424,7 @@ void ParallaxGen::zipDirectory(const filesystem::path &DirPath, const filesystem
   // finalize Zip
   if (mz_zip_writer_finalize_archive(&Zip) == 0) {
     spdlog::critical(L"Error finalizing Zip archive: {}", ZipPath.wstring());
-    exitWithUserInput(1);
+    exit(1);
   }
 
   mz_zip_writer_end(&Zip);

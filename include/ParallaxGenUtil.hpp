@@ -7,9 +7,6 @@
 #include <unordered_set>
 
 namespace ParallaxGenUtil {
-// terminals usually auto exit when program ends, this function waits for user
-// input before exiting
-void exitWithUserInput(const int &ExitCode = 0);
 
 // converts a string to a wstring
 auto stringToWstring(const std::string &Str) -> std::wstring;

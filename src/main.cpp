@@ -1,16 +1,16 @@
-#include <spdlog/sinks/basic_file_sink.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/spdlog.h>
-#include <windows.h>
-
 #include <CLI/CLI.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/stacktrace.hpp>
+#include <cstdlib>
 #include <filesystem>
 #include <iostream>
+#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/spdlog.h>
 #include <string>
 #include <unordered_map>
+#include <windows.h>
 
 #include "BethesdaGame.hpp"
 #include "ParallaxGen.hpp"
@@ -22,63 +22,42 @@
 using namespace std;
 using namespace ParallaxGenUtil;
 
-auto getExecutablePath() -> filesystem::path {
-  char Buffer[MAX_PATH];                                   // NOLINT
-  if (GetModuleFileName(nullptr, Buffer, MAX_PATH) == 0) { // NOLINT
-    cerr << "Error getting executable path: " << GetLastError() << "\n";
-    exitWithUserInput(1);
+struct ParallaxGenCLIArgs {
+  int Verbosity = 0;
+  filesystem::path GameDir;
+  string GameType = "skyrimse";
+  filesystem::path OutputDir;
+  bool Autostart = false;
+  bool NoGPU = false;
+  bool UpgradeShaders = false;
+  bool OptimizeMeshes = false;
+  bool NoZip = false;
+  bool NoCleanup = false;
+  bool NoDefaultConfig = false;
+  bool IgnoreParallax = false;
+  bool IgnoreComplexMaterial = false;
+  bool IgnoreTruePBR = false;
+
+  [[nodiscard]] auto getString() const -> string {
+    string OutStr;
+    OutStr += "Verbosity: " + to_string(Verbosity) + "\n";
+    OutStr += "GameDir: " + GameDir.string() + "\n";
+    OutStr += "GameType: " + GameType + "\n";
+    OutStr += "OutputDir: " + OutputDir.string() + "\n";
+    OutStr += "Autostart: " + to_string(static_cast<int>(Autostart)) + "\n";
+    OutStr += "NoGPU: " + to_string(static_cast<int>(NoGPU)) + "\n";
+    OutStr += "UpgradeShaders: " + to_string(static_cast<int>(UpgradeShaders)) + "\n";
+    OutStr += "OptimizeMeshes: " + to_string(static_cast<int>(OptimizeMeshes)) + "\n";
+    OutStr += "NoZip: " + to_string(static_cast<int>(NoZip)) + "\n";
+    OutStr += "NoCleanup: " + to_string(static_cast<int>(NoCleanup)) + "\n";
+    OutStr += "NoDefaultConfig: " + to_string(static_cast<int>(NoDefaultConfig)) + "\n";
+    OutStr += "IgnoreParallax: " + to_string(static_cast<int>(IgnoreParallax)) + "\n";
+    OutStr += "IgnoreComplexMaterial: " + to_string(static_cast<int>(IgnoreComplexMaterial)) + "\n";
+    OutStr += "IgnoreTruePBR: " + to_string(static_cast<int>(IgnoreTruePBR));
+
+    return OutStr;
   }
-
-  filesystem::path OutPath = filesystem::path(Buffer);
-
-  if (filesystem::exists(OutPath)) {
-    return OutPath;
-  }
-
-  cerr << "Error getting executable path: path does not exist\n";
-  exitWithUserInput(1);
-
-  return {};
-}
-
-void initLogger(const filesystem::path &LOGPATH) {
-  // Create loggers
-  vector<spdlog::sink_ptr> Sinks;
-  Sinks.push_back(make_shared<spdlog::sinks::stdout_color_sink_mt>());
-  Sinks.push_back(
-      make_shared<spdlog::sinks::basic_file_sink_mt>(LOGPATH.string(), true)); // TODO wide string support here
-  auto Logger = make_shared<spdlog::logger>("ParallaxGen", Sinks.begin(), Sinks.end());
-
-  // register logger parameters
-  spdlog::register_logger(Logger);
-  spdlog::set_default_logger(Logger);
-  spdlog::set_level(spdlog::level::info);
-  spdlog::flush_on(spdlog::level::info);
-}
-
-void addArguments(CLI::App &App, int &Verbosity, filesystem::path &GameDir, string &GameType,
-                  filesystem::path &OutputDir, bool &Autostart, bool &NoGPU, bool &UpgradeShaders, bool &OptimizeMeshes,
-                  bool &NoZip, bool &NoCleanup, bool &NoDefaultConfig, bool &IgnoreParallax,
-                  bool &IgnoreComplexMaterial, bool &IgnoreTruePBR, const string &AvailableGameTypesStr) {
-  App.add_flag("-v", Verbosity,
-               "Verbosity level -v for DEBUG data or -vv for TRACE data "
-               "(warning: TRACE data is very verbose)");
-  App.add_option("-d,--game-dir", GameDir, "Manually specify game directory");
-  App.add_option("-g,--game-type", GameType, "Specify game type [" + AvailableGameTypesStr + "]");
-  App.add_option("-o,--output-dir", OutputDir, "Manually specify output directory");
-  App.add_flag("--autostart", Autostart, "Start generation without user input");
-  App.add_flag("--no-gpu", NoGPU, "Don't use the GPU for any operations (Slower)");
-  App.add_flag("--upgrade-shaders", UpgradeShaders, "Upgrade shaders to a better version whenever possible");
-  App.add_flag("--optimize-meshes", OptimizeMeshes, "Optimize meshes before saving them");
-  App.add_flag("--no-zip", NoZip, "Don't zip the output meshes (also enables --no-cleanup)");
-  App.add_flag("--no-cleanup", NoCleanup, "Don't delete generated meshes after zipping");
-  App.add_flag("--no-default-conifg", NoDefaultConfig,
-               "Don't load the default config file (You need to know what "
-               "you're doing for this)");
-  App.add_flag("--ignore-parallax", IgnoreParallax, "Don't generate any parallax meshes");
-  App.add_flag("--ignore-complex-material", IgnoreComplexMaterial, "Don't generate any complex material meshes");
-  App.add_flag("--ignore-truepbr", IgnoreTruePBR, "Don't apply any TruePBR configs in the load order");
-}
+};
 
 // Store game type strings and their corresponding BethesdaGame::GameType enum
 // values This also determines the CLI argument help text (the key values)
@@ -90,108 +69,24 @@ auto getGameTypeMap() -> unordered_map<string, BethesdaGame::GameType> {
   return GameTypeMap;
 }
 
-void mainRunner(int ArgC, char **ArgV) {
-  // Find location of ParallaxGen.exe
-  const filesystem::path ExePath = getExecutablePath().parent_path();
-
-  // Initialize logger
-  const filesystem::path LogPath = ExePath / "ParallaxGen.log";
-  initLogger(LogPath);
-
-  //
-  // CLI Arguments
-  //
-  const string StartupCLIArgs = boost::join(vector<string>(ArgV + 1, ArgV + ArgC), " "); // NOLINT
-
-  // Define game type vars
-  vector<string> AvailableGameTypes;
-  auto GameTypeMap = getGameTypeMap();
-  AvailableGameTypes.reserve(GameTypeMap.size());
+auto getGameTypeMapStr() -> string {
+  const auto GameTypeMap = getGameTypeMap();
+  static vector<string> GameTypeStrs;
+  GameTypeStrs.reserve(GameTypeMap.size());
   for (const auto &Pair : GameTypeMap) {
-    AvailableGameTypes.push_back(Pair.first);
-  }
-  const string AvailableGameTypesStr = boost::join(AvailableGameTypes, ", ");
-
-  // Vars that store CLI argument values
-  // Default values are defined here
-  // TODO we should probably define a structure to hold CLI arguments
-  int Verbosity = 0;
-  filesystem::path GameDir;
-  string GameType = "skyrimse";
-  filesystem::path OutputDir = ExePath / "ParallaxGen_Output";
-  bool Autostart = false;
-  bool NoGPU = false;
-  bool UpgradeShaders = false;
-  bool OptimizeMeshes = false;
-  bool NoZip = false;
-  bool NoCleanup = false;
-  bool NoDefaultConfig = false;
-  bool IgnoreParallax = false;
-  bool IgnoreComplexMaterial = false;
-  bool IgnoreTruepbr = false;
-
-  // Parse CLI arguments
-  CLI::App App{"ParallaxGen: Auto convert meshes to parallax meshes"};
-  addArguments(App, Verbosity, GameDir, GameType, OutputDir, Autostart, NoGPU, UpgradeShaders, OptimizeMeshes, NoZip,
-               NoCleanup, NoDefaultConfig, IgnoreParallax, IgnoreComplexMaterial, IgnoreTruepbr, AvailableGameTypesStr);
-
-  // Check if arguments are valid, otherwise print error to user
-  try {
-    App.parse(ArgC, ArgV);
-  } catch (const CLI::ParseError &E) {
-    // TODO --help doesn't work correctly with this
-    spdlog::critical("Arguments Invalid: {}\n{}", E.what(), App.help());
-    exitWithUserInput(1);
+    GameTypeStrs.push_back(Pair.first);
   }
 
-  //
+  static string GameTypeStr = boost::join(GameTypeStrs, ", ");
+  return GameTypeStr;
+}
+
+void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   // Welcome Message
-  //
   spdlog::info("Welcome to ParallaxGen version {}!", PARALLAXGEN_VERSION);
-  spdlog::info("Arguments Supplied: {}", StartupCLIArgs);
 
-  //
-  // Argument validation
-  //
-
-  // Check if game_type exists in allowed_game_types
-  if (GameTypeMap.find(GameType) == GameTypeMap.end()) {
-    spdlog::critical("Invalid game type (-g) specified: {}", GameType);
-    exitWithUserInput(1);
-  }
-
-  // Check if there is actually anything to do
-  if (IgnoreParallax && IgnoreComplexMaterial && IgnoreTruepbr && !UpgradeShaders) {
-    spdlog::critical("There is nothing to do if both --ignore-parallax and "
-                     "--ignore-complex-material are set and --upgrade-shaders is not set.");
-    exitWithUserInput(1);
-  }
-
-  if (NoGPU && UpgradeShaders) {
-    spdlog::critical("--upgrade-shadres requires GPU. Remove --no-gpu or --upgrade-shaders.");
-    exitWithUserInput(1);
-  }
-
-  // If --no-zip is set, also set --no-cleanup
-  if (NoZip) {
-    NoCleanup = true;
-  }
-
-  // Set logging mode
-  if (Verbosity == 1) {
-    spdlog::set_level(spdlog::level::debug);
-    spdlog::flush_on(spdlog::level::debug);
-    spdlog::debug("DEBUG logging enabled");
-  }
-
-  if (Verbosity >= 2) {
-    spdlog::set_level(spdlog::level::trace);
-    spdlog::flush_on(spdlog::level::trace);
-    spdlog::trace("TRACE logging enabled");
-  }
-
-  // If true, NIF patching occurs
-  bool PatchMeshes = !IgnoreParallax || !IgnoreComplexMaterial || !IgnoreTruepbr;
+  // Print configuration parameters
+  spdlog::debug("Configuration Parameters:\n{}", Args.getString());
 
   //
   // Init
@@ -200,37 +95,37 @@ void mainRunner(int ArgC, char **ArgV) {
   // print output location
   spdlog::info(L"ParallaxGen output directory (the contents will be deleted if you "
                L"start generation!): {}",
-               OutputDir.wstring());
+               Args.OutputDir.wstring());
 
   // Create bethesda game type object
-  BethesdaGame::GameType BGType = GameTypeMap.at(GameType);
+  BethesdaGame::GameType BGType = getGameTypeMap().at(Args.GameType);
 
   // Create relevant objects
-  BethesdaGame BG = BethesdaGame(BGType, GameDir, true);
+  BethesdaGame BG = BethesdaGame(BGType, Args.GameDir, true);
   ParallaxGenDirectory PGD = ParallaxGenDirectory(BG);
   ParallaxGenConfig PGC = ParallaxGenConfig(&PGD, ExePath);
-  ParallaxGenD3D PGD3D = ParallaxGenD3D(&PGD, OutputDir, ExePath, !NoGPU);
-  ParallaxGen PG =
-      ParallaxGen(OutputDir, &PGD, &PGC, &PGD3D, OptimizeMeshes, IgnoreParallax, IgnoreComplexMaterial, IgnoreTruepbr);
+  ParallaxGenD3D PGD3D = ParallaxGenD3D(&PGD, Args.OutputDir, ExePath, !Args.NoGPU);
+  ParallaxGen PG = ParallaxGen(Args.OutputDir, &PGD, &PGC, &PGD3D, Args.OptimizeMeshes, Args.IgnoreParallax,
+                               Args.IgnoreComplexMaterial, Args.IgnoreTruePBR);
 
   // Check if GPU needs to be initialized
-  if (!NoGPU) {
+  if (!Args.NoGPU) {
     PGD3D.initGPU();
   }
 
   // Create output directory
   try {
-    filesystem::create_directories(OutputDir);
+    filesystem::create_directories(Args.OutputDir);
   } catch (const filesystem::filesystem_error &E) {
     spdlog::error("Failed to create output directory: {}", E.what());
-    exitWithUserInput(1);
+    exit(1);
   }
 
   // If output dir is the same as data dir meshes might get overwritten
-  if (filesystem::equivalent(OutputDir, PGD.getDataPath())) {
+  if (filesystem::equivalent(Args.OutputDir, PGD.getDataPath())) {
     spdlog::critical("Output directory cannot be the same directory as your data folder. "
                      "Exiting.");
-    exitWithUserInput(1);
+    exit(1);
   }
 
   //
@@ -238,7 +133,7 @@ void mainRunner(int ArgC, char **ArgV) {
   //
 
   // User Input to Continue
-  if (!Autostart) {
+  if (!Args.Autostart) {
     cout << "Press ENTER to start ParallaxGen...";
     cin.get();
   }
@@ -251,7 +146,7 @@ void mainRunner(int ArgC, char **ArgV) {
   if (filesystem::exists(PGStateFilePath)) {
     spdlog::critical("ParallaxGen meshes exist in your data directory, please delete before "
                      "re-running.");
-    exitWithUserInput(1);
+    exit(1);
   }
 
   PG.initOutputDir();
@@ -261,21 +156,21 @@ void mainRunner(int ArgC, char **ArgV) {
 
   // Load configs
   PGD.findPGConfigs();
-  PGC.loadConfig(!NoDefaultConfig);
+  PGC.loadConfig(!Args.NoDefaultConfig);
 
   // Install default cubemap file if needed
-  if (!IgnoreComplexMaterial) {
+  if (!Args.IgnoreComplexMaterial) {
     // install default cubemap file if needed
     if (!PGD.defCubemapExists()) {
       spdlog::info("Installing default cubemap file");
 
       // Create Directory
-      filesystem::path OutputCubemapPath = OutputDir / ParallaxGenDirectory::getDefaultCubemapPath().parent_path();
+      filesystem::path OutputCubemapPath = Args.OutputDir / ParallaxGenDirectory::getDefaultCubemapPath().parent_path();
       filesystem::create_directories(OutputCubemapPath);
 
       boost::filesystem::path AssetPath = boost::filesystem::path(ExePath) / L"assets/dynamic1pxcubemap_black_ENB.dds";
       boost::filesystem::path OutputPath =
-          boost::filesystem::path(OutputDir) / ParallaxGenDirectory::getDefaultCubemapPath();
+          boost::filesystem::path(Args.OutputDir) / ParallaxGenDirectory::getDefaultCubemapPath();
 
       // Move File
       boost::filesystem::copy_file(AssetPath, OutputPath, boost::filesystem::copy_options::overwrite_existing);
@@ -283,14 +178,14 @@ void mainRunner(int ArgC, char **ArgV) {
   }
 
   // Build file vectors
-  if (!IgnoreParallax || (IgnoreParallax && UpgradeShaders)) {
+  if (!Args.IgnoreParallax || Args.UpgradeShaders) {
     PGD.findHeightMaps(
         stringVecToWstringVec(PGC.getConfig()["parallax_lookup"]["allowlist"].get<vector<string>>()),
         stringVecToWstringVec(PGC.getConfig()["parallax_lookup"]["blocklist"].get<vector<string>>()),
         stringVecToWstringVec(PGC.getConfig()["parallax_lookup"]["archive_blocklist"].get<vector<string>>()));
   }
 
-  if (!IgnoreComplexMaterial) {
+  if (!Args.IgnoreComplexMaterial || Args.UpgradeShaders) {
     PGD.findComplexMaterialMaps(
         stringVecToWstringVec(PGC.getConfig()["complexmaterial_lookup"]["allowlist"].get<vector<string>>()),
         stringVecToWstringVec(PGC.getConfig()["complexmaterial_lookup"]["blocklist"].get<vector<string>>()),
@@ -298,48 +193,180 @@ void mainRunner(int ArgC, char **ArgV) {
     PGD3D.findCMMaps();
   }
 
-  if (!IgnoreTruepbr) {
+  if (!Args.IgnoreTruePBR) {
     PGD.findTruePBRConfigs(
         stringVecToWstringVec(PGC.getConfig()["truepbr_cfg_lookup"]["allowlist"].get<vector<string>>()),
         stringVecToWstringVec(PGC.getConfig()["truepbr_cfg_lookup"]["blocklist"].get<vector<string>>()),
         stringVecToWstringVec(PGC.getConfig()["truepbr_cfg_lookup"]["archive_blocklist"].get<vector<string>>()));
   }
 
-  // Upgrade shaders if set
-  if (UpgradeShaders) {
+  // Upgrade shaders if requested
+  if (Args.UpgradeShaders) {
     PG.upgradeShaders();
   }
 
   // Patch meshes if set
-  if (PatchMeshes) {
+  if (!Args.IgnoreParallax || !Args.IgnoreComplexMaterial || !Args.IgnoreTruePBR) {
     PGD.findMeshes(stringVecToWstringVec(PGC.getConfig()["nif_lookup"]["allowlist"].get<vector<string>>()),
                    stringVecToWstringVec(PGC.getConfig()["nif_lookup"]["blocklist"].get<vector<string>>()),
                    stringVecToWstringVec(PGC.getConfig()["nif_lookup"]["archive_blocklist"].get<vector<string>>()));
     PG.patchMeshes();
   }
 
-  spdlog::info("ParallaxGen has finished generating meshes.");
+  spdlog::info("ParallaxGen has finished patching meshes.");
 
   // archive
-  if (!NoZip) {
+  if (!Args.NoZip) {
     PG.zipMeshes();
   }
 
   // cleanup
-  if (!NoCleanup) {
+  if (!Args.NoCleanup) {
     PG.deleteMeshes();
   }
 }
 
-int main(int ArgC, char **ArgV) {
+void exitBlocking() {
+  cout << "Press ENTER to exit...";
+  cin.get();
+}
+
+auto getExecutablePath() -> filesystem::path {
+  char Buffer[MAX_PATH];                                   // NOLINT
+  if (GetModuleFileName(nullptr, Buffer, MAX_PATH) == 0) { // NOLINT
+    cerr << "Error getting executable path: " << GetLastError() << "\n";
+    exit(1);
+  }
+
+  filesystem::path OutPath = filesystem::path(Buffer);
+
+  if (filesystem::exists(OutPath)) {
+    return OutPath;
+  }
+
+  cerr << "Error getting executable path: path does not exist\n";
+  exit(1);
+
+  return {};
+}
+
+void addArguments(CLI::App &App, ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
+  // Logging
+  App.add_flag("-v", Args.Verbosity,
+               "Verbosity level -v for DEBUG data or -vv for TRACE data "
+               "(warning: TRACE data is very verbose)");
+  // Game
+  App.add_option("-d,--game-dir", Args.GameDir, "Manually specify game directory");
+  App.add_option("-g,--game-type", Args.GameType, "Specify game type [" + getGameTypeMapStr() + "]");
+  // App Options
+  App.add_flag("--autostart", Args.Autostart, "Start generation without user input");
+  auto *FlagNoGpu = App.add_flag("--no-gpu", Args.NoGPU, "Don't use the GPU for any operations (Slower)");
+  App.add_flag("--no-default-conifg", Args.NoDefaultConfig,
+               "Don't load the default config file (You need to know what "
+               "you're doing for this)");
+  // Output
+  App.add_option("-o,--output-dir", Args.OutputDir, "Manually specify output directory");
+  App.add_flag("--optimize-meshes", Args.OptimizeMeshes, "Optimize meshes before saving them");
+  App.add_flag("--no-zip", Args.NoZip, "Don't zip the output meshes (also enables --no-cleanup)");
+  App.add_flag("--no-cleanup", Args.NoCleanup, "Don't delete generated meshes after zipping");
+  // Patchers
+  App.add_flag("--upgrade-shaders", Args.UpgradeShaders, "Upgrade shaders to a better version whenever possible")
+      ->excludes(FlagNoGpu);
+  App.add_flag("--ignore-parallax", Args.IgnoreParallax, "Don't generate any parallax meshes");
+  App.add_flag("--ignore-complex-material", Args.IgnoreComplexMaterial, "Don't generate any complex material meshes");
+  App.add_flag("--ignore-truepbr", Args.IgnoreTruePBR, "Don't apply any TruePBR configs in the load order");
+
+  // Multi-argument Validation
+  App.callback([&Args, &ExePath]() {
+    // One action needs to be enabled
+    if (Args.IgnoreParallax && Args.IgnoreComplexMaterial && Args.IgnoreTruePBR && !Args.UpgradeShaders) {
+      throw CLI::ValidationError("No action items to do (check that you are not ignoring all patchers)");
+    }
+
+    // Validate Game Type
+    const auto GameTypeMap = getGameTypeMap();
+    if (GameTypeMap.find(Args.GameType) == GameTypeMap.end()) {
+      throw CLI::ValidationError("Invalid game type (-g) specified: " + Args.GameType + ". Available options are [" +
+                                 getGameTypeMapStr() + "]");
+    }
+
+    // Check if output dir is set, otherwise set default
+    if (Args.OutputDir.empty()) {
+      Args.OutputDir = ExePath / "ParallaxGenOutput";
+    } else {
+      // Check if output dir is a directory
+      if (!filesystem::is_directory(Args.OutputDir) && filesystem::exists(Args.OutputDir)) {
+        throw CLI::ValidationError("Output directory (-o) must be a directory or not exist");
+      }
+    }
+
+    // If --no-zip is set, also set --no-cleanup
+    if (Args.NoZip) {
+      Args.NoCleanup = true;
+    }
+  });
+}
+
+void initLogger(const filesystem::path &LOGPATH, const ParallaxGenCLIArgs &Args) {
+  // Create loggers
+  vector<spdlog::sink_ptr> Sinks;
+  Sinks.push_back(make_shared<spdlog::sinks::stdout_color_sink_mt>());
+  Sinks.push_back(
+      make_shared<spdlog::sinks::basic_file_sink_mt>(LOGPATH.string(), true)); // TODO wide string support here
+  auto Logger = make_shared<spdlog::logger>("ParallaxGen", Sinks.begin(), Sinks.end());
+
+  // register logger parameters
+  spdlog::register_logger(Logger);
+  spdlog::set_default_logger(Logger);
+  spdlog::set_level(spdlog::level::info);
+  spdlog::flush_on(spdlog::level::info);
+
+  // Set logging mode
+  if (Args.Verbosity == 1) {
+    spdlog::set_level(spdlog::level::debug);
+    spdlog::flush_on(spdlog::level::debug);
+    spdlog::debug("DEBUG logging enabled");
+  }
+
+  if (Args.Verbosity >= 2) {
+    spdlog::set_level(spdlog::level::trace);
+    spdlog::flush_on(spdlog::level::trace);
+    spdlog::trace("TRACE logging enabled");
+  }
+}
+
+auto main(int ArgC, char **ArgV) -> int {
+  // This is what keeps the console window open after the program exits until user input
+  if (atexit(exitBlocking) != 0) {
+    cerr << "Failed to register exitBlocking function\n";
+    return 1;
+  }
+
+  // Find location of ParallaxGen.exe
+  const filesystem::path ExePath = getExecutablePath().parent_path();
+
+  // CLI Arguments
+  ParallaxGenCLIArgs Args;
+  CLI::App App{"ParallaxGen: Auto convert meshes to parallax meshes"};
+  addArguments(App, Args, ExePath);
+
+  // Parse CLI Arguments (this is what exits on any validation issues)
+  CLI11_PARSE(App, ArgC, ArgV);
+
+  // Initialize logger
+  const filesystem::path LogPath = ExePath / "ParallaxGen.log";
+  initLogger(LogPath, Args);
+
+  // Main Runner (Catches all exceptions)
   try {
-    mainRunner(ArgC, ArgV);
-    exitWithUserInput(0);
+    mainRunner(Args, ExePath);
   } catch (const exception &E) {
     spdlog::critical("An unhandled exception occurred (Please provide this entire message "
                      "in your bug report).\n\nException type: {}\nMessage: {}\nStack Trace: "
                      "\n{}",
                      typeid(E).name(), E.what(), boost::stacktrace::to_string(boost::stacktrace::stacktrace()));
-    exitWithUserInput(1);
+    cout << "Press ENTER to abort...";
+    cin.get();
+    abort();
   }
 }

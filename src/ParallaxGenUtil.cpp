@@ -9,11 +9,6 @@
 
 using namespace std;
 namespace ParallaxGenUtil {
-void exitWithUserInput(const int &ExitCode) {
-  cout << "Press ENTER to exit...";
-  cin.get();
-  exit(ExitCode); // NOLINT
-}
 
 auto stringToWstring(const string &Str) -> wstring {
   size_t Length = Str.length() + 1; // Including null terminator

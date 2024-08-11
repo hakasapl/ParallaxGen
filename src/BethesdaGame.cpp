@@ -4,10 +4,7 @@
 #include <shlobj.h>
 #include <spdlog/spdlog.h>
 
-#include "ParallaxGenUtil.hpp"
-
 using namespace std;
-using namespace ParallaxGenUtil;
 
 BethesdaGame::BethesdaGame(GameType GameType, const filesystem::path &GamePath, const bool &Logging)
     : ObjGameType(GameType), Logging(Logging) {
@@ -24,7 +21,7 @@ BethesdaGame::BethesdaGame(GameType GameType, const filesystem::path &GamePath, 
     if (this->Logging) {
       spdlog::critical("Unable to locate game data path. Please specify the game data path "
                        "manually using the -d argument.");
-      exitWithUserInput(1);
+      exit(1);
     } else {
       throw runtime_error("Game path not found");
     }
@@ -35,7 +32,7 @@ BethesdaGame::BethesdaGame(GameType GameType, const filesystem::path &GamePath, 
     // If the game path does not exist, throw an exception
     if (this->Logging) {
       spdlog::critical(L"Game path does not exist: {}", this->GamePath.wstring());
-      exitWithUserInput(1);
+      exit(1);
     } else {
       throw runtime_error("Game path does not exist");
     }
@@ -43,13 +40,12 @@ BethesdaGame::BethesdaGame(GameType GameType, const filesystem::path &GamePath, 
 
   this->GameDataPath = this->GamePath / "Data";
 
-  if (!filesystem::exists(this->GameDataPath / getDataCheckFile())) {
+  const auto CheckPath = this->GameDataPath / getDataCheckFile();
+  if (!filesystem::exists(CheckPath)) {
     // If the game data path does not contain Skyrim.esm, throw an exception
     if (this->Logging) {
-      spdlog::critical(L"Game data path does not contain Skyrim.esm, which probably means "
-                       L"it's invalid: {}",
-                       this->GameDataPath.wstring());
-      exitWithUserInput(1);
+      spdlog::critical(L"Game data location is invalid: {} does not exist", CheckPath.wstring());
+      exit(1);
     } else {
       throw runtime_error("Game data path does not contain Skyrim.esm");
     }

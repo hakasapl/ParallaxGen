@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.5.6] - UNRELEASED
+
+- More robust CLI argument validation
+
 ## [0.5.5] - 2024-08-10
 
 - Fixed TruePBR nif_filter handling

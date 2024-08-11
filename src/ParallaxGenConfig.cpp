@@ -324,7 +324,7 @@ void ParallaxGenConfig::loadConfig(const bool &LoadNative) {
 
   // Validate the config
   if (!validateConfig()) {
-    exitWithUserInput(1);
+    exit(1);
   }
 
   // Initialize Member Variables
