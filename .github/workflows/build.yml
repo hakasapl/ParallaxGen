@@ -41,7 +41,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -G Ninja -DCMAKE_TOOLCHAIN_FILE="%VCPKG_ROOT%/scripts/buildsystems/vcpkg.cmake" -DCMAKE_INSTALL_PREFIX="./install"
+        cmake .. -G Ninja -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DCMAKE_INSTALL_PREFIX="./install"
 
     - name: Build and Install ParallaxGen
       run: |
