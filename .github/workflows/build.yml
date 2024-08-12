@@ -39,7 +39,7 @@ jobs:
 
     - name: Configure CMake
       run: |
-        mkdir build 2>nul
+        New-Item -ItemType Directory -Path "build" -Force
         cd build
         cmake .. -G Ninja -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DCMAKE_INSTALL_PREFIX="./install" -DCMAKE_BUILD_TYPE=Release
 
