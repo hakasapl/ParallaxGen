@@ -322,6 +322,12 @@ auto PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader
     spdlog::error("Error: Subsurface and foliage NIFShader chosen at once, undefined behavior!");
   }
 
+  // "subsurface" attribute
+  if (TruePBRData.contains("subsurface")) {
+    NIFUtil::configureShaderFlag(NIFShaderBSLSP, SLSF2_RIM_LIGHTING, TruePBRData["subsurface"].get<bool>(),
+                                 NIFModified);
+  }
+
   // "multilayer" attribute
   bool EnableMultiLayer = false;
   if (TruePBRData.contains("multilayer")) {
@@ -383,18 +389,6 @@ auto PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader
         auto NewInnerUVScale =
             Vector2(TruePBRData["inner_uv_scale"].get<float>(), TruePBRData["inner_uv_scale"].get<float>());
         NIFUtil::setShaderVec2(NIFShaderBSLSP->parallaxInnerLayerTextureScale, NewInnerUVScale, NIFModified);
-      }
-
-      // "subsurface_foliage" attribute
-      if (TruePBRData.contains("subsurface_foliage")) {
-        NIFUtil::configureShaderFlag(NIFShaderBSLSP, SLSF2_SOFT_LIGHTING, TruePBRData["subsurface_foliage"].get<bool>(),
-                                     NIFModified);
-      }
-
-      // "subsurface" attribute
-      if (TruePBRData.contains("subsurface")) {
-        NIFUtil::configureShaderFlag(NIFShaderBSLSP, SLSF2_RIM_LIGHTING, TruePBRData["subsurface"].get<bool>(),
-                                     NIFModified);
       }
     } else {
       // Clear lighting flags
