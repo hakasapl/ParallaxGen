@@ -71,23 +71,22 @@ void ParallaxGen::patchMeshes(const bool &MultiThread) {
       size_t End = (I == NumThreads - 1) ? Meshes.size() : (I + 1) * BatchSize;
 
       ThreadGroup.create_thread(
-          [this, &Meshes, Start, End, &TaskTracker, &TPBRConfigs, &SlotSearchVP, &SlotSearchCM, &DynCubeBlocklist] {
-            patchMeshBatch(Meshes, Start, End, TaskTracker, TPBRConfigs, SlotSearchVP, SlotSearchCM, DynCubeBlocklist);
+          [this, &Meshes, Start, End, &TaskTracker, &SlotSearchVP, &SlotSearchCM, &DynCubeBlocklist] {
+            patchMeshBatch(Meshes, Start, End, TaskTracker, SlotSearchVP, SlotSearchCM, DynCubeBlocklist);
           });
     }
 
     ThreadGroup.join_all(); // Wait for threads to complete
   } else {
-    patchMeshBatch(Meshes, 0, Meshes.size(), TaskTracker, TPBRConfigs, SlotSearchVP, SlotSearchCM, DynCubeBlocklist);
+    patchMeshBatch(Meshes, 0, Meshes.size(), TaskTracker, SlotSearchVP, SlotSearchCM, DynCubeBlocklist);
   }
 }
 
 void ParallaxGen::patchMeshBatch(const std::vector<std::filesystem::path> &Meshes, const size_t &Start,
-                                 const size_t &End, ParallaxGenTask &TaskTracker,
-                                 const std::vector<nlohmann::json> &TPBRConfigs, const std::vector<int> &SlotSearchVP,
+                                 const size_t &End, ParallaxGenTask &TaskTracker, const std::vector<int> &SlotSearchVP,
                                  const std::vector<int> &SlotSearchCM, std::vector<std::wstring> &DynCubeBlocklist) {
   for (size_t I = Start; I < End; I++) {
-    TaskTracker.completeJob(processNIF(Meshes[I], TPBRConfigs, SlotSearchVP, SlotSearchCM, DynCubeBlocklist));
+    TaskTracker.completeJob(processNIF(Meshes[I], SlotSearchVP, SlotSearchCM, DynCubeBlocklist));
   }
 }
 
@@ -215,8 +214,8 @@ void ParallaxGen::initOutputDir() const {
 }
 
 // shorten some enum names
-auto ParallaxGen::processNIF(const filesystem::path &NIFFile, const vector<nlohmann::json> &TPBRConfigs,
-                             const vector<int> &SlotSearchVP, const vector<int> &SlotSearchCM,
+auto ParallaxGen::processNIF(const filesystem::path &NIFFile, const vector<int> &SlotSearchVP,
+                             const vector<int> &SlotSearchCM,
                              vector<wstring> &DynCubeBlocklist) -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
@@ -283,8 +282,7 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, const vector<nlohm
   bool OneShapeSuccess = false;
   for (NiShape *NIFShape : NIF.GetShapes()) {
     NumShapes++;
-    ParallaxGenTask::updatePGResult(Result,
-                                    processShape(TPBRConfigs, NIF, NIFShape, PatchVP, PatchCM, PatchTPBR, NIFModified),
+    ParallaxGenTask::updatePGResult(Result, processShape(NIF, NIFShape, PatchVP, PatchCM, PatchTPBR, NIFModified),
                                     ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
     if (Result == ParallaxGenTask::PGResult::SUCCESS) {
       OneShapeSuccess = true;
@@ -314,9 +312,9 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, const vector<nlohm
   return Result;
 }
 
-auto ParallaxGen::processShape(const vector<nlohmann::json> &TPBRConfigs, NifFile &NIF, NiShape *NIFShape,
-                               PatcherVanillaParallax &PatchVP, PatcherComplexMaterial &PatchCM,
-                               PatcherTruePBR &PatchTPBR, bool &NIFModified) -> ParallaxGenTask::PGResult {
+auto ParallaxGen::processShape(NifFile &NIF, NiShape *NIFShape, PatcherVanillaParallax &PatchVP,
+                               PatcherComplexMaterial &PatchCM, PatcherTruePBR &PatchTPBR,
+                               bool &NIFModified) -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Prep
@@ -364,15 +362,14 @@ auto ParallaxGen::processShape(const vector<nlohmann::json> &TPBRConfigs, NifFil
   // TRUEPBR CONFIG
   if (!IgnoreTruePBR) {
     bool EnableTruePBR = false;
-    vector<tuple<nlohmann::json, string>> TruePBRData;
-    ParallaxGenTask::updatePGResult(
-        Result, PatchTPBR.shouldApply(NIFShape, TPBRConfigs, SearchPrefixes, EnableTruePBR, TruePBRData),
-        ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
+    map<size_t, tuple<nlohmann::json, string>> TruePBRData;
+    ParallaxGenTask::updatePGResult(Result, PatchTPBR.shouldApply(SearchPrefixes, EnableTruePBR, TruePBRData),
+                                    ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
     if (EnableTruePBR) {
       // Enable TruePBR on shape
       for (auto &TruePBRCFG : TruePBRData) {
         ParallaxGenTask::updatePGResult(
-            Result, PatchTPBR.applyPatch(NIFShape, get<0>(TruePBRCFG), get<1>(TruePBRCFG), NIFModified));
+            Result, PatchTPBR.applyPatch(NIFShape, get<0>(TruePBRCFG.second), get<1>(TruePBRCFG.second), NIFModified));
       }
       return Result;
     }

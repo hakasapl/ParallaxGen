@@ -2,7 +2,9 @@
 
 #include <NifFile.hpp>
 #include <filesystem>
+#include <map>
 #include <nlohmann/json.hpp>
+#include <unordered_set>
 #include <vector>
 
 #include "NIFUtil.hpp"
@@ -13,14 +15,34 @@ private:
   std::filesystem::path NIFPath;
   nifly::NifFile *NIF;
 
+  // Static caches
+  struct TupleStrHash {
+    auto operator()(const std::tuple<std::string, std::string> &T) const -> std::size_t {
+      std::size_t Hash1 = std::hash<std::string>{}(std::get<0>(T));
+      std::size_t Hash2 = std::hash<std::string>{}(std::get<1>(T));
+
+      // Combine the two hash values
+      return Hash1 ^ (Hash2 << 1);
+    }
+  };
+
+  std::unordered_set<size_t> NIFFilterBlocked;
+
 public:
+  static auto getTruePBRConfigs() -> std::map<size_t, nlohmann::json> &;
+  static auto getPathLookupJSONs() -> std::map<size_t, nlohmann::json> &;
+  static auto getPathLookupCache() -> std::unordered_map<std::tuple<std::string, std::string>, bool, TupleStrHash> &;
+  static auto getTruePBRDiffuseInverse() -> std::map<std::string, std::vector<size_t>> &;
+  static auto getTruePBRNormalInverse() -> std::map<std::string, std::vector<size_t>> &;
+
   PatcherTruePBR(std::filesystem::path NIFPath, nifly::NifFile *NIF);
 
+  static void loadPatcherBuffers(const std::map<size_t, nlohmann::json> &PBRJSONs);
+
   // check if truepbr should be enabled on shape
-  auto
-  shouldApply(nifly::NiShape *NIFShape, const std::vector<nlohmann::json> &TPBRConfigs,
-              const std::array<std::string, NUM_TEXTURE_SLOTS> &SearchPrefixes, bool &EnableResult,
-              std::vector<std::tuple<nlohmann::json, std::string>> &TruePBRData) const -> ParallaxGenTask::PGResult;
+  auto shouldApply(const std::array<std::string, NUM_TEXTURE_SLOTS> &SearchPrefixes, bool &EnableResult,
+                   std::map<size_t, std::tuple<nlohmann::json, std::string>> &TruePBRData) const
+      -> ParallaxGenTask::PGResult;
 
   // applies truepbr config on a shape in a NIF (always applies with config, but
   // maybe PBR is disabled)

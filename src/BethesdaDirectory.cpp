@@ -160,7 +160,7 @@ auto BethesdaDirectory::getDataPath() const -> filesystem::path { return DataDir
 
 auto BethesdaDirectory::findFiles(const bool &Lower, const vector<wstring> &GlobListAllow,
                                   const vector<wstring> &GlobListDeny, const vector<wstring> &ArchiveListDeny,
-                                  const bool &LogFindings) const -> vector<filesystem::path> {
+                                  const bool &LogFindings, const bool &AllowWString) const -> vector<filesystem::path> {
   // find all keys in FileMap that match pattern
   vector<filesystem::path> FoundFiles;
 
@@ -175,6 +175,15 @@ auto BethesdaDirectory::findFiles(const bool &Lower, const vector<wstring> &Glob
 
   // loop through filemap and match keys
   for (const auto &[key, value] : FileMap) {
+    if (!AllowWString) {
+      try {
+        string CurPath = key.string(); // NOLINT
+      } catch (...) {
+        // skip if key cannot be converted to string
+        continue;
+      }
+    }
+
     filesystem::path CurFilePath = value.Path;
 
     // Check globs

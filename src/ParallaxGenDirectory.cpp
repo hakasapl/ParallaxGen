@@ -64,6 +64,7 @@ void ParallaxGenDirectory::findTruePBRConfigs(const vector<wstring> &Allowlist, 
   auto ConfigFiles = findFiles(true, Allowlist, Blocklist, ArchiveBlocklist, true);
 
   // loop through and parse Configs
+  size_t ConfigOrder = 0;
   for (auto &Config : ConfigFiles) {
     // check if Config is valid
     auto ConfigFileBytes = getFile(Config);
@@ -85,7 +86,7 @@ void ParallaxGenDirectory::findTruePBRConfigs(const vector<wstring> &Allowlist, 
           }
         }
 
-        TruePBRConfigs.push_back(Element);
+        TruePBRConfigs[ConfigOrder++] = Element;
       }
     } catch (nlohmann::json::parse_error &E) {
       spdlog::error(L"Unable to parse TruePBR Config file {}: {}", Config.wstring(), stringToWstring(E.what()));
@@ -109,18 +110,11 @@ void ParallaxGenDirectory::buildBaseVectors(const vector<vector<string>> &Suffix
                   Suffixes[static_cast<int>(NIFUtil::TextureSlots::EnvMask)]);
 }
 
-void ParallaxGenDirectory::buildBaseVector(vector<string> &BaseVector, const vector<filesystem::path> &Files,
+void ParallaxGenDirectory::buildBaseVector(vector<string> &BaseVector, vector<filesystem::path> &Files,
                                            const vector<string> &Suffixes) {
   // Create base vector
   for (const auto &Elem : Files) {
-    string ElemStr;
-    try {
-      ElemStr = Elem.string();
-    } catch (...) {
-      // Keep the length consistent
-      BaseVector.emplace_back("");
-      continue;
-    }
+    string ElemStr = Elem.string();
 
     auto ElemBase = NIFUtil::getTexBase(ElemStr, Suffixes);
     BaseVector.push_back(ElemBase);
@@ -182,6 +176,6 @@ auto ParallaxGenDirectory::getComplexMaterialMapsBases() const -> const vector<s
 
 auto ParallaxGenDirectory::getMeshes() const -> const vector<filesystem::path> & { return Meshes; }
 
-auto ParallaxGenDirectory::getTruePBRConfigs() const -> const vector<nlohmann::json> & { return TruePBRConfigs; }
+auto ParallaxGenDirectory::getTruePBRConfigs() const -> const map<size_t, nlohmann::json> & { return TruePBRConfigs; }
 
 auto ParallaxGenDirectory::getPGConfigs() const -> const vector<filesystem::path> & { return PGConfigs; }

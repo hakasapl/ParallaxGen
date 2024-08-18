@@ -1,58 +1,145 @@
 #include "patchers/PatcherTruePBR.hpp"
 
 #include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <cstddef>
 #include <spdlog/spdlog.h>
 
 using namespace std;
 
-PatcherTruePBR::PatcherTruePBR(filesystem::path NIFPath, nifly::NifFile *NIF) : NIFPath(std::move(NIFPath)), NIF(NIF) {}
+PatcherTruePBR::PatcherTruePBR(filesystem::path NIFPath, nifly::NifFile *NIF) : NIFPath(std::move(NIFPath)), NIF(NIF) {
+  // "nif_filter" attribute
+  for (const auto &Config : getTruePBRConfigs()) {
+    if (Config.second.contains("nif_filter") &&
+        !boost::icontains(NIFPath.wstring(), Config.second["nif_filter"].get<string>())) {
+      NIFFilterBlocked.insert(Config.first);
+    }
+  }
+}
 
-auto PatcherTruePBR::shouldApply(nifly::NiShape *NIFShape, const vector<nlohmann::json> &TPBRConfigs,
-                                 const array<string, NUM_TEXTURE_SLOTS> &SearchPrefixes, bool &EnableResult,
-                                 vector<tuple<nlohmann::json, string>> &TruePBRData) const
+auto PatcherTruePBR::getTruePBRConfigs() -> map<size_t, nlohmann::json> & {
+  static map<size_t, nlohmann::json> TruePBRConfigs = {};
+  return TruePBRConfigs;
+}
+
+auto PatcherTruePBR::getPathLookupJSONs() -> map<size_t, nlohmann::json> & {
+  static map<size_t, nlohmann::json> PathLookupJSONs = {};
+  return PathLookupJSONs;
+}
+
+auto PatcherTruePBR::getTruePBRDiffuseInverse() -> map<string, vector<size_t>> & {
+  static map<string, vector<size_t>> TruePBRDiffuseInverse = {};
+  return TruePBRDiffuseInverse;
+}
+
+auto PatcherTruePBR::getTruePBRNormalInverse() -> map<string, vector<size_t>> & {
+  static map<string, vector<size_t>> TruePBRNormalInverse = {};
+  return TruePBRNormalInverse;
+}
+
+auto PatcherTruePBR::getPathLookupCache() -> unordered_map<tuple<string, string>, bool, TupleStrHash> & {
+  static unordered_map<tuple<string, string>, bool, TupleStrHash> PathLookupCache = {};
+  return PathLookupCache;
+}
+
+void PatcherTruePBR::loadPatcherBuffers(const map<size_t, nlohmann::json> &PBRJSONs) {
+  getTruePBRConfigs() = PBRJSONs;
+
+  // Create helper vectors
+  for (const auto &Config : PBRJSONs) {
+    // "match_normal" attribute
+    if (Config.second.contains("match_normal")) {
+      string RevNormal = Config.second["match_normal"].get<string>();
+      reverse(RevNormal.begin(), RevNormal.end());
+
+      getTruePBRNormalInverse()[RevNormal].push_back(Config.first);
+      continue;
+    }
+
+    // "match_diffuse" attribute
+    if (Config.second.contains("match_diffuse")) {
+      string RevDiffuse = Config.second["match_diffuse"].get<string>();
+      reverse(RevDiffuse.begin(), RevDiffuse.end());
+
+      getTruePBRDiffuseInverse()[RevDiffuse].push_back(Config.first);
+    }
+
+    // "path_contains" attribute
+    if (Config.second.contains("path_contains")) {
+      getPathLookupJSONs()[Config.first] = Config.second;
+    }
+  }
+}
+
+auto PatcherTruePBR::shouldApply(const array<string, NUM_TEXTURE_SLOTS> &SearchPrefixes, bool &EnableResult,
+                                 map<size_t, tuple<nlohmann::json, string>> &TruePBRData) const
     -> ParallaxGenTask::PGResult {
+  // This becomes true if match_normal or match_diffuse matches
+  bool NameMatch = false;
+  // "match_normal" attribute: Binary search for normal map
+  auto NormalMapReverse = boost::to_lower_copy(SearchPrefixes[1]);
+  reverse(NormalMapReverse.begin(), NormalMapReverse.end());
+  auto ItNorm = getTruePBRNormalInverse().lower_bound(NormalMapReverse);
 
-  auto Result = ParallaxGenTask::PGResult::SUCCESS;
-  const auto ShapeBlockID = NIF->GetBlockID(NIFShape);
-
-  for (const auto &TruePBRCFG : TPBRConfigs) {
-    string MatchedPath;
-
-    // "path-contains" attribute
-    bool ContainsMatch = TruePBRCFG.contains("path_contains") &&
-                         boost::icontains(SearchPrefixes[0], TruePBRCFG["path_contains"].get<string>());
-
-    bool NameMatch = false;
-    if (TruePBRCFG.contains("match_normal") &&
-        boost::iends_with(SearchPrefixes[1], TruePBRCFG["match_normal"].get<string>())) {
-      NameMatch = true;
-      MatchedPath = SearchPrefixes[1];
+  // Check if iterator before is the correct one
+  if (ItNorm != getTruePBRNormalInverse().begin()) {
+    if (boost::starts_with(NormalMapReverse, prev(ItNorm)->first)) {
+      ItNorm = prev(ItNorm);
     }
-    if (TruePBRCFG.contains("match_diffuse") &&
-        boost::iends_with(SearchPrefixes[0], TruePBRCFG["match_diffuse"].get<string>())) {
-      NameMatch = true;
-      MatchedPath = SearchPrefixes[0];
-    }
-
-    if (!ContainsMatch && !NameMatch) {
-      spdlog::trace(L"Rejecting shape {}: No matches", ShapeBlockID);
-      EnableResult |= false;
-      continue;
-    }
-
-    // "nif-filter" attribute
-    if (TruePBRCFG.contains("nif_filter") &&
-        !boost::icontains(NIFPath.wstring(), TruePBRCFG["nif_filter"].get<string>())) {
-      spdlog::trace(L"Rejecting shape {}: NIF filter", ShapeBlockID);
-      EnableResult |= false;
-      continue;
-    }
-
-    EnableResult = true;
-    TruePBRData.emplace_back(TruePBRCFG, MatchedPath);
   }
 
-  return Result;
+  while (ItNorm != getTruePBRNormalInverse().end() && boost::starts_with(NormalMapReverse, ItNorm->first)) {
+    for (const auto &NormCfg : ItNorm->second) {
+      TruePBRData.insert({NormCfg, {getTruePBRConfigs()[NormCfg], SearchPrefixes[1]}});
+    }
+    NameMatch = true;
+    ItNorm++;
+  }
+
+  // "match_diffuse" attribute: Binary search for diffuse
+  auto DiffuseMapReverse = boost::to_lower_copy(SearchPrefixes[0]);
+  reverse(DiffuseMapReverse.begin(), DiffuseMapReverse.end());
+  auto ItDiffuse = getTruePBRDiffuseInverse().lower_bound(DiffuseMapReverse);
+
+  // Check if iterator before is the correct one
+  if (ItDiffuse != getTruePBRDiffuseInverse().begin()) {
+    if (boost::starts_with(DiffuseMapReverse, prev(ItDiffuse)->first)) {
+      ItDiffuse = prev(ItDiffuse);
+    }
+  }
+
+  while (ItDiffuse != getTruePBRDiffuseInverse().end() && boost::starts_with(DiffuseMapReverse, ItDiffuse->first)) {
+    for (const auto &DiffuseCfg : ItDiffuse->second) {
+      TruePBRData.insert({DiffuseCfg, {getTruePBRConfigs()[DiffuseCfg], SearchPrefixes[0]}});
+    }
+    NameMatch = true;
+    ItDiffuse++;
+  }
+
+  // "patch_contains" attribute: Linear search for path_contains
+  if (!NameMatch) {
+    auto &Cache = getPathLookupCache();
+
+    // Check for path_contains only if no name match because it's a O(n) operation
+    for (const auto &Config : getPathLookupJSONs()) {
+      // Check if in cache
+      auto CacheKey = make_tuple(Config.second["path_contains"].get<string>(), SearchPrefixes[0]);
+
+      bool PathMatch = false;
+      if (Cache.find(CacheKey) == Cache.end()) {
+        // Not in cache, update it
+        Cache[CacheKey] = boost::icontains(SearchPrefixes[0], get<0>(CacheKey));
+      }
+
+      PathMatch = Cache[CacheKey];
+      if (PathMatch) {
+        TruePBRData.insert({Config.first, {Config.second, SearchPrefixes[0]}});
+      }
+    }
+  }
+
+  EnableResult = TruePBRData.size() > 0;
+  return ParallaxGenTask::PGResult::SUCCESS;
 }
 
 auto PatcherTruePBR::applyPatch(NiShape *NIFShape, nlohmann::json &TruePBRData, const std::string &MatchedPath,

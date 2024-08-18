@@ -18,6 +18,7 @@
 #include "ParallaxGenD3D.hpp"
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenUtil.hpp"
+#include "patchers/PatcherTruePBR.hpp"
 
 using namespace std;
 using namespace ParallaxGenUtil;
@@ -202,6 +203,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
         stringVecToWstringVec(PGC.getConfig()["truepbr_cfg_lookup"]["allowlist"].get<vector<string>>()),
         stringVecToWstringVec(PGC.getConfig()["truepbr_cfg_lookup"]["blocklist"].get<vector<string>>()),
         stringVecToWstringVec(PGC.getConfig()["truepbr_cfg_lookup"]["archive_blocklist"].get<vector<string>>()));
+    PatcherTruePBR::loadPatcherBuffers(PGD.getTruePBRConfigs());
   }
 
   // Build base vectors

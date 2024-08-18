@@ -56,21 +56,20 @@ public:
 
 private:
   void patchMeshBatch(const std::vector<std::filesystem::path> &Meshes, const size_t &Start, const size_t &End,
-                      ParallaxGenTask &TaskTracker, const std::vector<nlohmann::json> &TPBRConfigs,
-                      const std::vector<int> &SlotSearchVP, const std::vector<int> &SlotSearchCM,
-                      std::vector<std::wstring> &DynCubeBlocklist);
+                      ParallaxGenTask &TaskTracker, const std::vector<int> &SlotSearchVP,
+                      const std::vector<int> &SlotSearchCM, std::vector<std::wstring> &DynCubeBlocklist);
 
   // upgrades a height map to complex material
   auto convertHeightMapToComplexMaterial(const std::filesystem::path &HeightMap) -> ParallaxGenTask::PGResult;
 
   // processes a NIF file (enable parallax if needed)
-  auto processNIF(const std::filesystem::path &NIFFile, const std::vector<nlohmann::json> &TPBRConfigs,
-                  const std::vector<int> &SlotSearchVP, const std::vector<int> &SlotSearchCM,
+  auto processNIF(const std::filesystem::path &NIFFile, const std::vector<int> &SlotSearchVP,
+                  const std::vector<int> &SlotSearchCM,
                   std::vector<std::wstring> &DynCubeBlocklist) -> ParallaxGenTask::PGResult;
 
   // processes a shape within a NIF file
-  auto processShape(const std::vector<nlohmann::json> &TPBRConfigs, nifly::NifFile &NIF, nifly::NiShape *NIFShape,
-                    PatcherVanillaParallax &PatchVP, PatcherComplexMaterial &PatchCM, PatcherTruePBR &PatchTPBR,
+  auto processShape(nifly::NifFile &NIF, nifly::NiShape *NIFShape, PatcherVanillaParallax &PatchVP,
+                    PatcherComplexMaterial &PatchCM, PatcherTruePBR &PatchTPBR,
                     bool &NIFModified) -> ParallaxGenTask::PGResult;
 
   // Zip methods

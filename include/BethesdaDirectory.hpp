@@ -147,8 +147,8 @@ public:
    */
   [[nodiscard]] auto findFiles(const bool &Lower = false, const std::vector<std::wstring> &GlobListAllow = {},
                                const std::vector<std::wstring> &GlobListDeny = {},
-                               const std::vector<std::wstring> &ArchiveListDeny = {},
-                               const bool &LogFindings = false) const -> std::vector<std::filesystem::path>;
+                               const std::vector<std::wstring> &ArchiveListDeny = {}, const bool &LogFindings = false,
+                               const bool &AllowWString = false) const -> std::vector<std::filesystem::path>;
 
   /**
    * @brief Get the load order of BSAs

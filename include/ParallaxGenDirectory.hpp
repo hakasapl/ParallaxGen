@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <map>
 #include <nlohmann/json.hpp>
 #include <vector>
 
@@ -14,7 +15,8 @@ private:
   std::vector<std::filesystem::path> ComplexMaterialMaps;
   std::vector<std::filesystem::path> Meshes;
   std::vector<std::filesystem::path> PGConfigs;
-  std::vector<nlohmann::json> TruePBRConfigs;
+
+  std::map<size_t, nlohmann::json> TruePBRConfigs;
 
   static auto getTruePBRConfigFilenameFields() -> std::vector<std::string>;
   static auto getConfigPath() -> std::wstring;
@@ -73,11 +75,11 @@ public:
 
   [[nodiscard]] auto getMeshes() const -> const std::vector<std::filesystem::path> &;
 
-  [[nodiscard]] auto getTruePBRConfigs() const -> const std::vector<nlohmann::json> &;
+  [[nodiscard]] auto getTruePBRConfigs() const -> const std::map<size_t, nlohmann::json> &;
 
   [[nodiscard]] auto getPGConfigs() const -> const std::vector<std::filesystem::path> &;
 
 private:
-  static void buildBaseVector(std::vector<std::string> &BaseVector, const std::vector<std::filesystem::path> &Files,
+  static void buildBaseVector(std::vector<std::string> &BaseVector, std::vector<std::filesystem::path> &Files,
                               const std::vector<std::string> &Suffixes);
 };
