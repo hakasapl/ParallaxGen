@@ -106,7 +106,7 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
   }
 
   // Replace "_p" with "_m" in the stem
-  static const auto ParallaxSuffixes = PGC->getConfig()["suffixes"]["3"].get<vector<string>>();
+  static const auto ParallaxSuffixes = PGC->getConfig()["suffixes"][3].get<vector<string>>();
   string TexBase = NIFUtil::getTexBase(HeightMapStr, ParallaxSuffixes);
   if (TexBase.empty()) {
     // no height map (this shouldn't happen)

@@ -177,6 +177,7 @@ auto BethesdaDirectory::findFiles(const bool &Lower, const vector<wstring> &Glob
   for (const auto &[key, value] : FileMap) {
     if (!AllowWString) {
       try {
+        // TODO this is such a bad way of doing this
         string CurPath = key.string(); // NOLINT
       } catch (...) {
         // skip if key cannot be converted to string
@@ -501,7 +502,7 @@ auto BethesdaDirectory::getBSAFilesInDirectory() const -> vector<wstring> {
 
   for (const auto &Entry : filesystem::directory_iterator(this->DataDir)) {
     if (Entry.is_regular_file()) {
-      const string FileExtension = Entry.path().extension().string();
+      const auto FileExtension = Entry.path().extension().string();
       // only interested in BSA files
       if (!boost::iequals(FileExtension, ".bsa")) {
         continue;
