@@ -3,6 +3,11 @@
 ## [0.5.6] - UNRELEASED
 
 - More robust CLI argument validation
+- Runtime for parallax and CM is now n*log(n) worst-case instead of n^2
+- Runtime for truepbr average case is n*log(n) instead of n^2
+- Introduced multi-threading for mesh generation
+- Added --no-multithread CLI argument
+- Added --no-bsa CLI argument to avoid reading any BSAs
 
 ## [0.5.5] - 2024-08-10
 
