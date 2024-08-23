@@ -175,16 +175,6 @@ auto BethesdaDirectory::findFiles(const bool &Lower, const vector<wstring> &Glob
 
   // loop through filemap and match keys
   for (const auto &[key, value] : FileMap) {
-    if (!AllowWString) {
-      try {
-        // TODO this is such a bad way of doing this
-        string CurPath = key.string(); // NOLINT
-      } catch (...) {
-        // skip if key cannot be converted to string
-        continue;
-      }
-    }
-
     filesystem::path CurFilePath = value.Path;
 
     // Check globs
@@ -210,6 +200,14 @@ auto BethesdaDirectory::findFiles(const bool &Lower, const vector<wstring> &Glob
       if (checkGlob(BSAFile, LastWinningGlobArchiveDeny, ArchiveListDenyCstr)) {
         continue;
       }
+    }
+
+    // Check encoding
+    if (!AllowWString && !isPathAscii(key)) {
+      if (Logging) {
+        spdlog::warn(L"Skipping file with non-ASCII characters: {}", key.wstring());
+      }
+      continue;
     }
 
     // If not allowed, skip
@@ -568,6 +566,11 @@ auto BethesdaDirectory::isFileAllowed(const filesystem::path &FilePath) -> bool 
 }
 
 // helpers
+
+auto BethesdaDirectory::isPathAscii(const filesystem::path &Path) -> bool {
+  return ranges::all_of(Path.wstring(), [](wchar_t WC) { return WC <= ASCII_UPPER_BOUND; });
+}
+
 auto BethesdaDirectory::getFileFromMap(const filesystem::path &FilePath) const -> BethesdaDirectory::BethesdaFile {
   filesystem::path LowerPath = getPathLower(FilePath);
 

@@ -8,6 +8,9 @@
 - Introduced multi-threading for mesh generation
 - Added --no-multithread CLI argument
 - Added --no-bsa CLI argument to avoid reading any BSAs
+- Textures that have non-ASCII chars are skipped because NIFs can't use them
+- Fixed TruePBR case issue with Texture being capital T
+- upgrade-shaders will now check for _em.dds files when checking if an existing vanilla env mask exists
 
 ## [0.5.5] - 2024-08-10
 

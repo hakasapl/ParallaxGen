@@ -10,6 +10,8 @@
 #include "NIFUtil.hpp"
 #include "ParallaxGenTask.hpp"
 
+#define TEXTURE_STR_LENGTH 9
+
 class PatcherTruePBR {
 private:
   std::filesystem::path NIFPath;
@@ -40,9 +42,9 @@ public:
   static void loadPatcherBuffers(const std::map<size_t, nlohmann::json> &PBRJSONs);
 
   // check if truepbr should be enabled on shape
-  auto shouldApply(const std::array<std::string, NUM_TEXTURE_SLOTS> &SearchPrefixes, bool &EnableResult,
-                   std::map<size_t, std::tuple<nlohmann::json, std::string>> &TruePBRData) const
-      -> ParallaxGenTask::PGResult;
+  static auto
+  shouldApply(const std::array<std::string, NUM_TEXTURE_SLOTS> &SearchPrefixes, bool &EnableResult,
+              std::map<size_t, std::tuple<nlohmann::json, std::string>> &TruePBRData) -> ParallaxGenTask::PGResult;
 
   // applies truepbr config on a shape in a NIF (always applies with config, but
   // maybe PBR is disabled)
@@ -65,4 +67,8 @@ private:
 
   // Checks if a json object has a key
   static auto flag(nlohmann::json &JSON, const char *Key) -> bool;
+
+  static auto getSlotMatch(std::map<size_t, std::tuple<nlohmann::json, std::string>> &TruePBRData,
+                           const std::string &TexName,
+                           const std::map<std::string, std::vector<size_t>> &Lookup) -> void;
 };

@@ -52,7 +52,7 @@ void PatcherTruePBR::loadPatcherBuffers(const map<size_t, nlohmann::json> &PBRJS
       string RevNormal = Config.second["match_normal"].get<string>();
       reverse(RevNormal.begin(), RevNormal.end());
 
-      getTruePBRNormalInverse()[RevNormal].push_back(Config.first);
+      getTruePBRNormalInverse()[boost::to_lower_copy(RevNormal)].push_back(Config.first);
       continue;
     }
 
@@ -61,7 +61,7 @@ void PatcherTruePBR::loadPatcherBuffers(const map<size_t, nlohmann::json> &PBRJS
       string RevDiffuse = Config.second["match_diffuse"].get<string>();
       reverse(RevDiffuse.begin(), RevDiffuse.end());
 
-      getTruePBRDiffuseInverse()[RevDiffuse].push_back(Config.first);
+      getTruePBRDiffuseInverse()[boost::to_lower_copy(RevDiffuse)].push_back(Config.first);
     }
 
     // "path_contains" attribute
@@ -72,74 +72,70 @@ void PatcherTruePBR::loadPatcherBuffers(const map<size_t, nlohmann::json> &PBRJS
 }
 
 auto PatcherTruePBR::shouldApply(const array<string, NUM_TEXTURE_SLOTS> &SearchPrefixes, bool &EnableResult,
-                                 map<size_t, tuple<nlohmann::json, string>> &TruePBRData) const
-    -> ParallaxGenTask::PGResult {
-  // This becomes true if match_normal or match_diffuse matches
-  bool NameMatch = false;
+                                 map<size_t, tuple<nlohmann::json, string>> &TruePBRData) -> ParallaxGenTask::PGResult {
   // "match_normal" attribute: Binary search for normal map
-  auto NormalMapReverse = boost::to_lower_copy(SearchPrefixes[1]);
-  reverse(NormalMapReverse.begin(), NormalMapReverse.end());
-  auto ItNorm = getTruePBRNormalInverse().lower_bound(NormalMapReverse);
+  getSlotMatch(TruePBRData, SearchPrefixes[1], getTruePBRNormalInverse());
 
-  // Check if iterator before is the correct one
-  if (ItNorm != getTruePBRNormalInverse().begin()) {
-    if (boost::starts_with(NormalMapReverse, prev(ItNorm)->first)) {
-      ItNorm = prev(ItNorm);
-    }
-  }
-
-  while (ItNorm != getTruePBRNormalInverse().end() && boost::starts_with(NormalMapReverse, ItNorm->first)) {
-    for (const auto &NormCfg : ItNorm->second) {
-      TruePBRData.insert({NormCfg, {getTruePBRConfigs()[NormCfg], SearchPrefixes[1]}});
-    }
-    NameMatch = true;
-    ItNorm++;
-  }
-
-  // "match_diffuse" attribute: Binary search for diffuse
-  auto DiffuseMapReverse = boost::to_lower_copy(SearchPrefixes[0]);
-  reverse(DiffuseMapReverse.begin(), DiffuseMapReverse.end());
-  auto ItDiffuse = getTruePBRDiffuseInverse().lower_bound(DiffuseMapReverse);
-
-  // Check if iterator before is the correct one
-  if (ItDiffuse != getTruePBRDiffuseInverse().begin()) {
-    if (boost::starts_with(DiffuseMapReverse, prev(ItDiffuse)->first)) {
-      ItDiffuse = prev(ItDiffuse);
-    }
-  }
-
-  while (ItDiffuse != getTruePBRDiffuseInverse().end() && boost::starts_with(DiffuseMapReverse, ItDiffuse->first)) {
-    for (const auto &DiffuseCfg : ItDiffuse->second) {
-      TruePBRData.insert({DiffuseCfg, {getTruePBRConfigs()[DiffuseCfg], SearchPrefixes[0]}});
-    }
-    NameMatch = true;
-    ItDiffuse++;
-  }
+  // "match_diffuse" attribute: Binary search for diffuse map
+  getSlotMatch(TruePBRData, SearchPrefixes[0], getTruePBRDiffuseInverse());
 
   // "patch_contains" attribute: Linear search for path_contains
-  if (!NameMatch) {
-    auto &Cache = getPathLookupCache();
+  auto &Cache = getPathLookupCache();
 
-    // Check for path_contains only if no name match because it's a O(n) operation
-    for (const auto &Config : getPathLookupJSONs()) {
-      // Check if in cache
-      auto CacheKey = make_tuple(Config.second["path_contains"].get<string>(), SearchPrefixes[0]);
+  // Check for path_contains only if no name match because it's a O(n) operation
+  for (const auto &Config : getPathLookupJSONs()) {
+    // Check if in cache
+    auto CacheKey = make_tuple(Config.second["path_contains"].get<string>(), SearchPrefixes[0]);
 
-      bool PathMatch = false;
-      if (Cache.find(CacheKey) == Cache.end()) {
-        // Not in cache, update it
-        Cache[CacheKey] = boost::icontains(SearchPrefixes[0], get<0>(CacheKey));
-      }
+    bool PathMatch = false;
+    if (Cache.find(CacheKey) == Cache.end()) {
+      // Not in cache, update it
+      Cache[CacheKey] = boost::icontains(SearchPrefixes[0], get<0>(CacheKey));
+    }
 
-      PathMatch = Cache[CacheKey];
-      if (PathMatch) {
-        TruePBRData.insert({Config.first, {Config.second, SearchPrefixes[0]}});
-      }
+    PathMatch = Cache[CacheKey];
+    if (PathMatch) {
+      TruePBRData.insert({Config.first, {Config.second, SearchPrefixes[0]}});
     }
   }
 
   EnableResult = TruePBRData.size() > 0;
   return ParallaxGenTask::PGResult::SUCCESS;
+}
+
+auto PatcherTruePBR::getSlotMatch(map<size_t, tuple<nlohmann::json, string>> &TruePBRData, const string &TexName,
+                                  const map<string, vector<size_t>> &Lookup) -> void {
+  // "match_normal" attribute: Binary search for normal map
+  auto MapReverse = boost::to_lower_copy(TexName);
+  reverse(MapReverse.begin(), MapReverse.end());
+  auto It = Lookup.lower_bound(MapReverse);
+
+  // Check if iterator before is the correct one
+  if (It != Lookup.begin()) {
+    if (boost::starts_with(MapReverse, prev(It)->first)) {
+      It = prev(It);
+    }
+  }
+
+  string PriorityJSONFile;
+  while (It != Lookup.end() && boost::starts_with(MapReverse, It->first)) {
+    for (const auto &Cfg : It->second) {
+      auto CurJSON = getTruePBRConfigs()[Cfg]["json"].get<string>();
+      if (PriorityJSONFile.empty()) {
+        // Define priority file
+        PriorityJSONFile = CurJSON;
+      }
+
+      if (CurJSON != PriorityJSONFile) {
+        // Only use first JSON (highest priority one)
+        continue;
+      }
+
+      TruePBRData.insert({Cfg, {getTruePBRConfigs()[Cfg], TexName}});
+    }
+
+    It++;
+  }
 }
 
 auto PatcherTruePBR::applyPatch(NiShape *NIFShape, nlohmann::json &TruePBRData, const std::string &MatchedPath,
@@ -311,8 +307,8 @@ auto PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader
 
   // Add the PBR part to the texture path
   string TexPath = string(MatchedPath);
-  if (!boost::istarts_with(TexPath, "textures\\pbr\\")) {
-    boost::replace_first(TexPath, "textures\\", "textures\\pbr\\");
+  if (boost::istarts_with(TexPath, "textures\\") && !boost::istarts_with(TexPath, "textures\\pbr\\")) {
+    TexPath.replace(0, TEXTURE_STR_LENGTH, "textures\\pbr\\");
   }
 
   // Get PBR path, which is the path without the matched field

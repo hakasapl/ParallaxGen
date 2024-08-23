@@ -11,6 +11,8 @@
 
 #include "BethesdaGame.hpp"
 
+#define ASCII_UPPER_BOUND 127
+
 class BethesdaDirectory {
 private:
   /**
@@ -169,6 +171,15 @@ public:
   [[nodiscard]] auto getPluginLoadOrder(const bool &TrimExtension = false) const -> std::vector<std::wstring>;
 
   // Helpers
+
+  /**
+   * @brief Checks if fs::path object has only ascii characters
+   *
+   * @param Path Path to check
+   * @return true When path only has ascii chars
+   * @return false When path has other than ascii chars
+   */
+  [[nodiscard]] static auto isPathAscii(const std::filesystem::path &Path) -> bool;
 
   /**
    * @brief Get the lowercase path of a path

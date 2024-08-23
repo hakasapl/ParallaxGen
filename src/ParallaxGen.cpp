@@ -95,15 +95,7 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
 
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
-  string HeightMapStr;
-  // TODO technically this can work with wstring since no NIFs are involved, but the NIFUtil methods aren't compliant
-  try {
-    HeightMapStr = HeightMap.string();
-  } catch (...) {
-    spdlog::error(L"Height map contains invalid characters (skipping): {}", HeightMap.wstring());
-    Result = ParallaxGenTask::PGResult::FAILURE;
-    return Result;
-  }
+  string HeightMapStr = HeightMap.string();
 
   // Replace "_p" with "_m" in the stem
   static const auto ParallaxSuffixes = PGC->getConfig()["suffixes"][3].get<vector<string>>();
@@ -121,13 +113,18 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
     return Result;
   }
 
-  auto EnvMask = filesystem::path(TexBase + "_m.dds");
-  const auto ComplexMap = EnvMask;
-
-  if (!PGD->isFile(EnvMask)) {
-    // no env map
-    EnvMask = filesystem::path();
+  // Check if vanilla env mask exists (should be included in CM map)
+  filesystem::path EnvMask = filesystem::path();
+  vector<filesystem::path> EnvMaskPossibilities = {TexBase + "_m.dds", TexBase + "_em.dds"};
+  for (const auto &EnvMaskPossibility : EnvMaskPossibilities) {
+    if (PGD->isFile(EnvMaskPossibility)) {
+      // found env mask
+      EnvMask = EnvMaskPossibility;
+      break;
+    }
   }
+
+  const filesystem::path ComplexMap = TexBase + "_m.dds";
 
   // upgrade to complex material
   DirectX::ScratchImage NewComplexMap = PGD3D->upgradeToComplexMaterial(HeightMap, EnvMask);
@@ -363,7 +360,7 @@ auto ParallaxGen::processShape(NifFile &NIF, NiShape *NIFShape, PatcherVanillaPa
   if (!IgnoreTruePBR) {
     bool EnableTruePBR = false;
     map<size_t, tuple<nlohmann::json, string>> TruePBRData;
-    ParallaxGenTask::updatePGResult(Result, PatchTPBR.shouldApply(SearchPrefixes, EnableTruePBR, TruePBRData),
+    ParallaxGenTask::updatePGResult(Result, PatcherTruePBR::shouldApply(SearchPrefixes, EnableTruePBR, TruePBRData),
                                     ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
     if (EnableTruePBR) {
       // Enable TruePBR on shape
