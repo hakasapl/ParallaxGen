@@ -69,6 +69,6 @@ private:
   static auto flag(nlohmann::json &JSON, const char *Key) -> bool;
 
   static auto getSlotMatch(std::map<size_t, std::tuple<nlohmann::json, std::string>> &TruePBRData,
-                           const std::string &TexName,
+                           std::string &PriorityJSONFile, const std::string &TexName,
                            const std::map<std::string, std::vector<size_t>> &Lookup) -> void;
 };

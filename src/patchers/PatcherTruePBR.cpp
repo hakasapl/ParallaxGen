@@ -73,11 +73,14 @@ void PatcherTruePBR::loadPatcherBuffers(const map<size_t, nlohmann::json> &PBRJS
 
 auto PatcherTruePBR::shouldApply(const array<string, NUM_TEXTURE_SLOTS> &SearchPrefixes, bool &EnableResult,
                                  map<size_t, tuple<nlohmann::json, string>> &TruePBRData) -> ParallaxGenTask::PGResult {
+  // Stores the json filename that gets priority over this shape
+  string PriorityJSONFile;
+
   // "match_normal" attribute: Binary search for normal map
-  getSlotMatch(TruePBRData, SearchPrefixes[1], getTruePBRNormalInverse());
+  getSlotMatch(TruePBRData, PriorityJSONFile, SearchPrefixes[1], getTruePBRNormalInverse());
 
   // "match_diffuse" attribute: Binary search for diffuse map
-  getSlotMatch(TruePBRData, SearchPrefixes[0], getTruePBRDiffuseInverse());
+  getSlotMatch(TruePBRData, PriorityJSONFile, SearchPrefixes[0], getTruePBRDiffuseInverse());
 
   // "patch_contains" attribute: Linear search for path_contains
   auto &Cache = getPathLookupCache();
@@ -95,6 +98,17 @@ auto PatcherTruePBR::shouldApply(const array<string, NUM_TEXTURE_SLOTS> &SearchP
 
     PathMatch = Cache[CacheKey];
     if (PathMatch) {
+      auto CurJSON = Config.second["json"].get<string>();
+      if (PriorityJSONFile.empty()) {
+        // Define priority file
+        PriorityJSONFile = CurJSON;
+      }
+
+      if (CurJSON != PriorityJSONFile) {
+        // Only use first JSON (highest priority one)
+        continue;
+      }
+
       TruePBRData.insert({Config.first, {Config.second, SearchPrefixes[0]}});
     }
   }
@@ -103,8 +117,8 @@ auto PatcherTruePBR::shouldApply(const array<string, NUM_TEXTURE_SLOTS> &SearchP
   return ParallaxGenTask::PGResult::SUCCESS;
 }
 
-auto PatcherTruePBR::getSlotMatch(map<size_t, tuple<nlohmann::json, string>> &TruePBRData, const string &TexName,
-                                  const map<string, vector<size_t>> &Lookup) -> void {
+auto PatcherTruePBR::getSlotMatch(map<size_t, tuple<nlohmann::json, string>> &TruePBRData, string &PriorityJSONFile,
+                                  const string &TexName, const map<string, vector<size_t>> &Lookup) -> void {
   // "match_normal" attribute: Binary search for normal map
   auto MapReverse = boost::to_lower_copy(TexName);
   reverse(MapReverse.begin(), MapReverse.end());
@@ -117,7 +131,6 @@ auto PatcherTruePBR::getSlotMatch(map<size_t, tuple<nlohmann::json, string>> &Tr
     }
   }
 
-  string PriorityJSONFile;
   while (It != Lookup.end() && boost::starts_with(MapReverse, It->first)) {
     for (const auto &Cfg : It->second) {
       auto CurJSON = getTruePBRConfigs()[Cfg]["json"].get<string>();
