@@ -97,7 +97,11 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
 
   string HeightMapStr = HeightMap.string();
 
-  // Replace "_p" with "_m" in the stem
+  if (boost::icontains(HeightMapStr, "bwallbase")) {
+    spdlog::debug("DEBUG");
+  }
+
+  // Get texture base (remove _p.dds)
   static const auto ParallaxSuffixes = PGC->getConfig()["suffixes"][3].get<vector<string>>();
   string TexBase = NIFUtil::getTexBase(HeightMapStr, ParallaxSuffixes);
   if (TexBase.empty()) {
@@ -105,7 +109,7 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
     return Result;
   }
 
-  static const auto *CMBaseList = &PGD->getHeightMapsBases();
+  static const auto *CMBaseList = &PGD->getComplexMaterialMapsBases();
   static const auto *CMList = &PGD->getComplexMaterialMaps();
   auto ExistingCM = NIFUtil::getTexMatch(TexBase, *CMBaseList, *CMList);
   if (!ExistingCM.empty()) {
@@ -144,7 +148,7 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
     }
 
     // add newly created file to complexMaterialMaps for later processing
-    PGD->addComplexMaterialMap(ComplexMap);
+    PGD->addComplexMaterialMap(ComplexMap, TexBase);
 
     spdlog::debug(L"Generated complex material map: {}", ComplexMap.wstring());
   } else {

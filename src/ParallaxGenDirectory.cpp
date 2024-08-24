@@ -123,18 +123,28 @@ void ParallaxGenDirectory::buildBaseVector(vector<string> &BaseVector, vector<fi
   }
 }
 
-void ParallaxGenDirectory::addHeightMap(const filesystem::path &Path) {
+void ParallaxGenDirectory::addHeightMap(const filesystem::path &Path, const string &Base) {
   filesystem::path PathLower = getPathLower(Path);
 
   // add to vector
-  addUniqueElement(HeightMaps, PathLower);
+  HeightMaps.push_back(PathLower);
+  sort(HeightMaps.begin(), HeightMaps.end());
+
+  // add to base vector
+  HeightMapsBases.push_back(Base);
+  sort(HeightMapsBases.begin(), HeightMapsBases.end());
 }
 
-void ParallaxGenDirectory::addComplexMaterialMap(const filesystem::path &Path) {
+void ParallaxGenDirectory::addComplexMaterialMap(const filesystem::path &Path, const string &Base) {
   filesystem::path PathLower = getPathLower(Path);
 
   // add to vector
-  addUniqueElement(ComplexMaterialMaps, PathLower);
+  ComplexMaterialMaps.push_back(PathLower);
+  sort(ComplexMaterialMaps.begin(), ComplexMaterialMaps.end());
+
+  // add to base vector
+  ComplexMaterialMapsBases.push_back(Base);
+  sort(ComplexMaterialMapsBases.begin(), ComplexMaterialMapsBases.end());
 }
 
 void ParallaxGenDirectory::addMesh(const filesystem::path &Path) {

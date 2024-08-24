@@ -45,9 +45,9 @@ public:
   void buildBaseVectors(const std::vector<std::vector<std::string>> &Suffixes);
 
   // add methods
-  void addHeightMap(const std::filesystem::path &Path);
+  void addHeightMap(const std::filesystem::path &Path, const std::string &Base);
 
-  void addComplexMaterialMap(const std::filesystem::path &Path);
+  void addComplexMaterialMap(const std::filesystem::path &Path, const std::string &Base);
 
   void addMesh(const std::filesystem::path &Path);
 
