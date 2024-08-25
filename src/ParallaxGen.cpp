@@ -364,7 +364,7 @@ auto ParallaxGen::processShape(NifFile &NIF, NiShape *NIFShape, PatcherVanillaPa
   if (!IgnoreTruePBR) {
     bool EnableTruePBR = false;
     map<size_t, tuple<nlohmann::json, string>> TruePBRData;
-    ParallaxGenTask::updatePGResult(Result, PatcherTruePBR::shouldApply(SearchPrefixes, EnableTruePBR, TruePBRData),
+    ParallaxGenTask::updatePGResult(Result, PatchTPBR.shouldApply(SearchPrefixes, EnableTruePBR, TruePBRData),
                                     ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
     if (EnableTruePBR) {
       // Enable TruePBR on shape

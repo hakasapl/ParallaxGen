@@ -42,9 +42,8 @@ public:
   static void loadPatcherBuffers(const std::map<size_t, nlohmann::json> &PBRJSONs);
 
   // check if truepbr should be enabled on shape
-  static auto
-  shouldApply(const std::array<std::string, NUM_TEXTURE_SLOTS> &SearchPrefixes, bool &EnableResult,
-              std::map<size_t, std::tuple<nlohmann::json, std::string>> &TruePBRData) -> ParallaxGenTask::PGResult;
+  auto shouldApply(const std::array<std::string, NUM_TEXTURE_SLOTS> &SearchPrefixes, bool &EnableResult,
+                   std::map<size_t, std::tuple<nlohmann::json, std::string>> &TruePBRData) -> ParallaxGenTask::PGResult;
 
   // applies truepbr config on a shape in a NIF (always applies with config, but
   // maybe PBR is disabled)
@@ -68,7 +67,13 @@ private:
   // Checks if a json object has a key
   static auto flag(nlohmann::json &JSON, const char *Key) -> bool;
 
-  static auto getSlotMatch(std::map<size_t, std::tuple<nlohmann::json, std::string>> &TruePBRData,
-                           std::string &PriorityJSONFile, const std::string &TexName,
-                           const std::map<std::string, std::vector<size_t>> &Lookup) -> void;
+  auto getSlotMatch(std::map<size_t, std::tuple<nlohmann::json, std::string>> &TruePBRData,
+                    std::string &PriorityJSONFile, const std::string &TexName,
+                    const std::map<std::string, std::vector<size_t>> &Lookup) -> void;
+
+  auto getPathContainsMatch(std::map<size_t, std::tuple<nlohmann::json, std::string>> &TruePBRData,
+                            std::string &PriorityJSONFile, const std::string &Diffuse) -> void;
+
+  auto insertTruePBRData(std::map<size_t, std::tuple<nlohmann::json, std::string>> &TruePBRData,
+                         std::string &PriorityJSONFile, const std::string &TexName, size_t Cfg) -> void;
 };

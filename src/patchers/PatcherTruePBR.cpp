@@ -82,36 +82,8 @@ auto PatcherTruePBR::shouldApply(const array<string, NUM_TEXTURE_SLOTS> &SearchP
   // "match_diffuse" attribute: Binary search for diffuse map
   getSlotMatch(TruePBRData, PriorityJSONFile, SearchPrefixes[0], getTruePBRDiffuseInverse());
 
-  // "patch_contains" attribute: Linear search for path_contains
-  auto &Cache = getPathLookupCache();
-
-  // Check for path_contains only if no name match because it's a O(n) operation
-  for (const auto &Config : getPathLookupJSONs()) {
-    // Check if in cache
-    auto CacheKey = make_tuple(Config.second["path_contains"].get<string>(), SearchPrefixes[0]);
-
-    bool PathMatch = false;
-    if (Cache.find(CacheKey) == Cache.end()) {
-      // Not in cache, update it
-      Cache[CacheKey] = boost::icontains(SearchPrefixes[0], get<0>(CacheKey));
-    }
-
-    PathMatch = Cache[CacheKey];
-    if (PathMatch) {
-      auto CurJSON = Config.second["json"].get<string>();
-      if (PriorityJSONFile.empty()) {
-        // Define priority file
-        PriorityJSONFile = CurJSON;
-      }
-
-      if (CurJSON != PriorityJSONFile) {
-        // Only use first JSON (highest priority one)
-        continue;
-      }
-
-      TruePBRData.insert({Config.first, {Config.second, SearchPrefixes[0]}});
-    }
-  }
+  // "path_contains" attribute: Linear search for path_contains
+  getPathContainsMatch(TruePBRData, PriorityJSONFile, SearchPrefixes[0]);
 
   EnableResult = TruePBRData.size() > 0;
   return ParallaxGenTask::PGResult::SUCCESS;
@@ -119,7 +91,7 @@ auto PatcherTruePBR::shouldApply(const array<string, NUM_TEXTURE_SLOTS> &SearchP
 
 auto PatcherTruePBR::getSlotMatch(map<size_t, tuple<nlohmann::json, string>> &TruePBRData, string &PriorityJSONFile,
                                   const string &TexName, const map<string, vector<size_t>> &Lookup) -> void {
-  // "match_normal" attribute: Binary search for normal map
+  // binary search for map
   auto MapReverse = boost::to_lower_copy(TexName);
   reverse(MapReverse.begin(), MapReverse.end());
   auto It = Lookup.lower_bound(MapReverse);
@@ -133,22 +105,61 @@ auto PatcherTruePBR::getSlotMatch(map<size_t, tuple<nlohmann::json, string>> &Tr
 
   while (It != Lookup.end() && boost::starts_with(MapReverse, It->first)) {
     for (const auto &Cfg : It->second) {
-      auto CurJSON = getTruePBRConfigs()[Cfg]["json"].get<string>();
-      if (PriorityJSONFile.empty()) {
-        // Define priority file
-        PriorityJSONFile = CurJSON;
-      }
-
-      if (CurJSON != PriorityJSONFile) {
-        // Only use first JSON (highest priority one)
-        continue;
-      }
-
-      TruePBRData.insert({Cfg, {getTruePBRConfigs()[Cfg], TexName}});
+      insertTruePBRData(TruePBRData, PriorityJSONFile, TexName, Cfg);
     }
 
     It++;
   }
+}
+
+auto PatcherTruePBR::getPathContainsMatch(std::map<size_t, std::tuple<nlohmann::json, std::string>> &TruePBRData,
+                                          std::string &PriorityJSONFile, const std::string &Diffuse) -> void {
+  // "patch_contains" attribute: Linear search for path_contains
+  auto &Cache = getPathLookupCache();
+
+  // Check for path_contains only if no name match because it's a O(n) operation
+  for (const auto &Config : getPathLookupJSONs()) {
+    // Check if in cache
+    auto CacheKey = make_tuple(Config.second["path_contains"].get<string>(), Diffuse);
+
+    bool PathMatch = false;
+    if (Cache.find(CacheKey) == Cache.end()) {
+      // Not in cache, update it
+      Cache[CacheKey] = boost::icontains(Diffuse, get<0>(CacheKey));
+    }
+
+    PathMatch = Cache[CacheKey];
+    if (PathMatch) {
+      insertTruePBRData(TruePBRData, PriorityJSONFile, Diffuse, Config.first);
+    }
+  }
+}
+
+auto PatcherTruePBR::insertTruePBRData(std::map<size_t, std::tuple<nlohmann::json, std::string>> &TruePBRData,
+                                       std::string &PriorityJSONFile, const string &TexName, size_t Cfg) -> void {
+  // Check if we should skip this due to nif filter
+  if (NIFFilterBlocked.find(Cfg) != NIFFilterBlocked.end()) {
+    return;
+  }
+
+  auto CurJSON = getTruePBRConfigs()[Cfg]["json"].get<string>();
+  if (PriorityJSONFile.empty()) {
+    // Define priority file
+    PriorityJSONFile = CurJSON;
+  }
+
+  if (CurJSON != PriorityJSONFile) {
+    // Only use first JSON (highest priority one)
+    if (Cfg < TruePBRData.begin()->first) {
+      // Checks if we should be replacing the priority JSON (if we found a higher priority one)
+      TruePBRData.clear();
+      PriorityJSONFile = CurJSON;
+    } else {
+      return;
+    }
+  }
+
+  TruePBRData.insert({Cfg, {getTruePBRConfigs()[Cfg], TexName}});
 }
 
 auto PatcherTruePBR::applyPatch(NiShape *NIFShape, nlohmann::json &TruePBRData, const std::string &MatchedPath,
