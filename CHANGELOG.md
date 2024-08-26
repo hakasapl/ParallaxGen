@@ -12,6 +12,8 @@
 - Fixed TruePBR case issue with Texture being capital T
 - upgrade-shaders will now check for _em.dds files when checking if an existing vanilla env mask exists
 - actors, effects, and interface folders now included in mesh search
+- Diff JSON file is generated with mesh patch results (crc32 hash comparisons)
+- PARALLAXGEN_DONT_DELETE file is removed from output and replaced by diff file
 
 ## [0.5.5] - 2024-08-10
 

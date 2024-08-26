@@ -49,28 +49,29 @@ public:
   void deleteMeshes() const;
   // deletes entire output folder
   void deleteOutputDir() const;
-  // get state file name
-  [[nodiscard]] static auto getStateFileName() -> std::filesystem::path;
-  // init output folder
-  void initOutputDir() const;
+  // get output zip name
+  [[nodiscard]] static auto getOutputZipName() -> std::filesystem::path;
+  // get diff json name
+  [[nodiscard]] static auto getDiffJSONName() -> std::filesystem::path;
 
 private:
   void patchMeshBatch(const std::vector<std::filesystem::path> &Meshes, const size_t &Start, const size_t &End,
                       ParallaxGenTask &TaskTracker, const std::vector<int> &SlotSearchVP,
-                      const std::vector<int> &SlotSearchCM, std::vector<std::wstring> &DynCubeBlocklist);
+                      const std::vector<int> &SlotSearchCM, std::vector<std::wstring> &DynCubeBlocklist,
+                      nlohmann::json &DiffJSON);
 
   // upgrades a height map to complex material
   auto convertHeightMapToComplexMaterial(const std::filesystem::path &HeightMap) -> ParallaxGenTask::PGResult;
 
   // processes a NIF file (enable parallax if needed)
   auto processNIF(const std::filesystem::path &NIFFile, const std::vector<int> &SlotSearchVP,
-                  const std::vector<int> &SlotSearchCM,
-                  std::vector<std::wstring> &DynCubeBlocklist) -> ParallaxGenTask::PGResult;
+                  const std::vector<int> &SlotSearchCM, std::vector<std::wstring> &DynCubeBlocklist,
+                  nlohmann::json &DiffJSON) -> ParallaxGenTask::PGResult;
 
   // processes a shape within a NIF file
   auto processShape(nifly::NifFile &NIF, nifly::NiShape *NIFShape, PatcherVanillaParallax &PatchVP,
-                    PatcherComplexMaterial &PatchCM, PatcherTruePBR &PatchTPBR,
-                    bool &NIFModified) -> ParallaxGenTask::PGResult;
+                    PatcherComplexMaterial &PatchCM, PatcherTruePBR &PatchTPBR, bool &ShapeModified,
+                    size_t &ShaderApplied) -> ParallaxGenTask::PGResult;
 
   // Zip methods
   void addFileToZip(mz_zip_archive &Zip, const std::filesystem::path &FilePath,

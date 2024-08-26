@@ -147,14 +147,12 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   PG.deleteOutputDir();
 
   // Check if ParallaxGen output already exists in data directory
-  const filesystem::path PGStateFilePath = BG.getGameDataPath() / ParallaxGen::getStateFileName();
+  const filesystem::path PGStateFilePath = BG.getGameDataPath() / ParallaxGen::getDiffJSONName();
   if (filesystem::exists(PGStateFilePath)) {
     spdlog::critical("ParallaxGen meshes exist in your data directory, please delete before "
                      "re-running.");
     exit(1);
   }
-
-  PG.initOutputDir();
 
   // Populate file map from data directory
   PGD.populateFileMap(!Args.NoBSA);
