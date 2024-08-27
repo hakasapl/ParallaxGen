@@ -1,6 +1,7 @@
 {
   "dependencies": [
     "boost-algorithm",
+    "boost-asio",
     "boost-container",
     "boost-filesystem",
     "boost-iostreams",

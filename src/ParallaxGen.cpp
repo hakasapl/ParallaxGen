@@ -1,14 +1,14 @@
 #include "ParallaxGen.hpp"
 
 #include <DirectXTex.h>
-#include <spdlog/spdlog.h>
-
 #include <boost/algorithm/string.hpp>
+#include <boost/asio.hpp>
 #include <boost/crc.hpp>
 #include <boost/iostreams/device/array.hpp>
 #include <boost/iostreams/stream.hpp>
 #include <boost/thread.hpp>
 #include <fstream>
+#include <spdlog/spdlog.h>
 #include <vector>
 
 #include "NIFUtil.hpp"
@@ -63,24 +63,23 @@ void ParallaxGen::patchMeshes(const bool &MultiThread) {
 
   // Create threads
   if (MultiThread) {
+    // TODO num threads to actually use (hyperthreads?)
 #ifdef _DEBUG
     size_t NumThreads = 1;
 #else
     size_t NumThreads = boost::thread::hardware_concurrency();
 #endif
 
-    size_t BatchSize = Meshes.size() / NumThreads;
-    for (size_t I = 0; I < NumThreads; I++) {
-      size_t Start = I * BatchSize;
-      size_t End = (I == NumThreads - 1) ? Meshes.size() : (I + 1) * BatchSize;
+    boost::asio::thread_pool MeshPatchPool(NumThreads);
 
-      ThreadGroup.create_thread(
-          [this, &Meshes, Start, End, &TaskTracker, &SlotSearchVP, &SlotSearchCM, &DynCubeBlocklist, &DiffJSON] {
-            patchMeshBatch(Meshes, Start, End, TaskTracker, SlotSearchVP, SlotSearchCM, DynCubeBlocklist, DiffJSON);
+    for (const auto &Mesh : Meshes) {
+      boost::asio::post(
+          MeshPatchPool, [this, &TaskTracker, &SlotSearchVP, &SlotSearchCM, &DynCubeBlocklist, &DiffJSON, Mesh] {
+            TaskTracker.completeJob(processNIF(Mesh, SlotSearchVP, SlotSearchCM, DynCubeBlocklist, DiffJSON));
           });
     }
 
-    ThreadGroup.join_all(); // Wait for threads to complete
+    MeshPatchPool.join();
   } else {
     patchMeshBatch(Meshes, 0, Meshes.size(), TaskTracker, SlotSearchVP, SlotSearchCM, DynCubeBlocklist, DiffJSON);
   }
