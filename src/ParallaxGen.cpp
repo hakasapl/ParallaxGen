@@ -45,13 +45,6 @@ void ParallaxGen::upgradeShaders() {
 void ParallaxGen::patchMeshes(const bool &MultiThread) {
   auto Meshes = PGD->getMeshes();
 
-  // Load configs that we need
-  auto TPBRConfigs = PGD->getTruePBRConfigs();
-  auto SlotSearchVP = PGC->getConfig()["parallax_processing"]["lookup_order"].get<vector<int>>();
-  auto SlotSearchCM = PGC->getConfig()["complexmaterial_processing"]["lookup_order"].get<vector<int>>();
-  auto DynCubeBlocklist = stringVecToWstringVec(
-      PGC->getConfig()["complexmaterial_processing"]["dyncubemap_blocklist"].get<vector<string>>());
-
   // Create task tracker
   ParallaxGenTask TaskTracker("Mesh Patcher", Meshes.size());
 
@@ -63,7 +56,6 @@ void ParallaxGen::patchMeshes(const bool &MultiThread) {
 
   // Create threads
   if (MultiThread) {
-    // TODO num threads to actually use (hyperthreads?)
 #ifdef _DEBUG
     size_t NumThreads = 1;
 #else
@@ -73,15 +65,13 @@ void ParallaxGen::patchMeshes(const bool &MultiThread) {
     boost::asio::thread_pool MeshPatchPool(NumThreads);
 
     for (const auto &Mesh : Meshes) {
-      boost::asio::post(
-          MeshPatchPool, [this, &TaskTracker, &SlotSearchVP, &SlotSearchCM, &DynCubeBlocklist, &DiffJSON, Mesh] {
-            TaskTracker.completeJob(processNIF(Mesh, SlotSearchVP, SlotSearchCM, DynCubeBlocklist, DiffJSON));
-          });
+      boost::asio::post(MeshPatchPool,
+                        [this, &TaskTracker, &DiffJSON, Mesh] { TaskTracker.completeJob(processNIF(Mesh, DiffJSON)); });
     }
 
     MeshPatchPool.join();
   } else {
-    patchMeshBatch(Meshes, 0, Meshes.size(), TaskTracker, SlotSearchVP, SlotSearchCM, DynCubeBlocklist, DiffJSON);
+    patchMeshBatch(Meshes, 0, Meshes.size(), TaskTracker, DiffJSON);
   }
 
   // Save DiffJSON file
@@ -93,11 +83,9 @@ void ParallaxGen::patchMeshes(const bool &MultiThread) {
 }
 
 void ParallaxGen::patchMeshBatch(const std::vector<std::filesystem::path> &Meshes, const size_t &Start,
-                                 const size_t &End, ParallaxGenTask &TaskTracker, const std::vector<int> &SlotSearchVP,
-                                 const std::vector<int> &SlotSearchCM, std::vector<std::wstring> &DynCubeBlocklist,
-                                 nlohmann::json &DiffJSON) {
+                                 const size_t &End, ParallaxGenTask &TaskTracker, nlohmann::json &DiffJSON) {
   for (size_t I = Start; I < End; I++) {
-    TaskTracker.completeJob(processNIF(Meshes[I], SlotSearchVP, SlotSearchCM, DynCubeBlocklist, DiffJSON));
+    TaskTracker.completeJob(processNIF(Meshes[I], DiffJSON));
   }
 }
 
@@ -218,9 +206,7 @@ auto ParallaxGen::getOutputZipName() -> filesystem::path { return "ParallaxGen_O
 auto ParallaxGen::getDiffJSONName() -> filesystem::path { return "ParallaxGen_Diff.json"; }
 
 // shorten some enum names
-auto ParallaxGen::processNIF(const filesystem::path &NIFFile, const vector<int> &SlotSearchVP,
-                             const vector<int> &SlotSearchCM, vector<wstring> &DynCubeBlocklist,
-                             nlohmann::json &DiffJSON) -> ParallaxGenTask::PGResult {
+auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &DiffJSON) -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Determine output path for patched NIF
@@ -263,6 +249,12 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, const vector<int> 
 
   // Stores whether the NIF has been modified throughout the patching process
   bool NIFModified = false;
+
+  // Build static search vectors
+  static const auto SlotSearchVP = PGC->getConfig()["parallax_processing"]["lookup_order"].get<vector<int>>();
+  static const auto SlotSearchCM = PGC->getConfig()["complexmaterial_processing"]["lookup_order"].get<vector<int>>();
+  static const auto DynCubeBlocklist = stringVecToWstringVec(
+      PGC->getConfig()["complexmaterial_processing"]["dyncubemap_blocklist"].get<vector<string>>());
 
   // Create Patcher objects
   PatcherVanillaParallax PatchVP(NIFFile, &NIF, SlotSearchVP, PGC, PGD, PGD3D);

@@ -35,6 +35,13 @@ auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<string, 
 
   EnableResult = true; // Start with default true
 
+  // Check if nif has attached havok (Results in crashes for vanilla Parallax)
+  if (HasAttachedHavok) {
+    spdlog::trace(L"Rejecting NIF file {} due to attached havok animations", NIFPath.wstring());
+    EnableResult = false;
+    return Result;
+  }
+
   // Check if vanilla parallax file exists
   for (int Slot : SlotSearch) {
     string FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], *SearchList, *TexList).string();
@@ -51,13 +58,6 @@ auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<string, 
     return Result;
   }
 
-  // Check if nif has attached havok (Results in crashes for vanilla Parallax)
-  if (HasAttachedHavok) {
-    spdlog::trace(L"Rejecting NIF file {} due to attached havok animations", NIFPath.wstring());
-    EnableResult = false;
-    return Result;
-  }
-
   // ignore skinned meshes, these don't support Parallax
   if (NIFShape->HasSkinInstance() || NIFShape->IsSkinned()) {
     spdlog::trace(L"Rejecting shape {}: Skinned mesh", ShapeBlockID, NIFPath.wstring());
@@ -65,7 +65,7 @@ auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<string, 
     return Result;
   }
 
-  // Enable regular Parallax for this shape!
+  // Check for shader type
   auto NIFShaderType = static_cast<nifly::BSLightingShaderPropertyShaderType>(NIFShader->GetShaderType());
   if (NIFShaderType != BSLSP_DEFAULT && NIFShaderType != BSLSP_PARALLAX) {
     // don't overwrite existing NIFShaders
