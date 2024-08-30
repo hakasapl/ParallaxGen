@@ -64,21 +64,38 @@ void ParallaxGen::patchMeshes(const bool &MultiThread) {
 
     boost::asio::thread_pool MeshPatchPool(NumThreads);
 
+    // Exception vars
+    exception_ptr ThreadException = nullptr;
+    mutex ExceptionMutex;
+
     for (const auto &Mesh : Meshes) {
-      boost::asio::post(MeshPatchPool,
-                        [this, &TaskTracker, &DiffJSON, Mesh] { TaskTracker.completeJob(processNIF(Mesh, DiffJSON)); });
+      boost::asio::post(MeshPatchPool, [this, &TaskTracker, &DiffJSON, Mesh, &ThreadException, &ExceptionMutex] {
+        try {
+          TaskTracker.completeJob(processNIF(Mesh, DiffJSON));
+        } catch (...) {
+          lock_guard<mutex> Lock(ExceptionMutex);
+          ThreadException = current_exception();
+        }
+      });
     }
 
+    // Wait for all threads to complete
     MeshPatchPool.join();
+
+    // Rethrow exception if one occurred
+    if (ThreadException) {
+      rethrow_exception(ThreadException);
+    }
+
   } else {
     patchMeshBatch(Meshes, 0, Meshes.size(), TaskTracker, DiffJSON);
   }
 
-  // Save DiffJSON file
+  // Write DiffJSON file
   spdlog::info("Saving diff JSON file...");
   filesystem::path DiffJSONPath = OutputDir / getDiffJSONName();
   ofstream DiffJSONFile(DiffJSONPath);
-  DiffJSONFile << DiffJSON;
+  DiffJSONFile << DiffJSON << endl;
   DiffJSONFile.close();
 }
 
@@ -268,7 +285,7 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
     NumShapes++;
 
     bool ShapeModified = false;
-    size_t ShaderApplied = 0;
+    string ShaderApplied;
     ParallaxGenTask::updatePGResult(
         Result, processShape(NIF, NIFShape, PatchVP, PatchCM, PatchTPBR, ShapeModified, ShaderApplied),
         ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
@@ -276,10 +293,6 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
     // Update NIFModified if shape was modified
     if (ShapeModified) {
       NIFModified = true;
-
-      // Update DiffJSON
-      const auto ShapeBlockID = NIF.GetBlockID(NIFShape);
-      DiffJSON[NIFFile.string()]["shapes"][to_string(ShapeBlockID)]["shaderapplied"] = ShaderApplied;
     }
 
     if (Result == ParallaxGenTask::PGResult::SUCCESS) {
@@ -300,8 +313,6 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
     CRCBeforeResult.process_bytes(NIFFileData.data(), NIFFileData.size());
     const auto CRCBefore = CRCBeforeResult.checksum();
 
-    spdlog::debug(L"NIF Patched: {}", NIFFile.wstring());
-
     // create directories if required
     filesystem::create_directories(OutputFile.parent_path());
 
@@ -310,6 +321,8 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
       Result = ParallaxGenTask::PGResult::FAILURE;
       return Result;
     }
+
+    spdlog::debug(L"NIF Patched: {}", NIFFile.wstring());
 
     // Clear NIF from memory (no longer needed)
     NIF.Clear();
@@ -321,8 +334,12 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
     const auto CRCAfter = CRCResultAfter.checksum();
 
     // Add to diff JSON
-    DiffJSON[NIFFile.string()]["crc32original"] = CRCBefore;
-    DiffJSON[NIFFile.string()]["crc32patched"] = CRCAfter;
+    threadSafeJSONUpdate(
+        [&](nlohmann::json &JSON) {
+          JSON[NIFFile.string()]["crc32original"] = CRCBefore;
+          JSON[NIFFile.string()]["crc32patched"] = CRCAfter;
+        },
+        DiffJSON);
   }
 
   return Result;
@@ -330,7 +347,7 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
 
 auto ParallaxGen::processShape(NifFile &NIF, NiShape *NIFShape, PatcherVanillaParallax &PatchVP,
                                PatcherComplexMaterial &PatchCM, PatcherTruePBR &PatchTPBR, bool &ShapeModified,
-                               size_t &ShaderApplied) -> ParallaxGenTask::PGResult {
+                               string &ShaderApplied) -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Prep
@@ -388,7 +405,7 @@ auto ParallaxGen::processShape(NifFile &NIF, NiShape *NIFShape, PatcherVanillaPa
                                                                      get<1>(TruePBRCFG.second), ShapeModified));
       }
 
-      ShaderApplied = 3;
+      ShaderApplied = "pbr";
       return Result;
     }
   }
@@ -406,7 +423,7 @@ auto ParallaxGen::processShape(NifFile &NIF, NiShape *NIFShape, PatcherVanillaPa
       ParallaxGenTask::updatePGResult(Result,
                                       PatchCM.applyPatch(NIFShape, MatchedPath, EnableDynCubemaps, ShapeModified));
 
-      ShaderApplied = 2;
+      ShaderApplied = "complexmaterial";
       return Result;
     }
   }
@@ -421,13 +438,19 @@ auto ParallaxGen::processShape(NifFile &NIF, NiShape *NIFShape, PatcherVanillaPa
       // Enable Parallax on shape
       ParallaxGenTask::updatePGResult(Result, PatchVP.applyPatch(NIFShape, MatchedPath, ShapeModified));
 
-      ShaderApplied = 1;
+      ShaderApplied = "parallax";
       return Result;
     }
   }
 
-  ShaderApplied = 0;
+  ShaderApplied = "none";
   return Result;
+}
+
+void ParallaxGen::threadSafeJSONUpdate(const std::function<void(nlohmann::json &)> &Operation,
+                                       nlohmann::json &DiffJSON) {
+  std::lock_guard<std::mutex> Lock(JSONUpdateMutex);
+  Operation(DiffJSON);
 }
 
 void ParallaxGen::addFileToZip(mz_zip_archive &Zip, const filesystem::path &FilePath,

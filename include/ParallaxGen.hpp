@@ -3,6 +3,7 @@
 #include <NifFile.hpp>
 #include <filesystem>
 #include <miniz.h>
+#include <mutex>
 #include <nlohmann/json.hpp>
 
 #include "ParallaxGenConfig.hpp"
@@ -58,6 +59,10 @@ private:
   void patchMeshBatch(const std::vector<std::filesystem::path> &Meshes, const size_t &Start, const size_t &End,
                       ParallaxGenTask &TaskTracker, nlohmann::json &DiffJSON);
 
+  // thread safe JSON update
+  std::mutex JSONUpdateMutex;
+  void threadSafeJSONUpdate(const std::function<void(nlohmann::json &)> &Operation, nlohmann::json &DiffJSON);
+
   // upgrades a height map to complex material
   auto convertHeightMapToComplexMaterial(const std::filesystem::path &HeightMap) -> ParallaxGenTask::PGResult;
 
@@ -67,7 +72,7 @@ private:
   // processes a shape within a NIF file
   auto processShape(nifly::NifFile &NIF, nifly::NiShape *NIFShape, PatcherVanillaParallax &PatchVP,
                     PatcherComplexMaterial &PatchCM, PatcherTruePBR &PatchTPBR, bool &ShapeModified,
-                    size_t &ShaderApplied) -> ParallaxGenTask::PGResult;
+                    std::string &ShaderApplied) -> ParallaxGenTask::PGResult;
 
   // Zip methods
   void addFileToZip(mz_zip_archive &Zip, const std::filesystem::path &FilePath,

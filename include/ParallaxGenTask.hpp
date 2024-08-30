@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mutex>
 #include <string>
 #include <unordered_map>
 
@@ -13,6 +14,7 @@ private:
   std::string TaskName;
   size_t TotalJobs;
   size_t LastPerc = 0;
+  std::mutex NumJobsCompletedMutex;
 
   std::unordered_map<PGResult, size_t> NumJobsCompleted;
 
