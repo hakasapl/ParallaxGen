@@ -52,7 +52,7 @@ void ParallaxGenDirectory::findMeshes(const vector<wstring> &Allowlist, const ve
                                       const vector<wstring> &ArchiveBlocklist) {
   // find Meshes
   spdlog::info("Finding Meshes");
-  Meshes = findFiles(true, Allowlist, Blocklist, ArchiveBlocklist, true, true);
+  Meshes = findFiles(true, Allowlist, Blocklist, ArchiveBlocklist, true, false);
   spdlog::info("Found {} Meshes", Meshes.size());
 }
 

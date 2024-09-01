@@ -4,7 +4,6 @@
 #include <filesystem>
 #include <map>
 #include <nlohmann/json.hpp>
-#include <unordered_set>
 #include <vector>
 
 #include "NIFUtil.hpp"
@@ -27,8 +26,6 @@ private:
       return Hash1 ^ (Hash2 << 1);
     }
   };
-
-  std::unordered_set<size_t> NIFFilterBlocked;
 
 public:
   static auto getTruePBRConfigs() -> std::map<size_t, nlohmann::json> &;

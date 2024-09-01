@@ -7,15 +7,7 @@
 
 using namespace std;
 
-PatcherTruePBR::PatcherTruePBR(filesystem::path NIFPath, nifly::NifFile *NIF) : NIFPath(std::move(NIFPath)), NIF(NIF) {
-  // "nif_filter" attribute
-  for (const auto &Config : getTruePBRConfigs()) {
-    if (Config.second.contains("nif_filter") &&
-        !boost::icontains(NIFPath.wstring(), Config.second["nif_filter"].get<string>())) {
-      NIFFilterBlocked.insert(Config.first);
-    }
-  }
-}
+PatcherTruePBR::PatcherTruePBR(filesystem::path NIFPath, nifly::NifFile *NIF) : NIFPath(std::move(NIFPath)), NIF(NIF) {}
 
 auto PatcherTruePBR::getTruePBRConfigs() -> map<size_t, nlohmann::json> & {
   static map<size_t, nlohmann::json> TruePBRConfigs = {};
@@ -137,11 +129,6 @@ auto PatcherTruePBR::getPathContainsMatch(std::map<size_t, std::tuple<nlohmann::
 
 auto PatcherTruePBR::insertTruePBRData(std::map<size_t, std::tuple<nlohmann::json, std::string>> &TruePBRData,
                                        std::string &PriorityJSONFile, const string &TexName, size_t Cfg) -> void {
-  // Check if we should skip this due to nif filter
-  if (NIFFilterBlocked.find(Cfg) != NIFFilterBlocked.end()) {
-    return;
-  }
-
   auto CurJSON = getTruePBRConfigs()[Cfg]["json"].get<string>();
   if (PriorityJSONFile.empty()) {
     // Define priority file
@@ -157,6 +144,12 @@ auto PatcherTruePBR::insertTruePBRData(std::map<size_t, std::tuple<nlohmann::jso
     } else {
       return;
     }
+  }
+
+  // Check if we should skip this due to nif filter (this is expsenive, so we do it last)
+  if (getTruePBRConfigs()[Cfg].contains("nif_filter") &&
+      !boost::icontains(NIFPath.wstring(), getTruePBRConfigs()[Cfg]["nif_filter"].get<string>())) {
+    return;
   }
 
   TruePBRData.insert({Cfg, {getTruePBRConfigs()[Cfg], TexName}});

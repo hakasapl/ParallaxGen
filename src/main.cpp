@@ -91,7 +91,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   spdlog::info("Welcome to ParallaxGen version {}!", PARALLAXGEN_VERSION);
 
   // Print configuration parameters
-  spdlog::debug("Configuration Parameters:\n{}", Args.getString());
+  spdlog::debug("Configuration Parameters:\n\n{}\n", Args.getString());
 
   //
   // Init
