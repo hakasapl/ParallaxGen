@@ -226,6 +226,8 @@ auto ParallaxGen::getDiffJSONName() -> filesystem::path { return "ParallaxGen_Di
 auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &DiffJSON) -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
+  spdlog::trace(L"Processing NIF file: {}", NIFFile.wstring());
+
   // Determine output path for patched NIF
   const filesystem::path OutputFile = OutputDir / NIFFile;
   if (filesystem::exists(OutputFile)) {
@@ -276,7 +278,7 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
   // Create Patcher objects
   PatcherVanillaParallax PatchVP(NIFFile, &NIF, SlotSearchVP, PGC, PGD, PGD3D);
   PatcherComplexMaterial PatchCM(NIFFile, &NIF, SlotSearchCM, DynCubeBlocklist, PGC, PGD, PGD3D);
-  PatcherTruePBR PatchTPBR(NIFFile, &NIF);
+  PatcherTruePBR PatchTPBR(NIFFile, &NIF, PGD);
 
   // Patch each shape in NIF
   size_t NumShapes = 0;
@@ -394,6 +396,7 @@ auto ParallaxGen::processShape(NifFile &NIF, NiShape *NIFShape, PatcherVanillaPa
 
   // TRUEPBR CONFIG
   if (!IgnoreTruePBR) {
+    spdlog::trace("Checking for PBR on shape {}", ShapeBlockID);
     bool EnableTruePBR = false;
     map<size_t, tuple<nlohmann::json, string>> TruePBRData;
     ParallaxGenTask::updatePGResult(Result, PatchTPBR.shouldApply(SearchPrefixes, EnableTruePBR, TruePBRData),
@@ -412,6 +415,7 @@ auto ParallaxGen::processShape(NifFile &NIF, NiShape *NIFShape, PatcherVanillaPa
 
   // COMPLEX MATERIAL
   if (!IgnoreCM) {
+    spdlog::trace("Checking for complex material on shape {}", ShapeBlockID);
     bool EnableCM = false;
     bool EnableDynCubemaps = false;
     MatchedPath = "";
@@ -430,6 +434,7 @@ auto ParallaxGen::processShape(NifFile &NIF, NiShape *NIFShape, PatcherVanillaPa
 
   // VANILLA PARALLAX
   if (!IgnoreParallax) {
+    spdlog::trace("Checking for parallax on shape {}", ShapeBlockID);
     bool EnableParallax = false;
     MatchedPath = "";
     ParallaxGenTask::updatePGResult(Result, PatchVP.shouldApply(NIFShape, SearchPrefixes, EnableParallax, MatchedPath),

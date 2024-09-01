@@ -14,6 +14,7 @@
 - actors, effects, and interface folders now included in mesh search
 - Diff JSON file is generated with mesh patch results (crc32 hash comparisons)
 - PARALLAXGEN_DONT_DELETE file is removed from output and replaced by diff file
+- PBR will now not apply if the result prefix doesn't exists
 
 ## [0.5.5] - 2024-08-10
 

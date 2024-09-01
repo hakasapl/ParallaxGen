@@ -1,5 +1,6 @@
 #include "BethesdaDirectory.hpp"
 
+#include <boost/algorithm/string/predicate.hpp>
 #include <shlwapi.h>
 #include <spdlog/spdlog.h>
 
@@ -150,6 +151,16 @@ auto BethesdaDirectory::isBSAFile(const filesystem::path &RelPath) const -> bool
 auto BethesdaDirectory::isFile(const filesystem::path &RelPath) const -> bool {
   BethesdaFile File = getFileFromMap(RelPath);
   return !File.Path.empty();
+}
+
+auto BethesdaDirectory::isPrefix(const filesystem::path &RelPath) const -> bool {
+  auto It = FileMap.lower_bound(RelPath);
+  if (It == FileMap.end()) {
+    return false;
+  }
+
+  return boost::istarts_with(It->first.wstring(), RelPath.wstring()) ||
+         (It != FileMap.begin() && boost::istarts_with(prev(It)->first.wstring(), RelPath.wstring()));
 }
 
 auto BethesdaDirectory::getFullPath(const filesystem::path &RelPath) const -> filesystem::path {

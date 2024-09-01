@@ -129,6 +129,15 @@ public:
   [[nodiscard]] auto isFile(const std::filesystem::path &RelPath) const -> bool;
 
   /**
+   * @brief Check if file is a directory
+   *
+   * @param RelPath path to the file relative to the data directory
+   * @return true if file is a directory
+   * @return false if file is not a directory or doesn't exist
+   */
+  [[nodiscard]] auto isPrefix(const std::filesystem::path &RelPath) const -> bool;
+
+  /**
    * @brief Get the full path of a file in the load order
    *
    * @param RelPath path to the file relative to the data directory

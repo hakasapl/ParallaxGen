@@ -7,12 +7,15 @@
 #include <vector>
 
 #include "NIFUtil.hpp"
+#include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenTask.hpp"
 
 #define TEXTURE_STR_LENGTH 9
 
 class PatcherTruePBR {
 private:
+  ParallaxGenDirectory *PGD;
+
   std::filesystem::path NIFPath;
   nifly::NifFile *NIF;
 
@@ -34,7 +37,7 @@ public:
   static auto getTruePBRDiffuseInverse() -> std::map<std::string, std::vector<size_t>> &;
   static auto getTruePBRNormalInverse() -> std::map<std::string, std::vector<size_t>> &;
 
-  PatcherTruePBR(std::filesystem::path NIFPath, nifly::NifFile *NIF);
+  PatcherTruePBR(std::filesystem::path NIFPath, nifly::NifFile *NIF, ParallaxGenDirectory *PGD);
 
   static void loadPatcherBuffers(const std::map<size_t, nlohmann::json> &PBRJSONs);
 
