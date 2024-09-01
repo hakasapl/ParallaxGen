@@ -5,7 +5,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
-#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 #include <string>
@@ -19,6 +19,9 @@
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenUtil.hpp"
 #include "patchers/PatcherTruePBR.hpp"
+
+#define MAX_LOG_SIZE 5242880
+#define MAX_LOG_FILES 100
 
 using namespace std;
 using namespace ParallaxGenUtil;
@@ -320,8 +323,10 @@ void initLogger(const filesystem::path &LOGPATH, const ParallaxGenCLIArgs &Args)
   // Create loggers
   vector<spdlog::sink_ptr> Sinks;
   Sinks.push_back(make_shared<spdlog::sinks::stdout_color_sink_mt>());
-  Sinks.push_back(
-      make_shared<spdlog::sinks::basic_file_sink_mt>(LOGPATH.string(), true)); // TODO wide string support here
+
+  // Rotating file sink
+  Sinks.push_back(make_shared<spdlog::sinks::rotating_file_sink_mt>(LOGPATH.string(), MAX_LOG_SIZE,
+                                                                    MAX_LOG_FILES)); // TODO wide string support here
   auto Logger = make_shared<spdlog::logger>("ParallaxGen", Sinks.begin(), Sinks.end());
 
   // register logger parameters
@@ -363,7 +368,18 @@ auto main(int ArgC, char **ArgV) -> int {
   CLI11_PARSE(App, ArgC, ArgV);
 
   // Initialize logger
-  const filesystem::path LogPath = ExePath / "ParallaxGen.log";
+  const filesystem::path LogDir = ExePath / "ParallaxGenLogs";
+  // delete old logs
+  if (filesystem::exists(LogDir)) {
+    try {
+      filesystem::remove_all(LogDir);
+    } catch (const filesystem::filesystem_error &E) {
+      cerr << "Failed to delete old log directory: " << E.what() << "\n";
+      return 1;
+    }
+  }
+
+  const filesystem::path LogPath = LogDir / "ParallaxGen.log";
   initLogger(LogPath, Args);
 
   // Main Runner (Catches all exceptions)
