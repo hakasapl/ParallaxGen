@@ -1,6 +1,8 @@
 #include "patchers/PatcherTruePBR.hpp"
+#include "NIFUtil.hpp"
 #include "ParallaxGenDirectory.hpp"
 
+#include <Shaders.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <cstddef>
@@ -511,6 +513,35 @@ auto PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader
       auto NewInnerUVScale =
           Vector2(TruePBRData["inner_uv_scale"].get<float>(), TruePBRData["inner_uv_scale"].get<float>());
       NIFUtil::setShaderVec2(NIFShaderBSLSP->parallaxInnerLayerTextureScale, NewInnerUVScale, NIFModified);
+    }
+  } else if (TruePBRData.contains("glint")) {
+    // glint is enabled
+    const auto &GlintParams = TruePBRData["glint"];
+
+    // Set shader type to MLP
+    NIFUtil::setShaderType(NIFShader, BSLSP_MULTILAYERPARALLAX, NIFModified);
+    // Enable Glint with FitSlope flag
+    NIFUtil::setShaderFlag(NIFShaderBSLSP, SLSF2_FIT_SLOPE, NIFModified);
+
+    // Glint parameters
+    if (GlintParams.contains("screen_space_scale")) {
+      NIFUtil::setShaderFloat(NIFShaderBSLSP->parallaxInnerLayerThickness, GlintParams["screen_space_scale"],
+                              NIFModified);
+    }
+
+    if (GlintParams.contains("log_microfacet_density")) {
+      NIFUtil::setShaderFloat(NIFShaderBSLSP->parallaxRefractionScale, GlintParams["log_microfacet_density"],
+                              NIFModified);
+    }
+
+    if (GlintParams.contains("microfacet_roughness")) {
+      NIFUtil::setShaderFloat(NIFShaderBSLSP->parallaxInnerLayerTextureScale.u, GlintParams["microfacet_roughness"],
+                              NIFModified);
+    }
+
+    if (GlintParams.contains("density_randomization")) {
+      NIFUtil::setShaderFloat(NIFShaderBSLSP->parallaxInnerLayerTextureScale.v, GlintParams["density_randomization"],
+                              NIFModified);
     }
   } else {
     // Revert to default NIFShader type

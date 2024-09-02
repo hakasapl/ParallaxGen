@@ -16,6 +16,7 @@
 - PARALLAXGEN_DONT_DELETE file is removed from output and replaced by diff file
 - PBR will now not apply if the result prefix doesn't exists
 - Logs are now stored in "ParallaxGenLogs" and use a rolling log system to make it more manageable
+- Added PBR glint support
 
 ## [0.5.5] - 2024-08-10
 
