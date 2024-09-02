@@ -368,13 +368,19 @@ auto main(int ArgC, char **ArgV) -> int {
   CLI11_PARSE(App, ArgC, ArgV);
 
   // Initialize logger
-  const filesystem::path LogDir = ExePath / "ParallaxGenLogs";
+  const filesystem::path LogDir = ExePath / "log";
   // delete old logs
   if (filesystem::exists(LogDir)) {
     try {
-      filesystem::remove_all(LogDir);
+      // Only delete files that are .log and start with ParallaxGen
+      for (const auto &Entry : filesystem::directory_iterator(LogDir)) {
+        if (Entry.is_regular_file() && Entry.path().extension() == ".log" &&
+            Entry.path().filename().wstring().starts_with(L"ParallaxGen")) {
+          filesystem::remove(Entry.path());
+        }
+      }
     } catch (const filesystem::filesystem_error &E) {
-      cerr << "Failed to delete old log directory: " << E.what() << "\n";
+      cerr << "Failed to delete old logs: " << E.what() << "\n";
       return 1;
     }
   }
