@@ -138,9 +138,15 @@ auto PatcherTruePBR::getPathContainsMatch(std::map<size_t, std::tuple<nlohmann::
 auto PatcherTruePBR::insertTruePBRData(std::map<size_t, std::tuple<nlohmann::json, std::string>> &TruePBRData,
                                        std::string &PriorityJSONFile, const string &TexName, size_t Cfg) -> void {
   const auto CurCfg = getTruePBRConfigs()[Cfg];
-
-  // Figure out file priority
   const auto CurJSON = CurCfg["json"].get<string>();
+
+  // Check if we should skip this due to nif filter (this is expsenive, so we do it last)
+  if (CurCfg.contains("nif_filter") && !boost::icontains(NIFPath.wstring(), CurCfg["nif_filter"].get<string>())) {
+    spdlog::trace("Not applying PBR JSON from {} because NIF filter does not match", CurJSON);
+    return;
+  }
+
+  // Evaluate JSON priority
   if (PriorityJSONFile.empty()) {
     // Define priority file
     PriorityJSONFile = CurJSON;
@@ -156,12 +162,6 @@ auto PatcherTruePBR::insertTruePBRData(std::map<size_t, std::tuple<nlohmann::jso
       spdlog::trace("Not applying PBR JSON from {} because {} has higher priority", CurJSON, PriorityJSONFile);
       return;
     }
-  }
-
-  // Check if we should skip this due to nif filter (this is expsenive, so we do it last)
-  if (CurCfg.contains("nif_filter") && !boost::icontains(NIFPath.wstring(), CurCfg["nif_filter"].get<string>())) {
-    spdlog::trace("Not applying PBR JSON from {} because NIF filter does not match", CurJSON);
-    return;
   }
 
   // Find and check prefix value
