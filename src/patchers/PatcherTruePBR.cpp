@@ -96,19 +96,28 @@ auto PatcherTruePBR::getSlotMatch(map<size_t, tuple<nlohmann::json, string>> &Tr
   reverse(MapReverse.begin(), MapReverse.end());
   auto It = Lookup.lower_bound(MapReverse);
 
-  // Check if iterator before is the correct one
-  if (It != Lookup.begin()) {
-    if (boost::starts_with(MapReverse, prev(It)->first)) {
-      It = prev(It);
-    }
+  // Check if match is 1 back
+  if (It != Lookup.begin() && boost::starts_with(MapReverse, prev(It)->first)) {
+    It = prev(It);
+  } else if (It != Lookup.end() && boost::starts_with(MapReverse, It->first)) {
+    // Check if match is current iterator, just continue here
+  } else {
+    // No match found
+    return;
   }
 
-  while (It != Lookup.end() && boost::starts_with(MapReverse, It->first)) {
-    for (const auto &Cfg : It->second) {
-      insertTruePBRData(TruePBRData, PriorityJSONFile, TexName, Cfg);
-    }
+  // Initialize CFG set
+  set<size_t> Cfgs(It->second.begin(), It->second.end());
 
-    It++;
+  // Go back to include others if we need to
+  while (It != Lookup.begin() && boost::starts_with(MapReverse, prev(It)->first)) {
+    It = prev(It);
+    Cfgs.insert(It->second.begin(), It->second.end());
+  }
+
+  // Loop through all matches
+  for (const auto &Cfg : Cfgs) {
+    insertTruePBRData(TruePBRData, PriorityJSONFile, TexName, Cfg);
   }
 }
 
