@@ -453,12 +453,6 @@ auto PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader
     spdlog::error("Error: Subsurface and foliage NIFShader chosen at once, undefined behavior!");
   }
 
-  // "subsurface_foliage" attribute
-  if (TruePBRData.contains("subsurface_foliage")) {
-    NIFUtil::configureShaderFlag(NIFShaderBSLSP, SLSF2_SOFT_LIGHTING, TruePBRData["subsurface_foliage"].get<bool>(),
-                                 NIFModified);
-  }
-
   // "subsurface" attribute
   if (TruePBRData.contains("subsurface")) {
     NIFUtil::configureShaderFlag(NIFShaderBSLSP, SLSF2_RIM_LIGHTING, TruePBRData["subsurface"].get<bool>(),
@@ -466,62 +460,67 @@ auto PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader
   }
 
   // "multilayer" attribute
-  bool EnableML = TruePBRData.contains("multilayer") && TruePBRData["multilayer"];
-  if (EnableML) {
-    NIFUtil::setShaderType(NIFShader, BSLSP_MULTILAYERPARALLAX, NIFModified);
-    NIFUtil::setShaderFlag(NIFShaderBSLSP, SLSF2_MULTI_LAYER_PARALLAX, NIFModified);
+  bool EnableMultiLayer = false;
+  if (TruePBRData.contains("multilayer")) {
+    if (TruePBRData["multilayer"]) {
+      EnableMultiLayer = true;
 
-    // "coat_color" attribute
-    if (TruePBRData.contains("coat_color") && TruePBRData["coat_color"].size() >= 3) {
-      auto NewCoatColor = Vector3(TruePBRData["coat_color"][0].get<float>(), TruePBRData["coat_color"][1].get<float>(),
-                                  TruePBRData["coat_color"][2].get<float>());
-      if (NIFShader->GetSpecularColor() != NewCoatColor) {
-        NIFShader->SetSpecularColor(NewCoatColor);
-        NIFModified = true;
+      NIFUtil::setShaderType(NIFShader, BSLSP_MULTILAYERPARALLAX, NIFModified);
+      NIFUtil::setShaderFlag(NIFShaderBSLSP, SLSF2_MULTI_LAYER_PARALLAX, NIFModified);
+
+      // "coat_color" attribute
+      if (TruePBRData.contains("coat_color") && TruePBRData["coat_color"].size() >= 3) {
+        auto NewCoatColor =
+            Vector3(TruePBRData["coat_color"][0].get<float>(), TruePBRData["coat_color"][1].get<float>(),
+                    TruePBRData["coat_color"][2].get<float>());
+        if (NIFShader->GetSpecularColor() != NewCoatColor) {
+          NIFShader->SetSpecularColor(NewCoatColor);
+          NIFModified = true;
+        }
       }
-    }
 
-    // "coat_specular_level" attribute
-    if (TruePBRData.contains("coat_specular_level")) {
-      auto NewCoatSpecularLevel = TruePBRData["coat_specular_level"].get<float>();
-      NIFUtil::setShaderFloat(NIFShaderBSLSP->parallaxRefractionScale, NewCoatSpecularLevel, NIFModified);
-    }
+      // "coat_specular_level" attribute
+      if (TruePBRData.contains("coat_specular_level")) {
+        auto NewCoatSpecularLevel = TruePBRData["coat_specular_level"].get<float>();
+        NIFUtil::setShaderFloat(NIFShaderBSLSP->parallaxRefractionScale, NewCoatSpecularLevel, NIFModified);
+      }
 
-    // "coat_roughness" attribute
-    if (TruePBRData.contains("coat_roughness")) {
-      auto NewCoatRoughness = TruePBRData["coat_roughness"].get<float>();
-      NIFUtil::setShaderFloat(NIFShaderBSLSP->parallaxInnerLayerThickness, NewCoatRoughness, NIFModified);
-    }
+      // "coat_roughness" attribute
+      if (TruePBRData.contains("coat_roughness")) {
+        auto NewCoatRoughness = TruePBRData["coat_roughness"].get<float>();
+        NIFUtil::setShaderFloat(NIFShaderBSLSP->parallaxInnerLayerThickness, NewCoatRoughness, NIFModified);
+      }
 
-    // "coat_strength" attribute
-    if (TruePBRData.contains("coat_strength")) {
-      auto NewCoatStrength = TruePBRData["coat_strength"].get<float>();
-      NIFUtil::setShaderFloat(NIFShaderBSLSP->softlighting, NewCoatStrength, NIFModified);
-    }
+      // "coat_strength" attribute
+      if (TruePBRData.contains("coat_strength")) {
+        auto NewCoatStrength = TruePBRData["coat_strength"].get<float>();
+        NIFUtil::setShaderFloat(NIFShaderBSLSP->softlighting, NewCoatStrength, NIFModified);
+      }
 
-    // "coat_diffuse" attribute
-    if (TruePBRData.contains("coat_diffuse")) {
-      NIFUtil::configureShaderFlag(NIFShaderBSLSP, SLSF2_EFFECT_LIGHTING, TruePBRData["coat_diffuse"].get<bool>(),
-                                   NIFModified);
-    }
+      // "coat_diffuse" attribute
+      if (TruePBRData.contains("coat_diffuse")) {
+        NIFUtil::configureShaderFlag(NIFShaderBSLSP, SLSF2_EFFECT_LIGHTING, TruePBRData["coat_diffuse"].get<bool>(),
+                                     NIFModified);
+      }
 
-    // "coat_parallax" attribute
-    if (TruePBRData.contains("coat_parallax")) {
-      NIFUtil::configureShaderFlag(NIFShaderBSLSP, SLSF2_SOFT_LIGHTING, TruePBRData["coat_parallax"].get<bool>(),
-                                   NIFModified);
-    }
+      // "coat_parallax" attribute
+      if (TruePBRData.contains("coat_parallax")) {
+        NIFUtil::configureShaderFlag(NIFShaderBSLSP, SLSF2_SOFT_LIGHTING, TruePBRData["coat_parallax"].get<bool>(),
+                                     NIFModified);
+      }
 
-    // "coat_normal" attribute
-    if (TruePBRData.contains("coat_normal")) {
-      NIFUtil::configureShaderFlag(NIFShaderBSLSP, SLSF2_BACK_LIGHTING, TruePBRData["coat_normal"].get<bool>(),
-                                   NIFModified);
-    }
+      // "coat_normal" attribute
+      if (TruePBRData.contains("coat_normal")) {
+        NIFUtil::configureShaderFlag(NIFShaderBSLSP, SLSF2_BACK_LIGHTING, TruePBRData["coat_normal"].get<bool>(),
+                                     NIFModified);
+      }
 
-    // "inner_uv_scale" attribute
-    if (TruePBRData.contains("inner_uv_scale")) {
-      auto NewInnerUVScale =
-          Vector2(TruePBRData["inner_uv_scale"].get<float>(), TruePBRData["inner_uv_scale"].get<float>());
-      NIFUtil::setShaderVec2(NIFShaderBSLSP->parallaxInnerLayerTextureScale, NewInnerUVScale, NIFModified);
+      // "inner_uv_scale" attribute
+      if (TruePBRData.contains("inner_uv_scale")) {
+        auto NewInnerUVScale =
+            Vector2(TruePBRData["inner_uv_scale"].get<float>(), TruePBRData["inner_uv_scale"].get<float>());
+        NIFUtil::setShaderVec2(NIFShaderBSLSP->parallaxInnerLayerTextureScale, NewInnerUVScale, NIFModified);
+      }
     }
   } else if (TruePBRData.contains("glint")) {
     // glint is enabled
@@ -557,10 +556,11 @@ auto PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader
     NIFUtil::setShaderType(NIFShader, BSLSP_DEFAULT, NIFModified);
   }
 
-  if (!EnableML) {
+  if (!EnableMultiLayer) {
     // Clear multilayer flags
     NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF2_MULTI_LAYER_PARALLAX, NIFModified);
     NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF2_BACK_LIGHTING, NIFModified);
+    NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF2_SOFT_LIGHTING, NIFModified);
   }
 
   return Result;
