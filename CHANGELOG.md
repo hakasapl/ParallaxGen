@@ -1,7 +1,8 @@
 # Changelog
 
-## [0.5.6] - UNRELEASED
+## [0.5.6] - 9/3/2024
 
+- PBR multilayer: false is now processed correctly
 - More robust CLI argument validation
 - Runtime for parallax and CM is now n*log(n) worst-case instead of n^2
 - Runtime for truepbr average case is n*log(n) instead of n^2
