@@ -10,6 +10,9 @@ ParallaxGenTask::ParallaxGenTask(string TaskName, const size_t &TotalJobs)
 }
 
 void ParallaxGenTask::completeJob(const PGResult &Result) {
+  // Use lock_guard to make this method thread-safe
+  lock_guard<mutex> Lock(NumJobsCompletedMutex);
+
   // Check if NumJobsCompleted has Result for key
   if (NumJobsCompleted.find(Result) == NumJobsCompleted.end()) {
     NumJobsCompleted[Result] = 0;

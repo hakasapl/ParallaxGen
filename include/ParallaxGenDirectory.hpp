@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <map>
 #include <nlohmann/json.hpp>
 #include <vector>
 
@@ -8,11 +9,14 @@
 
 class ParallaxGenDirectory : public BethesdaDirectory {
 private:
+  std::vector<std::string> HeightMapsBases;
   std::vector<std::filesystem::path> HeightMaps;
+  std::vector<std::string> ComplexMaterialMapsBases;
   std::vector<std::filesystem::path> ComplexMaterialMaps;
   std::vector<std::filesystem::path> Meshes;
   std::vector<std::filesystem::path> PGConfigs;
-  std::vector<nlohmann::json> TruePBRConfigs;
+
+  std::map<size_t, nlohmann::json> TruePBRConfigs;
 
   static auto getTruePBRConfigFilenameFields() -> std::vector<std::string>;
   static auto getConfigPath() -> std::wstring;
@@ -38,10 +42,12 @@ public:
   // get the parallax gen config
   void findPGConfigs();
 
-  // add methods
-  void addHeightMap(const std::filesystem::path &Path);
+  void buildBaseVectors(const std::vector<std::vector<std::string>> &Suffixes);
 
-  void addComplexMaterialMap(const std::filesystem::path &Path);
+  // add methods
+  void addHeightMap(const std::filesystem::path &Path, const std::string &Base);
+
+  void addComplexMaterialMap(const std::filesystem::path &Path, const std::string &Base);
 
   void addMesh(const std::filesystem::path &Path);
 
@@ -61,13 +67,19 @@ public:
   [[nodiscard]] auto defCubemapExists() -> bool;
 
   // get methods
-  [[nodiscard]] auto getHeightMaps() const -> std::vector<std::filesystem::path>;
+  [[nodiscard]] auto getHeightMaps() const -> const std::vector<std::filesystem::path> &;
+  [[nodiscard]] auto getHeightMapsBases() const -> const std::vector<std::string> &;
 
-  [[nodiscard]] auto getComplexMaterialMaps() const -> std::vector<std::filesystem::path>;
+  [[nodiscard]] auto getComplexMaterialMaps() const -> const std::vector<std::filesystem::path> &;
+  [[nodiscard]] auto getComplexMaterialMapsBases() const -> const std::vector<std::string> &;
 
-  [[nodiscard]] auto getMeshes() const -> std::vector<std::filesystem::path>;
+  [[nodiscard]] auto getMeshes() const -> const std::vector<std::filesystem::path> &;
 
-  [[nodiscard]] auto getTruePBRConfigs() const -> std::vector<nlohmann::json>;
+  [[nodiscard]] auto getTruePBRConfigs() const -> const std::map<size_t, nlohmann::json> &;
 
-  [[nodiscard]] auto getPGConfigs() const -> std::vector<std::filesystem::path>;
+  [[nodiscard]] auto getPGConfigs() const -> const std::vector<std::filesystem::path> &;
+
+private:
+  static void buildBaseVector(std::vector<std::string> &BaseVector, std::vector<std::filesystem::path> &Files,
+                              const std::vector<std::string> &Suffixes);
 };

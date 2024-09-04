@@ -5,7 +5,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
-#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 #include <string>
@@ -18,6 +18,10 @@
 #include "ParallaxGenD3D.hpp"
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenUtil.hpp"
+#include "patchers/PatcherTruePBR.hpp"
+
+#define MAX_LOG_SIZE 5242880
+#define MAX_LOG_FILES 100
 
 using namespace std;
 using namespace ParallaxGenUtil;
@@ -28,7 +32,9 @@ struct ParallaxGenCLIArgs {
   string GameType = "skyrimse";
   filesystem::path OutputDir;
   bool Autostart = false;
+  bool NoMultithread = false;
   bool NoGPU = false;
+  bool NoBSA = false;
   bool UpgradeShaders = false;
   bool OptimizeMeshes = false;
   bool NoZip = false;
@@ -45,7 +51,9 @@ struct ParallaxGenCLIArgs {
     OutStr += "GameType: " + GameType + "\n";
     OutStr += "OutputDir: " + OutputDir.string() + "\n";
     OutStr += "Autostart: " + to_string(static_cast<int>(Autostart)) + "\n";
+    OutStr += "NoMultithread: " + to_string(static_cast<int>(NoMultithread)) + "\n";
     OutStr += "NoGPU: " + to_string(static_cast<int>(NoGPU)) + "\n";
+    OutStr += "NoBSA: " + to_string(static_cast<int>(NoBSA)) + "\n";
     OutStr += "UpgradeShaders: " + to_string(static_cast<int>(UpgradeShaders)) + "\n";
     OutStr += "OptimizeMeshes: " + to_string(static_cast<int>(OptimizeMeshes)) + "\n";
     OutStr += "NoZip: " + to_string(static_cast<int>(NoZip)) + "\n";
@@ -86,7 +94,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   spdlog::info("Welcome to ParallaxGen version {}!", PARALLAXGEN_VERSION);
 
   // Print configuration parameters
-  spdlog::debug("Configuration Parameters:\n{}", Args.getString());
+  spdlog::debug("Configuration Parameters:\n\n{}\n", Args.getString());
 
   //
   // Init
@@ -142,17 +150,15 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   PG.deleteOutputDir();
 
   // Check if ParallaxGen output already exists in data directory
-  const filesystem::path PGStateFilePath = BG.getGameDataPath() / ParallaxGen::getStateFileName();
+  const filesystem::path PGStateFilePath = BG.getGameDataPath() / ParallaxGen::getDiffJSONName();
   if (filesystem::exists(PGStateFilePath)) {
     spdlog::critical("ParallaxGen meshes exist in your data directory, please delete before "
                      "re-running.");
     exit(1);
   }
 
-  PG.initOutputDir();
-
   // Populate file map from data directory
-  PGD.populateFileMap();
+  PGD.populateFileMap(!Args.NoBSA);
 
   // Load configs
   PGD.findPGConfigs();
@@ -198,7 +204,11 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
         stringVecToWstringVec(PGC.getConfig()["truepbr_cfg_lookup"]["allowlist"].get<vector<string>>()),
         stringVecToWstringVec(PGC.getConfig()["truepbr_cfg_lookup"]["blocklist"].get<vector<string>>()),
         stringVecToWstringVec(PGC.getConfig()["truepbr_cfg_lookup"]["archive_blocklist"].get<vector<string>>()));
+    PatcherTruePBR::loadPatcherBuffers(PGD.getTruePBRConfigs());
   }
+
+  // Build base vectors
+  PGD.buildBaseVectors(PGC.getConfig()["suffixes"].get<vector<vector<string>>>());
 
   // Upgrade shaders if requested
   if (Args.UpgradeShaders) {
@@ -210,7 +220,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
     PGD.findMeshes(stringVecToWstringVec(PGC.getConfig()["nif_lookup"]["allowlist"].get<vector<string>>()),
                    stringVecToWstringVec(PGC.getConfig()["nif_lookup"]["blocklist"].get<vector<string>>()),
                    stringVecToWstringVec(PGC.getConfig()["nif_lookup"]["archive_blocklist"].get<vector<string>>()));
-    PG.patchMeshes();
+    PG.patchMeshes(!Args.NoMultithread);
   }
 
   spdlog::info("ParallaxGen has finished patching meshes.");
@@ -258,8 +268,10 @@ void addArguments(CLI::App &App, ParallaxGenCLIArgs &Args, const filesystem::pat
   // Game
   App.add_option("-d,--game-dir", Args.GameDir, "Manually specify game directory");
   App.add_option("-g,--game-type", Args.GameType, "Specify game type [" + getGameTypeMapStr() + "]");
+  App.add_flag("--no-bsa", Args.NoBSA, "Don't load BSA files, only loose files");
   // App Options
   App.add_flag("--autostart", Args.Autostart, "Start generation without user input");
+  App.add_flag("--no-multithread", Args.NoMultithread, "Don't use multithreading (Slower)");
   auto *FlagNoGpu = App.add_flag("--no-gpu", Args.NoGPU, "Don't use the GPU for any operations (Slower)");
   App.add_flag("--no-default-conifg", Args.NoDefaultConfig,
                "Don't load the default config file (You need to know what "
@@ -311,8 +323,10 @@ void initLogger(const filesystem::path &LOGPATH, const ParallaxGenCLIArgs &Args)
   // Create loggers
   vector<spdlog::sink_ptr> Sinks;
   Sinks.push_back(make_shared<spdlog::sinks::stdout_color_sink_mt>());
-  Sinks.push_back(
-      make_shared<spdlog::sinks::basic_file_sink_mt>(LOGPATH.string(), true)); // TODO wide string support here
+
+  // Rotating file sink
+  Sinks.push_back(make_shared<spdlog::sinks::rotating_file_sink_mt>(LOGPATH.string(), MAX_LOG_SIZE,
+                                                                    MAX_LOG_FILES)); // TODO wide string support here
   auto Logger = make_shared<spdlog::logger>("ParallaxGen", Sinks.begin(), Sinks.end());
 
   // register logger parameters
@@ -354,7 +368,24 @@ auto main(int ArgC, char **ArgV) -> int {
   CLI11_PARSE(App, ArgC, ArgV);
 
   // Initialize logger
-  const filesystem::path LogPath = ExePath / "ParallaxGen.log";
+  const filesystem::path LogDir = ExePath / "log";
+  // delete old logs
+  if (filesystem::exists(LogDir)) {
+    try {
+      // Only delete files that are .log and start with ParallaxGen
+      for (const auto &Entry : filesystem::directory_iterator(LogDir)) {
+        if (Entry.is_regular_file() && Entry.path().extension() == ".log" &&
+            Entry.path().filename().wstring().starts_with(L"ParallaxGen")) {
+          filesystem::remove(Entry.path());
+        }
+      }
+    } catch (const filesystem::filesystem_error &E) {
+      cerr << "Failed to delete old logs: " << E.what() << "\n";
+      return 1;
+    }
+  }
+
+  const filesystem::path LogPath = LogDir / "ParallaxGen.log";
   initLogger(LogPath, Args);
 
   // Main Runner (Catches all exceptions)

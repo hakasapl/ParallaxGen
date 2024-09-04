@@ -25,11 +25,14 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<string, 
   auto *NIFShader = NIF->GetShader(NIFShape);
   auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
 
+  static const auto *SearchList = &PGD->getComplexMaterialMapsBases();
+  static const auto *TexList = &PGD->getComplexMaterialMaps();
+
   EnableResult = true; // Start with default true
 
   // Check if complex material file exists
   for (int Slot : SlotSearch) {
-    string FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], NIFUtil::TextureSlots::EnvMask, PGC, PGD).string();
+    string FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], *SearchList, *TexList).string();
     if (!FoundMatch.empty()) {
       // found complex material map
       MatchedPath = FoundMatch;

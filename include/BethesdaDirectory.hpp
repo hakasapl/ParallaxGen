@@ -11,6 +11,8 @@
 
 #include "BethesdaGame.hpp"
 
+#define ASCII_UPPER_BOUND 127
+
 class BethesdaDirectory {
 private:
   /**
@@ -75,7 +77,7 @@ public:
   /**
    * @brief Populate file map with all files in the load order
    */
-  void populateFileMap();
+  void populateFileMap(bool IncludeBSAs = true);
 
   /**
    * @brief Get the file map vector
@@ -127,6 +129,15 @@ public:
   [[nodiscard]] auto isFile(const std::filesystem::path &RelPath) const -> bool;
 
   /**
+   * @brief Check if file is a directory
+   *
+   * @param RelPath path to the file relative to the data directory
+   * @return true if file is a directory
+   * @return false if file is not a directory or doesn't exist
+   */
+  [[nodiscard]] auto isPrefix(const std::filesystem::path &RelPath) const -> bool;
+
+  /**
    * @brief Get the full path of a file in the load order
    *
    * @param RelPath path to the file relative to the data directory
@@ -147,8 +158,8 @@ public:
    */
   [[nodiscard]] auto findFiles(const bool &Lower = false, const std::vector<std::wstring> &GlobListAllow = {},
                                const std::vector<std::wstring> &GlobListDeny = {},
-                               const std::vector<std::wstring> &ArchiveListDeny = {},
-                               const bool &LogFindings = false) const -> std::vector<std::filesystem::path>;
+                               const std::vector<std::wstring> &ArchiveListDeny = {}, const bool &LogFindings = false,
+                               const bool &AllowWString = false) const -> std::vector<std::filesystem::path>;
 
   /**
    * @brief Get the load order of BSAs
@@ -169,6 +180,15 @@ public:
   [[nodiscard]] auto getPluginLoadOrder(const bool &TrimExtension = false) const -> std::vector<std::wstring>;
 
   // Helpers
+
+  /**
+   * @brief Checks if fs::path object has only ascii characters
+   *
+   * @param Path Path to check
+   * @return true When path only has ascii chars
+   * @return false When path has other than ascii chars
+   */
+  [[nodiscard]] static auto isPathAscii(const std::filesystem::path &Path) -> bool;
 
   /**
    * @brief Get the lowercase path of a path

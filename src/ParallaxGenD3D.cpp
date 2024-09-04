@@ -943,6 +943,9 @@ auto ParallaxGenD3D::getDDS(const filesystem::path &DDSPath,
 
 auto ParallaxGenD3D::getDDSMetadata(const filesystem::path &DDSPath,
                                     DirectX::TexMetadata &DDSMeta) -> ParallaxGenTask::PGResult {
+  // Use lock_guard to make this method thread-safe
+  lock_guard<mutex> Lock(DDSMetaDataMutex);
+
   // Check if in cache
   // TODO set cache to something on failure
   if (DDSMetaDataCache.find(DDSPath) != DDSMetaDataCache.end()) {

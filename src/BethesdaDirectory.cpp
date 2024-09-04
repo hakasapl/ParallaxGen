@@ -1,5 +1,6 @@
 #include "BethesdaDirectory.hpp"
 
+#include <boost/algorithm/string/predicate.hpp>
 #include <shlwapi.h>
 #include <spdlog/spdlog.h>
 
@@ -60,12 +61,14 @@ auto BethesdaDirectory::checkGlob(const wstring &Str, const vector<wstring> &Glo
   return std::ranges::any_of(GlobListCstr, [&](LPCWSTR Glob) { return PathMatchSpecW(StrCstr, Glob); });
 }
 
-void BethesdaDirectory::populateFileMap() {
+void BethesdaDirectory::populateFileMap(bool IncludeBSAs) {
   // clear map before populating
   FileMap.clear();
 
-  // add BSA files to file map
-  addBSAFilesToMap();
+  if (IncludeBSAs) {
+    // add BSA files to file map
+    addBSAFilesToMap();
+  }
 
   // add loose files to file map
   addLooseFilesToMap();
@@ -150,6 +153,16 @@ auto BethesdaDirectory::isFile(const filesystem::path &RelPath) const -> bool {
   return !File.Path.empty();
 }
 
+auto BethesdaDirectory::isPrefix(const filesystem::path &RelPath) const -> bool {
+  auto It = FileMap.lower_bound(RelPath);
+  if (It == FileMap.end()) {
+    return false;
+  }
+
+  return boost::istarts_with(It->first.wstring(), RelPath.wstring()) ||
+         (It != FileMap.begin() && boost::istarts_with(prev(It)->first.wstring(), RelPath.wstring()));
+}
+
 auto BethesdaDirectory::getFullPath(const filesystem::path &RelPath) const -> filesystem::path {
   return DataDir / RelPath;
 }
@@ -158,7 +171,7 @@ auto BethesdaDirectory::getDataPath() const -> filesystem::path { return DataDir
 
 auto BethesdaDirectory::findFiles(const bool &Lower, const vector<wstring> &GlobListAllow,
                                   const vector<wstring> &GlobListDeny, const vector<wstring> &ArchiveListDeny,
-                                  const bool &LogFindings) const -> vector<filesystem::path> {
+                                  const bool &LogFindings, const bool &AllowWString) const -> vector<filesystem::path> {
   // find all keys in FileMap that match pattern
   vector<filesystem::path> FoundFiles;
 
@@ -198,6 +211,14 @@ auto BethesdaDirectory::findFiles(const bool &Lower, const vector<wstring> &Glob
       if (checkGlob(BSAFile, LastWinningGlobArchiveDeny, ArchiveListDenyCstr)) {
         continue;
       }
+    }
+
+    // Check encoding
+    if (!AllowWString && !isPathAscii(key)) {
+      if (Logging) {
+        spdlog::warn(L"Skipping file with non-ASCII characters: {}", key.wstring());
+      }
+      continue;
     }
 
     // If not allowed, skip
@@ -490,7 +511,7 @@ auto BethesdaDirectory::getBSAFilesInDirectory() const -> vector<wstring> {
 
   for (const auto &Entry : filesystem::directory_iterator(this->DataDir)) {
     if (Entry.is_regular_file()) {
-      const string FileExtension = Entry.path().extension().string();
+      const auto FileExtension = Entry.path().extension().string();
       // only interested in BSA files
       if (!boost::iequals(FileExtension, ".bsa")) {
         continue;
@@ -556,6 +577,11 @@ auto BethesdaDirectory::isFileAllowed(const filesystem::path &FilePath) -> bool 
 }
 
 // helpers
+
+auto BethesdaDirectory::isPathAscii(const filesystem::path &Path) -> bool {
+  return ranges::all_of(Path.wstring(), [](wchar_t WC) { return WC <= ASCII_UPPER_BOUND; });
+}
+
 auto BethesdaDirectory::getFileFromMap(const filesystem::path &FilePath) const -> BethesdaDirectory::BethesdaFile {
   filesystem::path LowerPath = getPathLower(FilePath);
 

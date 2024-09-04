@@ -30,27 +30,30 @@ auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<string, 
   auto *NIFShader = NIF->GetShader(NIFShape);
   auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
 
+  static const auto *SearchList = &PGD->getHeightMapsBases();
+  static const auto *TexList = &PGD->getHeightMaps();
+
   EnableResult = true; // Start with default true
 
-  // Check if complex material file exists
+  // Check if nif has attached havok (Results in crashes for vanilla Parallax)
+  if (HasAttachedHavok) {
+    spdlog::trace(L"Rejecting NIF file {} due to attached havok animations", NIFPath.wstring());
+    EnableResult = false;
+    return Result;
+  }
+
+  // Check if vanilla parallax file exists
   for (int Slot : SlotSearch) {
-    string FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], NIFUtil::TextureSlots::Parallax, PGC, PGD).string();
+    string FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], *SearchList, *TexList).string();
     if (!FoundMatch.empty()) {
-      // found complex material map
+      // found parallax map
       MatchedPath = FoundMatch;
       break;
     }
   }
 
   if (MatchedPath.empty()) {
-    // no complex material map
-    EnableResult = false;
-    return Result;
-  }
-
-  // Check if nif has attached havok (Results in crashes for vanilla Parallax)
-  if (HasAttachedHavok) {
-    spdlog::trace(L"Rejecting NIF file {} due to attached havok animations", NIFPath.wstring());
+    // no parallax map
     EnableResult = false;
     return Result;
   }
@@ -62,7 +65,7 @@ auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<string, 
     return Result;
   }
 
-  // Enable regular Parallax for this shape!
+  // Check for shader type
   auto NIFShaderType = static_cast<nifly::BSLightingShaderPropertyShaderType>(NIFShader->GetShaderType());
   if (NIFShaderType != BSLSP_DEFAULT && NIFShaderType != BSLSP_PARALLAX) {
     // don't overwrite existing NIFShaders

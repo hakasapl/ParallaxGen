@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <filesystem>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -49,6 +50,7 @@ private:
   Microsoft::WRL::ComPtr<ID3D11ComputeShader> ShaderCountAlphaValues;
 
   std::unordered_map<std::filesystem::path, DirectX::TexMetadata> DDSMetaDataCache;
+  std::mutex DDSMetaDataMutex;
 
 public:
   // Constructor
