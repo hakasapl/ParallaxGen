@@ -48,8 +48,8 @@ auto configureShaderFlag(nifly::BSLightingShaderProperty *NIFShaderBSLSP, const 
 auto setTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, const TextureSlots &Slot,
                     const std::string &TexturePath, bool &Changed) -> void;
 auto getTexBase(const std::string &TexPath, const std::vector<std::string> &Suffixes) -> std::string;
-auto getTexMatch(const std::string &Base, const std::vector<std::string> &SearchList,
-                 const std::vector<std::filesystem::path> &TexList) -> std::filesystem::path;
+auto getTexMatch(const std::string &Base,
+                 const std::map<std::string, std::filesystem::path> &SearchMap) -> std::filesystem::path;
 // Gets all the texture prefixes for a textureset. ie. _n.dds is removed etc. for each slot
 auto getSearchPrefixes(nifly::NifFile &NIF, nifly::NiShape *NIFShape,
                        const std::vector<std::vector<std::string>> &Suffixes)

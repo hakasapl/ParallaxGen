@@ -106,20 +106,20 @@ void ParallaxGenDirectory::findPGConfigs() {
   spdlog::info("Found {} ParallaxGen configs in load order", PGConfigs.size());
 }
 
-void ParallaxGenDirectory::buildBaseVectors(const vector<vector<string>> &Suffixes) {
-  buildBaseVector(HeightMapsBases, HeightMaps, Suffixes[static_cast<int>(NIFUtil::TextureSlots::Parallax)]);
-  buildBaseVector(ComplexMaterialMapsBases, ComplexMaterialMaps,
-                  Suffixes[static_cast<int>(NIFUtil::TextureSlots::EnvMask)]);
+void ParallaxGenDirectory::buildBaseMaps(const vector<vector<string>> &Suffixes) {
+  buildBaseMap(HeightMapsBases, HeightMaps, Suffixes[static_cast<int>(NIFUtil::TextureSlots::Parallax)]);
+  buildBaseMap(ComplexMaterialMapsBases, ComplexMaterialMaps,
+               Suffixes[static_cast<int>(NIFUtil::TextureSlots::EnvMask)]);
 }
 
-void ParallaxGenDirectory::buildBaseVector(vector<string> &BaseVector, vector<filesystem::path> &Files,
-                                           const vector<string> &Suffixes) {
+void ParallaxGenDirectory::buildBaseMap(map<string, filesystem::path> &BaseMap, vector<filesystem::path> &Files,
+                                        const vector<string> &Suffixes) {
   // Create base vector
   for (const auto &Elem : Files) {
     string ElemStr = Elem.string();
 
     auto ElemBase = NIFUtil::getTexBase(ElemStr, Suffixes);
-    BaseVector.push_back(ElemBase);
+    BaseMap[ElemBase] = Elem;
   }
 }
 
@@ -131,8 +131,7 @@ void ParallaxGenDirectory::addHeightMap(const filesystem::path &Path, const stri
   sort(HeightMaps.begin(), HeightMaps.end());
 
   // add to base vector
-  HeightMapsBases.push_back(Base);
-  sort(HeightMapsBases.begin(), HeightMapsBases.end());
+  HeightMapsBases[Base] = PathLower;
 }
 
 void ParallaxGenDirectory::addComplexMaterialMap(const filesystem::path &Path, const string &Base) {
@@ -143,8 +142,7 @@ void ParallaxGenDirectory::addComplexMaterialMap(const filesystem::path &Path, c
   sort(ComplexMaterialMaps.begin(), ComplexMaterialMaps.end());
 
   // add to base vector
-  ComplexMaterialMapsBases.push_back(Base);
-  sort(ComplexMaterialMapsBases.begin(), ComplexMaterialMapsBases.end());
+  ComplexMaterialMapsBases[Base] = PathLower;
 }
 
 void ParallaxGenDirectory::addMesh(const filesystem::path &Path) {
@@ -177,12 +175,14 @@ auto ParallaxGenDirectory::isMesh(const filesystem::path &Path) const -> bool {
 auto ParallaxGenDirectory::defCubemapExists() -> bool { return isFile(getDefaultCubemapPath()); }
 
 auto ParallaxGenDirectory::getHeightMaps() const -> const vector<filesystem::path> & { return HeightMaps; }
-auto ParallaxGenDirectory::getHeightMapsBases() const -> const vector<string> & { return HeightMapsBases; }
+auto ParallaxGenDirectory::getHeightMapsBases() const -> const map<string, filesystem::path> & {
+  return HeightMapsBases;
+}
 
 auto ParallaxGenDirectory::getComplexMaterialMaps() const -> const vector<filesystem::path> & {
   return ComplexMaterialMaps;
 }
-auto ParallaxGenDirectory::getComplexMaterialMapsBases() const -> const vector<string> & {
+auto ParallaxGenDirectory::getComplexMaterialMapsBases() const -> const map<string, filesystem::path> & {
   return ComplexMaterialMapsBases;
 }
 

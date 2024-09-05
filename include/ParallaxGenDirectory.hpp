@@ -9,10 +9,10 @@
 
 class ParallaxGenDirectory : public BethesdaDirectory {
 private:
-  std::vector<std::string> HeightMapsBases;
   std::vector<std::filesystem::path> HeightMaps;
-  std::vector<std::string> ComplexMaterialMapsBases;
+  std::map<std::string, std::filesystem::path> HeightMapsBases;
   std::vector<std::filesystem::path> ComplexMaterialMaps;
+  std::map<std::string, std::filesystem::path> ComplexMaterialMapsBases;
   std::vector<std::filesystem::path> Meshes;
   std::vector<std::filesystem::path> PGConfigs;
 
@@ -42,7 +42,7 @@ public:
   // get the parallax gen config
   void findPGConfigs();
 
-  void buildBaseVectors(const std::vector<std::vector<std::string>> &Suffixes);
+  void buildBaseMaps(const std::vector<std::vector<std::string>> &Suffixes);
 
   // add methods
   void addHeightMap(const std::filesystem::path &Path, const std::string &Base);
@@ -68,10 +68,10 @@ public:
 
   // get methods
   [[nodiscard]] auto getHeightMaps() const -> const std::vector<std::filesystem::path> &;
-  [[nodiscard]] auto getHeightMapsBases() const -> const std::vector<std::string> &;
+  [[nodiscard]] auto getHeightMapsBases() const -> const std::map<std::string, std::filesystem::path> &;
 
   [[nodiscard]] auto getComplexMaterialMaps() const -> const std::vector<std::filesystem::path> &;
-  [[nodiscard]] auto getComplexMaterialMapsBases() const -> const std::vector<std::string> &;
+  [[nodiscard]] auto getComplexMaterialMapsBases() const -> const std::map<std::string, std::filesystem::path> &;
 
   [[nodiscard]] auto getMeshes() const -> const std::vector<std::filesystem::path> &;
 
@@ -80,6 +80,6 @@ public:
   [[nodiscard]] auto getPGConfigs() const -> const std::vector<std::filesystem::path> &;
 
 private:
-  static void buildBaseVector(std::vector<std::string> &BaseVector, std::vector<std::filesystem::path> &Files,
-                              const std::vector<std::string> &Suffixes);
+  static void buildBaseMap(std::map<std::string, std::filesystem::path> &BaseMap,
+                           std::vector<std::filesystem::path> &Files, const std::vector<std::string> &Suffixes);
 };

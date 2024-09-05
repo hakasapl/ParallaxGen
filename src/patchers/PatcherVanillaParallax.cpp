@@ -30,8 +30,7 @@ auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<string, 
   auto *NIFShader = NIF->GetShader(NIFShape);
   auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
 
-  static const auto *SearchList = &PGD->getHeightMapsBases();
-  static const auto *TexList = &PGD->getHeightMaps();
+  static const auto *HeightBaseMap = &PGD->getHeightMapsBases();
 
   EnableResult = true; // Start with default true
 
@@ -44,7 +43,7 @@ auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<string, 
 
   // Check if vanilla parallax file exists
   for (int Slot : SlotSearch) {
-    string FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], *SearchList, *TexList).string();
+    string FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], *HeightBaseMap).string();
     if (!FoundMatch.empty()) {
       // found parallax map
       MatchedPath = FoundMatch;

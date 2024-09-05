@@ -208,7 +208,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   }
 
   // Build base vectors
-  PGD.buildBaseVectors(PGC.getConfig()["suffixes"].get<vector<vector<string>>>());
+  PGD.buildBaseMaps(PGC.getConfig()["suffixes"].get<vector<vector<string>>>());
 
   // Upgrade shaders if requested
   if (Args.UpgradeShaders) {

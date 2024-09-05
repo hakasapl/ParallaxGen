@@ -1,6 +1,10 @@
 # Changelog
 
-## [0.5.6] - 9/3/2024
+## [0.5.7] - UNRELEASED
+
+- Fixed sorting issue that would result in some patches being missed
+
+## [0.5.6] - 2025-09-03
 
 - PBR multilayer: false is now processed correctly
 - More robust CLI argument validation

@@ -121,9 +121,8 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
     return Result;
   }
 
-  static const auto *CMBaseList = &PGD->getComplexMaterialMapsBases();
-  static const auto *CMList = &PGD->getComplexMaterialMaps();
-  auto ExistingCM = NIFUtil::getTexMatch(TexBase, *CMBaseList, *CMList);
+  static const auto *CMBaseMap = &PGD->getComplexMaterialMapsBases();
+  auto ExistingCM = NIFUtil::getTexMatch(TexBase, *CMBaseMap);
   if (!ExistingCM.empty()) {
     // complex material already exists
     return Result;

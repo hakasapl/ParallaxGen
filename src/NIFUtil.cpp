@@ -1,6 +1,5 @@
 #include "NIFUtil.hpp"
 #include <NifFile.hpp>
-#include <algorithm>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
 
@@ -116,22 +115,20 @@ auto NIFUtil::getTexBase(const string &TexPath, const vector<string> &Suffixes) 
   return {};
 }
 
-auto NIFUtil::getTexMatch(const string &Base, const vector<string> &SearchList,
-                          const vector<filesystem::path> &TexList) -> std::filesystem::path {
+auto NIFUtil::getTexMatch(const string &Base, const map<string, filesystem::path> &SearchMap) -> std::filesystem::path {
   // Binary search on base list
   const string BaseLower = boost::to_lower_copy(Base);
-  const auto It = lower_bound(SearchList.begin(), SearchList.end(), BaseLower);
+  const auto It = SearchMap.find(BaseLower);
 
-  if (It != SearchList.end()) {
+  if (It != SearchMap.end()) {
     // Found a match
-    if (!boost::equals(*It, BaseLower)) {
+    if (!boost::equals(It->first, BaseLower)) {
       // No exact match
       return {};
     }
 
     // Return matched texture
-    auto Idx = distance(SearchList.begin(), It);
-    return TexList[Idx];
+    return It->second;
   }
 
   return {};

@@ -18,6 +18,11 @@ PatcherComplexMaterial::PatcherComplexMaterial(filesystem::path NIFPath, nifly::
 auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<string, NUM_TEXTURE_SLOTS> &SearchPrefixes,
                                          bool &EnableResult, bool &EnableDynCubemaps,
                                          string &MatchedPath) const -> ParallaxGenTask::PGResult {
+
+  if (boost::contains(NIFPath.wstring(), "serikur house.nif")) {
+    spdlog::trace("serikur house.nif");
+  }
+
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Prep
@@ -25,14 +30,13 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<string, 
   auto *NIFShader = NIF->GetShader(NIFShape);
   auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
 
-  static const auto *SearchList = &PGD->getComplexMaterialMapsBases();
-  static const auto *TexList = &PGD->getComplexMaterialMaps();
+  static const auto *CMBaseMap = &PGD->getComplexMaterialMapsBases();
 
   EnableResult = true; // Start with default true
 
   // Check if complex material file exists
   for (int Slot : SlotSearch) {
-    string FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], *SearchList, *TexList).string();
+    string FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], *CMBaseMap).string();
     if (!FoundMatch.empty()) {
       // found complex material map
       MatchedPath = FoundMatch;
