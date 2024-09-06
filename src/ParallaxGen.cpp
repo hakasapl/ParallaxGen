@@ -225,12 +225,12 @@ auto ParallaxGen::getDiffJSONName() -> filesystem::path { return "ParallaxGen_Di
 auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &DiffJSON) -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
-  spdlog::trace(L"Processing NIF file: {}", NIFFile.wstring());
+  spdlog::trace(L"NIF: {} | Starting processing", NIFFile.wstring());
 
   // Determine output path for patched NIF
   const filesystem::path OutputFile = OutputDir / NIFFile;
   if (filesystem::exists(OutputFile)) {
-    spdlog::error(L"Unable to process NIF file, file already exists: {}", NIFFile.wstring());
+    spdlog::error(L"NIF: {} | NIF Rejected: File already exists", NIFFile.wstring());
     Result = ParallaxGenTask::PGResult::FAILURE;
     return Result;
   }
@@ -241,7 +241,7 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
   // Get NIF Bytes
   const vector<std::byte> NIFFileData = PGD->getFile(NIFFile);
   if (NIFFileData.empty()) {
-    spdlog::error(L"Unable to read NIF file: {}", NIFFile.wstring());
+    spdlog::error(L"NIF: {} | NIF Rejected: File is empty", NIFFile.wstring());
     Result = ParallaxGenTask::PGResult::FAILURE;
     return Result;
   }
@@ -254,13 +254,13 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
     // try block for loading nif
     NIF.Load(NIFStream);
   } catch (const exception &E) {
-    spdlog::error(L"Error reading NIF file from BSA: {}, {}", NIFFile.wstring(), stringToWstring(E.what()));
+    spdlog::error(L"NIF: {} | NIF Rejected: Unable to read from BSA", NIFFile.wstring(), stringToWstring(E.what()));
     Result = ParallaxGenTask::PGResult::FAILURE;
     return Result;
   }
 
   if (!NIF.IsValid()) {
-    spdlog::error(L"Invalid NIF file (ignoring): {}", NIFFile.wstring());
+    spdlog::error(L"NIF: {} | NIF Rejected: Invalid NIF", NIFFile.wstring());
     Result = ParallaxGenTask::PGResult::FAILURE;
     return Result;
   }
@@ -287,9 +287,9 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
 
     bool ShapeModified = false;
     string ShaderApplied;
-    ParallaxGenTask::updatePGResult(
-        Result, processShape(NIF, NIFShape, PatchVP, PatchCM, PatchTPBR, ShapeModified, ShaderApplied),
-        ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
+    ParallaxGenTask::updatePGResult(Result,
+                                    processShape(NIFFile, NIF, NIFShape, PatchVP, PatchCM, PatchTPBR, ShapeModified),
+                                    ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
 
     // Update NIFModified if shape was modified
     if (ShapeModified) {
@@ -323,7 +323,7 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
       return Result;
     }
 
-    spdlog::debug(L"NIF Patched: {}", NIFFile.wstring());
+    spdlog::debug(L"NIF: {} | Saving patched NIF to output", NIFFile.wstring());
 
     // Clear NIF from memory (no longer needed)
     NIF.Clear();
@@ -346,25 +346,26 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
   return Result;
 }
 
-auto ParallaxGen::processShape(NifFile &NIF, NiShape *NIFShape, PatcherVanillaParallax &PatchVP,
-                               PatcherComplexMaterial &PatchCM, PatcherTruePBR &PatchTPBR, bool &ShapeModified,
-                               string &ShaderApplied) -> ParallaxGenTask::PGResult {
+auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, NiShape *NIFShape,
+                               PatcherVanillaParallax &PatchVP, PatcherComplexMaterial &PatchCM,
+                               PatcherTruePBR &PatchTPBR, bool &ShapeModified) -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Prep
   const auto ShapeBlockID = NIF.GetBlockID(NIFShape);
+  spdlog::trace(L"NIF: {} | Shape: {} | Starting Processing", NIFPath.wstring(), ShapeBlockID);
 
   // Check for exclusions
-  // get NIFShader type
-  if (!NIFShape->HasShaderProperty()) {
-    spdlog::trace(L"Rejecting shape {}: No NIFShader property", ShapeBlockID);
-    return Result;
-  }
-
   // only allow BSLightingShaderProperty blocks
   string NIFShapeName = NIFShape->GetBlockName();
   if (NIFShapeName != "NiTriShape" && NIFShapeName != "BSTriShape") {
-    spdlog::trace(L"Rejecting shape {}: Incorrect shape block type", ShapeBlockID);
+    spdlog::trace(L"NIF: {} | Shape: {} | Rejecting: Incorrect shape block type", NIFPath.wstring(), ShapeBlockID);
+    return Result;
+  }
+
+  // get NIFShader type
+  if (!NIFShape->HasShaderProperty()) {
+    spdlog::trace(L"NIF: {} | Shape: {} | Rejecting: No NIFShader property", NIFPath.wstring(), ShapeBlockID);
     return Result;
   }
 
@@ -372,49 +373,50 @@ auto ParallaxGen::processShape(NifFile &NIF, NiShape *NIFShape, PatcherVanillaPa
   NiShader *NIFShader = NIF.GetShader(NIFShape);
   if (NIFShader == nullptr) {
     // skip if no NIFShader
-    spdlog::trace(L"Rejecting shape {}: No NIFShader", ShapeBlockID);
-    return Result;
-  }
-
-  // check that NIFShader has a texture set
-  if (!NIFShader->HasTextureSet()) {
-    spdlog::trace(L"Rejecting shape {}: No texture set", ShapeBlockID);
+    spdlog::trace(L"NIF: {} | Shape: {} | Rejecting: No NIFShader property", NIFPath.wstring(), ShapeBlockID);
     return Result;
   }
 
   // check that NIFShader is a BSLightingShaderProperty
   string NIFShaderName = NIFShader->GetBlockName();
   if (NIFShaderName != "BSLightingShaderProperty") {
-    spdlog::trace(L"Rejecting shape {}: Incorrect NIFShader block type", ShapeBlockID);
+    spdlog::trace(L"NIF: {} | Shape: {} | Rejecting: Incorrect NIFShader block type", NIFPath.wstring(), ShapeBlockID);
     return Result;
   }
 
+  // check that NIFShader has a texture set
+  if (!NIFShader->HasTextureSet()) {
+    spdlog::trace(L"NIF: {} | Shape: {} | Rejecting: No texture set", NIFPath.wstring(), ShapeBlockID);
+    return Result;
+  }
+
+  // Find search prefixes
   static const vector<vector<string>> Suffixes = PGC->getConfig()["suffixes"].get<vector<vector<string>>>();
   auto SearchPrefixes = NIFUtil::getSearchPrefixes(NIF, NIFShape, Suffixes);
   string MatchedPath;
 
   // TRUEPBR CONFIG
   if (!IgnoreTruePBR) {
-    spdlog::trace("Checking for PBR on shape {}", ShapeBlockID);
     bool EnableTruePBR = false;
     map<size_t, tuple<nlohmann::json, string>> TruePBRData;
-    ParallaxGenTask::updatePGResult(Result, PatchTPBR.shouldApply(SearchPrefixes, EnableTruePBR, TruePBRData),
+    ParallaxGenTask::updatePGResult(Result,
+                                    PatchTPBR.shouldApply(ShapeBlockID, SearchPrefixes, EnableTruePBR, TruePBRData),
                                     ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
     if (EnableTruePBR) {
       // Enable TruePBR on shape
       for (auto &TruePBRCFG : TruePBRData) {
+        spdlog::trace(L"NIF: {} | Shape: {} | PBR | Applying PBR Config {}", NIFPath.wstring(), ShapeBlockID,
+                      TruePBRCFG.first);
         ParallaxGenTask::updatePGResult(Result, PatchTPBR.applyPatch(NIFShape, get<0>(TruePBRCFG.second),
                                                                      get<1>(TruePBRCFG.second), ShapeModified));
       }
 
-      ShaderApplied = "pbr";
       return Result;
     }
   }
 
   // COMPLEX MATERIAL
   if (!IgnoreCM) {
-    spdlog::trace("Checking for complex material on shape {}", ShapeBlockID);
     bool EnableCM = false;
     bool EnableDynCubemaps = false;
     MatchedPath = "";
@@ -426,14 +428,12 @@ auto ParallaxGen::processShape(NifFile &NIF, NiShape *NIFShape, PatcherVanillaPa
       ParallaxGenTask::updatePGResult(Result,
                                       PatchCM.applyPatch(NIFShape, MatchedPath, EnableDynCubemaps, ShapeModified));
 
-      ShaderApplied = "complexmaterial";
       return Result;
     }
   }
 
   // VANILLA PARALLAX
   if (!IgnoreParallax) {
-    spdlog::trace("Checking for parallax on shape {}", ShapeBlockID);
     bool EnableParallax = false;
     MatchedPath = "";
     ParallaxGenTask::updatePGResult(Result, PatchVP.shouldApply(NIFShape, SearchPrefixes, EnableParallax, MatchedPath),
@@ -442,12 +442,10 @@ auto ParallaxGen::processShape(NifFile &NIF, NiShape *NIFShape, PatcherVanillaPa
       // Enable Parallax on shape
       ParallaxGenTask::updatePGResult(Result, PatchVP.applyPatch(NIFShape, MatchedPath, ShapeModified));
 
-      ShaderApplied = "parallax";
       return Result;
     }
   }
 
-  ShaderApplied = "none";
   return Result;
 }
 

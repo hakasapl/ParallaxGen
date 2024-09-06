@@ -70,9 +70,9 @@ private:
   auto processNIF(const std::filesystem::path &NIFFile, nlohmann::json &DiffJSON) -> ParallaxGenTask::PGResult;
 
   // processes a shape within a NIF file
-  auto processShape(nifly::NifFile &NIF, nifly::NiShape *NIFShape, PatcherVanillaParallax &PatchVP,
-                    PatcherComplexMaterial &PatchCM, PatcherTruePBR &PatchTPBR, bool &ShapeModified,
-                    std::string &ShaderApplied) -> ParallaxGenTask::PGResult;
+  auto processShape(const std::filesystem::path &NIFPath, nifly::NifFile &NIF, nifly::NiShape *NIFShape,
+                    PatcherVanillaParallax &PatchVP, PatcherComplexMaterial &PatchCM, PatcherTruePBR &PatchTPBR,
+                    bool &ShapeModified) -> ParallaxGenTask::PGResult;
 
   // Zip methods
   void addFileToZip(mz_zip_archive &Zip, const std::filesystem::path &FilePath,

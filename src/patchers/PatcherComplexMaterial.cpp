@@ -19,14 +19,12 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<string, 
                                          bool &EnableResult, bool &EnableDynCubemaps,
                                          string &MatchedPath) const -> ParallaxGenTask::PGResult {
 
-  if (boost::contains(NIFPath.wstring(), "serikur house.nif")) {
-    spdlog::trace("serikur house.nif");
-  }
-
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Prep
   const auto ShapeBlockID = NIF->GetBlockID(NIFShape);
+  spdlog::trace(L"NIF: {} | Shape: {} | CM | Starting checking", NIFPath.wstring(), ShapeBlockID);
+
   auto *NIFShader = NIF->GetShader(NIFShape);
   auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
 
@@ -39,6 +37,8 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<string, 
     string FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], *CMBaseMap).string();
     if (!FoundMatch.empty()) {
       // found complex material map
+      spdlog::trace(L"NIF: {} | Shape: {} | CM | Found CM map: {}", NIFPath.wstring(), ShapeBlockID,
+                    stringToWstring(MatchedPath));
       MatchedPath = FoundMatch;
       break;
     }
@@ -46,6 +46,7 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<string, 
 
   if (MatchedPath.empty()) {
     // no complex material map
+    spdlog::trace(L"NIF: {} | Shape: {} | CM | No CM map found", NIFPath.wstring(), ShapeBlockID);
     EnableResult = false;
     return Result;
   }
@@ -53,14 +54,15 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<string, 
   // Get NIFShader type
   auto NIFShaderType = static_cast<nifly::BSLightingShaderPropertyShaderType>(NIFShader->GetShaderType());
   if (NIFShaderType != BSLSP_DEFAULT && NIFShaderType != BSLSP_ENVMAP && NIFShaderType != BSLSP_PARALLAX) {
-    spdlog::trace(L"Rejecting shape {}: Incorrect NIFShader type", ShapeBlockID);
+    spdlog::trace(L"NIF: {} | Shape: {} | CM | Shape Rejected: Incorrect NIFShader type", NIFPath.wstring(),
+                  ShapeBlockID);
     EnableResult = false;
     return Result;
   }
 
   // Check if TruePBR is enabled
   if (NIFUtil::hasShaderFlag(NIFShaderBSLSP, SLSF2_UNUSED01)) {
-    spdlog::trace(L"Rejecting shape {} in NIF file {}: TruePBR enabled", ShapeBlockID, NIFPath.wstring());
+    spdlog::trace(L"NIF: {} | Shape: {} | CM | Shape Rejected: TruePBR enabled", NIFPath.wstring(), ShapeBlockID);
     EnableResult = false;
     return Result;
   }
@@ -70,7 +72,8 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<string, 
   NIF->GetTextureSlot(NIFShape, DiffuseMap, 0);
   if (!DiffuseMap.empty() && !PGD->isFile(DiffuseMap)) {
     // no Diffuse map
-    spdlog::trace("Rejecting shape {}: diffuse map missing: {}", ShapeBlockID, DiffuseMap);
+    spdlog::trace(L"NIF: {} | Shape: {} | CM | Shape Rejected: Diffuse map missing: {}", NIFPath.wstring(),
+                  ShapeBlockID, stringToWstring(DiffuseMap));
     EnableResult = false;
     return Result;
   }
@@ -79,9 +82,8 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<string, 
   ParallaxGenTask::updatePGResult(Result, PGD3D->checkIfAspectRatioMatches(DiffuseMap, MatchedPath, SameAspect),
                                   ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
   if (!SameAspect) {
-    spdlog::trace(L"Rejecting shape {} in NIF file {}: Complex material map does not "
-                  L"match diffuse map",
-                  ShapeBlockID, NIFPath.wstring());
+    spdlog::trace(L"NIF: {} | Shape: {} | CM | Shape Rejected: Aspect ratio of diffuse and CM map do not match",
+                  NIFPath.wstring(), ShapeBlockID);
     EnableResult = false;
     return Result;
   }
@@ -90,6 +92,7 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<string, 
   EnableDynCubemaps = !(ParallaxGenDirectory::checkGlob(NIFPath.wstring(), DynCubemapBlocklist) ||
                         ParallaxGenDirectory::checkGlob(stringToWstring(MatchedPath), DynCubemapBlocklist));
 
+  spdlog::trace(L"NIF: {} | Shape: {} | CM | Shape Accepted", NIFPath.wstring(), ShapeBlockID);
   return Result;
 }
 

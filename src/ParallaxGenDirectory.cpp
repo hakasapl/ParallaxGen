@@ -58,7 +58,6 @@ void ParallaxGenDirectory::findMeshes(const vector<wstring> &Allowlist, const ve
 
 void ParallaxGenDirectory::findTruePBRConfigs(const vector<wstring> &Allowlist, const vector<wstring> &Blocklist,
                                               const vector<wstring> &ArchiveBlocklist) {
-  // TODO more logging here
   // Find True PBR Configs
   spdlog::info("Finding TruePBR Configs");
   auto ConfigFiles = findFiles(true, Allowlist, Blocklist, ArchiveBlocklist, true, false);
@@ -88,6 +87,7 @@ void ParallaxGenDirectory::findTruePBRConfigs(const vector<wstring> &Allowlist, 
           }
         }
 
+        spdlog::trace("TruePBR Config {} Loaded: {}", ConfigOrder, Element.dump());
         TruePBRConfigs[ConfigOrder++] = Element;
       }
     } catch (nlohmann::json::parse_error &E) {
