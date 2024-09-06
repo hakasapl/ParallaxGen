@@ -3,6 +3,7 @@
 ## [0.5.7] - UNRELEASED
 
 - Fixed sorting issue that would result in some patches being missed
+- Updated nifly library to the latest commit (fixes undefined behavior with badly configured NIFs)
 
 ## [0.5.6] - 2025-09-03
 
