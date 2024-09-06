@@ -1,9 +1,10 @@
 # Changelog
 
-## [0.5.7] - UNRELEASED
+## [0.5.7] - 2025-09-05
 
 - Fixed sorting issue that would result in some patches being missed
 - Updated nifly library to the latest commit (fixes undefined behavior with badly configured NIFs)
+- Logging is more detailed now in -vv mode for mesh patching
 
 ## [0.5.6] - 2025-09-03
 
