@@ -24,29 +24,67 @@ auto PatcherTruePBR::getPathLookupJSONs() -> map<size_t, nlohmann::json> & {
   return PathLookupJSONs;
 }
 
-auto PatcherTruePBR::getTruePBRDiffuseInverse() -> map<string, vector<size_t>> & {
-  static map<string, vector<size_t>> TruePBRDiffuseInverse = {};
+auto PatcherTruePBR::getTruePBRDiffuseInverse() -> map<wstring, vector<size_t>> & {
+  static map<wstring, vector<size_t>> TruePBRDiffuseInverse = {};
   return TruePBRDiffuseInverse;
 }
 
-auto PatcherTruePBR::getTruePBRNormalInverse() -> map<string, vector<size_t>> & {
-  static map<string, vector<size_t>> TruePBRNormalInverse = {};
+auto PatcherTruePBR::getTruePBRNormalInverse() -> map<wstring, vector<size_t>> & {
+  static map<wstring, vector<size_t>> TruePBRNormalInverse = {};
   return TruePBRNormalInverse;
 }
 
-auto PatcherTruePBR::getPathLookupCache() -> unordered_map<tuple<string, string>, bool, TupleStrHash> & {
-  static unordered_map<tuple<string, string>, bool, TupleStrHash> PathLookupCache = {};
+auto PatcherTruePBR::getPathLookupCache() -> unordered_map<tuple<wstring, wstring>, bool, TupleStrHash> & {
+  static unordered_map<tuple<wstring, wstring>, bool, TupleStrHash> PathLookupCache = {};
   return PathLookupCache;
 }
 
-void PatcherTruePBR::loadPatcherBuffers(const map<size_t, nlohmann::json> &PBRJSONs) {
-  getTruePBRConfigs() = PBRJSONs;
+auto PatcherTruePBR::getTruePBRConfigFilenameFields() -> vector<string> {
+  static const vector<string> PGConfigFilenameFields = {"match_normal", "match_diffuse", "rename"};
+  return PGConfigFilenameFields;
+}
+
+void PatcherTruePBR::loadPatcherBuffers(const std::vector<std::filesystem::path> &PBRJSONs, ParallaxGenDirectory *PGD) {
+  size_t ConfigOrder = 0;
+  for (const auto &Config : PBRJSONs) {
+    // check if Config is valid
+    auto ConfigFileBytes = PGD->getFile(Config);
+    string ConfigFileStr(reinterpret_cast<const char *>(ConfigFileBytes.data()), ConfigFileBytes.size());
+
+    try {
+      nlohmann::json J = nlohmann::json::parse(ConfigFileStr);
+      // loop through each Element
+      for (auto &Element : J) {
+        // Preprocessing steps here
+        if (Element.contains("texture")) {
+          Element["match_diffuse"] = Element["texture"];
+        }
+
+        Element["json"] = Config.string();
+
+        // loop through filename Fields
+        for (const auto &Field : getTruePBRConfigFilenameFields()) {
+          if (Element.contains(Field) && !boost::istarts_with(Element[Field].get<string>(), "\\")) {
+            Element[Field] = Element[Field].get<string>().insert(0, 1, '\\');
+          }
+        }
+
+        spdlog::trace("TruePBR Config {} Loaded: {}", ConfigOrder, Element.dump());
+        getTruePBRConfigs()[ConfigOrder++] = Element;
+      }
+    } catch (nlohmann::json::parse_error &E) {
+      spdlog::error(L"Unable to parse TruePBR Config file {}: {}", Config.wstring(), ParallaxGenUtil::stringToWstring(E.what()));
+      continue;
+    }
+  }
+
+  spdlog::info("Found {} TruePBR entries", getTruePBRConfigs().size());
 
   // Create helper vectors
-  for (const auto &Config : PBRJSONs) {
+  for (const auto &Config : getTruePBRConfigs()) {
     // "match_normal" attribute
     if (Config.second.contains("match_normal")) {
-      string RevNormal = Config.second["match_normal"].get<string>();
+      auto RevNormal = ParallaxGenUtil::stringToWstring(Config.second["match_normal"].get<string>());
       reverse(RevNormal.begin(), RevNormal.end());
 
       getTruePBRNormalInverse()[boost::to_lower_copy(RevNormal)].push_back(Config.first);
@@ -55,7 +93,7 @@ void PatcherTruePBR::loadPatcherBuffers(const map<size_t, nlohmann::json> &PBRJS
 
     // "match_diffuse" attribute
     if (Config.second.contains("match_diffuse")) {
-      string RevDiffuse = Config.second["match_diffuse"].get<string>();
+      auto RevDiffuse = ParallaxGenUtil::stringToWstring(Config.second["match_diffuse"].get<string>());
       reverse(RevDiffuse.begin(), RevDiffuse.end());
 
       getTruePBRDiffuseInverse()[boost::to_lower_copy(RevDiffuse)].push_back(Config.first);
@@ -68,13 +106,13 @@ void PatcherTruePBR::loadPatcherBuffers(const map<size_t, nlohmann::json> &PBRJS
   }
 }
 
-auto PatcherTruePBR::shouldApply(const uint32_t &ShapeBlockID, const array<string, NUM_TEXTURE_SLOTS> &SearchPrefixes,
+auto PatcherTruePBR::shouldApply(const uint32_t &ShapeBlockID, const array<wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes,
                                  bool &EnableResult,
-                                 map<size_t, tuple<nlohmann::json, string>> &TruePBRData) -> ParallaxGenTask::PGResult {
+                                 map<size_t, tuple<nlohmann::json, wstring>> &TruePBRData) -> ParallaxGenTask::PGResult {
   spdlog::trace(L"NIF: {} | Shape: {} | PBR | Starting checking", NIFPath.wstring(), ShapeBlockID);
 
   // Stores the json filename that gets priority over this shape
-  string PriorityJSONFile;
+  wstring PriorityJSONFile;
 
   // "match_normal" attribute: Binary search for normal map
   getSlotMatch(ShapeBlockID, TruePBRData, PriorityJSONFile, SearchPrefixes[1], getTruePBRNormalInverse(),
@@ -99,9 +137,9 @@ auto PatcherTruePBR::shouldApply(const uint32_t &ShapeBlockID, const array<strin
   return ParallaxGenTask::PGResult::SUCCESS;
 }
 
-auto PatcherTruePBR::getSlotMatch(const uint32_t &ShapeBlockID, map<size_t, tuple<nlohmann::json, string>> &TruePBRData,
-                                  string &PriorityJSONFile, const string &TexName,
-                                  const map<string, vector<size_t>> &Lookup, const wstring &SlotLabel) -> void {
+auto PatcherTruePBR::getSlotMatch(const uint32_t &ShapeBlockID, map<size_t, tuple<nlohmann::json, wstring>> &TruePBRData,
+                                  wstring &PriorityJSONFile, const wstring &TexName,
+                                  const map<wstring, vector<size_t>> &Lookup, const wstring &SlotLabel) -> void {
   // binary search for map
   auto MapReverse = boost::to_lower_copy(TexName);
   reverse(MapReverse.begin(), MapReverse.end());
@@ -115,7 +153,7 @@ auto PatcherTruePBR::getSlotMatch(const uint32_t &ShapeBlockID, map<size_t, tupl
   } else {
     // No match found
     spdlog::trace(L"NIF: {} | Shape: {} | PBR | {} | No PBR JSON match found for \"{}\"", NIFPath.wstring(),
-                  ShapeBlockID, SlotLabel, ParallaxGenUtil::stringToWstring(TexName));
+                  ShapeBlockID, SlotLabel, TexName);
     return;
   }
 
@@ -129,7 +167,7 @@ auto PatcherTruePBR::getSlotMatch(const uint32_t &ShapeBlockID, map<size_t, tupl
   }
 
   spdlog::trace(L"NIF: {} | Shape: {} | PBR | {} | Matched {} PBR JSONs for \"{}\"", NIFPath.wstring(), ShapeBlockID,
-                SlotLabel, Cfgs.size(), ParallaxGenUtil::stringToWstring(TexName));
+                SlotLabel, Cfgs.size(), TexName);
 
   // Loop through all matches
   for (const auto &Cfg : Cfgs) {
@@ -138,8 +176,8 @@ auto PatcherTruePBR::getSlotMatch(const uint32_t &ShapeBlockID, map<size_t, tupl
 }
 
 auto PatcherTruePBR::getPathContainsMatch(const uint32_t &ShapeBlockID,
-                                          std::map<size_t, std::tuple<nlohmann::json, std::string>> &TruePBRData,
-                                          std::string &PriorityJSONFile, const std::string &Diffuse) -> void {
+                                          std::map<size_t, std::tuple<nlohmann::json, std::wstring>> &TruePBRData,
+                                          std::wstring &PriorityJSONFile, const std::wstring &Diffuse) -> void {
   // "patch_contains" attribute: Linear search for path_contains
   auto &Cache = getPathLookupCache();
 
@@ -147,7 +185,7 @@ auto PatcherTruePBR::getPathContainsMatch(const uint32_t &ShapeBlockID,
   size_t NumMatches = 0;
   for (const auto &Config : getPathLookupJSONs()) {
     // Check if in cache
-    auto CacheKey = make_tuple(Config.second["path_contains"].get<string>(), Diffuse);
+    auto CacheKey = make_tuple(ParallaxGenUtil::stringToWstring(Config.second["path_contains"].get<string>()), Diffuse);
 
     bool PathMatch = false;
     if (Cache.find(CacheKey) == Cache.end()) {
@@ -165,18 +203,18 @@ auto PatcherTruePBR::getPathContainsMatch(const uint32_t &ShapeBlockID,
   wstring SlotLabel = L"path_contains";
   if (NumMatches > 0) {
     spdlog::trace(L"NIF: {} | Shape: {} | PBR | {} | Matched {} PBR JSONs for \"{}\"", NIFPath.wstring(), ShapeBlockID,
-                  SlotLabel, NumMatches, ParallaxGenUtil::stringToWstring(Diffuse));
+                  SlotLabel, NumMatches, Diffuse);
   } else {
     spdlog::trace(L"NIF: {} | Shape: {} | PBR | {} | No PBR JSON match found for \"{}\"", NIFPath.wstring(),
-                  ShapeBlockID, SlotLabel, ParallaxGenUtil::stringToWstring(Diffuse));
+                  ShapeBlockID, SlotLabel, Diffuse);
   }
 }
 
 auto PatcherTruePBR::insertTruePBRData(const uint32_t &ShapeBlockID,
-                                       std::map<size_t, std::tuple<nlohmann::json, std::string>> &TruePBRData,
-                                       std::string &PriorityJSONFile, const string &TexName, size_t Cfg) -> void {
+                                       std::map<size_t, std::tuple<nlohmann::json, std::wstring>> &TruePBRData,
+                                       std::wstring &PriorityJSONFile, const wstring &TexName, size_t Cfg) -> void {
   const auto CurCfg = getTruePBRConfigs()[Cfg];
-  const auto CurJSON = CurCfg["json"].get<string>();
+  const auto CurJSON = ParallaxGenUtil::stringToWstring(CurCfg["json"].get<string>());
 
   // Check if we should skip this due to nif filter (this is expsenive, so we do it last)
   if (CurCfg.contains("nif_filter") && !boost::icontains(NIFPath.wstring(), CurCfg["nif_filter"].get<string>())) {
@@ -190,7 +228,7 @@ auto PatcherTruePBR::insertTruePBRData(const uint32_t &ShapeBlockID,
     // Define priority file
     PriorityJSONFile = CurJSON;
     spdlog::trace(L"NIF: {} | Shape: {} | PBR | Setting priority JSON to {}", NIFPath.wstring(), ShapeBlockID,
-                  ParallaxGenUtil::stringToWstring(PriorityJSONFile));
+                  PriorityJSONFile);
   }
 
   if (CurJSON != PriorityJSONFile) {
@@ -200,7 +238,7 @@ auto PatcherTruePBR::insertTruePBRData(const uint32_t &ShapeBlockID,
       TruePBRData.clear();
       PriorityJSONFile = CurJSON;
       spdlog::trace(L"NIF: {} | Shape: {} | PBR | Setting priority JSON to {}", NIFPath.wstring(), ShapeBlockID,
-                    ParallaxGenUtil::stringToWstring(PriorityJSONFile));
+                    PriorityJSONFile);
     } else {
       spdlog::trace(L"NIF: {} | Shape: {} | PBR | PBR JSON Rejected {}: Losing JSON Priority", NIFPath.wstring(),
                     ShapeBlockID, Cfg);
@@ -210,43 +248,43 @@ auto PatcherTruePBR::insertTruePBRData(const uint32_t &ShapeBlockID,
 
   // Find and check prefix value
   // Add the PBR part to the texture path
-  string TexPath = TexName;
+  auto TexPath = TexName;
   if (boost::istarts_with(TexPath, "textures\\") && !boost::istarts_with(TexPath, "textures\\pbr\\")) {
-    TexPath.replace(0, TEXTURE_STR_LENGTH, "textures\\pbr\\");
+    TexPath.replace(0, TEXTURE_STR_LENGTH, L"textures\\pbr\\");
   }
 
   // Get PBR path, which is the path without the matched field
-  string MatchedField =
+  auto MatchedFieldStr =
       CurCfg.contains("match_normal") ? CurCfg["match_normal"].get<string>() : CurCfg["match_diffuse"].get<string>();
+  auto MatchedField = ParallaxGenUtil::stringToWstring(MatchedFieldStr);
   TexPath.erase(TexPath.length() - MatchedField.length(), MatchedField.length());
 
   // "rename" attribute
   if (CurCfg.contains("rename")) {
-    MatchedField = CurCfg["rename"].get<string>();
+    MatchedField = ParallaxGenUtil::stringToWstring(CurCfg["rename"].get<string>());
   }
 
-  spdlog::trace(L"NIF: {} | Shape: {} | PBR | {} | PBR texture path created: {}", NIFPath.wstring(), ShapeBlockID, Cfg,
-                ParallaxGenUtil::stringToWstring(MatchedField));
+  spdlog::trace(L"NIF: {} | Shape: {} | PBR | {} | PBR texture path created: {}", NIFPath.wstring(), ShapeBlockID, Cfg, MatchedField);
 
   // Check if named_field is a directory
-  string MatchedPath = boost::to_lower_copy(TexPath + MatchedField);
+  wstring MatchedPath = boost::to_lower_copy(TexPath + MatchedField);
   bool EnableTruePBR = (!CurCfg.contains("pbr") || CurCfg["pbr"]) && !MatchedPath.empty();
   if (EnableTruePBR && !PGD->isPrefix(MatchedPath)) {
     spdlog::trace(L"NIF: {} | Shape: {} | PBR | {} | PBR JSON Rejected: Path {} is not a prefix", NIFPath.wstring(),
-                  ShapeBlockID, Cfg, ParallaxGenUtil::stringToWstring(MatchedPath));
+                  ShapeBlockID, Cfg, MatchedPath);
     return;
   }
 
   // If no pbr clear MatchedPath
   if (!EnableTruePBR) {
-    MatchedPath = "";
+    MatchedPath = L"";
   }
 
   spdlog::trace(L"NIF: {} | Shape: {} | PBR | {} | PBR JSON accepted", NIFPath.wstring(), ShapeBlockID, Cfg);
   TruePBRData.insert({Cfg, {CurCfg, MatchedPath}});
 }
 
-auto PatcherTruePBR::applyPatch(NiShape *NIFShape, nlohmann::json &TruePBRData, const std::string &MatchedPath,
+auto PatcherTruePBR::applyPatch(NiShape *NIFShape, nlohmann::json &TruePBRData, const std::wstring &MatchedPath,
                                 bool &NIFModified) const -> ParallaxGenTask::PGResult {
 
   // enable TruePBR on shape
@@ -407,7 +445,7 @@ auto PatcherTruePBR::applyPatch(NiShape *NIFShape, nlohmann::json &TruePBRData, 
 
 auto PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader,
                                           BSLightingShaderProperty *NIFShaderBSLSP, nlohmann::json &TruePBRData,
-                                          const string &MatchedPath,
+                                          const wstring &MatchedPath,
                                           bool &NIFModified) const -> ParallaxGenTask::PGResult {
 
   // enable TruePBR on shape
@@ -415,21 +453,21 @@ auto PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader
 
   // "lock_diffuse" attribute
   if (!flag(TruePBRData, "lock_diffuse")) {
-    auto NewDiffuse = MatchedPath + ".dds";
+    auto NewDiffuse = MatchedPath + L".dds";
     NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::Diffuse, NewDiffuse, NIFModified);
   }
 
   // "lock_normal" attribute
   if (!flag(TruePBRData, "lock_normal")) {
-    auto NewNormal = MatchedPath + "_n.dds";
+    auto NewNormal = MatchedPath + L"_n.dds";
     NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::Normal, NewNormal, NIFModified);
   }
 
   // "emissive" attribute
   if (TruePBRData.contains("emissive") && !flag(TruePBRData, "lock_emissive")) {
-    string NewGlow;
+    wstring NewGlow;
     if (TruePBRData["emissive"].get<bool>()) {
-      NewGlow = MatchedPath + "_g.dds";
+      NewGlow = MatchedPath + L"_g.dds";
     }
 
     NIFUtil::configureShaderFlag(NIFShaderBSLSP, SLSF1_EXTERNAL_EMITTANCE, TruePBRData["emissive"].get<bool>(),
@@ -439,9 +477,9 @@ auto PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader
 
   // "parallax" attribute
   if (TruePBRData.contains("parallax") && !flag(TruePBRData, "lock_parallax")) {
-    string NewParallax;
+    wstring NewParallax;
     if (TruePBRData["parallax"].get<bool>()) {
-      NewParallax = MatchedPath + "_p.dds";
+      NewParallax = MatchedPath + L"_p.dds";
     }
 
     NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::Parallax, NewParallax, NIFModified);
@@ -452,16 +490,16 @@ auto PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader
 
   // "lock_rmaos" attribute
   if (!flag(TruePBRData, "lock_rmaos")) {
-    auto NewRMAOS = MatchedPath + "_rmaos.dds";
+    auto NewRMAOS = MatchedPath + L"_rmaos.dds";
     NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::EnvMask, NewRMAOS, NIFModified);
   }
 
   // "lock_cnr" attribute
   if (!flag(TruePBRData, "lock_cnr")) {
     // "coat_normal" attribute
-    string NewCNR;
+    wstring NewCNR;
     if (TruePBRData.contains("coat_normal") && TruePBRData["coat_normal"].get<bool>()) {
-      NewCNR = MatchedPath + "_cnr.dds";
+      NewCNR = MatchedPath + L"_cnr.dds";
     }
 
     NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::Tint, NewCNR, NIFModified);
@@ -470,11 +508,11 @@ auto PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader
   // "lock_subsurface" attribute
   if (!flag(TruePBRData, "lock_subsurface")) {
     // "subsurface_foliage" attribute
-    string NewSubsurface;
+    wstring NewSubsurface;
     if ((TruePBRData.contains("subsurface_foliage") && TruePBRData["subsurface_foliage"].get<bool>()) ||
         (TruePBRData.contains("subsurface") && TruePBRData["subsurface"].get<bool>()) ||
         (TruePBRData.contains("coat_diffuse") && TruePBRData["coat_diffuse"].get<bool>())) {
-      NewSubsurface = MatchedPath + "_s.dds";
+      NewSubsurface = MatchedPath + L"_s.dds";
     }
 
     NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::Backlight, NewSubsurface, NIFModified);

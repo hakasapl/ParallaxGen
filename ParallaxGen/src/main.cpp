@@ -161,22 +161,21 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   PGD.populateFileMap(!Args.NoBSA);
 
   // Load configs
-  PGD.findPGConfigs();
   PGC.loadConfig(!Args.NoDefaultConfig);
 
   // Install default cubemap file if needed
   if (!Args.IgnoreComplexMaterial) {
     // install default cubemap file if needed
-    if (!PGD.defCubemapExists()) {
+    if (!PGD.isFile("textures\\cubemaps\\dynamic1pxcubemap_black.dds")) {
       spdlog::info("Installing default cubemap file");
 
       // Create Directory
-      filesystem::path OutputCubemapPath = Args.OutputDir / ParallaxGenDirectory::getDefaultCubemapPath().parent_path();
+      filesystem::path OutputCubemapPath = Args.OutputDir / "textures\\cubemaps";
       filesystem::create_directories(OutputCubemapPath);
 
       boost::filesystem::path AssetPath = boost::filesystem::path(ExePath) / L"assets/dynamic1pxcubemap_black_ENB.dds";
       boost::filesystem::path OutputPath =
-          boost::filesystem::path(Args.OutputDir) / ParallaxGenDirectory::getDefaultCubemapPath();
+          boost::filesystem::path(Args.OutputDir) / "textures\\cubemaps\\dynamic1pxcubemap_black.dds";
 
       // Move File
       boost::filesystem::copy_file(AssetPath, OutputPath, boost::filesystem::copy_options::overwrite_existing);
@@ -184,31 +183,9 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   }
 
   // Build file vectors
-  if (!Args.IgnoreParallax || Args.UpgradeShaders) {
-    PGD.findHeightMaps(
-        stringVecToWstringVec(PGC.getConfig()["parallax_lookup"]["allowlist"].get<vector<string>>()),
-        stringVecToWstringVec(PGC.getConfig()["parallax_lookup"]["blocklist"].get<vector<string>>()),
-        stringVecToWstringVec(PGC.getConfig()["parallax_lookup"]["archive_blocklist"].get<vector<string>>()));
-  }
+  PGD.findPGFiles();
 
-  if (!Args.IgnoreComplexMaterial || Args.UpgradeShaders) {
-    PGD.findComplexMaterialMaps(
-        stringVecToWstringVec(PGC.getConfig()["complexmaterial_lookup"]["allowlist"].get<vector<string>>()),
-        stringVecToWstringVec(PGC.getConfig()["complexmaterial_lookup"]["blocklist"].get<vector<string>>()),
-        stringVecToWstringVec(PGC.getConfig()["complexmaterial_lookup"]["archive_blocklist"].get<vector<string>>()));
-    PGD3D.findCMMaps();
-  }
-
-  if (!Args.IgnoreTruePBR) {
-    PGD.findTruePBRConfigs(
-        stringVecToWstringVec(PGC.getConfig()["truepbr_cfg_lookup"]["allowlist"].get<vector<string>>()),
-        stringVecToWstringVec(PGC.getConfig()["truepbr_cfg_lookup"]["blocklist"].get<vector<string>>()),
-        stringVecToWstringVec(PGC.getConfig()["truepbr_cfg_lookup"]["archive_blocklist"].get<vector<string>>()));
-    PatcherTruePBR::loadPatcherBuffers(PGD.getTruePBRConfigs());
-  }
-
-  // Build base vectors
-  PGD.buildBaseMaps(PGC.getConfig()["suffixes"].get<vector<vector<string>>>());
+  PatcherTruePBR::loadPatcherBuffers(PGD.getPBRJSONs(), &PGD);
 
   // Upgrade shaders if requested
   if (Args.UpgradeShaders) {
@@ -217,9 +194,6 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   // Patch meshes if set
   if (!Args.IgnoreParallax || !Args.IgnoreComplexMaterial || !Args.IgnoreTruePBR) {
-    PGD.findMeshes(stringVecToWstringVec(PGC.getConfig()["nif_lookup"]["allowlist"].get<vector<string>>()),
-                   stringVecToWstringVec(PGC.getConfig()["nif_lookup"]["blocklist"].get<vector<string>>()),
-                   stringVecToWstringVec(PGC.getConfig()["nif_lookup"]["archive_blocklist"].get<vector<string>>()));
     PG.patchMeshes(!Args.NoMultithread);
   }
 

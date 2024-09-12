@@ -23,8 +23,8 @@ PatcherVanillaParallax::PatcherVanillaParallax(filesystem::path NIFPath, nifly::
   }
 }
 
-auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<string, NUM_TEXTURE_SLOTS> &SearchPrefixes,
-                                         bool &EnableResult, string &MatchedPath) const -> ParallaxGenTask::PGResult {
+auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes,
+                                         bool &EnableResult, wstring &MatchedPath) const -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Prep
@@ -34,7 +34,7 @@ auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<string, 
   auto *NIFShader = NIF->GetShader(NIFShape);
   auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
 
-  static const auto *HeightBaseMap = &PGD->getHeightMapsBases();
+  static const auto *HeightBaseMap = &PGD->getTextureMapConst(NIFUtil::TextureSlots::Parallax);
 
   EnableResult = true; // Start with default true
 
@@ -48,11 +48,10 @@ auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<string, 
 
   // Check if vanilla parallax file exists
   for (int Slot : SlotSearch) {
-    string FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], *HeightBaseMap).string();
+    auto FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], *HeightBaseMap).Path.wstring();
     if (!FoundMatch.empty()) {
       // found parallax map
-      spdlog::trace(L"NIF: {} | Shape: {} | Parallax | Found parallax map: {}", NIFPath.wstring(), ShapeBlockID,
-                    stringToWstring(MatchedPath));
+      spdlog::trace(L"NIF: {} | Shape: {} | Parallax | Found parallax map: {}", NIFPath.wstring(), ShapeBlockID, MatchedPath);
       MatchedPath = FoundMatch;
       break;
     }
@@ -134,7 +133,7 @@ auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<string, 
   return Result;
 }
 
-auto PatcherVanillaParallax::applyPatch(NiShape *NIFShape, const string &MatchedPath,
+auto PatcherVanillaParallax::applyPatch(NiShape *NIFShape, const wstring &MatchedPath,
                                         bool &NIFModified) -> ParallaxGenTask::PGResult {
   // enable Parallax on shape
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
@@ -159,8 +158,7 @@ auto PatcherVanillaParallax::applyPatch(NiShape *NIFShape, const string &Matched
     NIFModified = true;
   }
   // Set Parallax heightmap texture
-  string NewHeightMap = MatchedPath; // NOLINT
-  NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::Parallax, NewHeightMap, NIFModified);
+  NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::Parallax, MatchedPath, NIFModified);
 
   return Result;
 }

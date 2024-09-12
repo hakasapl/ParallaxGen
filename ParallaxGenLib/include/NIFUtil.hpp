@@ -20,6 +20,52 @@ enum class TextureSlots : unsigned int {
   Unused = 8
 };
 
+enum class PGTextureType {
+  DIFFUSE,
+  NORMAL,
+  GLOW,
+  HEIGHT,
+  CUBEMAP,
+  ENVIRONMENTMASK,
+  COMPLEXMATERIAL,
+  RMAOS,
+  TINT,
+  COATNORMAL,
+  BACKLIGHT
+};
+
+struct PGTexture {
+  std::filesystem::path Path;
+  PGTextureType Type;
+};
+
+auto getDefaultTextureType(const TextureSlots &Slot) -> PGTextureType;
+
+// TODO this should be in UTIL
+// Custom comparator for comparing strings from right to left
+struct ReverseComparator {
+  template <typename StringT>
+  auto operator()(const StringT& Lhs, const StringT& Rhs) const -> bool {
+    auto LhsIt = Lhs.rbegin();
+    auto RhsIt = Rhs.rbegin();
+
+    while (LhsIt != Lhs.rend() && RhsIt != Rhs.rend()) {
+      if (*LhsIt != *RhsIt) {
+          return *LhsIt < *RhsIt;
+      }
+      ++LhsIt;
+      ++RhsIt;
+    }
+    return Lhs.size() < Rhs.size();
+  }
+};
+
+auto loadNIFFromBytes(const std::vector<std::byte> &NIFBytes) -> nifly::NifFile;
+
+auto getTexSuffixMap() -> std::map<std::wstring, TextureSlots, ReverseComparator>;
+
+auto getSlotFromPath(const std::filesystem::path &Path) -> TextureSlots;
+
 // shader helpers
 auto setShaderType(nifly::NiShader *NIFShader, const nifly::BSLightingShaderPropertyShaderType &Type,
                    bool &Changed) -> void;
@@ -45,14 +91,15 @@ auto configureShaderFlag(nifly::BSLightingShaderProperty *NIFShaderBSLSP, const 
                          const bool &Enable, bool &Changed) -> void;
 
 // Texture slot helpers
+auto setTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, const TextureSlots &Slot, const std::wstring &TexturePath, bool &Changed) -> void;
 auto setTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, const TextureSlots &Slot,
                     const std::string &TexturePath, bool &Changed) -> void;
-auto getTexBase(const std::string &TexPath, const std::vector<std::string> &Suffixes) -> std::string;
-auto getTexMatch(const std::string &Base,
-                 const std::map<std::string, std::filesystem::path> &SearchMap) -> std::filesystem::path;
+auto getTexBase(const std::filesystem::path &TexPath) -> std::wstring;
+auto getTexBase(const std::wstring &TexPath) -> std::wstring;
+auto getTexMatch(const std::wstring &Base,
+                 const std::map<std::wstring, PGTexture> &SearchMap) -> PGTexture;
 // Gets all the texture prefixes for a textureset. ie. _n.dds is removed etc. for each slot
-auto getSearchPrefixes(nifly::NifFile &NIF, nifly::NiShape *NIFShape,
-                       const std::vector<std::vector<std::string>> &Suffixes)
-    -> std::array<std::string, NUM_TEXTURE_SLOTS>;
+auto getSearchPrefixes(nifly::NifFile &NIF, nifly::NiShape *NIFShape)
+    -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;
 
 } // namespace NIFUtil

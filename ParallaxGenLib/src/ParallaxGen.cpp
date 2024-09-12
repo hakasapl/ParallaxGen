@@ -32,13 +32,13 @@ ParallaxGen::ParallaxGen(filesystem::path OutputDir, ParallaxGenDirectory *PGD, 
 
 void ParallaxGen::upgradeShaders() {
   // Get height maps (vanilla _p.dds files)
-  auto HeightMaps = PGD->getHeightMaps();
+  const auto &HeightMaps = PGD->getTextureMapConst(NIFUtil::TextureSlots::Parallax);
 
   // Define task parameters
   ParallaxGenTask TaskTracker("Shader Upgrades", HeightMaps.size());
 
   for (const auto &HeightMap : HeightMaps) {
-    TaskTracker.completeJob(convertHeightMapToComplexMaterial(HeightMap));
+    TaskTracker.completeJob(convertHeightMapToComplexMaterial(HeightMap.second.Path));
   }
 }
 
@@ -115,31 +115,26 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
 
   // Get texture base (remove _p.dds)
   static const auto ParallaxSuffixes = PGC->getConfig()["suffixes"][3].get<vector<string>>();
-  string TexBase = NIFUtil::getTexBase(HeightMapStr, ParallaxSuffixes);
+  const auto TexBase = NIFUtil::getTexBase(HeightMapStr);
   if (TexBase.empty()) {
     // no height map (this shouldn't happen)
     return Result;
   }
 
-  static const auto *CMBaseMap = &PGD->getComplexMaterialMapsBases();
+  static const auto *CMBaseMap = &PGD->getTextureMapConst(NIFUtil::TextureSlots::EnvMask);
   auto ExistingCM = NIFUtil::getTexMatch(TexBase, *CMBaseMap);
-  if (!ExistingCM.empty()) {
-    // complex material already exists
-    return Result;
-  }
-
-  // Check if vanilla env mask exists (should be included in CM map)
   filesystem::path EnvMask = filesystem::path();
-  vector<filesystem::path> EnvMaskPossibilities = {TexBase + "_m.dds", TexBase + "_em.dds"};
-  for (const auto &EnvMaskPossibility : EnvMaskPossibilities) {
-    if (PGD->isFile(EnvMaskPossibility)) {
-      // found env mask
-      EnvMask = EnvMaskPossibility;
-      break;
+  if (!ExistingCM.Path.empty()) {
+    if (ExistingCM.Type == NIFUtil::PGTextureType::COMPLEXMATERIAL) {
+      // complex material already exists
+      return Result;
     }
+
+    // env mask exists, but it's not a complex material
+    EnvMask = ExistingCM.Path;
   }
 
-  const filesystem::path ComplexMap = TexBase + "_m.dds";
+  const filesystem::path ComplexMap = TexBase + L"_m.dds";
 
   // upgrade to complex material
   DirectX::ScratchImage NewComplexMap = PGD3D->upgradeToComplexMaterial(HeightMap, EnvMask);
@@ -159,7 +154,7 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
     }
 
     // add newly created file to complexMaterialMaps for later processing
-    PGD->addComplexMaterialMap(ComplexMap, TexBase);
+    PGD->getTextureMap(NIFUtil::TextureSlots::EnvMask)[TexBase] = {ComplexMap, NIFUtil::PGTextureType::COMPLEXMATERIAL};
 
     spdlog::debug(L"Generated complex material map: {}", ComplexMap.wstring());
   } else {
@@ -392,13 +387,13 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
 
   // Find search prefixes
   static const vector<vector<string>> Suffixes = PGC->getConfig()["suffixes"].get<vector<vector<string>>>();
-  auto SearchPrefixes = NIFUtil::getSearchPrefixes(NIF, NIFShape, Suffixes);
-  string MatchedPath;
+  auto SearchPrefixes = NIFUtil::getSearchPrefixes(NIF, NIFShape);
+  wstring MatchedPath;
 
   // TRUEPBR CONFIG
   if (!IgnoreTruePBR) {
     bool EnableTruePBR = false;
-    map<size_t, tuple<nlohmann::json, string>> TruePBRData;
+    map<size_t, tuple<nlohmann::json, wstring>> TruePBRData;
     ParallaxGenTask::updatePGResult(Result,
                                     PatchTPBR.shouldApply(ShapeBlockID, SearchPrefixes, EnableTruePBR, TruePBRData),
                                     ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
@@ -419,7 +414,7 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
   if (!IgnoreCM) {
     bool EnableCM = false;
     bool EnableDynCubemaps = false;
-    MatchedPath = "";
+    MatchedPath = L"";
     ParallaxGenTask::updatePGResult(
         Result, PatchCM.shouldApply(NIFShape, SearchPrefixes, EnableCM, EnableDynCubemaps, MatchedPath),
         ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
@@ -435,7 +430,7 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
   // VANILLA PARALLAX
   if (!IgnoreParallax) {
     bool EnableParallax = false;
-    MatchedPath = "";
+    MatchedPath = L"";
     ParallaxGenTask::updatePGResult(Result, PatchVP.shouldApply(NIFShape, SearchPrefixes, EnableParallax, MatchedPath),
                                     ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
     if (EnableParallax) {
