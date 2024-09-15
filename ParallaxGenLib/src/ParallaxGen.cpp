@@ -88,7 +88,9 @@ void ParallaxGen::patchMeshes(const bool &MultiThread) {
     }
 
   } else {
-    patchMeshBatch(Meshes, 0, Meshes.size(), TaskTracker, DiffJSON);
+    for (const auto &Mesh : Meshes) {
+      TaskTracker.completeJob(processNIF(Mesh, DiffJSON));
+    }
   }
 
   // Write DiffJSON file
@@ -97,13 +99,6 @@ void ParallaxGen::patchMeshes(const bool &MultiThread) {
   ofstream DiffJSONFile(DiffJSONPath);
   DiffJSONFile << DiffJSON << endl;
   DiffJSONFile.close();
-}
-
-void ParallaxGen::patchMeshBatch(const std::vector<std::filesystem::path> &Meshes, const size_t &Start,
-                                 const size_t &End, ParallaxGenTask &TaskTracker, nlohmann::json &DiffJSON) {
-  for (size_t I = Start; I < End; I++) {
-    TaskTracker.completeJob(processNIF(Meshes[I], DiffJSON));
-  }
 }
 
 auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &HeightMap) -> ParallaxGenTask::PGResult {

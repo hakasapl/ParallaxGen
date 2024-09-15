@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.5.8] - UNRELEASED
+
+- New method for mapping textures to types
+
 ## [0.5.7] - 2025-09-05
 
 - Fixed sorting issue that would result in some patches being missed
