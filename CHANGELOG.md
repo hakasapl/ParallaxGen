@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.5.8] - UNRELEASED
+
+- Fixed PBR bug when multilayer: false is defined
+
 ## [0.5.7] - 2025-09-05
 
 - Fixed sorting issue that would result in some patches being missed
