@@ -68,9 +68,22 @@ void PatcherTruePBR::loadPatcherBuffers(const map<size_t, nlohmann::json> &PBRJS
   }
 }
 
-auto PatcherTruePBR::shouldApply(const uint32_t &ShapeBlockID, const array<string, NUM_TEXTURE_SLOTS> &SearchPrefixes,
+auto PatcherTruePBR::shouldApply(nifly::NiShape *NIFShape, const array<string, NUM_TEXTURE_SLOTS> &SearchPrefixes,
                                  bool &EnableResult,
                                  map<size_t, tuple<nlohmann::json, string>> &TruePBRData) -> ParallaxGenTask::PGResult {
+  // Prep
+  auto *NIFShader = NIF->GetShader(NIFShape);
+  auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
+  auto TextureSetBlockID = NIFShaderBSLSP->TextureSetRef()->index;
+
+  // Check if we already matched this texture set
+  if (MatchedTextureSets.find(TextureSetBlockID) != MatchedTextureSets.end()) {
+    TruePBRData = MatchedTextureSets[TextureSetBlockID];
+    EnableResult = true;
+    return ParallaxGenTask::PGResult::SUCCESS;
+  }
+
+  const auto ShapeBlockID = NIF->GetBlockID(NIFShape);
   spdlog::trace(L"NIF: {} | Shape: {} | PBR | Starting checking", NIFPath.wstring(), ShapeBlockID);
 
   // Stores the json filename that gets priority over this shape
@@ -92,6 +105,9 @@ auto PatcherTruePBR::shouldApply(const uint32_t &ShapeBlockID, const array<strin
   EnableResult = NumConfigs > 0;
   if (EnableResult) {
     spdlog::trace(L"NIF: {} | Shape: {} | PBR | {} PBR Configs matched", NIFPath.wstring(), ShapeBlockID, NumConfigs);
+
+    // Add to good to go set
+    MatchedTextureSets[TextureSetBlockID] = TruePBRData;
   } else {
     spdlog::trace(L"NIF: {} | Shape: {} | PBR | No PBR Configs matched", NIFPath.wstring(), ShapeBlockID);
   }
