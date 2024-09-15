@@ -3,6 +3,7 @@
 ## [0.5.8] - UNRELEASED
 
 - Fixed PBR bug when multilayer: false is defined
+- Fixed upgrade-shader not generating mipmaps
 
 ## [0.5.7] - 2025-09-05
 

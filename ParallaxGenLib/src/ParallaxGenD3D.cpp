@@ -3,8 +3,10 @@
 #include <DirectXTex.h>
 #include <algorithm>
 #include <comdef.h>
+#include <d3d11.h>
 #include <d3dcompiler.h>
 #include <spdlog/spdlog.h>
+#include <winnt.h>
 
 #include "ParallaxGenTask.hpp"
 #include "ParallaxGenUtil.hpp"
@@ -497,7 +499,7 @@ auto ParallaxGenD3D::upgradeToComplexMaterial(const std::filesystem::path &Paral
   }
   OutputTextureDesc.Width = ResultWidth;
   OutputTextureDesc.Height = ResultHeight;
-  OutputTextureDesc.MipLevels = 1;
+  OutputTextureDesc.MipLevels = 0;
   OutputTextureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
   OutputTextureDesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
 
@@ -506,6 +508,11 @@ auto ParallaxGenD3D::upgradeToComplexMaterial(const std::filesystem::path &Paral
   if (PGResult != ParallaxGenTask::PGResult::SUCCESS) {
     return {};
   }
+  // Query the texture's description to get the actual number of mip levels
+  D3D11_TEXTURE2D_DESC CreatedOutputTextureDesc = {};
+  OutputTexture->GetDesc(&CreatedOutputTextureDesc);
+  UINT ResultMips = CreatedOutputTextureDesc.MipLevels;
+
   ComPtr<ID3D11UnorderedAccessView> OutputUAV;
   PGResult = createUnorderedAccessView(OutputTexture, OutputUAV);
   if (PGResult != ParallaxGenTask::PGResult::SUCCESS) {
@@ -572,6 +579,31 @@ auto ParallaxGenD3D::upgradeToComplexMaterial(const std::filesystem::path &Paral
   EnvMapSRV.Reset();
   ConstantBuffer.Reset();
 
+  // Generate mips
+  D3D11_TEXTURE2D_DESC OutputTextureMipsDesc = {};
+  OutputTexture->GetDesc(&OutputTextureMipsDesc);
+  OutputTextureMipsDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+  OutputTextureMipsDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
+  ComPtr<ID3D11Texture2D> OutputTextureMips;
+  PGResult = createTexture2D(OutputTextureMipsDesc, OutputTextureMips);
+  if (PGResult != ParallaxGenTask::PGResult::SUCCESS) {
+    return {};
+  }
+  ComPtr<ID3D11ShaderResourceView> OutputMipsSRV;
+  PGResult = createShaderResourceView(OutputTextureMips, OutputMipsSRV);
+  if (PGResult != ParallaxGenTask::PGResult::SUCCESS) {
+    return {};
+  }
+
+  // Copy texture
+  PtrContext->CopyResource(OutputTextureMips.Get(), OutputTexture.Get());
+  PtrContext->GenerateMips(OutputMipsSRV.Get());
+  PtrContext->CopyResource(OutputTexture.Get(), OutputTextureMips.Get());
+
+  // cleanup
+  OutputTextureMips.Reset();
+  OutputMipsSRV.Reset();
+
   // Read back output buffer
   auto OutputBufferData = readBack<UINT>(OutputBuffer);
 
@@ -589,7 +621,7 @@ auto ParallaxGenD3D::upgradeToComplexMaterial(const std::filesystem::path &Paral
 
   // Import into directx scratchimage
   DirectX::ScratchImage OutputImage =
-      loadRawPixelsToScratchImage(OutputTextureData, ResultWidth, ResultHeight, DXGI_FORMAT_R8G8B8A8_UNORM);
+      loadRawPixelsToScratchImage(OutputTextureData, ResultWidth, ResultHeight, ResultMips, DXGI_FORMAT_R8G8B8A8_UNORM);
 
   // Compress DDS
   // BC3 works best with heightmaps
@@ -677,7 +709,7 @@ auto ParallaxGenD3D::createShaderResourceView(
   // Create SRV for texture
   D3D11_SHADER_RESOURCE_VIEW_DESC ShaderDesc = {};
   ShaderDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-  ShaderDesc.Texture2D.MipLevels = 1; // NOLINT
+  ShaderDesc.Texture2D.MipLevels = -1;  // NOLINT
 
   // Create SRV
   HR = PtrDevice->CreateShaderResourceView(Texture.Get(), &ShaderDesc, Dest.ReleaseAndGetAddressOf());
@@ -814,44 +846,54 @@ auto ParallaxGenD3D::readBack(const ComPtr<ID3D11Texture2D> &GPUResource,
   HRESULT HR{};
   ParallaxGenTask::PGResult PGResult{};
 
-  // grab edge detection results
+  // Grab texture description
   D3D11_TEXTURE2D_DESC StagingTex2DDesc;
   GPUResource->GetDesc(&StagingTex2DDesc);
+  UINT MipLevels = StagingTex2DDesc.MipLevels;  // Number of mip levels to read back
+
   // Enable flags for CPU access
   StagingTex2DDesc.Usage = D3D11_USAGE_STAGING;
   StagingTex2DDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
   StagingTex2DDesc.BindFlags = 0;
+  StagingTex2DDesc.MiscFlags = 0;
 
-  // create staging texture and copy resource
+  // Create staging texture
   ComPtr<ID3D11Texture2D> StagingTex2D;
   PGResult = createTexture2D(StagingTex2DDesc, StagingTex2D);
   if (PGResult != ParallaxGenTask::PGResult::SUCCESS) {
-    spdlog::debug("Failed to create staging texture: {}", getHRESULTErrorMessage(HR));
-    return {};
+      spdlog::debug("Failed to create staging texture: {}", getHRESULTErrorMessage(HR));
+      return {};
   }
 
-  // copy resource
+  // Copy resource to staging texture
   PtrContext->CopyResource(StagingTex2D.Get(), GPUResource.Get());
 
-  // map resource to CPU
-  D3D11_MAPPED_SUBRESOURCE MappedResource;
-  HR = PtrContext->Map(StagingTex2D.Get(), 0, D3D11_MAP_READ, 0, &MappedResource);
-  if (FAILED(HR)) {
-    spdlog::debug("[GPU] Failed to map resource to CPU during read back: {}", getHRESULTErrorMessage(HR));
-    return {};
+  std::vector<unsigned char> OutputData;
+
+  // Iterate over each mip level
+  for (UINT MipLevel = 0; MipLevel < MipLevels; ++MipLevel) {
+    // Get dimensions for the current mip level
+    UINT MipWidth = std::max(1U, StagingTex2DDesc.Width >> MipLevel);
+    UINT MipHeight = std::max(1U, StagingTex2DDesc.Height >> MipLevel);
+
+    // Map the mip level to the CPU
+    D3D11_MAPPED_SUBRESOURCE MappedResource;
+    HR = PtrContext->Map(StagingTex2D.Get(), MipLevel, D3D11_MAP_READ, 0, &MappedResource);
+    if (FAILED(HR)) {
+        spdlog::debug("[GPU] Failed to map resource to CPU during read back at mip level {}: {}", MipLevel, getHRESULTErrorMessage(HR));
+        return {};
+    }
+
+    // Copy the data from the mapped resource to the output vector
+    auto *SrcData = reinterpret_cast<unsigned char*>(MappedResource.pData);
+    for (UINT Row = 0; Row < MipHeight; ++Row) {
+        unsigned char* RowStart = SrcData + Row * MappedResource.RowPitch;  // NOLINT
+        OutputData.insert(OutputData.end(), RowStart, RowStart + MipWidth * Channels);  // NOLINT
+    }
+
+    // Unmap the resource for this mip level
+    PtrContext->Unmap(StagingTex2D.Get(), MipLevel);
   }
-
-  // Access the texture data from MappedResource.pData
-  // TODO auto detect # of channels?
-  size_t DataSize =
-      static_cast<size_t>(StagingTex2DDesc.Width) * static_cast<size_t>(StagingTex2DDesc.Height) * Channels;
-
-  std::vector<unsigned char> OutputData(reinterpret_cast<unsigned char *>(MappedResource.pData),
-                                        reinterpret_cast<unsigned char *>(MappedResource.pData) + // NOLINT
-                                            DataSize);                                            // NOLINT
-
-  // Cleaup
-  PtrContext->Unmap(StagingTex2D.Get(), 0); // cleanup map
 
   StagingTex2D.Reset();
 
@@ -989,11 +1031,11 @@ auto ParallaxGenD3D::getDDSMetadata(const filesystem::path &DDSPath,
 
 DirectX::ScratchImage ParallaxGenD3D::loadRawPixelsToScratchImage(const vector<unsigned char> &RawPixels,
                                                                   const size_t &Width, const size_t &Height,
-                                                                  DXGI_FORMAT Format) {
+                                                                  const size_t &Mips, DXGI_FORMAT Format) {
   // Initialize a ScratchImage
   DirectX::ScratchImage Image;
   HRESULT HR = Image.Initialize2D(Format, Width, Height, 1,
-                                  1); // 1 array slice, 1 mipmap level
+                                  Mips); // 1 array slice, 1 mipmap level
   if (FAILED(HR)) {
     spdlog::debug("Failed to initialize ScratchImage: {}", getHRESULTErrorMessage(HR));
     return {};
