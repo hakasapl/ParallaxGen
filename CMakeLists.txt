@@ -26,6 +26,9 @@ set(PARALLAXGEN_VERSION 0.5.8)
 project(${PROJECT_NAME} VERSION ${PARALLAXGEN_VERSION})
 add_compile_definitions(PARALLAXGEN_VERSION="${PARALLAXGEN_VERSION}")
 
+# Set test version (set this to 0 for prod releases)
+add_compile_definitions(PARALLAXGEN_TEST_VERSION=1)
+
 # Setup Folders
 set(EXTRN_BUILD_DIR ${CMAKE_BINARY_DIR}/external/blds)
 set(EXTRN_INSTALL_DIR ${CMAKE_BINARY_DIR}/external/installed)
