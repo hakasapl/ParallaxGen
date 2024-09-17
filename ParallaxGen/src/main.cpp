@@ -93,6 +93,12 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   // Welcome Message
   spdlog::info("Welcome to ParallaxGen version {}!", PARALLAXGEN_VERSION);
 
+  // Test message if required
+  if (PARALLAXGEN_TEST_VERSION > 0) {
+    spdlog::warn("This is an EXPERIMENTAL development build of ParallaxGen: {} Test Build {}", PARALLAXGEN_VERSION,
+                 PARALLAXGEN_TEST_VERSION);
+  }
+
   // Print configuration parameters
   spdlog::debug("Configuration Parameters:\n\n{}\n", Args.getString());
 

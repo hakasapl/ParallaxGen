@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <map>
 #include <nlohmann/json.hpp>
+#include <unordered_map>
 #include <vector>
 
 #include "NIFUtil.hpp"
@@ -30,6 +31,9 @@ private:
     }
   };
 
+  // Set that stores already matched texture sets
+  std::unordered_map<uint32_t, std::map<size_t, std::tuple<nlohmann::json, std::string>>> MatchedTextureSets;
+
 public:
   static auto getTruePBRConfigs() -> std::map<size_t, nlohmann::json> &;
   static auto getPathLookupJSONs() -> std::map<size_t, nlohmann::json> &;
@@ -43,7 +47,7 @@ public:
   static void loadPatcherBuffers(const std::vector<std::filesystem::path> &PBRJSONs, ParallaxGenDirectory *PGD);
 
   // check if truepbr should be enabled on shape
-  auto shouldApply(const uint32_t &ShapeBlockID, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes,
+  auto shouldApply(nifly::NiShape *NIFShape, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes,
                    bool &EnableResult,
                    std::map<size_t, std::tuple<nlohmann::json, std::wstring>> &TruePBRData) -> ParallaxGenTask::PGResult;
 

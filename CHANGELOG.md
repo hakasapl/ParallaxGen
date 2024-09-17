@@ -2,6 +2,9 @@
 
 ## [0.5.8] - UNRELEASED
 
+- Fixed PBR bug when multilayer: false is defined
+- Fixed upgrade-shader not generating mipmaps
+- Fixed PBR bug with duplicate texture sets
 - New method for mapping textures to types
 
 ## [0.5.7] - 2025-09-05

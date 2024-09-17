@@ -134,7 +134,7 @@ private:
   auto getDDSMetadata(const std::filesystem::path &DDSPath, DirectX::TexMetadata &DDSMeta) -> ParallaxGenTask::PGResult;
 
   static auto loadRawPixelsToScratchImage(const std::vector<unsigned char> &RawPixels, const size_t &Width,
-                                          const size_t &Height, DXGI_FORMAT Format) -> DirectX::ScratchImage;
+                                          const size_t &Height, const size_t &Mips, DXGI_FORMAT Format) -> DirectX::ScratchImage;
 
   static auto isPowerOfTwo(unsigned int X) -> bool;
 };

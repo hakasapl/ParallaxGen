@@ -390,7 +390,7 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
     bool EnableTruePBR = false;
     map<size_t, tuple<nlohmann::json, wstring>> TruePBRData;
     ParallaxGenTask::updatePGResult(Result,
-                                    PatchTPBR.shouldApply(ShapeBlockID, SearchPrefixes, EnableTruePBR, TruePBRData),
+                                    PatchTPBR.shouldApply(NIFShape, SearchPrefixes, EnableTruePBR, TruePBRData),
                                     ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
     if (EnableTruePBR) {
       // Enable TruePBR on shape
