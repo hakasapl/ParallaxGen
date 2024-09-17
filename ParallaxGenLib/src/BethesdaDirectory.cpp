@@ -74,7 +74,7 @@ void BethesdaDirectory::populateFileMap(bool IncludeBSAs) {
   addLooseFilesToMap();
 }
 
-auto BethesdaDirectory::getFileMap() const -> map<filesystem::path, BethesdaDirectory::BethesdaFile> { return FileMap; }
+auto BethesdaDirectory::getFileMap() const -> const map<filesystem::path, BethesdaDirectory::BethesdaFile>& { return FileMap; }
 
 auto BethesdaDirectory::getFile(const filesystem::path &RelPath) const -> vector<std::byte> {
   // find bsa/loose file to open

@@ -8,6 +8,7 @@
 #include <spdlog/spdlog.h>
 #include <winnt.h>
 
+#include "NIFUtil.hpp"
 #include "ParallaxGenTask.hpp"
 #include "ParallaxGenUtil.hpp"
 
@@ -20,25 +21,27 @@ ParallaxGenD3D::ParallaxGenD3D(ParallaxGenDirectory *PGD, filesystem::path Outpu
     : PGD(PGD), OutputDir(std::move(OutputDir)), ExePath(std::move(ExePath)), UseGPU(UseGPU) {}
 
 auto ParallaxGenD3D::findCMMaps() -> ParallaxGenTask::PGResult {
-  const auto &EnvMasks = PGD->getComplexMaterialMaps();
+  auto &EnvMasks = PGD->getTextureMap(NIFUtil::TextureSlots::EnvMask);
 
   ParallaxGenTask::PGResult PGResult = ParallaxGenTask::PGResult::SUCCESS;
   vector<filesystem::path> ComplexMaterialMaps;
 
   // loop through maps
-  for (const auto &EnvMask : EnvMasks) {
+  size_t NumCMMaps = 0;
+  for (auto &EnvMask : EnvMasks) {
     bool Result = false;
-    ParallaxGenTask::updatePGResult(PGResult, checkIfCM(EnvMask, Result),
+    ParallaxGenTask::updatePGResult(PGResult, checkIfCM(EnvMask.second.Path, Result),
                                     ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
 
     if (Result) {
-      ComplexMaterialMaps.push_back(EnvMask);
-      spdlog::debug(L"Found File: {}", EnvMask.wstring());
+      // TODO we need to fill in alpha for non-CM stuff
+      EnvMask.second.Type = NIFUtil::PGTextureType::COMPLEXMATERIAL;
+      NumCMMaps++;
+      spdlog::debug(L"Found File: {}", EnvMask.second.Path.wstring());
     }
   }
 
-  PGD->setComplexMaterialMaps(ComplexMaterialMaps);
-  spdlog::info("Found {} complex material maps", ComplexMaterialMaps.size());
+  spdlog::info("Found {} complex material maps", NumCMMaps);
   return ParallaxGenTask::PGResult::SUCCESS;
 }
 

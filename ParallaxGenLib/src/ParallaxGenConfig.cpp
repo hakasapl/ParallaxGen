@@ -245,7 +245,7 @@ void ParallaxGenConfig::loadConfig(const bool &LoadNative) {
   }
 
   // loop through PGConfigPaths (in load order)
-  for (const auto &PGConfigFile : PGD->getPGConfigs()) {
+  for (const auto &PGConfigFile : PGD->getPGJSONs()) {
     spdlog::debug(L"Loading ParallaxGen Config: {}", PGConfigFile.wstring());
     try {
       const auto J = nlohmann::json::parse(PGD->getFile(PGConfigFile));

@@ -1,11 +1,22 @@
 #include "ParallaxGenDirectory.hpp"
 
 #include <DirectXTex.h>
+#include <NifFile.hpp>
+#include <Shaders.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/asio.hpp>
+#include <boost/thread.hpp>
+#include <filesystem>
+#include <mutex>
 #include <spdlog/spdlog.h>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
 
 #include "NIFUtil.hpp"
+#include "ParallaxGenTask.hpp"
 #include "ParallaxGenUtil.hpp"
 
 using namespace std;
@@ -13,181 +24,335 @@ using namespace ParallaxGenUtil;
 
 ParallaxGenDirectory::ParallaxGenDirectory(BethesdaGame BG) : BethesdaDirectory(BG, true) {}
 
-auto ParallaxGenDirectory::getTruePBRConfigFilenameFields() -> vector<string> {
-  static const vector<string> PGConfigFilenameFields = {"match_normal", "match_diffuse", "rename"};
-  return PGConfigFilenameFields;
-}
+auto ParallaxGenDirectory::findPGFiles(const bool &MapFromMeshes) -> void {
+  mutex UnconfirmedTexturesMutex;
+  unordered_map<filesystem::path, UnconfirmedTextureProperty> UnconfirmedTextures;
+  unordered_set<filesystem::path> UnconfirmedMeshes;
 
-auto ParallaxGenDirectory::getConfigPath() -> wstring {
-  static const wstring PGConfPath = L"parallaxgen";
-  return PGConfPath;
-}
+  spdlog::info("Starting building texture map");
 
-auto ParallaxGenDirectory::getDefaultCubemapPath() -> filesystem::path {
-  static const filesystem::path DefCubemapPath = "textures\\cubemaps\\dynamic1pxcubemap_black.dds";
-  return DefCubemapPath;
-}
-
-void ParallaxGenDirectory::findHeightMaps(const vector<wstring> &Allowlist, const vector<wstring> &Blocklist,
-                                          const vector<wstring> &ArchiveBlocklist) {
-  // find height maps
-  spdlog::info("Finding parallax height maps");
-  // Find heightmaps
-  HeightMaps = findFiles(true, Allowlist, Blocklist, ArchiveBlocklist, true, false);
-  sort(HeightMaps.begin(), HeightMaps.end());
-  spdlog::info("Found {} height maps", HeightMaps.size());
-}
-
-void ParallaxGenDirectory::findComplexMaterialMaps(const vector<wstring> &Allowlist, const vector<wstring> &Blocklist,
-                                                   const vector<wstring> &ArchiveBlocklist) {
-  spdlog::info("Finding complex material maps");
-  // find complex material maps
-  // TODO find a way to have downstream stuff edit this directly instead of replacement
-  ComplexMaterialMaps = findFiles(true, Allowlist, Blocklist, ArchiveBlocklist, false, false);
-  sort(ComplexMaterialMaps.begin(), ComplexMaterialMaps.end());
-  // No conclusion because this is affected by D3D later
-}
-
-void ParallaxGenDirectory::findMeshes(const vector<wstring> &Allowlist, const vector<wstring> &Blocklist,
-                                      const vector<wstring> &ArchiveBlocklist) {
-  // find Meshes
-  spdlog::info("Finding Meshes");
-  Meshes = findFiles(true, Allowlist, Blocklist, ArchiveBlocklist, true, false);
-  spdlog::info("Found {} Meshes", Meshes.size());
-}
-
-void ParallaxGenDirectory::findTruePBRConfigs(const vector<wstring> &Allowlist, const vector<wstring> &Blocklist,
-                                              const vector<wstring> &ArchiveBlocklist) {
-  // Find True PBR Configs
-  spdlog::info("Finding TruePBR Configs");
-  auto ConfigFiles = findFiles(true, Allowlist, Blocklist, ArchiveBlocklist, true, false);
-
-  // loop through and parse Configs
-  size_t ConfigOrder = 0;
-  for (auto &Config : ConfigFiles) {
-    // check if Config is valid
-    auto ConfigFileBytes = getFile(Config);
-    string ConfigFileStr(reinterpret_cast<const char *>(ConfigFileBytes.data()), ConfigFileBytes.size());
-
-    try {
-      nlohmann::json J = nlohmann::json::parse(ConfigFileStr);
-      // loop through each Element
-      for (auto &Element : J) {
-        // Preprocessing steps here
-        if (Element.contains("texture")) {
-          Element["match_diffuse"] = Element["texture"];
-        }
-
-        Element["json"] = Config.string();
-
-        // loop through filename Fields
-        for (const auto &Field : getTruePBRConfigFilenameFields()) {
-          if (Element.contains(Field) && !boost::istarts_with(Element[Field].get<string>(), "\\")) {
-            Element[Field] = Element[Field].get<string>().insert(0, 1, '\\');
-          }
-        }
-
-        spdlog::trace("TruePBR Config {} Loaded: {}", ConfigOrder, Element.dump());
-        TruePBRConfigs[ConfigOrder++] = Element;
+  // Populate unconfirmed maps
+  spdlog::info("Finding relevant files");
+  const auto &FileMap = getFileMap();
+  for (const auto &[Path, File] : FileMap) {
+    if (boost::iequals(Path.extension().wstring(), L".dds")) {
+      // Found a DDS
+      UnconfirmedTextures[Path] = {};
+    } else if (boost::iequals(Path.extension().wstring(), L".nif")) {
+      // Found a NIF
+      UnconfirmedMeshes.insert(Path);
+    } else if (boost::iequals(Path.extension().wstring(), L".json")) {
+      // Found a JSON file
+      const auto &FirstPath = Path.begin()->wstring();
+      if (boost::iequals(FirstPath, L"pbrnifpatcher")) {
+        // Found PBR JSON config
+        PBRJSONs.push_back(Path);
+      } else if (boost::iequals(FirstPath, L"parallaxgen")) {
+        // Found ParallaxGen JSON config TODO
+        PGJSONs.push_back(Path);
       }
-    } catch (nlohmann::json::parse_error &E) {
-      spdlog::error(L"Unable to parse TruePBR Config file {}: {}", Config.wstring(), stringToWstring(E.what()));
-      continue;
     }
   }
 
-  spdlog::info("Found {} TruePBR entries", TruePBRConfigs.size());
-}
+  // TODO blacklisting
+  // TODO config processing
+  // TODO task tracker should have option to print only every 10% or something
+  if (MapFromMeshes) {
+    // Create task tracker
+    ParallaxGenTask TaskTracker("Mapping Textures", UnconfirmedMeshes.size());
 
-void ParallaxGenDirectory::findPGConfigs() {
-  // find PGConfigs
-  spdlog::info("Finding ParallaxGen configs in load order");
-  PGConfigs = findFiles(true, {getConfigPath() + L"\\**.json"});
-  spdlog::info("Found {} ParallaxGen configs in load order", PGConfigs.size());
-}
+    // Create thread pool
+    size_t NumThreads = boost::thread::hardware_concurrency();
+    boost::asio::thread_pool MapTextureFromMeshPool(NumThreads);
 
-void ParallaxGenDirectory::buildBaseMaps(const vector<vector<string>> &Suffixes) {
-  buildBaseMap(HeightMapsBases, HeightMaps, Suffixes[static_cast<int>(NIFUtil::TextureSlots::Parallax)]);
-  buildBaseMap(ComplexMaterialMapsBases, ComplexMaterialMaps,
-               Suffixes[static_cast<int>(NIFUtil::TextureSlots::EnvMask)]);
-}
+    spdlog::info("Reading meshes to match textures to slots");
+    // Loop through each mesh to confirm textures
+    for (const auto &Mesh : UnconfirmedMeshes) {
+      boost::asio::post(
+          MapTextureFromMeshPool, [this, &TaskTracker, &Mesh, &UnconfirmedTextures, &UnconfirmedTexturesMutex] {
+            TaskTracker.completeJob(mapTexturesFromNIF(Mesh, UnconfirmedTextures, UnconfirmedTexturesMutex));
+          });
+    }
 
-void ParallaxGenDirectory::buildBaseMap(map<string, filesystem::path> &BaseMap, vector<filesystem::path> &Files,
-                                        const vector<string> &Suffixes) {
-  // Create base vector
-  for (const auto &Elem : Files) {
-    string ElemStr = Elem.string();
+    // Wait for all threads to complete
+    MapTextureFromMeshPool.join();
 
-    auto ElemBase = NIFUtil::getTexBase(ElemStr, Suffixes);
-    BaseMap[ElemBase] = Elem;
+    // TODO also check TXST sets here when mapping textures
+  } else {
+    // Confirm everything because there is no way to check
+    Meshes.insert(UnconfirmedMeshes.begin(), UnconfirmedMeshes.end());
+  }
+
+  // Loop through unconfirmed textures to confirm them
+  for (const auto &[Texture, Property] : UnconfirmedTextures) {
+    bool FoundInstance = false;
+
+    // Find winning texture slot
+    size_t MaxVal = 0;
+    NIFUtil::TextureSlots WinningSlot = {};
+    for (const auto &[Slot, Count] : Property.Slots) {
+      FoundInstance = true;
+      if (Count > MaxVal) {
+        MaxVal = Count;
+        WinningSlot = Slot;
+      }
+    }
+
+    // Find winning texture type
+    MaxVal = 0;
+    NIFUtil::PGTextureType WinningType = {};
+    for (const auto &[Type, Count] : Property.Types) {
+      FoundInstance = true;
+      if (Count > MaxVal) {
+        MaxVal = Count;
+        WinningType = Type;
+      }
+    }
+
+    if (!FoundInstance) {
+      // Determine slot and type by suffix
+      const auto DefProperty = NIFUtil::getDefaultsFromSuffix(Texture);
+      WinningSlot = get<0>(DefProperty);
+      WinningType = get<1>(DefProperty);
+    }
+
+    // Log result
+    spdlog::trace(L"Mapping Textures | Mapping Result | Texture: {} | Slot: {} | Type: {}", Texture.wstring(),
+                  static_cast<size_t>(WinningSlot), stringToWstring(NIFUtil::getTextureTypeStr(WinningType)));
+
+    // Add to texture map
+    addToTextureMaps(Texture, WinningSlot, WinningType);
   }
 }
 
-void ParallaxGenDirectory::addHeightMap(const filesystem::path &Path, const string &Base) {
-  filesystem::path PathLower = getPathLower(Path);
+auto ParallaxGenDirectory::mapTexturesFromNIF(
+    const filesystem::path &NIFPath, unordered_map<filesystem::path, UnconfirmedTextureProperty> &UnconfirmedTextures,
+    mutex &UnconfirmedTexturesMutex) -> ParallaxGenTask::PGResult {
+  auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
-  // add to vector
-  HeightMaps.push_back(PathLower);
-  sort(HeightMaps.begin(), HeightMaps.end());
+  // Load NIF
+  const auto &NIFBytes = getFile(NIFPath);
+  NifFile NIF;
+  try {
+    // Attempt to load NIF file
+    NIF = NIFUtil::loadNIFFromBytes(NIFBytes);
+  } catch (const exception &E) {
+    // Unable to read NIF, delete from Meshes set
+    spdlog::error(L"Error reading NIF File \"{}\" (skipping): {}", NIFPath.wstring(), stringToWstring(E.what()));
+    return ParallaxGenTask::PGResult::FAILURE;
+  }
 
-  // add to base vector
-  HeightMapsBases[Base] = PathLower;
+  // Loop through each shape
+  bool HasAtLeastOneTextureSet = false;
+  for (auto &Shape : NIF.GetShapes()) {
+    if (!Shape->HasShaderProperty()) {
+      // No shader, skip
+      continue;
+    }
+
+    // Get shader
+    const auto &Shader = NIF.GetShader(Shape);
+
+    if (!Shader->HasTextureSet()) {
+      // No texture set, skip
+      continue;
+    }
+
+    // We have a texture set
+    HasAtLeastOneTextureSet = true;
+
+    // Loop through each texture slot
+    for (uint32_t Slot = 0; Slot < NUM_TEXTURE_SLOTS; Slot++) {
+      string Texture;
+      NIF.GetTextureSlot(Shape, Texture, Slot);
+      boost::to_lower(Texture); // Lowercase for comparison
+
+      if (Texture.empty()) {
+        // No texture in this slot
+        continue;
+      }
+
+      const auto ShaderType = Shader->GetShaderType();
+      NIFUtil::PGTextureType TextureType = {};
+
+      // Check to make sure appropriate shaders are set for a given texture
+      auto *const ShaderBSSP = dynamic_cast<BSShaderProperty *>(Shader);
+      switch (static_cast<NIFUtil::TextureSlots>(Slot)) {
+      case NIFUtil::TextureSlots::Diffuse:
+        // Diffuse check
+        TextureType = NIFUtil::PGTextureType::DIFFUSE;
+        break;
+      case NIFUtil::TextureSlots::Normal:
+        // Normal check
+        if (ShaderType == BSLSP_SKINTINT && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF1_FACEGEN_RGB_TINT)) {
+          // This is a skin tint map
+          TextureType = NIFUtil::PGTextureType::MODELSPACENORMAL;
+          break;
+        }
+
+        TextureType = NIFUtil::PGTextureType::NORMAL;
+        break;
+      case NIFUtil::TextureSlots::Glow:
+        // Glowmap check
+        if ((ShaderType == BSLSP_GLOWMAP && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF2_GLOW_MAP)) ||
+            (ShaderType == BSLSP_DEFAULT && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF2_UNUSED01))) {
+          // This is an emmissive map (either vanilla glowmap shader or PBR)
+          TextureType = NIFUtil::PGTextureType::EMISSIVE;
+          break;
+        }
+
+        if (ShaderType == BSLSP_MULTILAYERPARALLAX && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF2_MULTI_LAYER_PARALLAX)) {
+          // This is a subsurface map
+          TextureType = NIFUtil::PGTextureType::SUBSURFACE;
+          break;
+        }
+
+        if (ShaderType == BSLSP_SKINTINT && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF1_FACEGEN_RGB_TINT)) {
+          // This is a skin tint map
+          TextureType = NIFUtil::PGTextureType::SKINTINT;
+          break;
+        }
+
+        continue;
+      case NIFUtil::TextureSlots::Parallax:
+        // Parallax check
+        if ((ShaderType == BSLSP_DEFAULT && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF1_PARALLAX)) ||
+            (ShaderType == BSLSP_DEFAULT && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF2_UNUSED01))) {
+          // This is a height map
+          TextureType = NIFUtil::PGTextureType::HEIGHT;
+          break;
+        }
+
+        continue;
+      case NIFUtil::TextureSlots::Cubemap:
+        // Cubemap check
+        if (ShaderType == BSLSP_ENVMAP && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF1_ENVIRONMENT_MAPPING)) {
+          TextureType = NIFUtil::PGTextureType::CUBEMAP;
+          break;
+        }
+
+        continue;
+      case NIFUtil::TextureSlots::EnvMask:
+        // Envmap check
+        if (ShaderType == BSLSP_ENVMAP && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF1_ENVIRONMENT_MAPPING)) {
+          TextureType = NIFUtil::PGTextureType::ENVIRONMENTMASK;
+          break;
+        }
+
+        if (ShaderType == BSLSP_DEFAULT && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF2_UNUSED01)) {
+          TextureType = NIFUtil::PGTextureType::RMAOS;
+          break;
+        }
+
+        continue;
+      case NIFUtil::TextureSlots::Tint:
+        // Tint check
+        if (ShaderType == BSLSP_MULTILAYERPARALLAX && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF2_MULTI_LAYER_PARALLAX)) {
+          if (NIFUtil::hasShaderFlag(ShaderBSSP, SLSF2_UNUSED01)) {
+            // 2 layer PBR
+            TextureType = NIFUtil::PGTextureType::COATNORMAL;
+          } else {
+            // normal multilayer
+            TextureType = NIFUtil::PGTextureType::INNERLAYER;
+          }
+          break;
+        }
+
+        continue;
+      case NIFUtil::TextureSlots::Backlight:
+        // Backlight check
+        if (ShaderType == BSLSP_MULTILAYERPARALLAX && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF2_UNUSED01)) {
+          // TODO verify this
+          TextureType = NIFUtil::PGTextureType::SUBSURFACE;
+          break;
+        }
+
+        if (NIFUtil::hasShaderFlag(ShaderBSSP, SLSF2_BACK_LIGHTING)) {
+          TextureType = NIFUtil::PGTextureType::BACKLIGHT;
+          break;
+        }
+
+        if (ShaderType == BSLSP_SKINTINT && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF1_FACEGEN_RGB_TINT)) {
+          TextureType = NIFUtil::PGTextureType::SPECULAR;
+          break;
+        }
+
+        continue;
+      default:
+        TextureType = NIFUtil::PGTextureType::DIFFUSE;
+      }
+
+      // Log finding
+      spdlog::trace(L"Mapping Textures | Slot Found | NIF: {} | Texture: {} | Slot: {} | Type: {}", NIFPath.wstring(),
+                    stringToWstring(Texture), Slot, stringToWstring(NIFUtil::getTextureTypeStr(TextureType)));
+
+      // Update unconfirmed textures map
+      updateUnconfirmedTexturesMap(Texture, static_cast<NIFUtil::TextureSlots>(Slot), TextureType, UnconfirmedTextures,
+                                   UnconfirmedTexturesMutex);
+    }
+  }
+
+  if (HasAtLeastOneTextureSet) {
+    // Add mesh to set
+    addMesh(NIFPath);
+  }
+
+  return Result;
 }
 
-void ParallaxGenDirectory::addComplexMaterialMap(const filesystem::path &Path, const string &Base) {
-  filesystem::path PathLower = getPathLower(Path);
+auto ParallaxGenDirectory::updateUnconfirmedTexturesMap(
+    const filesystem::path &Path, const NIFUtil::TextureSlots &Slot, const NIFUtil::PGTextureType &Type,
+    unordered_map<filesystem::path, UnconfirmedTextureProperty> &UnconfirmedTextures, mutex &Mutex) -> void {
+  // Use mutex to make this thread safe
+  lock_guard<mutex> Lock(Mutex);
 
-  // add to vector
-  ComplexMaterialMaps.push_back(PathLower);
-  sort(ComplexMaterialMaps.begin(), ComplexMaterialMaps.end());
-
-  // add to base vector
-  ComplexMaterialMapsBases[Base] = PathLower;
+  // Check if texture is already in map
+  if (UnconfirmedTextures.find(Path) != UnconfirmedTextures.end()) {
+    // Texture is present
+    UnconfirmedTextures[Path].Slots[Slot]++;
+    UnconfirmedTextures[Path].Types[Type]++;
+  }
 }
 
-void ParallaxGenDirectory::addMesh(const filesystem::path &Path) {
-  filesystem::path PathLower = getPathLower(Path);
+auto ParallaxGenDirectory::addToTextureMaps(const filesystem::path &Path, const NIFUtil::TextureSlots &Slot,
+                                            const NIFUtil::PGTextureType &Type) -> void {
+  // Use mutex to make this thread safe
+  lock_guard<mutex> Lock(TextureMapsMutex);
 
-  // add to vector
-  addUniqueElement(Meshes, PathLower);
+  // Get texture base
+  const auto &Base = NIFUtil::getTexBase(Path);
+  const auto &SlotInt = static_cast<size_t>(Slot);
+
+  // Check if texture is already in map
+  if (TextureMaps[SlotInt].find(Base) != TextureMaps[SlotInt].end()) {
+    // Texture already exists
+    spdlog::warn(L"Texture {} already exists in map in slot {}, replacing. This might cause issues.", Base, SlotInt);
+  }
+
+  // Add to texture map
+  NIFUtil::PGTexture NewPGTexture = {Path, Type};
+  TextureMaps[SlotInt][Base] = NewPGTexture;
 }
 
-void ParallaxGenDirectory::setHeightMaps(const vector<filesystem::path> &Paths) { HeightMaps = Paths; }
+auto ParallaxGenDirectory::addMesh(const filesystem::path &Path) -> void {
+  // Use mutex to make this thread safe
+  lock_guard<mutex> Lock(MeshesMutex);
 
-void ParallaxGenDirectory::setComplexMaterialMaps(const vector<filesystem::path> &Paths) {
-  ComplexMaterialMaps = Paths;
+  // Add mesh to set
+  Meshes.insert(Path);
 }
 
-void ParallaxGenDirectory::setMeshes(const vector<filesystem::path> &Paths) { Meshes = Paths; }
-
-auto ParallaxGenDirectory::isHeightMap(const filesystem::path &Path) const -> bool {
-  return find(HeightMaps.begin(), HeightMaps.end(), getPathLower(Path)) != HeightMaps.end();
+auto ParallaxGenDirectory::getTextureMap(const NIFUtil::TextureSlots &Slot) -> map<wstring, NIFUtil::PGTexture> & {
+  return TextureMaps[static_cast<size_t>(Slot)];
 }
 
-auto ParallaxGenDirectory::isComplexMaterialMap(const filesystem::path &Path) const -> bool {
-  return find(ComplexMaterialMaps.begin(), ComplexMaterialMaps.end(), getPathLower(Path)) != ComplexMaterialMaps.end();
+auto ParallaxGenDirectory::getTextureMapConst(const NIFUtil::TextureSlots &Slot) const
+    -> const map<wstring, NIFUtil::PGTexture> & {
+  return TextureMaps[static_cast<size_t>(Slot)];
 }
 
-auto ParallaxGenDirectory::isMesh(const filesystem::path &Path) const -> bool {
-  return find(Meshes.begin(), Meshes.end(), getPathLower(Path)) != Meshes.end();
-}
+auto ParallaxGenDirectory::getMeshes() const -> const unordered_set<filesystem::path> & { return Meshes; }
 
-auto ParallaxGenDirectory::defCubemapExists() -> bool { return isFile(getDefaultCubemapPath()); }
+auto ParallaxGenDirectory::getPBRJSONs() const -> const vector<filesystem::path> & { return PBRJSONs; }
 
-auto ParallaxGenDirectory::getHeightMaps() const -> const vector<filesystem::path> & { return HeightMaps; }
-auto ParallaxGenDirectory::getHeightMapsBases() const -> const map<string, filesystem::path> & {
-  return HeightMapsBases;
-}
-
-auto ParallaxGenDirectory::getComplexMaterialMaps() const -> const vector<filesystem::path> & {
-  return ComplexMaterialMaps;
-}
-auto ParallaxGenDirectory::getComplexMaterialMapsBases() const -> const map<string, filesystem::path> & {
-  return ComplexMaterialMapsBases;
-}
-
-auto ParallaxGenDirectory::getMeshes() const -> const vector<filesystem::path> & { return Meshes; }
-
-auto ParallaxGenDirectory::getTruePBRConfigs() const -> const map<size_t, nlohmann::json> & { return TruePBRConfigs; }
-
-auto ParallaxGenDirectory::getPGConfigs() const -> const vector<filesystem::path> & { return PGConfigs; }
+auto ParallaxGenDirectory::getPGJSONs() const -> const vector<filesystem::path> & { return PGJSONs; }

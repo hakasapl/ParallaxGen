@@ -56,9 +56,6 @@ public:
   [[nodiscard]] static auto getDiffJSONName() -> std::filesystem::path;
 
 private:
-  void patchMeshBatch(const std::vector<std::filesystem::path> &Meshes, const size_t &Start, const size_t &End,
-                      ParallaxGenTask &TaskTracker, nlohmann::json &DiffJSON);
-
   // thread safe JSON update
   std::mutex JSONUpdateMutex;
   void threadSafeJSONUpdate(const std::function<void(nlohmann::json &)> &Operation, nlohmann::json &DiffJSON);

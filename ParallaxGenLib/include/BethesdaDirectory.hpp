@@ -84,7 +84,7 @@ public:
    *
    * @return std::map<std::filesystem::path, BethesdaFile>
    */
-  [[nodiscard]] auto getFileMap() const -> std::map<std::filesystem::path, BethesdaFile>;
+  [[nodiscard]] auto getFileMap() const -> const std::map<std::filesystem::path, BethesdaFile>&;
 
   /**
    * @brief Get the data directory path
