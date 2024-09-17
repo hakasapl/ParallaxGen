@@ -21,200 +21,28 @@ auto ParallaxGenConfig::getConfigValidation() -> nlohmann::json {
     "title": "parallaxgen-cfg",
     "type": "object",
     "properties": {
-      "parallax_lookup": {
-        "type": "object",
-        "properties": {
-          "allowlist": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": ".*\\.dds$"
-            }
-          },
-          "blocklist": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "archive_blocklist": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": "^[^\\/\\\\]*$"
-            }
-          }
-        },
-        "required": [
-          "allowlist",
-          "blocklist",
-          "archive_blocklist"
-        ]
-      },
-      "parallax_processing": {
-        "type": "object",
-        "properties": {
-          "lookup_order": {
-            "type": "array",
-            "items": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 8
-            }
-          }
-        },
-        "required": [
-          "lookup_order"
-        ]
-      },
-      "complexmaterial_lookup": {
-        "type": "object",
-        "properties": {
-          "allowlist": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": ".*\\.dds$"
-            }
-          },
-          "blocklist": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "archive_blocklist": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": "^[^\\/\\\\]*$"
-            }
-          }
-        },
-        "required": [
-          "allowlist",
-          "blocklist",
-          "archive_blocklist"
-        ]
-      },
-      "complexmaterial_processing": {
-        "type": "object",
-        "properties": {
-          "lookup_order": {
-            "type": "array",
-            "items": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 8
-            }
-          },
-          "dyncubemap_blocklist": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "lookup_order",
-          "dyncubemap_blocklist"
-        ]
-      },
-      "truepbr_cfg_lookup": {
-        "type": "object",
-        "properties": {
-          "allowlist": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": ".*\\.json$"
-            }
-          },
-          "blocklist": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "archive_blocklist": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": "^[^\\/\\\\]*$"
-            }
-          }
-        },
-        "required": [
-          "allowlist",
-          "blocklist",
-          "archive_blocklist"
-        ]
-      },
-      "truepbr_cfg_processing": {
-        "type": "object",
-        "properties": {
-          "lookup_order": {
-            "type": "array",
-            "items": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 8
-            }
-          }
-        },
-        "required": [
-          "lookup_order"
-        ]
-      },
-      "nif_lookup": {
-        "type": "object",
-        "properties": {
-          "allowlist": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": ".*\\.nif$"
-            }
-          },
-          "blocklist": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "archive_blocklist": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": "^[^\\/\\\\]*$"
-            }
-          }
-        },
-        "required": [
-          "allowlist",
-          "blocklist",
-          "archive_blocklist"
-        ]
-      },
-      "suffixes": {
+      "dyncubemap_blocklist": {
         "type": "array",
         "items": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
+          "type": "string"
+        }
+      },
+      "nif_blocklist": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "texture_map": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string"
         }
       }
     },
     "required": [
-      "parallax_lookup",
-      "parallax_processing",
-      "complexmaterial_lookup",
-      "complexmaterial_processing",
-      "truepbr_cfg_lookup",
-      "truepbr_cfg_processing",
-      "nif_lookup",
-      "suffixes"
+      "nif_blocklist",
+      "texture_map"
     ]
   }
   )"_json;
@@ -276,14 +104,6 @@ void ParallaxGenConfig::loadConfig(const bool &LoadNative) {
 }
 
 auto ParallaxGenConfig::getConfig() const -> const nlohmann::json & { return PGConfig; }
-
-auto ParallaxGenConfig::getSuffix(const unsigned int &Slot) const -> vector<string> {
-  if (Slot >= CfgSuffixes.size()) {
-    return {};
-  }
-
-  return CfgSuffixes[Slot];
-}
 
 auto ParallaxGenConfig::validateConfig() -> bool {
   // Validate PGConfig against schema

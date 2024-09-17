@@ -21,10 +21,9 @@ ParallaxGenD3D::ParallaxGenD3D(ParallaxGenDirectory *PGD, filesystem::path Outpu
     : PGD(PGD), OutputDir(std::move(OutputDir)), ExePath(std::move(ExePath)), UseGPU(UseGPU) {}
 
 auto ParallaxGenD3D::findCMMaps() -> ParallaxGenTask::PGResult {
-  auto &EnvMasks = PGD->getTextureMap(NIFUtil::TextureSlots::EnvMask);
+  auto &EnvMasks = PGD->getTextureMap(NIFUtil::TextureSlots::ENVMASK);
 
   ParallaxGenTask::PGResult PGResult = ParallaxGenTask::PGResult::SUCCESS;
-  vector<filesystem::path> ComplexMaterialMaps;
 
   // loop through maps
   size_t NumCMMaps = 0;
@@ -35,7 +34,7 @@ auto ParallaxGenD3D::findCMMaps() -> ParallaxGenTask::PGResult {
 
     if (Result) {
       // TODO we need to fill in alpha for non-CM stuff
-      EnvMask.second.Type = NIFUtil::PGTextureType::COMPLEXMATERIAL;
+      EnvMask.second.Type = NIFUtil::TextureType::COMPLEXMATERIAL;
       NumCMMaps++;
       spdlog::debug(L"Found File: {}", EnvMask.second.Path.wstring());
     }

@@ -9,9 +9,9 @@
 using namespace std;
 using namespace ParallaxGenUtil;
 
-PatcherVanillaParallax::PatcherVanillaParallax(filesystem::path NIFPath, nifly::NifFile *NIF, vector<int> SlotSearch,
+PatcherVanillaParallax::PatcherVanillaParallax(filesystem::path NIFPath, nifly::NifFile *NIF,
                                                ParallaxGenConfig *PGC, ParallaxGenDirectory *PGD, ParallaxGenD3D *PGD3D)
-    : NIFPath(std::move(NIFPath)), NIF(NIF), SlotSearch(std::move(SlotSearch)), PGD(PGD), PGC(PGC), PGD3D(PGD3D) {
+    : NIFPath(std::move(NIFPath)), NIF(NIF), PGD(PGD), PGC(PGC), PGD3D(PGD3D) {
   // Determine if NIF has attached havok animations
   vector<NiObject *> NIFBlockTree;
   NIF->GetTree(NIFBlockTree);
@@ -34,7 +34,7 @@ auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<wstring,
   auto *NIFShader = NIF->GetShader(NIFShape);
   auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
 
-  static const auto *HeightBaseMap = &PGD->getTextureMapConst(NIFUtil::TextureSlots::Parallax);
+  static const auto *HeightBaseMap = &PGD->getTextureMapConst(NIFUtil::TextureSlots::PARALLAX);
 
   EnableResult = true; // Start with default true
 
@@ -47,6 +47,7 @@ auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<wstring,
   }
 
   // Check if vanilla parallax file exists
+  static const vector<int> SlotSearch = {0, 1};  // Diffuse first, then normal
   for (int Slot : SlotSearch) {
     auto FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], *HeightBaseMap).Path.wstring();
     if (!FoundMatch.empty()) {
@@ -108,7 +109,7 @@ auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<wstring,
 
   // verify that maps match each other (this is somewhat expense so it happens last)
   string DiffuseMap;
-  NIF->GetTextureSlot(NIFShape, DiffuseMap, static_cast<unsigned int>(NIFUtil::TextureSlots::Diffuse));
+  NIF->GetTextureSlot(NIFShape, DiffuseMap, static_cast<unsigned int>(NIFUtil::TextureSlots::DIFFUSE));
   if (!DiffuseMap.empty() && !PGD->isFile(DiffuseMap)) {
     // no Diffuse map
     spdlog::trace(L"NIF: {} | Shape: {} | Parallax | Shape Rejected: Diffuse map missing: {}", NIFPath.wstring(),
@@ -158,7 +159,7 @@ auto PatcherVanillaParallax::applyPatch(NiShape *NIFShape, const wstring &Matche
     NIFModified = true;
   }
   // Set Parallax heightmap texture
-  NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::Parallax, MatchedPath, NIFModified);
+  NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::PARALLAX, MatchedPath, NIFModified);
 
   return Result;
 }

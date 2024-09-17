@@ -56,10 +56,10 @@ auto ParallaxGenDirectory::findPGFiles(const bool &MapFromMeshes) -> void {
 
   // TODO blacklisting
   // TODO config processing
-  // TODO task tracker should have option to print only every 10% or something
+  // TODO probably not all of this is needed depending on args provided
   if (MapFromMeshes) {
     // Create task tracker
-    ParallaxGenTask TaskTracker("Mapping Textures", UnconfirmedMeshes.size());
+    ParallaxGenTask TaskTracker("Mapping Textures", UnconfirmedMeshes.size(), 10);
 
     // Create thread pool
     size_t NumThreads = boost::thread::hardware_concurrency();
@@ -100,7 +100,7 @@ auto ParallaxGenDirectory::findPGFiles(const bool &MapFromMeshes) -> void {
 
     // Find winning texture type
     MaxVal = 0;
-    NIFUtil::PGTextureType WinningType = {};
+    NIFUtil::TextureType WinningType = {};
     for (const auto &[Type, Count] : Property.Types) {
       FoundInstance = true;
       if (Count > MaxVal) {
@@ -173,113 +173,113 @@ auto ParallaxGenDirectory::mapTexturesFromNIF(
       }
 
       const auto ShaderType = Shader->GetShaderType();
-      NIFUtil::PGTextureType TextureType = {};
+      NIFUtil::TextureType TextureType = {};
 
       // Check to make sure appropriate shaders are set for a given texture
       auto *const ShaderBSSP = dynamic_cast<BSShaderProperty *>(Shader);
       switch (static_cast<NIFUtil::TextureSlots>(Slot)) {
-      case NIFUtil::TextureSlots::Diffuse:
+      case NIFUtil::TextureSlots::DIFFUSE:
         // Diffuse check
-        TextureType = NIFUtil::PGTextureType::DIFFUSE;
+        TextureType = NIFUtil::TextureType::DIFFUSE;
         break;
-      case NIFUtil::TextureSlots::Normal:
+      case NIFUtil::TextureSlots::NORMAL:
         // Normal check
         if (ShaderType == BSLSP_SKINTINT && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF1_FACEGEN_RGB_TINT)) {
           // This is a skin tint map
-          TextureType = NIFUtil::PGTextureType::MODELSPACENORMAL;
+          TextureType = NIFUtil::TextureType::MODELSPACENORMAL;
           break;
         }
 
-        TextureType = NIFUtil::PGTextureType::NORMAL;
+        TextureType = NIFUtil::TextureType::NORMAL;
         break;
-      case NIFUtil::TextureSlots::Glow:
+      case NIFUtil::TextureSlots::GLOW:
         // Glowmap check
         if ((ShaderType == BSLSP_GLOWMAP && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF2_GLOW_MAP)) ||
             (ShaderType == BSLSP_DEFAULT && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF2_UNUSED01))) {
           // This is an emmissive map (either vanilla glowmap shader or PBR)
-          TextureType = NIFUtil::PGTextureType::EMISSIVE;
+          TextureType = NIFUtil::TextureType::EMISSIVE;
           break;
         }
 
         if (ShaderType == BSLSP_MULTILAYERPARALLAX && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF2_MULTI_LAYER_PARALLAX)) {
           // This is a subsurface map
-          TextureType = NIFUtil::PGTextureType::SUBSURFACE;
+          TextureType = NIFUtil::TextureType::SUBSURFACE;
           break;
         }
 
         if (ShaderType == BSLSP_SKINTINT && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF1_FACEGEN_RGB_TINT)) {
           // This is a skin tint map
-          TextureType = NIFUtil::PGTextureType::SKINTINT;
+          TextureType = NIFUtil::TextureType::SKINTINT;
           break;
         }
 
         continue;
-      case NIFUtil::TextureSlots::Parallax:
+      case NIFUtil::TextureSlots::PARALLAX:
         // Parallax check
         if ((ShaderType == BSLSP_DEFAULT && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF1_PARALLAX)) ||
             (ShaderType == BSLSP_DEFAULT && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF2_UNUSED01))) {
           // This is a height map
-          TextureType = NIFUtil::PGTextureType::HEIGHT;
+          TextureType = NIFUtil::TextureType::HEIGHT;
           break;
         }
 
         continue;
-      case NIFUtil::TextureSlots::Cubemap:
+      case NIFUtil::TextureSlots::CUBEMAP:
         // Cubemap check
         if (ShaderType == BSLSP_ENVMAP && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF1_ENVIRONMENT_MAPPING)) {
-          TextureType = NIFUtil::PGTextureType::CUBEMAP;
+          TextureType = NIFUtil::TextureType::CUBEMAP;
           break;
         }
 
         continue;
-      case NIFUtil::TextureSlots::EnvMask:
+      case NIFUtil::TextureSlots::ENVMASK:
         // Envmap check
         if (ShaderType == BSLSP_ENVMAP && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF1_ENVIRONMENT_MAPPING)) {
-          TextureType = NIFUtil::PGTextureType::ENVIRONMENTMASK;
+          TextureType = NIFUtil::TextureType::ENVIRONMENTMASK;
           break;
         }
 
         if (ShaderType == BSLSP_DEFAULT && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF2_UNUSED01)) {
-          TextureType = NIFUtil::PGTextureType::RMAOS;
+          TextureType = NIFUtil::TextureType::RMAOS;
           break;
         }
 
         continue;
-      case NIFUtil::TextureSlots::Tint:
+      case NIFUtil::TextureSlots::TINT:
         // Tint check
         if (ShaderType == BSLSP_MULTILAYERPARALLAX && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF2_MULTI_LAYER_PARALLAX)) {
           if (NIFUtil::hasShaderFlag(ShaderBSSP, SLSF2_UNUSED01)) {
             // 2 layer PBR
-            TextureType = NIFUtil::PGTextureType::COATNORMAL;
+            TextureType = NIFUtil::TextureType::COATNORMAL;
           } else {
             // normal multilayer
-            TextureType = NIFUtil::PGTextureType::INNERLAYER;
+            TextureType = NIFUtil::TextureType::INNERLAYER;
           }
           break;
         }
 
         continue;
-      case NIFUtil::TextureSlots::Backlight:
+      case NIFUtil::TextureSlots::BACKLIGHT:
         // Backlight check
         if (ShaderType == BSLSP_MULTILAYERPARALLAX && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF2_UNUSED01)) {
           // TODO verify this
-          TextureType = NIFUtil::PGTextureType::SUBSURFACE;
+          TextureType = NIFUtil::TextureType::SUBSURFACE;
           break;
         }
 
         if (NIFUtil::hasShaderFlag(ShaderBSSP, SLSF2_BACK_LIGHTING)) {
-          TextureType = NIFUtil::PGTextureType::BACKLIGHT;
+          TextureType = NIFUtil::TextureType::BACKLIGHT;
           break;
         }
 
         if (ShaderType == BSLSP_SKINTINT && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF1_FACEGEN_RGB_TINT)) {
-          TextureType = NIFUtil::PGTextureType::SPECULAR;
+          TextureType = NIFUtil::TextureType::SPECULAR;
           break;
         }
 
         continue;
       default:
-        TextureType = NIFUtil::PGTextureType::DIFFUSE;
+        TextureType = NIFUtil::TextureType::DIFFUSE;
       }
 
       // Log finding
@@ -301,7 +301,7 @@ auto ParallaxGenDirectory::mapTexturesFromNIF(
 }
 
 auto ParallaxGenDirectory::updateUnconfirmedTexturesMap(
-    const filesystem::path &Path, const NIFUtil::TextureSlots &Slot, const NIFUtil::PGTextureType &Type,
+    const filesystem::path &Path, const NIFUtil::TextureSlots &Slot, const NIFUtil::TextureType &Type,
     unordered_map<filesystem::path, UnconfirmedTextureProperty> &UnconfirmedTextures, mutex &Mutex) -> void {
   // Use mutex to make this thread safe
   lock_guard<mutex> Lock(Mutex);
@@ -315,7 +315,7 @@ auto ParallaxGenDirectory::updateUnconfirmedTexturesMap(
 }
 
 auto ParallaxGenDirectory::addToTextureMaps(const filesystem::path &Path, const NIFUtil::TextureSlots &Slot,
-                                            const NIFUtil::PGTextureType &Type) -> void {
+                                            const NIFUtil::TextureType &Type) -> void {
   // Use mutex to make this thread safe
   lock_guard<mutex> Lock(TextureMapsMutex);
 

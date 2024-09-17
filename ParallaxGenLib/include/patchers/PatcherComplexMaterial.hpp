@@ -14,14 +14,13 @@ class PatcherComplexMaterial {
 private:
   std::filesystem::path NIFPath;
   nifly::NifFile *NIF;
-  std::vector<int> SlotSearch;
   std::vector<std::wstring> DynCubemapBlocklist;
   ParallaxGenDirectory *PGD;
   ParallaxGenConfig *PGC;
   ParallaxGenD3D *PGD3D;
 
 public:
-  PatcherComplexMaterial(std::filesystem::path NIFPath, nifly::NifFile *NIF, std::vector<int> SlotSearch,
+  PatcherComplexMaterial(std::filesystem::path NIFPath, nifly::NifFile *NIF,
                          std::vector<std::wstring> DynCubemapBlocklist, ParallaxGenConfig *PGC,
                          ParallaxGenDirectory *PGD, ParallaxGenD3D *PGD3D);
 

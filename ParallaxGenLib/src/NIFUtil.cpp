@@ -10,93 +10,93 @@
 using namespace std;
 
 // TODO this is a headache we should just use ints
-auto NIFUtil::getDefaultTextureType(const TextureSlots &Slot) -> PGTextureType {
+auto NIFUtil::getDefaultTextureType(const TextureSlots &Slot) -> TextureType {
   switch (Slot) {
-    case TextureSlots::Diffuse:
-      return PGTextureType::DIFFUSE;
-    case TextureSlots::Normal:
-      return PGTextureType::NORMAL;
-    case TextureSlots::Glow:
-      return PGTextureType::EMISSIVE;
-    case TextureSlots::Parallax:
-      return PGTextureType::HEIGHT;
-    case TextureSlots::Cubemap:
-      return PGTextureType::CUBEMAP;
-    case TextureSlots::EnvMask:
-      return PGTextureType::ENVIRONMENTMASK;
-    case TextureSlots::Tint:
-      return PGTextureType::TINT;
-    case TextureSlots::Backlight:
-      return PGTextureType::BACKLIGHT;
+    case TextureSlots::DIFFUSE:
+      return TextureType::DIFFUSE;
+    case TextureSlots::NORMAL:
+      return TextureType::NORMAL;
+    case TextureSlots::GLOW:
+      return TextureType::EMISSIVE;
+    case TextureSlots::PARALLAX:
+      return TextureType::HEIGHT;
+    case TextureSlots::CUBEMAP:
+      return TextureType::CUBEMAP;
+    case TextureSlots::ENVMASK:
+      return TextureType::ENVIRONMENTMASK;
+    case TextureSlots::TINT:
+      return TextureType::TINT;
+    case TextureSlots::BACKLIGHT:
+      return TextureType::BACKLIGHT;
     default:
-      return PGTextureType::DIFFUSE;
+      return TextureType::DIFFUSE;
   }
 }
 
-auto NIFUtil::getTexSuffixMap() -> map<wstring, tuple<NIFUtil::TextureSlots, NIFUtil::PGTextureType>> {
-  static const map<wstring, tuple<NIFUtil::TextureSlots, NIFUtil::PGTextureType>> TextureSuffixMap = {
-    {L"_bl", {NIFUtil::TextureSlots::Backlight, NIFUtil::PGTextureType::BACKLIGHT}},
-    {L"_b", {NIFUtil::TextureSlots::Backlight, NIFUtil::PGTextureType::BACKLIGHT}},
-    {L"_cnr", {NIFUtil::TextureSlots::Tint, NIFUtil::PGTextureType::COATNORMAL}},
-    {L"_s", {NIFUtil::TextureSlots::Tint, NIFUtil::PGTextureType::SUBSURFACE}},  // TODO verify this
-    {L"_i", {NIFUtil::TextureSlots::Tint, NIFUtil::PGTextureType::INNERLAYER}},
-    {L"_rmaos", {NIFUtil::TextureSlots::EnvMask, NIFUtil::PGTextureType::RMAOS}},
-    {L"_envmask", {NIFUtil::TextureSlots::EnvMask, NIFUtil::PGTextureType::ENVIRONMENTMASK}},
-    {L"_em", {NIFUtil::TextureSlots::EnvMask, NIFUtil::PGTextureType::ENVIRONMENTMASK}},
-    {L"_m", {NIFUtil::TextureSlots::EnvMask, NIFUtil::PGTextureType::ENVIRONMENTMASK}},
-    {L"_e", {NIFUtil::TextureSlots::Cubemap, NIFUtil::PGTextureType::CUBEMAP}},
-    {L"_p", {NIFUtil::TextureSlots::Parallax, NIFUtil::PGTextureType::HEIGHT}},
-    {L"_sk", {NIFUtil::TextureSlots::Glow, NIFUtil::PGTextureType::EMISSIVE}},  // TODO this aint right
-    {L"_g", {NIFUtil::TextureSlots::Glow, NIFUtil::PGTextureType::EMISSIVE}},
-    {L"_msn", {NIFUtil::TextureSlots::Normal, NIFUtil::PGTextureType::NORMAL}},
-    {L"_n", {NIFUtil::TextureSlots::Normal, NIFUtil::PGTextureType::NORMAL}},
-    {L"_d", {NIFUtil::TextureSlots::Diffuse, NIFUtil::PGTextureType::DIFFUSE}},
-    {L"mask", {NIFUtil::TextureSlots::Diffuse, NIFUtil::PGTextureType::DIFFUSE}}
+auto NIFUtil::getTexSuffixMap() -> map<wstring, tuple<NIFUtil::TextureSlots, NIFUtil::TextureType>> {
+  static const map<wstring, tuple<NIFUtil::TextureSlots, NIFUtil::TextureType>> TextureSuffixMap = {
+    {L"_bl", {NIFUtil::TextureSlots::BACKLIGHT, NIFUtil::TextureType::BACKLIGHT}},
+    {L"_b", {NIFUtil::TextureSlots::BACKLIGHT, NIFUtil::TextureType::BACKLIGHT}},
+    {L"_cnr", {NIFUtil::TextureSlots::TINT, NIFUtil::TextureType::COATNORMAL}},
+    {L"_s", {NIFUtil::TextureSlots::TINT, NIFUtil::TextureType::SUBSURFACE}},  // TODO verify this
+    {L"_i", {NIFUtil::TextureSlots::TINT, NIFUtil::TextureType::INNERLAYER}},
+    {L"_rmaos", {NIFUtil::TextureSlots::ENVMASK, NIFUtil::TextureType::RMAOS}},
+    {L"_envmask", {NIFUtil::TextureSlots::ENVMASK, NIFUtil::TextureType::ENVIRONMENTMASK}},
+    {L"_em", {NIFUtil::TextureSlots::ENVMASK, NIFUtil::TextureType::ENVIRONMENTMASK}},
+    {L"_m", {NIFUtil::TextureSlots::ENVMASK, NIFUtil::TextureType::ENVIRONMENTMASK}},
+    {L"_e", {NIFUtil::TextureSlots::CUBEMAP, NIFUtil::TextureType::CUBEMAP}},
+    {L"_p", {NIFUtil::TextureSlots::PARALLAX, NIFUtil::TextureType::HEIGHT}},
+    {L"_sk", {NIFUtil::TextureSlots::GLOW, NIFUtil::TextureType::EMISSIVE}},  // TODO this aint right
+    {L"_g", {NIFUtil::TextureSlots::GLOW, NIFUtil::TextureType::EMISSIVE}},
+    {L"_msn", {NIFUtil::TextureSlots::NORMAL, NIFUtil::TextureType::NORMAL}},
+    {L"_n", {NIFUtil::TextureSlots::NORMAL, NIFUtil::TextureType::NORMAL}},
+    {L"_d", {NIFUtil::TextureSlots::DIFFUSE, NIFUtil::TextureType::DIFFUSE}},
+    {L"mask", {NIFUtil::TextureSlots::DIFFUSE, NIFUtil::TextureType::DIFFUSE}}
   };
 
   return TextureSuffixMap;
 }
 
-auto NIFUtil::getTextureTypeStr(const PGTextureType &Type) -> string {
+auto NIFUtil::getTextureTypeStr(const TextureType &Type) -> string {
   switch (Type) {
-    case PGTextureType::DIFFUSE:
+    case TextureType::DIFFUSE:
       return "Diffuse";
-    case PGTextureType::NORMAL:
+    case TextureType::NORMAL:
       return "Normal";
-    case PGTextureType::MODELSPACENORMAL:
+    case TextureType::MODELSPACENORMAL:
       return "Model Space Normal";
-    case PGTextureType::EMISSIVE:
+    case TextureType::EMISSIVE:
       return "Emissive";
-    case PGTextureType::SKINTINT:
+    case TextureType::SKINTINT:
       return "Skin Tint";
-    case PGTextureType::SUBSURFACE:
+    case TextureType::SUBSURFACE:
       return "Subsurface";
-    case PGTextureType::HEIGHT:
+    case TextureType::HEIGHT:
       return "Height";
-    case PGTextureType::CUBEMAP:
+    case TextureType::CUBEMAP:
       return "Cubemap";
-    case PGTextureType::ENVIRONMENTMASK:
+    case TextureType::ENVIRONMENTMASK:
       return "Environment Mask";
-    case PGTextureType::COMPLEXMATERIAL:
+    case TextureType::COMPLEXMATERIAL:
       return "Complex Material";
-    case PGTextureType::RMAOS:
+    case TextureType::RMAOS:
       return "RMAOS";
-    case PGTextureType::TINT:
+    case TextureType::TINT:
       return "Tint";
-    case PGTextureType::INNERLAYER:
+    case TextureType::INNERLAYER:
       return "Inner Layer";
-    case PGTextureType::COATNORMAL:
+    case TextureType::COATNORMAL:
       return "Coat Normal";
-    case PGTextureType::BACKLIGHT:
+    case TextureType::BACKLIGHT:
       return "Backlight";
-    case PGTextureType::SPECULAR:
+    case TextureType::SPECULAR:
       return "Specular";
     default:
       return "Unknown";
   }
 }
 
-auto NIFUtil::getDefaultsFromSuffix(const std::filesystem::path &Path) -> tuple<NIFUtil::TextureSlots, NIFUtil::PGTextureType> {
+auto NIFUtil::getDefaultsFromSuffix(const std::filesystem::path &Path) -> tuple<NIFUtil::TextureSlots, NIFUtil::TextureType> {
   const auto &SuffixMap = getTexSuffixMap();
 
   // Get the texture suffix

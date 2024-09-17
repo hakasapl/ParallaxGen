@@ -32,7 +32,7 @@ ParallaxGen::ParallaxGen(filesystem::path OutputDir, ParallaxGenDirectory *PGD, 
 
 void ParallaxGen::upgradeShaders() {
   // Get height maps (vanilla _p.dds files)
-  const auto &HeightMaps = PGD->getTextureMapConst(NIFUtil::TextureSlots::Parallax);
+  const auto &HeightMaps = PGD->getTextureMapConst(NIFUtil::TextureSlots::PARALLAX);
 
   // Define task parameters
   ParallaxGenTask TaskTracker("Shader Upgrades", HeightMaps.size());
@@ -109,18 +109,17 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
   string HeightMapStr = HeightMap.string();
 
   // Get texture base (remove _p.dds)
-  static const auto ParallaxSuffixes = PGC->getConfig()["suffixes"][3].get<vector<string>>();
   const auto TexBase = NIFUtil::getTexBase(HeightMapStr);
   if (TexBase.empty()) {
     // no height map (this shouldn't happen)
     return Result;
   }
 
-  static const auto *CMBaseMap = &PGD->getTextureMapConst(NIFUtil::TextureSlots::EnvMask);
+  static const auto *CMBaseMap = &PGD->getTextureMapConst(NIFUtil::TextureSlots::ENVMASK);
   auto ExistingCM = NIFUtil::getTexMatch(TexBase, *CMBaseMap);
   filesystem::path EnvMask = filesystem::path();
   if (!ExistingCM.Path.empty()) {
-    if (ExistingCM.Type == NIFUtil::PGTextureType::COMPLEXMATERIAL) {
+    if (ExistingCM.Type == NIFUtil::TextureType::COMPLEXMATERIAL) {
       // complex material already exists
       return Result;
     }
@@ -149,7 +148,7 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
     }
 
     // add newly created file to complexMaterialMaps for later processing
-    PGD->getTextureMap(NIFUtil::TextureSlots::EnvMask)[TexBase] = {ComplexMap, NIFUtil::PGTextureType::COMPLEXMATERIAL};
+    PGD->getTextureMap(NIFUtil::TextureSlots::ENVMASK)[TexBase] = {ComplexMap, NIFUtil::TextureType::COMPLEXMATERIAL};
 
     spdlog::debug(L"Generated complex material map: {}", ComplexMap.wstring());
   } else {
@@ -259,14 +258,12 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
   bool NIFModified = false;
 
   // Build static search vectors
-  static const auto SlotSearchVP = PGC->getConfig()["parallax_processing"]["lookup_order"].get<vector<int>>();
-  static const auto SlotSearchCM = PGC->getConfig()["complexmaterial_processing"]["lookup_order"].get<vector<int>>();
   static const auto DynCubeBlocklist = stringVecToWstringVec(
-      PGC->getConfig()["complexmaterial_processing"]["dyncubemap_blocklist"].get<vector<string>>());
+      PGC->getConfig()["dyncubemap_blocklist"].get<vector<string>>());
 
   // Create Patcher objects
-  PatcherVanillaParallax PatchVP(NIFFile, &NIF, SlotSearchVP, PGC, PGD, PGD3D);
-  PatcherComplexMaterial PatchCM(NIFFile, &NIF, SlotSearchCM, DynCubeBlocklist, PGC, PGD, PGD3D);
+  PatcherVanillaParallax PatchVP(NIFFile, &NIF, PGC, PGD, PGD3D);
+  PatcherComplexMaterial PatchCM(NIFFile, &NIF, DynCubeBlocklist, PGC, PGD, PGD3D);
   PatcherTruePBR PatchTPBR(NIFFile, &NIF, PGD);
 
   // Patch each shape in NIF
@@ -338,7 +335,7 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
 
 auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, NiShape *NIFShape,
                                PatcherVanillaParallax &PatchVP, PatcherComplexMaterial &PatchCM,
-                               PatcherTruePBR &PatchTPBR, bool &ShapeModified) -> ParallaxGenTask::PGResult {
+                               PatcherTruePBR &PatchTPBR, bool &ShapeModified) const -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Prep
@@ -381,7 +378,6 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
   }
 
   // Find search prefixes
-  static const vector<vector<string>> Suffixes = PGC->getConfig()["suffixes"].get<vector<vector<string>>>();
   auto SearchPrefixes = NIFUtil::getSearchPrefixes(NIF, NIFShape);
   wstring MatchedPath;
 

@@ -32,7 +32,7 @@ private:
   };
 
   // Set that stores already matched texture sets
-  std::unordered_map<uint32_t, std::map<size_t, std::tuple<nlohmann::json, std::string>>> MatchedTextureSets;
+  std::unordered_map<uint32_t, std::map<size_t, std::tuple<nlohmann::json, std::wstring>>> MatchedTextureSets;
 
 public:
   static auto getTruePBRConfigs() -> std::map<size_t, nlohmann::json> &;

@@ -18,7 +18,7 @@ class ParallaxGenDirectory : public BethesdaDirectory {
 private:
   struct UnconfirmedTextureProperty {
     std::unordered_map<NIFUtil::TextureSlots, size_t> Slots;
-    std::unordered_map<NIFUtil::PGTextureType, size_t> Types;
+    std::unordered_map<NIFUtil::TextureType, size_t> Types;
   };
 
   // Structures to store relevant files (sometimes their contents)
@@ -43,12 +43,12 @@ private:
                           std::mutex &UnconfirmedTexturesMutex) -> ParallaxGenTask::PGResult;
 
   static auto updateUnconfirmedTexturesMap(
-      const std::filesystem::path &Path, const NIFUtil::TextureSlots &Slot, const NIFUtil::PGTextureType &Type,
+      const std::filesystem::path &Path, const NIFUtil::TextureSlots &Slot, const NIFUtil::TextureType &Type,
       std::unordered_map<std::filesystem::path, UnconfirmedTextureProperty> &UnconfirmedTextureSlots,
       std::mutex &Mutex) -> void;
 
   auto addToTextureMaps(const std::filesystem::path &Path, const NIFUtil::TextureSlots &Slot,
-                        const NIFUtil::PGTextureType &Type) -> void;
+                        const NIFUtil::TextureType &Type) -> void;
 
   auto addMesh(const std::filesystem::path &Path) -> void;
 

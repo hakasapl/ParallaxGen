@@ -190,7 +190,9 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   // Build file vectors
   PGD.findPGFiles();
+  PGD3D.findCMMaps();
 
+  // Load PBR configs
   PatcherTruePBR::loadPatcherBuffers(PGD.getPBRJSONs(), &PGD);
 
   // Upgrade shaders if requested

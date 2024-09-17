@@ -10,10 +10,10 @@
 using namespace std;
 using namespace ParallaxGenUtil;
 
-PatcherComplexMaterial::PatcherComplexMaterial(filesystem::path NIFPath, nifly::NifFile *NIF, vector<int> SlotSearch,
+PatcherComplexMaterial::PatcherComplexMaterial(filesystem::path NIFPath, nifly::NifFile *NIF,
                                                vector<wstring> DynCubemapBlocklist, ParallaxGenConfig *PGC,
                                                ParallaxGenDirectory *PGD, ParallaxGenD3D *PGD3D)
-    : NIFPath(std::move(NIFPath)), NIF(NIF), SlotSearch(std::move(SlotSearch)),
+    : NIFPath(std::move(NIFPath)), NIF(NIF),
       DynCubemapBlocklist(std::move(DynCubemapBlocklist)), PGD(PGD), PGC(PGC), PGD3D(PGD3D) {}
 
 auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes,
@@ -29,17 +29,18 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<wstring,
   auto *NIFShader = NIF->GetShader(NIFShape);
   auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
 
-  static const auto *CMBaseMap = &PGD->getTextureMap(NIFUtil::TextureSlots::EnvMask);
+  static const auto *CMBaseMap = &PGD->getTextureMap(NIFUtil::TextureSlots::ENVMASK);
 
   EnableResult = true; // Start with default true
 
   // Check if complex material file exists
+  static const vector<int> SlotSearch = {0, 1};  // Diffuse first, then normal
   for (int Slot : SlotSearch) {
-    auto FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], *CMBaseMap).Path.wstring();
-    if (!FoundMatch.empty()) {
+    auto FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], *CMBaseMap);
+    if (!FoundMatch.Path.empty() && FoundMatch.Type == NIFUtil::TextureType::COMPLEXMATERIAL) {
       // found complex material map
       spdlog::trace(L"NIF: {} | Shape: {} | CM | Found CM map: {}", NIFPath.wstring(), ShapeBlockID, MatchedPath);
-      MatchedPath = FoundMatch;
+      MatchedPath = FoundMatch.Path.wstring();
       break;
     }
   }
@@ -112,13 +113,13 @@ auto PatcherComplexMaterial::applyPatch(NiShape *NIFShape, const wstring &Matche
   NIFUtil::setShaderFlag(NIFShaderBSLSP, SLSF1_ENVIRONMENT_MAPPING, NIFModified);
   // Set complex material texture
   string NewParallax;
-  NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::Parallax, NewParallax, NIFModified);
-  NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::EnvMask, MatchedPath, NIFModified);
+  NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::PARALLAX, NewParallax, NIFModified);
+  NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::ENVMASK, MatchedPath, NIFModified);
 
   // Dynamic cubemaps (if enabled)
   if (ApplyDynCubemaps) {
     // TODO don't statically define this str
-    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::Cubemap, "textures\\cubemaps\\dynamic1pxcubemap_black.dds", NIFModified);
+    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::CUBEMAP, "textures\\cubemaps\\dynamic1pxcubemap_black.dds", NIFModified);
   }
 
   return Result;

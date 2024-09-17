@@ -413,7 +413,7 @@ auto PatcherTruePBR::applyPatch(NiShape *NIFShape, nlohmann::json &TruePBRData, 
   // "cubemap" attribute
   if (TruePBRData.contains("cubemap") && EnableEnvMapping && !flag(TruePBRData, "lock_cubemap")) {
     auto NewCubemap = TruePBRData["cubemap"].get<string>();
-    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::Cubemap, NewCubemap, NIFModified);
+    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::CUBEMAP, NewCubemap, NIFModified);
   }
 
   // "emmissive_scale" attribute
@@ -471,13 +471,13 @@ auto PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader
   // "lock_diffuse" attribute
   if (!flag(TruePBRData, "lock_diffuse")) {
     auto NewDiffuse = MatchedPath + L".dds";
-    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::Diffuse, NewDiffuse, NIFModified);
+    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::DIFFUSE, NewDiffuse, NIFModified);
   }
 
   // "lock_normal" attribute
   if (!flag(TruePBRData, "lock_normal")) {
     auto NewNormal = MatchedPath + L"_n.dds";
-    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::Normal, NewNormal, NIFModified);
+    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::NORMAL, NewNormal, NIFModified);
   }
 
   // "emissive" attribute
@@ -489,7 +489,7 @@ auto PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader
 
     NIFUtil::configureShaderFlag(NIFShaderBSLSP, SLSF1_EXTERNAL_EMITTANCE, TruePBRData["emissive"].get<bool>(),
                                  NIFModified);
-    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::Glow, NewGlow, NIFModified);
+    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::GLOW, NewGlow, NIFModified);
   }
 
   // "parallax" attribute
@@ -499,16 +499,16 @@ auto PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader
       NewParallax = MatchedPath + L"_p.dds";
     }
 
-    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::Parallax, NewParallax, NIFModified);
+    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::PARALLAX, NewParallax, NIFModified);
   }
 
   string Slot4;
-  NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::Cubemap, Slot4, NIFModified);
+  NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::CUBEMAP, Slot4, NIFModified);
 
   // "lock_rmaos" attribute
   if (!flag(TruePBRData, "lock_rmaos")) {
     auto NewRMAOS = MatchedPath + L"_rmaos.dds";
-    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::EnvMask, NewRMAOS, NIFModified);
+    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::ENVMASK, NewRMAOS, NIFModified);
   }
 
   // "lock_cnr" attribute
@@ -519,7 +519,7 @@ auto PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader
       NewCNR = MatchedPath + L"_cnr.dds";
     }
 
-    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::Tint, NewCNR, NIFModified);
+    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::TINT, NewCNR, NIFModified);
   }
 
   // "lock_subsurface" attribute
@@ -532,7 +532,7 @@ auto PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader
       NewSubsurface = MatchedPath + L"_s.dds";
     }
 
-    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::Backlight, NewSubsurface, NIFModified);
+    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::BACKLIGHT, NewSubsurface, NIFModified);
   }
 
   // revert to default NIFShader type, remove flags used in other types

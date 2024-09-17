@@ -14,7 +14,6 @@ class PatcherVanillaParallax {
 private:
   std::filesystem::path NIFPath;
   nifly::NifFile *NIF;
-  std::vector<int> SlotSearch;
   ParallaxGenDirectory *PGD;
   ParallaxGenConfig *PGC;
   ParallaxGenD3D *PGD3D;
@@ -22,7 +21,7 @@ private:
   bool HasAttachedHavok = false;
 
 public:
-  PatcherVanillaParallax(std::filesystem::path NIFPath, nifly::NifFile *NIF, std::vector<int> SlotSearch,
+  PatcherVanillaParallax(std::filesystem::path NIFPath, nifly::NifFile *NIF,
                          ParallaxGenConfig *PGC, ParallaxGenDirectory *PGD, ParallaxGenD3D *PGD3D);
 
   // check if vanilla parallax should be enabled on shape

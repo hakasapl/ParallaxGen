@@ -4,8 +4,8 @@
 
 using namespace std;
 
-ParallaxGenTask::ParallaxGenTask(string TaskName, const size_t &TotalJobs)
-    : TaskName(std::move(TaskName)), TotalJobs(TotalJobs) {
+ParallaxGenTask::ParallaxGenTask(string TaskName, const size_t &TotalJobs, const int &ProgressPrintModulo)
+    : ProgressPrintModulo(ProgressPrintModulo), TaskName(std::move(TaskName)), TotalJobs(TotalJobs) {
   initJobStatus();
 }
 
@@ -33,7 +33,10 @@ void ParallaxGenTask::printJobStatus(bool Force) {
   size_t Perc = CombinedJobs * FULL_PERCENTAGE / TotalJobs;
   if (Force || Perc != LastPerc) {
     LastPerc = Perc;
-    spdlog::info("{} Progress: {}/{} [{}%]", TaskName, CombinedJobs, TotalJobs, Perc);
+
+    if (Perc % ProgressPrintModulo == 0) {
+      spdlog::info("{} Progress: {}/{} [{}%]", TaskName, CombinedJobs, TotalJobs, Perc);
+    }
   }
 
   if (Perc == FULL_PERCENTAGE) {

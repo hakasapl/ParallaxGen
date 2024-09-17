@@ -22,9 +22,6 @@ public:
   void loadConfig(const bool &LoadNative = true);
   [[nodiscard]] auto getConfig() const -> const nlohmann::json &;
 
-  // Member variables
-  [[nodiscard]] auto getSuffix(const unsigned int &Slot) const -> std::vector<std::string>;
-
 private:
   auto validateConfig() -> bool;
 

@@ -10,18 +10,18 @@
 
 namespace NIFUtil {
 enum class TextureSlots : unsigned int {
-  Diffuse = 0,
-  Normal = 1,
-  Glow = 2,
-  Parallax = 3,
-  Cubemap = 4,
-  EnvMask = 5,
-  Tint = 6,
-  Backlight = 7,
-  Unused = 8
+  DIFFUSE,
+  NORMAL,
+  GLOW,
+  PARALLAX,
+  CUBEMAP,
+  ENVMASK,
+  TINT,
+  BACKLIGHT,
+  UNUSED
 };
 
-enum class PGTextureType {
+enum class TextureType {
   DIFFUSE,
   NORMAL,
   MODELSPACENORMAL,
@@ -40,20 +40,20 @@ enum class PGTextureType {
   SPECULAR
 };
 
-auto getTextureTypeStr(const PGTextureType &Type) -> std::string;
+auto getTextureTypeStr(const TextureType &Type) -> std::string;
 
 struct PGTexture {
   std::filesystem::path Path;
-  PGTextureType Type;
+  TextureType Type;
 };
 
-auto getDefaultTextureType(const TextureSlots &Slot) -> PGTextureType;
+auto getDefaultTextureType(const TextureSlots &Slot) -> TextureType;
 
 auto loadNIFFromBytes(const std::vector<std::byte> &NIFBytes) -> nifly::NifFile;
 
-auto getTexSuffixMap() -> std::map<std::wstring, std::tuple<TextureSlots, PGTextureType>>;
+auto getTexSuffixMap() -> std::map<std::wstring, std::tuple<TextureSlots, TextureType>>;
 
-auto getDefaultsFromSuffix(const std::filesystem::path &Path) -> std::tuple<TextureSlots, PGTextureType>;
+auto getDefaultsFromSuffix(const std::filesystem::path &Path) -> std::tuple<TextureSlots, TextureType>;
 
 // shader helpers
 auto setShaderType(nifly::NiShader *NIFShader, const nifly::BSLightingShaderPropertyShaderType &Type,
