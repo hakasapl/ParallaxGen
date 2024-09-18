@@ -257,13 +257,9 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
   // Stores whether the NIF has been modified throughout the patching process
   bool NIFModified = false;
 
-  // Build static search vectors
-  static const auto DynCubeBlocklist = stringVecToWstringVec(
-      PGC->getConfig()["dyncubemap_blocklist"].get<vector<string>>());
-
   // Create Patcher objects
   PatcherVanillaParallax PatchVP(NIFFile, &NIF, PGC, PGD, PGD3D);
-  PatcherComplexMaterial PatchCM(NIFFile, &NIF, DynCubeBlocklist, PGC, PGD, PGD3D);
+  PatcherComplexMaterial PatchCM(NIFFile, &NIF, PGC, PGD, PGD3D);
   PatcherTruePBR PatchTPBR(NIFFile, &NIF, PGD);
 
   // Patch each shape in NIF

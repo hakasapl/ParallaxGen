@@ -4,12 +4,12 @@
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/iostreams/stream.hpp>
+#include <unordered_map>
 
 #include "ParallaxGenUtil.hpp"
 
 using namespace std;
 
-// TODO this is a headache we should just use ints
 auto NIFUtil::getDefaultTextureType(const TextureSlots &Slot) -> TextureType {
   switch (Slot) {
     case TextureSlots::DIFFUSE:
@@ -57,43 +57,92 @@ auto NIFUtil::getTexSuffixMap() -> map<wstring, tuple<NIFUtil::TextureSlots, NIF
   return TextureSuffixMap;
 }
 
-auto NIFUtil::getTextureTypeStr(const TextureType &Type) -> string {
-  switch (Type) {
-    case TextureType::DIFFUSE:
-      return "Diffuse";
-    case TextureType::NORMAL:
-      return "Normal";
-    case TextureType::MODELSPACENORMAL:
-      return "Model Space Normal";
-    case TextureType::EMISSIVE:
-      return "Emissive";
-    case TextureType::SKINTINT:
-      return "Skin Tint";
-    case TextureType::SUBSURFACE:
-      return "Subsurface";
-    case TextureType::HEIGHT:
-      return "Height";
-    case TextureType::CUBEMAP:
-      return "Cubemap";
-    case TextureType::ENVIRONMENTMASK:
-      return "Environment Mask";
-    case TextureType::COMPLEXMATERIAL:
-      return "Complex Material";
-    case TextureType::RMAOS:
-      return "RMAOS";
-    case TextureType::TINT:
-      return "Tint";
-    case TextureType::INNERLAYER:
-      return "Inner Layer";
-    case TextureType::COATNORMAL:
-      return "Coat Normal";
-    case TextureType::BACKLIGHT:
-      return "Backlight";
-    case TextureType::SPECULAR:
-      return "Specular";
-    default:
-      return "Unknown";
+auto NIFUtil::getStrFromTexType(const TextureType &Type) -> string {
+  static unordered_map<TextureType, string> StrFromTexMap = {
+    {TextureType::DIFFUSE, "diffuse"},
+    {TextureType::NORMAL, "normal"},
+    {TextureType::MODELSPACENORMAL, "model space normal"},
+    {TextureType::EMISSIVE, "emissive"},
+    {TextureType::SKINTINT, "skin tint"},
+    {TextureType::SUBSURFACE, "subsurface"},
+    {TextureType::HEIGHT, "height"},
+    {TextureType::CUBEMAP, "cubemap"},
+    {TextureType::ENVIRONMENTMASK, "environment mask"},
+    {TextureType::COMPLEXMATERIAL, "complex material"},
+    {TextureType::RMAOS, "rmaos"},
+    {TextureType::TINT, "tint"},
+    {TextureType::INNERLAYER, "inner layer"},
+    {TextureType::COATNORMAL, "coat normal"},
+    {TextureType::BACKLIGHT, "backlight"},
+    {TextureType::SPECULAR, "specular"},
+    {TextureType::SUBSURFACEPBR, "subsurface pbr"},
+    {TextureType::UNKNOWN, "unknown"}
+  };
+
+  if (StrFromTexMap.find(Type) != StrFromTexMap.end()) {
+    return StrFromTexMap[Type];
   }
+
+  return StrFromTexMap[TextureType::UNKNOWN];
+}
+
+auto NIFUtil::getTexTypeFromStr(const string &Type) -> TextureType {
+  static unordered_map<string, TextureType> TexFromStrMap = {
+    {"diffuse", TextureType::DIFFUSE},
+    {"normal", TextureType::NORMAL},
+    {"model space normal", TextureType::MODELSPACENORMAL},
+    {"emissive", TextureType::EMISSIVE},
+    {"skin tint", TextureType::SKINTINT},
+    {"subsurface", TextureType::SUBSURFACE},
+    {"height", TextureType::HEIGHT},
+    {"cubemap", TextureType::CUBEMAP},
+    {"environment mask", TextureType::ENVIRONMENTMASK},
+    {"complex material", TextureType::COMPLEXMATERIAL},
+    {"rmaos", TextureType::RMAOS},
+    {"tint", TextureType::TINT},
+    {"inner layer", TextureType::INNERLAYER},
+    {"coat normal", TextureType::COATNORMAL},
+    {"backlight", TextureType::BACKLIGHT},
+    {"specular", TextureType::SPECULAR},
+    {"subsurface pbr", TextureType::SUBSURFACEPBR},
+    {"unknown", TextureType::UNKNOWN}
+  };
+
+  const auto SearchKey = boost::to_lower_copy(Type);
+  if (TexFromStrMap.find(Type) != TexFromStrMap.end()) {
+    return TexFromStrMap[Type];
+  }
+
+  return TexFromStrMap["unknown"];
+}
+
+auto NIFUtil::getSlotFromTexType(const TextureType &Type) -> TextureSlots {
+  static unordered_map<TextureType, TextureSlots> TexTypeToSlotMap = {
+    {TextureType::DIFFUSE, TextureSlots::DIFFUSE},
+    {TextureType::NORMAL, TextureSlots::NORMAL},
+    {TextureType::MODELSPACENORMAL, TextureSlots::NORMAL},
+    {TextureType::EMISSIVE, TextureSlots::GLOW},
+    {TextureType::SKINTINT, TextureSlots::GLOW},
+    {TextureType::SUBSURFACE, TextureSlots::GLOW},
+    {TextureType::HEIGHT, TextureSlots::PARALLAX},
+    {TextureType::CUBEMAP, TextureSlots::CUBEMAP},
+    {TextureType::ENVIRONMENTMASK, TextureSlots::ENVMASK},
+    {TextureType::COMPLEXMATERIAL, TextureSlots::ENVMASK},
+    {TextureType::RMAOS, TextureSlots::ENVMASK},
+    {TextureType::TINT, TextureSlots::TINT},
+    {TextureType::INNERLAYER, TextureSlots::TINT},
+    {TextureType::COATNORMAL, TextureSlots::TINT},
+    {TextureType::BACKLIGHT, TextureSlots::BACKLIGHT},
+    {TextureType::SPECULAR, TextureSlots::BACKLIGHT},
+    {TextureType::SUBSURFACEPBR, TextureSlots::BACKLIGHT},
+    {TextureType::UNKNOWN, TextureSlots::UNKNOWN}
+  };
+
+  if (TexTypeToSlotMap.find(Type) != TexTypeToSlotMap.end()) {
+    return TexTypeToSlotMap[Type];
+  }
+
+  return TexTypeToSlotMap[TextureType::UNKNOWN];
 }
 
 auto NIFUtil::getDefaultsFromSuffix(const std::filesystem::path &Path) -> tuple<NIFUtil::TextureSlots, NIFUtil::TextureType> {
@@ -110,7 +159,7 @@ auto NIFUtil::getDefaultsFromSuffix(const std::filesystem::path &Path) -> tuple<
   }
 
   // Default return diffuse
-  return SuffixMap.at(L"_d");
+  return {TextureSlots::UNKNOWN, TextureType::UNKNOWN};
 }
 
 auto NIFUtil::loadNIFFromBytes(const std::vector<std::byte> &NIFBytes) -> nifly::NifFile {

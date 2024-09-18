@@ -10,11 +10,14 @@
 #include <boost/thread.hpp>
 #include <filesystem>
 #include <mutex>
+#include <shlwapi.h>
 #include <spdlog/spdlog.h>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <winnt.h>
 
+#include "BethesdaDirectory.hpp"
 #include "NIFUtil.hpp"
 #include "ParallaxGenTask.hpp"
 #include "ParallaxGenUtil.hpp"
@@ -24,63 +27,83 @@ using namespace ParallaxGenUtil;
 
 ParallaxGenDirectory::ParallaxGenDirectory(BethesdaGame BG) : BethesdaDirectory(BG, true) {}
 
-auto ParallaxGenDirectory::findPGFiles(const bool &MapFromMeshes) -> void {
-  mutex UnconfirmedTexturesMutex;
-  unordered_map<filesystem::path, UnconfirmedTextureProperty> UnconfirmedTextures;
-  unordered_set<filesystem::path> UnconfirmedMeshes;
-
-  spdlog::info("Starting building texture map");
+auto ParallaxGenDirectory::findFiles() -> void {
+  // Clear existing unconfirmedtextures
+  UnconfirmedTextures.clear();
+  UnconfirmedMeshes.clear();
 
   // Populate unconfirmed maps
-  spdlog::info("Finding relevant files");
+  spdlog::info("Finding Relevant Files");
   const auto &FileMap = getFileMap();
   for (const auto &[Path, File] : FileMap) {
     if (boost::iequals(Path.extension().wstring(), L".dds")) {
       // Found a DDS
+      spdlog::trace(L"Finding Files | Found DDS | {}", Path.wstring());
       UnconfirmedTextures[Path] = {};
     } else if (boost::iequals(Path.extension().wstring(), L".nif")) {
       // Found a NIF
+      spdlog::trace(L"Finding Files | Found NIF | {}", Path.wstring());
       UnconfirmedMeshes.insert(Path);
     } else if (boost::iequals(Path.extension().wstring(), L".json")) {
       // Found a JSON file
       const auto &FirstPath = Path.begin()->wstring();
       if (boost::iequals(FirstPath, L"pbrnifpatcher")) {
         // Found PBR JSON config
+        spdlog::trace(L"Finding Files | Found PBR JSON | {}", Path.wstring());
         PBRJSONs.push_back(Path);
       } else if (boost::iequals(FirstPath, L"parallaxgen")) {
         // Found ParallaxGen JSON config TODO
+        spdlog::trace(L"Finding Files | Found ParallaxGen JSON | {}", Path.wstring());
         PGJSONs.push_back(Path);
       }
     }
   }
+  spdlog::info("Finding files done");
+}
 
-  // TODO blacklisting
-  // TODO config processing
+auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
+                                    const unordered_map<filesystem::path, NIFUtil::TextureType> &ManualTextureMaps,
+                                    const bool &MapFromMeshes, const bool &Multithreading) -> void {
+  spdlog::info("Starting building texture map");
+
+  // Convert Lists to LPCWSTR lists
+  const auto NIFBlocklistCstr = convertWStringSetToLPCWSTRSet(NIFBlocklist);
+
   // TODO probably not all of this is needed depending on args provided
-  if (MapFromMeshes) {
-    // Create task tracker
-    ParallaxGenTask TaskTracker("Mapping Textures", UnconfirmedMeshes.size(), 10);
+  // Create task tracker
+  ParallaxGenTask TaskTracker("Mapping Textures", UnconfirmedMeshes.size(), MAPTEXTURE_PROGRESS_MODULO);
 
-    // Create thread pool
-    size_t NumThreads = boost::thread::hardware_concurrency();
-    boost::asio::thread_pool MapTextureFromMeshPool(NumThreads);
+  // Create thread pool
+  size_t NumThreads = boost::thread::hardware_concurrency();
+  boost::asio::thread_pool MapTextureFromMeshPool(NumThreads);
 
-    spdlog::info("Reading meshes to match textures to slots");
-    // Loop through each mesh to confirm textures
-    for (const auto &Mesh : UnconfirmedMeshes) {
-      boost::asio::post(
-          MapTextureFromMeshPool, [this, &TaskTracker, &Mesh, &UnconfirmedTextures, &UnconfirmedTexturesMutex] {
-            TaskTracker.completeJob(mapTexturesFromNIF(Mesh, UnconfirmedTextures, UnconfirmedTexturesMutex));
-          });
+  // Loop through each mesh to confirm textures
+  for (const auto &Mesh : UnconfirmedMeshes) {
+    if (checkGlobMatchInSet(Mesh.wstring(), NIFBlocklistCstr)) {
+      // Skip mesh because it is on blocklist
+      spdlog::trace(L"Mapping Textures | Skipping Mesh due to Blocklist | Mesh: {}", Mesh.wstring());
+      TaskTracker.completeJob(ParallaxGenTask::PGResult::SUCCESS);
+      continue;
     }
 
+    if (!MapFromMeshes) {
+      // Skip mapping textures from meshes
+      Meshes.insert(Mesh);
+      TaskTracker.completeJob(ParallaxGenTask::PGResult::SUCCESS);
+      continue;
+    }
+
+    if (Multithreading) {
+      boost::asio::post(MapTextureFromMeshPool,
+                      [this, &TaskTracker, &Mesh] { TaskTracker.completeJob(mapTexturesFromNIF(Mesh)); });
+    } else {
+      TaskTracker.completeJob(mapTexturesFromNIF(Mesh));
+    }
+  }
+
+  if (Multithreading) {
     // Wait for all threads to complete
     MapTextureFromMeshPool.join();
-
-    // TODO also check TXST sets here when mapping textures
-  } else {
-    // Confirm everything because there is no way to check
-    Meshes.insert(UnconfirmedMeshes.begin(), UnconfirmedMeshes.end());
   }
 
   // Loop through unconfirmed textures to confirm them
@@ -116,18 +139,42 @@ auto ParallaxGenDirectory::findPGFiles(const bool &MapFromMeshes) -> void {
       WinningType = get<1>(DefProperty);
     }
 
+    if (ManualTextureMaps.find(Texture) != ManualTextureMaps.end()) {
+      // Manual texture map found, override
+      WinningType = ManualTextureMaps.at(Texture);
+      WinningSlot = NIFUtil::getSlotFromTexType(WinningType);
+    }
+
     // Log result
     spdlog::trace(L"Mapping Textures | Mapping Result | Texture: {} | Slot: {} | Type: {}", Texture.wstring(),
-                  static_cast<size_t>(WinningSlot), stringToWstring(NIFUtil::getTextureTypeStr(WinningType)));
+                  static_cast<size_t>(WinningSlot), stringToWstring(NIFUtil::getStrFromTexType(WinningType)));
 
     // Add to texture map
-    addToTextureMaps(Texture, WinningSlot, WinningType);
+    if (WinningSlot != NIFUtil::TextureSlots::UNKNOWN) {
+      // Only add if no unknowns
+      addToTextureMaps(Texture, WinningSlot, WinningType);
+    }
   }
 }
 
-auto ParallaxGenDirectory::mapTexturesFromNIF(
-    const filesystem::path &NIFPath, unordered_map<filesystem::path, UnconfirmedTextureProperty> &UnconfirmedTextures,
-    mutex &UnconfirmedTexturesMutex) -> ParallaxGenTask::PGResult {
+auto ParallaxGenDirectory::checkGlobMatchInSet(const wstring &Check, const unordered_set<LPCWSTR> &List) -> bool {
+  // convert wstring to LPCWSTR
+  LPCWSTR CheckCstr = Check.c_str();
+
+  // check if string matches any glob
+  return std::ranges::any_of(List, [&](LPCWSTR Glob) { return PathMatchSpecW(CheckCstr, Glob); });
+}
+
+auto ParallaxGenDirectory::convertWStringSetToLPCWSTRSet(const unordered_set<wstring> &Set) -> unordered_set<LPCWSTR> {
+  unordered_set<LPCWSTR> Output;
+  for (const auto &Item : Set) {
+    Output.insert(Item.c_str());
+  }
+
+  return Output;
+}
+
+auto ParallaxGenDirectory::mapTexturesFromNIF(const filesystem::path &NIFPath) -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Load NIF
@@ -262,8 +309,7 @@ auto ParallaxGenDirectory::mapTexturesFromNIF(
       case NIFUtil::TextureSlots::BACKLIGHT:
         // Backlight check
         if (ShaderType == BSLSP_MULTILAYERPARALLAX && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF2_UNUSED01)) {
-          // TODO verify this
-          TextureType = NIFUtil::TextureType::SUBSURFACE;
+          TextureType = NIFUtil::TextureType::SUBSURFACEPBR;
           break;
         }
 
@@ -279,12 +325,12 @@ auto ParallaxGenDirectory::mapTexturesFromNIF(
 
         continue;
       default:
-        TextureType = NIFUtil::TextureType::DIFFUSE;
+        TextureType = NIFUtil::TextureType::UNKNOWN;
       }
 
       // Log finding
       spdlog::trace(L"Mapping Textures | Slot Found | NIF: {} | Texture: {} | Slot: {} | Type: {}", NIFPath.wstring(),
-                    stringToWstring(Texture), Slot, stringToWstring(NIFUtil::getTextureTypeStr(TextureType)));
+                    stringToWstring(Texture), Slot, stringToWstring(NIFUtil::getStrFromTexType(TextureType)));
 
       // Update unconfirmed textures map
       updateUnconfirmedTexturesMap(Texture, static_cast<NIFUtil::TextureSlots>(Slot), TextureType, UnconfirmedTextures,

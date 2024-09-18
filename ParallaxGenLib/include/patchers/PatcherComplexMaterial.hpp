@@ -2,7 +2,10 @@
 
 #include <NifFile.hpp>
 #include <filesystem>
+#include <shlwapi.h>
 #include <string>
+#include <unordered_set>
+#include <winnt.h>
 
 #include "NIFUtil.hpp"
 #include "ParallaxGenConfig.hpp"
@@ -14,14 +17,16 @@ class PatcherComplexMaterial {
 private:
   std::filesystem::path NIFPath;
   nifly::NifFile *NIF;
-  std::vector<std::wstring> DynCubemapBlocklist;
   ParallaxGenDirectory *PGD;
   ParallaxGenConfig *PGC;
   ParallaxGenD3D *PGD3D;
 
+  static std::unordered_set<LPCWSTR> DynCubemapBlocklist;
+
 public:
-  PatcherComplexMaterial(std::filesystem::path NIFPath, nifly::NifFile *NIF,
-                         std::vector<std::wstring> DynCubemapBlocklist, ParallaxGenConfig *PGC,
+  static auto loadDynCubemapBlocklist(const std::unordered_set<std::wstring> &DynCubemapBlocklist) -> void;
+
+  PatcherComplexMaterial(std::filesystem::path NIFPath, nifly::NifFile *NIF, ParallaxGenConfig *PGC,
                          ParallaxGenDirectory *PGD, ParallaxGenD3D *PGD3D);
 
   // check if complex material should be enabled on shape

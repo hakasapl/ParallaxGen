@@ -18,6 +18,7 @@
 #include "ParallaxGenD3D.hpp"
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenUtil.hpp"
+#include "patchers/PatcherComplexMaterial.hpp"
 #include "patchers/PatcherTruePBR.hpp"
 
 #define MAX_LOG_SIZE 5242880
@@ -166,9 +167,6 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   // Populate file map from data directory
   PGD.populateFileMap(!Args.NoBSA);
 
-  // Load configs
-  PGC.loadConfig(!Args.NoDefaultConfig);
-
   // Install default cubemap file if needed
   if (!Args.IgnoreComplexMaterial) {
     // install default cubemap file if needed
@@ -188,12 +186,16 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
     }
   }
 
+  // Load configs
+  PGC.loadConfig(!Args.NoDefaultConfig);
+
   // Build file vectors
-  PGD.findPGFiles();
+  PGD.findFiles();
   PGD3D.findCMMaps();
 
   // Load PBR configs
   PatcherTruePBR::loadPatcherBuffers(PGD.getPBRJSONs(), &PGD);
+  PatcherComplexMaterial::loadDynCubemapBlocklist(PGC.getDynCubemapBlocklist());
 
   // Upgrade shaders if requested
   if (Args.UpgradeShaders) {

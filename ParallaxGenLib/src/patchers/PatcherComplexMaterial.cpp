@@ -5,16 +5,21 @@
 
 #include "NIFUtil.hpp"
 #include "ParallaxGenConfig.hpp"
+#include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenUtil.hpp"
 
 using namespace std;
 using namespace ParallaxGenUtil;
 
-PatcherComplexMaterial::PatcherComplexMaterial(filesystem::path NIFPath, nifly::NifFile *NIF,
-                                               vector<wstring> DynCubemapBlocklist, ParallaxGenConfig *PGC,
+std::unordered_set<LPCWSTR> PatcherComplexMaterial::DynCubemapBlocklist;  // NOLINT TODO whats up with this
+
+auto PatcherComplexMaterial::loadDynCubemapBlocklist(const unordered_set<wstring> &DynCubemapBlocklist) -> void {
+  PatcherComplexMaterial::DynCubemapBlocklist = ParallaxGenDirectory::convertWStringSetToLPCWSTRSet(DynCubemapBlocklist);
+}
+
+PatcherComplexMaterial::PatcherComplexMaterial(filesystem::path NIFPath, nifly::NifFile *NIF, ParallaxGenConfig *PGC,
                                                ParallaxGenDirectory *PGD, ParallaxGenD3D *PGD3D)
-    : NIFPath(std::move(NIFPath)), NIF(NIF),
-      DynCubemapBlocklist(std::move(DynCubemapBlocklist)), PGD(PGD), PGC(PGC), PGD3D(PGD3D) {}
+    : NIFPath(std::move(NIFPath)), NIF(NIF), PGD(PGD), PGC(PGC), PGD3D(PGD3D) {}
 
 auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes,
                                          bool &EnableResult, bool &EnableDynCubemaps,
@@ -90,8 +95,8 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<wstring,
   }
 
   // Determine if dynamic cubemaps should be set
-  EnableDynCubemaps = !(ParallaxGenDirectory::checkGlob(NIFPath.wstring(), DynCubemapBlocklist) ||
-                        ParallaxGenDirectory::checkGlob(MatchedPath, DynCubemapBlocklist));
+  EnableDynCubemaps = !(ParallaxGenDirectory::checkGlobMatchInSet(NIFPath.wstring(), DynCubemapBlocklist) ||
+                        ParallaxGenDirectory::checkGlobMatchInSet(MatchedPath, DynCubemapBlocklist));
 
   spdlog::trace(L"NIF: {} | Shape: {} | CM | Shape Accepted", NIFPath.wstring(), ShapeBlockID);
   return Result;

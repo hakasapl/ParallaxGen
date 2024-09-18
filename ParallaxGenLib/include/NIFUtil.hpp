@@ -18,7 +18,8 @@ enum class TextureSlots : unsigned int {
   ENVMASK,
   TINT,
   BACKLIGHT,
-  UNUSED
+  UNUSED,
+  UNKNOWN
 };
 
 enum class TextureType {
@@ -37,10 +38,16 @@ enum class TextureType {
   INNERLAYER,
   COATNORMAL,
   BACKLIGHT,
-  SPECULAR
+  SPECULAR,
+  SUBSURFACEPBR,
+  UNKNOWN
 };
 
-auto getTextureTypeStr(const TextureType &Type) -> std::string;
+auto getStrFromTexType(const TextureType &Type) -> std::string;
+
+auto getTexTypeFromStr(const std::string &Type) -> TextureType;
+
+auto getSlotFromTexType(const TextureType &Type) -> TextureSlots;
 
 struct PGTexture {
   std::filesystem::path Path;
