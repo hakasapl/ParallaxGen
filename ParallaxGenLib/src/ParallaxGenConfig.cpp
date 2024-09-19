@@ -123,8 +123,8 @@ auto ParallaxGenConfig::addConfigJSON(const nlohmann::json &J) -> void {
   }
 
   // "texture_map" field
-  if (J.contains("texture_map")) {
-    for (const auto &Item : J["texture_map"].items()) {
+  if (J.contains("texture_maps")) {
+    for (const auto &Item : J["texture_maps"].items()) {
       ManualTextureMaps[boost::to_lower_copy(Item.key())] = NIFUtil::getTexTypeFromStr(Item.value().get<string>());
     }
   }

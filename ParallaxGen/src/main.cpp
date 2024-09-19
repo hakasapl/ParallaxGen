@@ -17,7 +17,6 @@
 #include "ParallaxGenConfig.hpp"
 #include "ParallaxGenD3D.hpp"
 #include "ParallaxGenDirectory.hpp"
-#include "ParallaxGenUtil.hpp"
 #include "patchers/PatcherComplexMaterial.hpp"
 #include "patchers/PatcherTruePBR.hpp"
 
@@ -25,7 +24,6 @@
 #define MAX_LOG_FILES 100
 
 using namespace std;
-using namespace ParallaxGenUtil;
 
 struct ParallaxGenCLIArgs {
   int Verbosity = 0;
@@ -38,6 +36,7 @@ struct ParallaxGenCLIArgs {
   bool NoBSA = false;
   bool UpgradeShaders = false;
   bool OptimizeMeshes = false;
+  bool NoMapFromMeshes = false;
   bool NoZip = false;
   bool NoCleanup = false;
   bool NoDefaultConfig = false;
@@ -57,6 +56,7 @@ struct ParallaxGenCLIArgs {
     OutStr += "NoBSA: " + to_string(static_cast<int>(NoBSA)) + "\n";
     OutStr += "UpgradeShaders: " + to_string(static_cast<int>(UpgradeShaders)) + "\n";
     OutStr += "OptimizeMeshes: " + to_string(static_cast<int>(OptimizeMeshes)) + "\n";
+    OutStr += "NoMapFromMeshes: " + to_string(static_cast<int>(NoMapFromMeshes)) + "\n";
     OutStr += "NoZip: " + to_string(static_cast<int>(NoZip)) + "\n";
     OutStr += "NoCleanup: " + to_string(static_cast<int>(NoCleanup)) + "\n";
     OutStr += "NoDefaultConfig: " + to_string(static_cast<int>(NoDefaultConfig)) + "\n";
@@ -90,6 +90,25 @@ auto getGameTypeMapStr() -> string {
   return GameTypeStr;
 }
 
+auto deployDynamicCubemapFile(ParallaxGenDirectory *PGD, const filesystem::path &OutputDir, const filesystem::path &ExePath) -> void {
+  // Install default cubemap file if needed
+  static const filesystem::path DynCubeMapPath = "textures/cubemaps/dynamic1pxcubemap_black.dds";
+  if (!PGD->isFile(DynCubeMapPath)) {
+    spdlog::info("Installing default dynamic cubemap file");
+
+    // Create Directory
+    filesystem::path OutputCubemapPath = OutputDir / DynCubeMapPath.parent_path();
+    filesystem::create_directories(OutputCubemapPath);
+
+    boost::filesystem::path AssetPath = boost::filesystem::path(ExePath) / "assets/dynamic1pxcubemap_black_ENB.dds";
+    boost::filesystem::path OutputPath =
+        boost::filesystem::path(OutputDir) / DynCubeMapPath;
+
+    // Move File
+    boost::filesystem::copy_file(AssetPath, OutputPath, boost::filesystem::copy_options::overwrite_existing);
+  }
+}
+
 void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   // Welcome Message
   spdlog::info("Welcome to ParallaxGen version {}!", PARALLAXGEN_VERSION);
@@ -100,12 +119,11 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
                  PARALLAXGEN_TEST_VERSION);
   }
 
+  // Alpha message
+  spdlog::warn("ParallaxGen is currently in ALPHA. Please file detailed bug reports on nexus or github.");
+
   // Print configuration parameters
   spdlog::debug("Configuration Parameters:\n\n{}\n", Args.getString());
-
-  //
-  // Init
-  //
 
   // print output location
   spdlog::info(L"ParallaxGen output directory (the contents will be deleted if you "
@@ -128,6 +146,16 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
     PGD3D.initGPU();
   }
 
+  //
+  // Generation
+  //
+
+  // User Input to Continue
+  if (!Args.Autostart) {
+    cout << "Press ENTER to start ParallaxGen...";
+    cin.get();
+  }
+
   // Create output directory
   try {
     filesystem::create_directories(Args.OutputDir);
@@ -141,16 +169,6 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
     spdlog::critical("Output directory cannot be the same directory as your data folder. "
                      "Exiting.");
     exit(1);
-  }
-
-  //
-  // Generation
-  //
-
-  // User Input to Continue
-  if (!Args.Autostart) {
-    cout << "Press ENTER to start ParallaxGen...";
-    cin.get();
   }
 
   // delete existing output
@@ -167,33 +185,20 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   // Populate file map from data directory
   PGD.populateFileMap(!Args.NoBSA);
 
-  // Install default cubemap file if needed
-  if (!Args.IgnoreComplexMaterial) {
-    // install default cubemap file if needed
-    if (!PGD.isFile("textures\\cubemaps\\dynamic1pxcubemap_black.dds")) {
-      spdlog::info("Installing default cubemap file");
-
-      // Create Directory
-      filesystem::path OutputCubemapPath = Args.OutputDir / "textures\\cubemaps";
-      filesystem::create_directories(OutputCubemapPath);
-
-      boost::filesystem::path AssetPath = boost::filesystem::path(ExePath) / L"assets/dynamic1pxcubemap_black_ENB.dds";
-      boost::filesystem::path OutputPath =
-          boost::filesystem::path(Args.OutputDir) / "textures\\cubemaps\\dynamic1pxcubemap_black.dds";
-
-      // Move File
-      boost::filesystem::copy_file(AssetPath, OutputPath, boost::filesystem::copy_options::overwrite_existing);
-    }
-  }
+  // Find relevant files
+  PGD.findFiles();
 
   // Load configs
   PGC.loadConfig(!Args.NoDefaultConfig);
 
-  // Build file vectors
-  PGD.findFiles();
-  PGD3D.findCMMaps();
+  // Map files
+  PGD.mapFiles(PGC.getNIFBlocklist(), PGC.getManualTextureMaps(), !Args.NoMapFromMeshes, !Args.NoMultithread);
 
-  // Load PBR configs
+  spdlog::info("Determining texture types");
+  PGD3D.findCMMaps();
+  spdlog::info("Done determining texture types");
+
+  // Load patcher static vars
   PatcherTruePBR::loadPatcherBuffers(PGD.getPBRJSONs(), &PGD);
   PatcherComplexMaterial::loadDynCubemapBlocklist(PGC.getDynCubemapBlocklist());
 
@@ -208,6 +213,9 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   }
 
   spdlog::info("ParallaxGen has finished patching meshes.");
+
+  // Deploy dynamic cubemap file
+  deployDynamicCubemapFile(&PGD, Args.OutputDir, ExePath);
 
   // archive
   if (!Args.NoZip) {
@@ -263,6 +271,8 @@ void addArguments(CLI::App &App, ParallaxGenCLIArgs &Args, const filesystem::pat
   // Output
   App.add_option("-o,--output-dir", Args.OutputDir, "Manually specify output directory");
   App.add_flag("--optimize-meshes", Args.OptimizeMeshes, "Optimize meshes before saving them");
+  App.add_flag("--no-map-from-meshes", Args.NoMapFromMeshes,
+               "Don't map textures from meshes (faster but less accurate)");
   App.add_flag("--no-zip", Args.NoZip, "Don't zip the output meshes (also enables --no-cleanup)");
   App.add_flag("--no-cleanup", Args.NoCleanup, "Don't delete generated meshes after zipping");
   // Patchers

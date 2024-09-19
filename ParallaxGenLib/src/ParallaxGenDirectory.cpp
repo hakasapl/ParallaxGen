@@ -69,7 +69,6 @@ auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
   // Convert Lists to LPCWSTR lists
   const auto NIFBlocklistCstr = convertWStringSetToLPCWSTRSet(NIFBlocklist);
 
-  // TODO probably not all of this is needed depending on args provided
   // Create task tracker
   ParallaxGenTask TaskTracker("Mapping Textures", UnconfirmedMeshes.size(), MAPTEXTURE_PROGRESS_MODULO);
 
@@ -155,6 +154,8 @@ auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
       addToTextureMaps(Texture, WinningSlot, WinningType);
     }
   }
+
+  spdlog::info("Mapping textures done");
 }
 
 auto ParallaxGenDirectory::checkGlobMatchInSet(const wstring &Check, const unordered_set<LPCWSTR> &List) -> bool {

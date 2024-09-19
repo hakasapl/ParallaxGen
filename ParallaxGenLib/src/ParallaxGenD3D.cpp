@@ -26,7 +26,6 @@ auto ParallaxGenD3D::findCMMaps() -> ParallaxGenTask::PGResult {
   ParallaxGenTask::PGResult PGResult = ParallaxGenTask::PGResult::SUCCESS;
 
   // loop through maps
-  size_t NumCMMaps = 0;
   for (auto &EnvMask : EnvMasks) {
     bool Result = false;
     ParallaxGenTask::updatePGResult(PGResult, checkIfCM(EnvMask.second.Path, Result),
@@ -35,12 +34,10 @@ auto ParallaxGenD3D::findCMMaps() -> ParallaxGenTask::PGResult {
     if (Result) {
       // TODO we need to fill in alpha for non-CM stuff
       EnvMask.second.Type = NIFUtil::TextureType::COMPLEXMATERIAL;
-      NumCMMaps++;
       spdlog::debug(L"Found File: {}", EnvMask.second.Path.wstring());
     }
   }
 
-  spdlog::info("Found {} complex material maps", NumCMMaps);
   return ParallaxGenTask::PGResult::SUCCESS;
 }
 
