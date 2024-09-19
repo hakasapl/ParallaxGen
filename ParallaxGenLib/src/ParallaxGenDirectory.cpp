@@ -373,7 +373,7 @@ auto ParallaxGenDirectory::addToTextureMaps(const filesystem::path &Path, const 
   // Check if texture is already in map
   if (TextureMaps[SlotInt].find(Base) != TextureMaps[SlotInt].end()) {
     // Texture already exists
-    spdlog::warn(L"Texture {} already exists in map in slot {}, replacing. This might cause issues.", Base, SlotInt);
+    spdlog::warn(L"Texture base {} already exists in map in slot {}, replacing.", Base, SlotInt);
   }
 
   // Add to texture map
