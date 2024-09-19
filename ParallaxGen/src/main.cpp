@@ -43,6 +43,7 @@ struct ParallaxGenCLIArgs {
   bool IgnoreParallax = false;
   bool IgnoreComplexMaterial = false;
   bool IgnoreTruePBR = false;
+  bool DisableMLP = false;
 
   [[nodiscard]] auto getString() const -> string {
     string OutStr;
@@ -63,6 +64,7 @@ struct ParallaxGenCLIArgs {
     OutStr += "IgnoreParallax: " + to_string(static_cast<int>(IgnoreParallax)) + "\n";
     OutStr += "IgnoreComplexMaterial: " + to_string(static_cast<int>(IgnoreComplexMaterial)) + "\n";
     OutStr += "IgnoreTruePBR: " + to_string(static_cast<int>(IgnoreTruePBR));
+    OutStr += "DisableMLP: " + to_string(static_cast<int>(DisableMLP));
 
     return OutStr;
   }
@@ -90,7 +92,8 @@ auto getGameTypeMapStr() -> string {
   return GameTypeStr;
 }
 
-auto deployDynamicCubemapFile(ParallaxGenDirectory *PGD, const filesystem::path &OutputDir, const filesystem::path &ExePath) -> void {
+auto deployDynamicCubemapFile(ParallaxGenDirectory *PGD, const filesystem::path &OutputDir,
+                              const filesystem::path &ExePath) -> void {
   // Install default cubemap file if needed
   static const filesystem::path DynCubeMapPath = "textures/cubemaps/dynamic1pxcubemap_black.dds";
   if (!PGD->isFile(DynCubeMapPath)) {
@@ -101,8 +104,7 @@ auto deployDynamicCubemapFile(ParallaxGenDirectory *PGD, const filesystem::path 
     filesystem::create_directories(OutputCubemapPath);
 
     boost::filesystem::path AssetPath = boost::filesystem::path(ExePath) / "assets/dynamic1pxcubemap_black_ENB.dds";
-    boost::filesystem::path OutputPath =
-        boost::filesystem::path(OutputDir) / DynCubeMapPath;
+    boost::filesystem::path OutputPath = boost::filesystem::path(OutputDir) / DynCubeMapPath;
 
     // Move File
     boost::filesystem::copy_file(AssetPath, OutputPath, boost::filesystem::copy_options::overwrite_existing);
@@ -200,7 +202,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   // Load patcher static vars
   PatcherTruePBR::loadPatcherBuffers(PGD.getPBRJSONs(), &PGD);
-  PatcherComplexMaterial::loadDynCubemapBlocklist(PGC.getDynCubemapBlocklist());
+  PatcherComplexMaterial::loadStatics(PGC.getDynCubemapBlocklist(), Args.DisableMLP);
 
   // Upgrade shaders if requested
   if (Args.UpgradeShaders) {
@@ -279,8 +281,11 @@ void addArguments(CLI::App &App, ParallaxGenCLIArgs &Args, const filesystem::pat
   App.add_flag("--upgrade-shaders", Args.UpgradeShaders, "Upgrade shaders to a better version whenever possible")
       ->excludes(FlagNoGpu);
   App.add_flag("--ignore-parallax", Args.IgnoreParallax, "Don't generate any parallax meshes");
-  App.add_flag("--ignore-complex-material", Args.IgnoreComplexMaterial, "Don't generate any complex material meshes");
+  auto *FlagIgnoreCM = App.add_flag("--ignore-complex-material", Args.IgnoreComplexMaterial,
+                                    "Don't generate any complex material meshes");
   App.add_flag("--ignore-truepbr", Args.IgnoreTruePBR, "Don't apply any TruePBR configs in the load order");
+  App.add_flag("--disable-mlp", Args.DisableMLP, "Disable MLP (Multi-Layer Parallax) if complex material is possible")
+      ->excludes(FlagIgnoreCM);
 
   // Multi-argument Validation
   App.callback([&Args, &ExePath]() {

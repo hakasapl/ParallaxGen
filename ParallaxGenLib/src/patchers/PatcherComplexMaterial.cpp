@@ -1,5 +1,6 @@
 #include "patchers/PatcherComplexMaterial.hpp"
 
+#include <Shaders.hpp>
 #include <boost/algorithm/string.hpp>
 #include <spdlog/spdlog.h>
 
@@ -11,10 +12,13 @@
 using namespace std;
 using namespace ParallaxGenUtil;
 
-std::unordered_set<LPCWSTR> PatcherComplexMaterial::DynCubemapBlocklist;  // NOLINT TODO whats up with this
+// Statics
+std::unordered_set<LPCWSTR> PatcherComplexMaterial::DynCubemapBlocklist;  // NOLINT
+bool PatcherComplexMaterial::DisableMLP;
 
-auto PatcherComplexMaterial::loadDynCubemapBlocklist(const unordered_set<wstring> &DynCubemapBlocklist) -> void {
+auto PatcherComplexMaterial::loadStatics(const unordered_set<wstring> &DynCubemapBlocklist, const bool &DisableMLP) -> void {
   PatcherComplexMaterial::DynCubemapBlocklist = ParallaxGenDirectory::convertWStringSetToLPCWSTRSet(DynCubemapBlocklist);
+  PatcherComplexMaterial::DisableMLP = DisableMLP;
 }
 
 PatcherComplexMaterial::PatcherComplexMaterial(filesystem::path NIFPath, nifly::NifFile *NIF, ParallaxGenConfig *PGC,
@@ -59,7 +63,7 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<wstring,
 
   // Get NIFShader type
   auto NIFShaderType = static_cast<nifly::BSLightingShaderPropertyShaderType>(NIFShader->GetShaderType());
-  if (NIFShaderType != BSLSP_DEFAULT && NIFShaderType != BSLSP_ENVMAP && NIFShaderType != BSLSP_PARALLAX) {
+  if (NIFShaderType != BSLSP_DEFAULT && NIFShaderType != BSLSP_ENVMAP && NIFShaderType != BSLSP_PARALLAX && (NIFShaderType != BSLSP_MULTILAYERPARALLAX || !DisableMLP)) {
     spdlog::trace(L"NIF: {} | Shape: {} | CM | Shape Rejected: Incorrect NIFShader type", NIFPath.wstring(),
                   ShapeBlockID);
     EnableResult = false;
@@ -123,8 +127,16 @@ auto PatcherComplexMaterial::applyPatch(NiShape *NIFShape, const wstring &Matche
 
   // Dynamic cubemaps (if enabled)
   if (ApplyDynCubemaps) {
-    // TODO don't statically define this str
     NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::CUBEMAP, "textures\\cubemaps\\dynamic1pxcubemap_black.dds", NIFModified);
+  }
+
+  // Remove texture slots if disabling MLP
+  if (DisableMLP) {
+    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::GLOW, "", NIFModified);
+    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::TINT, "", NIFModified);
+    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::BACKLIGHT, "", NIFModified);
+
+    NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF2_MULTI_LAYER_PARALLAX, NIFModified);
   }
 
   return Result;

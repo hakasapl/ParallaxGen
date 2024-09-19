@@ -22,9 +22,10 @@ private:
   ParallaxGenD3D *PGD3D;
 
   static std::unordered_set<LPCWSTR> DynCubemapBlocklist;
+  static bool DisableMLP;
 
 public:
-  static auto loadDynCubemapBlocklist(const std::unordered_set<std::wstring> &DynCubemapBlocklist) -> void;
+  static auto loadStatics(const std::unordered_set<std::wstring> &DynCubemapBlocklist, const bool &DisableMLP) -> void;
 
   PatcherComplexMaterial(std::filesystem::path NIFPath, nifly::NifFile *NIF, ParallaxGenConfig *PGC,
                          ParallaxGenDirectory *PGD, ParallaxGenD3D *PGD3D);

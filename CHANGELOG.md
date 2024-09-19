@@ -6,6 +6,7 @@
 - Fixed upgrade-shader not generating mipmaps
 - Fixed PBR bug with duplicate texture sets
 - New method for mapping textures to types
+- Added --disable-mlp flag to turn MLP into complex material where possible
 
 ## [0.5.7] - 2025-09-05
 
