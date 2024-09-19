@@ -7,6 +7,7 @@
 - Fixed PBR bug with duplicate texture sets
 - New method for mapping textures to types
 - Added --disable-mlp flag to turn MLP into complex material where possible
+- Removed weapons/armor from dynamic cubemap blocklist
 
 ## [0.5.7] - 2025-09-05
 
