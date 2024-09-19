@@ -224,32 +224,13 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
     return Result;
   }
 
-  // NIF file object
-  NifFile NIF;
-
-  // Get NIF Bytes
+  // Load NIF file
   const vector<std::byte> NIFFileData = PGD->getFile(NIFFile);
-  if (NIFFileData.empty()) {
-    spdlog::error(L"NIF: {} | NIF Rejected: File is empty", NIFFile.wstring());
-    Result = ParallaxGenTask::PGResult::FAILURE;
-    return Result;
-  }
-
-  // Convert Byte Vector to Stream
-  boost::iostreams::array_source NIFArraySource(reinterpret_cast<const char *>(NIFFileData.data()), NIFFileData.size());
-  boost::iostreams::stream<boost::iostreams::array_source> NIFStream(NIFArraySource);
-
+  NifFile NIF;
   try {
-    // try block for loading nif
-    NIF.Load(NIFStream);
-  } catch (const exception &E) {
-    spdlog::error(L"NIF: {} | NIF Rejected: Unable to read from BSA", NIFFile.wstring(), stringToWstring(E.what()));
-    Result = ParallaxGenTask::PGResult::FAILURE;
-    return Result;
-  }
-
-  if (!NIF.IsValid()) {
-    spdlog::error(L"NIF: {} | NIF Rejected: Invalid NIF", NIFFile.wstring());
+    NIF = NIFUtil::loadNIFFromBytes(NIFFileData);
+  } catch(const exception &E) {
+    spdlog::error(L"NIF: {} | NIF Rejected: Unable to load NIF: {}", NIFFile.wstring(), stringToWstring(E.what()));
     Result = ParallaxGenTask::PGResult::FAILURE;
     return Result;
   }

@@ -32,6 +32,7 @@ struct ParallaxGenCLIArgs {
   filesystem::path OutputDir;
   bool Autostart = false;
   bool NoMultithread = false;
+  bool HighMem = false;
   bool NoGPU = false;
   bool NoBSA = false;
   bool UpgradeShaders = false;
@@ -53,6 +54,7 @@ struct ParallaxGenCLIArgs {
     OutStr += "OutputDir: " + OutputDir.string() + "\n";
     OutStr += "Autostart: " + to_string(static_cast<int>(Autostart)) + "\n";
     OutStr += "NoMultithread: " + to_string(static_cast<int>(NoMultithread)) + "\n";
+    OutStr += "HighMem: " + to_string(static_cast<int>(HighMem)) + "\n";
     OutStr += "NoGPU: " + to_string(static_cast<int>(NoGPU)) + "\n";
     OutStr += "NoBSA: " + to_string(static_cast<int>(NoBSA)) + "\n";
     OutStr += "UpgradeShaders: " + to_string(static_cast<int>(UpgradeShaders)) + "\n";
@@ -194,7 +196,8 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   PGC.loadConfig(!Args.NoDefaultConfig);
 
   // Map files
-  PGD.mapFiles(PGC.getNIFBlocklist(), PGC.getManualTextureMaps(), !Args.NoMapFromMeshes, !Args.NoMultithread);
+  PGD.mapFiles(PGC.getNIFBlocklist(), PGC.getManualTextureMaps(), !Args.NoMapFromMeshes, !Args.NoMultithread,
+               Args.HighMem);
 
   spdlog::info("Determining texture types");
   PGD3D.findCMMaps();
@@ -275,6 +278,7 @@ void addArguments(CLI::App &App, ParallaxGenCLIArgs &Args, const filesystem::pat
   App.add_flag("--optimize-meshes", Args.OptimizeMeshes, "Optimize meshes before saving them");
   App.add_flag("--no-map-from-meshes", Args.NoMapFromMeshes,
                "Don't map textures from meshes (faster but less accurate)");
+  App.add_flag("--high-mem", Args.HighMem, "Enable high memory usage (faster runtime but uses a lot more RAM)");
   App.add_flag("--no-zip", Args.NoZip, "Don't zip the output meshes (also enables --no-cleanup)");
   App.add_flag("--no-cleanup", Args.NoCleanup, "Don't delete generated meshes after zipping");
   // Patchers

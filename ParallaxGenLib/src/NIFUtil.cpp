@@ -168,7 +168,7 @@ auto NIFUtil::loadNIFFromBytes(const std::vector<std::byte> &NIFBytes) -> nifly:
 
   // Get NIF Bytes
   if (NIFBytes.empty()) {
-    throw runtime_error("Unable to load NIF: File is empty");
+    throw runtime_error("File is empty");
   }
 
   // Convert Byte Vector to Stream
@@ -177,7 +177,7 @@ auto NIFUtil::loadNIFFromBytes(const std::vector<std::byte> &NIFBytes) -> nifly:
 
   NIF.Load(NIFStream);
   if (!NIF.IsValid()) {
-    throw runtime_error("Unable to load NIF: Invalid NIF");
+    throw runtime_error("Invalid NIF");
   }
 
   return NIF;

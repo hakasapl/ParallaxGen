@@ -9,7 +9,8 @@
     "**/markers/**",
     "**/mps/**",
     "**/sky/**",
-    "**/water/**"
+    "**/water/**",
+    "calientetools/**"
   ],
   "texture_maps": {}
 }

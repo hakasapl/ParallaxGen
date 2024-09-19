@@ -115,6 +115,15 @@ auto PatcherComplexMaterial::applyPatch(NiShape *NIFShape, const wstring &Matche
   auto *NIFShader = NIF->GetShader(NIFShape);
   auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
 
+  // Remove texture slots if disabling MLP
+  if (DisableMLP && NIFShaderBSLSP->GetShaderType() == BSLSP_MULTILAYERPARALLAX) {
+    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::GLOW, "", NIFModified);
+    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::TINT, "", NIFModified);
+    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::BACKLIGHT, "", NIFModified);
+
+    NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF2_MULTI_LAYER_PARALLAX, NIFModified);
+  }
+
   // Set NIFShader type to env map
   NIFUtil::setShaderType(NIFShader, BSLSP_ENVMAP, NIFModified);
   // Set NIFShader flags
@@ -128,15 +137,6 @@ auto PatcherComplexMaterial::applyPatch(NiShape *NIFShape, const wstring &Matche
   // Dynamic cubemaps (if enabled)
   if (ApplyDynCubemaps) {
     NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::CUBEMAP, "textures\\cubemaps\\dynamic1pxcubemap_black.dds", NIFModified);
-  }
-
-  // Remove texture slots if disabling MLP
-  if (DisableMLP) {
-    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::GLOW, "", NIFModified);
-    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::TINT, "", NIFModified);
-    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::BACKLIGHT, "", NIFModified);
-
-    NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF2_MULTI_LAYER_PARALLAX, NIFModified);
   }
 
   return Result;

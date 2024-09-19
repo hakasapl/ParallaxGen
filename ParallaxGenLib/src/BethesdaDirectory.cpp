@@ -1,6 +1,7 @@
 #include "BethesdaDirectory.hpp"
 
 #include <boost/algorithm/string/predicate.hpp>
+#include <mutex>
 #include <shlwapi.h>
 #include <spdlog/spdlog.h>
 
@@ -76,7 +77,7 @@ void BethesdaDirectory::populateFileMap(bool IncludeBSAs) {
 
 auto BethesdaDirectory::getFileMap() const -> const map<filesystem::path, BethesdaDirectory::BethesdaFile>& { return FileMap; }
 
-auto BethesdaDirectory::getFile(const filesystem::path &RelPath) const -> vector<std::byte> {
+auto BethesdaDirectory::getFile(const filesystem::path &RelPath, const bool &CacheFile) -> vector<std::byte> {
   // find bsa/loose file to open
   BethesdaFile File = getFileFromMap(RelPath);
   if (File.Path.empty()) {
@@ -87,6 +88,20 @@ auto BethesdaDirectory::getFile(const filesystem::path &RelPath) const -> vector
     }
   }
 
+  auto LowerRelPath = getPathLower(RelPath);
+  if (!CacheFile) {
+    lock_guard<mutex> Lock(FileCacheMutex);
+
+    if (FileCache.find(LowerRelPath) != FileCache.end()) {
+      if (Logging) {
+        spdlog::trace(L"Reading file from cache: {}", RelPath.wstring());
+      }
+
+      return FileCache[LowerRelPath];
+    }
+  }
+
+  vector<std::byte> OutFileBytes;
   shared_ptr<BSAFile> BSAStruct = File.BSAFile;
   if (BSAStruct == nullptr) {
     if (Logging) {
@@ -95,10 +110,8 @@ auto BethesdaDirectory::getFile(const filesystem::path &RelPath) const -> vector
 
     filesystem::path FilePath = DataDir / RelPath;
 
-    return getFileBytes(FilePath);
-  }
-
-  if (BSAStruct != nullptr) {
+    OutFileBytes = getFileBytes(FilePath);
+  } else {
     filesystem::path BSAPath = BSAStruct->Path;
 
     if (Logging) {
@@ -125,17 +138,28 @@ auto BethesdaDirectory::getFile(const filesystem::path &RelPath) const -> vector
       }
 
       auto &S = AOS.get<binary_io::memory_ostream>();
-      return S.rdbuf();
-    }
-
-    if (Logging) {
-      spdlog::error(L"File not found in BSA archive: {}", RelPath.wstring());
+      OutFileBytes = S.rdbuf();
     } else {
-      throw runtime_error("File not found in BSA archive");
+      if (Logging) {
+        spdlog::error(L"File not found in BSA archive: {}", RelPath.wstring());
+      } else {
+        throw runtime_error("File not found in BSA archive");
+      }
     }
   }
 
-  return {};
+  if (OutFileBytes.empty()) {
+    return {};
+  }
+
+  // cache file if flag is set
+  if (CacheFile) {
+    lock_guard<mutex> Lock(FileCacheMutex);
+
+    FileCache[LowerRelPath] = OutFileBytes;
+  }
+
+  return OutFileBytes;
 }
 
 auto BethesdaDirectory::isLooseFile(const filesystem::path &RelPath) const -> bool {

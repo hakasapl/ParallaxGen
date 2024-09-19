@@ -63,14 +63,15 @@ auto ParallaxGenDirectory::findFiles() -> void {
 
 auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
                                     const unordered_map<filesystem::path, NIFUtil::TextureType> &ManualTextureMaps,
-                                    const bool &MapFromMeshes, const bool &Multithreading) -> void {
+                                    const bool &MapFromMeshes, const bool &Multithreading,
+                                    const bool &CacheNIFs) -> void {
   spdlog::info("Starting building texture map");
 
   // Convert Lists to LPCWSTR lists
   const auto NIFBlocklistCstr = convertWStringSetToLPCWSTRSet(NIFBlocklist);
 
   // Create task tracker
-  ParallaxGenTask TaskTracker("Mapping Textures", UnconfirmedMeshes.size(), MAPTEXTURE_PROGRESS_MODULO);
+  ParallaxGenTask TaskTracker("Loading NIFs", UnconfirmedMeshes.size(), MAPTEXTURE_PROGRESS_MODULO);
 
   // Create thread pool
   size_t NumThreads = boost::thread::hardware_concurrency();
@@ -80,7 +81,7 @@ auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
   for (const auto &Mesh : UnconfirmedMeshes) {
     if (checkGlobMatchInSet(Mesh.wstring(), NIFBlocklistCstr)) {
       // Skip mesh because it is on blocklist
-      spdlog::trace(L"Mapping Textures | Skipping Mesh due to Blocklist | Mesh: {}", Mesh.wstring());
+      spdlog::trace(L"Loading NIFs | Skipping Mesh due to Blocklist | Mesh: {}", Mesh.wstring());
       TaskTracker.completeJob(ParallaxGenTask::PGResult::SUCCESS);
       continue;
     }
@@ -93,10 +94,11 @@ auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
     }
 
     if (Multithreading) {
-      boost::asio::post(MapTextureFromMeshPool,
-                      [this, &TaskTracker, &Mesh] { TaskTracker.completeJob(mapTexturesFromNIF(Mesh)); });
+      boost::asio::post(MapTextureFromMeshPool, [this, &TaskTracker, &Mesh, &CacheNIFs] {
+        TaskTracker.completeJob(mapTexturesFromNIF(Mesh, CacheNIFs));
+      });
     } else {
-      TaskTracker.completeJob(mapTexturesFromNIF(Mesh));
+      TaskTracker.completeJob(mapTexturesFromNIF(Mesh, CacheNIFs));
     }
   }
 
@@ -175,11 +177,12 @@ auto ParallaxGenDirectory::convertWStringSetToLPCWSTRSet(const unordered_set<wst
   return Output;
 }
 
-auto ParallaxGenDirectory::mapTexturesFromNIF(const filesystem::path &NIFPath) -> ParallaxGenTask::PGResult {
+auto ParallaxGenDirectory::mapTexturesFromNIF(const filesystem::path &NIFPath,
+                                              const bool &CacheNIFs) -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Load NIF
-  const auto &NIFBytes = getFile(NIFPath);
+  const auto &NIFBytes = getFile(NIFPath, CacheNIFs);
   NifFile NIF;
   try {
     // Attempt to load NIF file
