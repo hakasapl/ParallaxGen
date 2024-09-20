@@ -110,7 +110,7 @@ auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<wstring,
   // verify that maps match each other (this is somewhat expense so it happens last)
   string DiffuseMap;
   NIF->GetTextureSlot(NIFShape, DiffuseMap, static_cast<unsigned int>(NIFUtil::TextureSlots::DIFFUSE));
-  if (!DiffuseMap.empty() && !PGD->isFile(DiffuseMap)) {
+  if (DiffuseMap.empty() || !PGD->isFile(DiffuseMap)) {
     // no Diffuse map
     spdlog::trace(L"NIF: {} | Shape: {} | Parallax | Shape Rejected: Diffuse map missing: {}", NIFPath.wstring(),
                   ShapeBlockID, strToWstr(DiffuseMap));

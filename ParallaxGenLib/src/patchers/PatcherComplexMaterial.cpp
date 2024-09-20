@@ -80,7 +80,7 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<wstring,
   // verify that maps match each other
   string DiffuseMap;
   NIF->GetTextureSlot(NIFShape, DiffuseMap, 0);
-  if (!DiffuseMap.empty() && !PGD->isFile(DiffuseMap)) {
+  if (DiffuseMap.empty() || !PGD->isFile(DiffuseMap)) {
     // no Diffuse map
     spdlog::trace(L"NIF: {} | Shape: {} | CM | Shape Rejected: Diffuse map missing: {}", NIFPath.wstring(),
                   ShapeBlockID, strToWstr(DiffuseMap));

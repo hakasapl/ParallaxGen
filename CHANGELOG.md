@@ -10,6 +10,7 @@
 - Removed weapons/armor from dynamic cubemap blocklist
 - Added --high-mem option for paster processing in exchange for high memory usage
 - Added wide string support in filenames
+- Fixed issue of blank DDS files being checked for aspect ratio
 
 ## [0.5.7] - 2025-09-05
 
