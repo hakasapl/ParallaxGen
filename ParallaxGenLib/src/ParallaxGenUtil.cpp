@@ -6,6 +6,7 @@
 #include <boost/algorithm/string.hpp>
 #include <fstream>
 #include <iostream>
+#include <wingdi.h>
 #include <winnt.h>
 
 using namespace std;

@@ -13,11 +13,13 @@ using namespace std;
 using namespace ParallaxGenUtil;
 
 // Statics
-std::unordered_set<LPCWSTR> PatcherComplexMaterial::DynCubemapBlocklist;  // NOLINT
+std::unordered_set<LPCWSTR> PatcherComplexMaterial::DynCubemapBlocklist; // NOLINT
 bool PatcherComplexMaterial::DisableMLP;
 
-auto PatcherComplexMaterial::loadStatics(const unordered_set<wstring> &DynCubemapBlocklist, const bool &DisableMLP) -> void {
-  PatcherComplexMaterial::DynCubemapBlocklist = ParallaxGenDirectory::convertWStringSetToLPCWSTRSet(DynCubemapBlocklist);
+auto PatcherComplexMaterial::loadStatics(const unordered_set<wstring> &DynCubemapBlocklist,
+                                         const bool &DisableMLP) -> void {
+  PatcherComplexMaterial::DynCubemapBlocklist =
+      ParallaxGenDirectory::convertWStringSetToLPCWSTRSet(DynCubemapBlocklist);
   PatcherComplexMaterial::DisableMLP = DisableMLP;
 }
 
@@ -43,7 +45,7 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<wstring,
   EnableResult = true; // Start with default true
 
   // Check if complex material file exists
-  static const vector<int> SlotSearch = {0, 1};  // Diffuse first, then normal
+  static const vector<int> SlotSearch = {0, 1}; // Diffuse first, then normal
   for (int Slot : SlotSearch) {
     auto FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], *CMBaseMap);
     if (!FoundMatch.Path.empty() && FoundMatch.Type == NIFUtil::TextureType::COMPLEXMATERIAL) {
@@ -63,7 +65,8 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<wstring,
 
   // Get NIFShader type
   auto NIFShaderType = static_cast<nifly::BSLightingShaderPropertyShaderType>(NIFShader->GetShaderType());
-  if (NIFShaderType != BSLSP_DEFAULT && NIFShaderType != BSLSP_ENVMAP && NIFShaderType != BSLSP_PARALLAX && (NIFShaderType != BSLSP_MULTILAYERPARALLAX || !DisableMLP)) {
+  if (NIFShaderType != BSLSP_DEFAULT && NIFShaderType != BSLSP_ENVMAP && NIFShaderType != BSLSP_PARALLAX &&
+      (NIFShaderType != BSLSP_MULTILAYERPARALLAX || !DisableMLP)) {
     spdlog::trace(L"NIF: {} | Shape: {} | CM | Shape Rejected: Incorrect NIFShader type", NIFPath.wstring(),
                   ShapeBlockID);
     EnableResult = false;
@@ -73,6 +76,17 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<wstring,
   // Check if TruePBR is enabled
   if (NIFUtil::hasShaderFlag(NIFShaderBSLSP, SLSF2_UNUSED01)) {
     spdlog::trace(L"NIF: {} | Shape: {} | CM | Shape Rejected: TruePBR enabled", NIFPath.wstring(), ShapeBlockID);
+    EnableResult = false;
+    return Result;
+  }
+
+  // check to make sure there are textures defined in slot 3 or 8
+  if (NIFShaderType != BSLSP_MULTILAYERPARALLAX &&
+      (!NIFUtil::getTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::GLOW).empty() ||
+       !NIFUtil::getTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::TINT).empty() ||
+       !NIFUtil::getTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::BACKLIGHT).empty())) {
+    spdlog::trace(L"NIF: {} | Shape: {} | CM | Shape Rejected: Texture defined in slots 3,7,or 8", NIFPath.wstring(),
+                  ShapeBlockID);
     EnableResult = false;
     return Result;
   }
@@ -136,7 +150,8 @@ auto PatcherComplexMaterial::applyPatch(NiShape *NIFShape, const wstring &Matche
 
   // Dynamic cubemaps (if enabled)
   if (ApplyDynCubemaps) {
-    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::CUBEMAP, "textures\\cubemaps\\dynamic1pxcubemap_black.dds", NIFModified);
+    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::CUBEMAP,
+                            "textures\\cubemaps\\dynamic1pxcubemap_black.dds", NIFModified);
   }
 
   return Result;

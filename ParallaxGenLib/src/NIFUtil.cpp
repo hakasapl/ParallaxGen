@@ -285,6 +285,12 @@ auto NIFUtil::setTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, cons
   }
 }
 
+auto NIFUtil::getTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, const TextureSlots &Slot) -> string {
+  string Texture;
+  NIF->GetTextureSlot(NIFShape, Texture, static_cast<unsigned int>(Slot));
+  return Texture;
+}
+
 auto NIFUtil::getTexBase(const std::filesystem::path &Path) -> std::wstring {
   const auto &SuffixMap = getTexSuffixMap();
 
