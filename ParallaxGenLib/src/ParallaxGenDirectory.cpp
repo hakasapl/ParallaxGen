@@ -74,7 +74,11 @@ auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
   ParallaxGenTask TaskTracker("Loading NIFs", UnconfirmedMeshes.size(), MAPTEXTURE_PROGRESS_MODULO);
 
   // Create thread pool
+#ifdef _DEBUG
+  size_t NumThreads = 1;
+#else
   size_t NumThreads = boost::thread::hardware_concurrency();
+#endif
   boost::asio::thread_pool MapTextureFromMeshPool(NumThreads);
 
   // Loop through each mesh to confirm textures
@@ -98,7 +102,7 @@ auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
         try {
           TaskTracker.completeJob(mapTexturesFromNIF(Mesh, CacheNIFs));
         } catch (const exception &E) {
-          spdlog::error(L"Exception in thread processing NIF \"{}\": {}", Mesh.wstring(), strToWstr(E.what()));
+          spdlog::error(L"Exception in thread loading NIF \"{}\": {}", Mesh.wstring(), strToWstr(E.what()));
           TaskTracker.completeJob(ParallaxGenTask::PGResult::FAILURE);
         }
       });

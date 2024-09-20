@@ -64,28 +64,19 @@ void ParallaxGen::patchMeshes(const bool &MultiThread) {
 
     boost::asio::thread_pool MeshPatchPool(NumThreads);
 
-    // Exception vars
-    exception_ptr ThreadException = nullptr;
-    mutex ExceptionMutex;
-
     for (const auto &Mesh : Meshes) {
-      boost::asio::post(MeshPatchPool, [this, &TaskTracker, &DiffJSON, Mesh, &ThreadException, &ExceptionMutex] {
+      boost::asio::post(MeshPatchPool, [this, &TaskTracker, &DiffJSON, Mesh] {
         try {
           TaskTracker.completeJob(processNIF(Mesh, DiffJSON));
-        } catch (...) {
-          lock_guard<mutex> Lock(ExceptionMutex);
-          ThreadException = current_exception();
+        } catch (const exception &E) {
+          spdlog::error(L"Exception in thread patching NIF {}: {}", Mesh.wstring(), strToWstr(E.what()));
+          TaskTracker.completeJob(ParallaxGenTask::PGResult::FAILURE);
         }
       });
     }
 
     // Wait for all threads to complete
     MeshPatchPool.join();
-
-    // Rethrow exception if one occurred
-    if (ThreadException) {
-      rethrow_exception(ThreadException);
-    }
 
   } else {
     for (const auto &Mesh : Meshes) {

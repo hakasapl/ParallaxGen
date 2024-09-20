@@ -63,4 +63,5 @@ auto getFileBytes(const filesystem::path &FilePath) -> vector<std::byte> {
 
   return Buffer;
 }
+
 } // namespace ParallaxGenUtil
