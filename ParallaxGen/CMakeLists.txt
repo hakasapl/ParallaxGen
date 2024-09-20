@@ -3,7 +3,7 @@ set(SOURCES
     "src/main.cpp"
 )
 
-add_executable(ParallaxGen ${SOURCES})
+add_executable(ParallaxGen ${SOURCES} icon.rc)
 
 # Packages
 find_package(CLI11 REQUIRED CONFIG)
