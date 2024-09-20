@@ -111,14 +111,14 @@ auto ParallaxGenConfig::addConfigJSON(const nlohmann::json &J) -> void {
   // "dyncubemap_blocklist" field
   if (J.contains("dyncubemap_blocklist")) {
     for (const auto &Item : J["dyncubemap_blocklist"]) {
-      DynCubemapBlocklist.insert(stringToWstring(boost::to_lower_copy(Item.get<string>())));
+      DynCubemapBlocklist.insert(strToWstr(boost::to_lower_copy(Item.get<string>())));
     }
   }
 
   // "nif_blocklist" field
   if (J.contains("nif_blocklist")) {
     for (const auto &Item : J["nif_blocklist"]) {
-      NIFBlocklist.insert(stringToWstring(boost::to_lower_copy(Item.get<string>())));
+      NIFBlocklist.insert(strToWstr(boost::to_lower_copy(Item.get<string>())));
     }
   }
 
@@ -135,7 +135,7 @@ auto ParallaxGenConfig::parseJSON(const std::filesystem::path &JSONFile, const v
   try {
     J = nlohmann::json::parse(Bytes);
   } catch (const nlohmann::json::parse_error &E) {
-    spdlog::error(L"Error parsing JSON file {}: {}", JSONFile.wstring(), stringToWstring(E.what()));
+    spdlog::error(L"Error parsing JSON file {}: {}", JSONFile.wstring(), strToWstr(E.what()));
     J = {};
     return false;
   }
@@ -148,7 +148,7 @@ auto ParallaxGenConfig::validateJSON(const std::filesystem::path &JSONFile, cons
   try {
     Validator.validate(J);
   } catch (const std::exception &E) {
-    spdlog::error(L"Invalid JSON file {}: {}", JSONFile.wstring(), stringToWstring(E.what()));
+    spdlog::error(L"Invalid JSON file {}: {}", JSONFile.wstring(), strToWstr(E.what()));
     return false;
   }
 

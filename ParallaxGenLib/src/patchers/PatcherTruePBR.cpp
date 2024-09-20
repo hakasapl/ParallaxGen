@@ -73,7 +73,7 @@ void PatcherTruePBR::loadPatcherBuffers(const std::vector<std::filesystem::path>
         getTruePBRConfigs()[ConfigOrder++] = Element;
       }
     } catch (nlohmann::json::parse_error &E) {
-      spdlog::error(L"Unable to parse TruePBR Config file {}: {}", Config.wstring(), ParallaxGenUtil::stringToWstring(E.what()));
+      spdlog::error(L"Unable to parse TruePBR Config file {}: {}", Config.wstring(), ParallaxGenUtil::strToWstr(E.what()));
       continue;
     }
   }
@@ -84,7 +84,7 @@ void PatcherTruePBR::loadPatcherBuffers(const std::vector<std::filesystem::path>
   for (const auto &Config : getTruePBRConfigs()) {
     // "match_normal" attribute
     if (Config.second.contains("match_normal")) {
-      auto RevNormal = ParallaxGenUtil::stringToWstring(Config.second["match_normal"].get<string>());
+      auto RevNormal = ParallaxGenUtil::strToWstr(Config.second["match_normal"].get<string>());
       reverse(RevNormal.begin(), RevNormal.end());
 
       getTruePBRNormalInverse()[boost::to_lower_copy(RevNormal)].push_back(Config.first);
@@ -93,7 +93,7 @@ void PatcherTruePBR::loadPatcherBuffers(const std::vector<std::filesystem::path>
 
     // "match_diffuse" attribute
     if (Config.second.contains("match_diffuse")) {
-      auto RevDiffuse = ParallaxGenUtil::stringToWstring(Config.second["match_diffuse"].get<string>());
+      auto RevDiffuse = ParallaxGenUtil::strToWstr(Config.second["match_diffuse"].get<string>());
       reverse(RevDiffuse.begin(), RevDiffuse.end());
 
       getTruePBRDiffuseInverse()[boost::to_lower_copy(RevDiffuse)].push_back(Config.first);
@@ -202,7 +202,7 @@ auto PatcherTruePBR::getPathContainsMatch(const uint32_t &ShapeBlockID,
   size_t NumMatches = 0;
   for (const auto &Config : getPathLookupJSONs()) {
     // Check if in cache
-    auto CacheKey = make_tuple(ParallaxGenUtil::stringToWstring(Config.second["path_contains"].get<string>()), Diffuse);
+    auto CacheKey = make_tuple(ParallaxGenUtil::strToWstr(Config.second["path_contains"].get<string>()), Diffuse);
 
     bool PathMatch = false;
     if (Cache.find(CacheKey) == Cache.end()) {
@@ -231,7 +231,7 @@ auto PatcherTruePBR::insertTruePBRData(const uint32_t &ShapeBlockID,
                                        std::map<size_t, std::tuple<nlohmann::json, std::wstring>> &TruePBRData,
                                        std::wstring &PriorityJSONFile, const wstring &TexName, size_t Cfg) -> void {
   const auto CurCfg = getTruePBRConfigs()[Cfg];
-  const auto CurJSON = ParallaxGenUtil::stringToWstring(CurCfg["json"].get<string>());
+  const auto CurJSON = ParallaxGenUtil::strToWstr(CurCfg["json"].get<string>());
 
   // Check if we should skip this due to nif filter (this is expsenive, so we do it last)
   if (CurCfg.contains("nif_filter") && !boost::icontains(NIFPath.wstring(), CurCfg["nif_filter"].get<string>())) {
@@ -273,12 +273,12 @@ auto PatcherTruePBR::insertTruePBRData(const uint32_t &ShapeBlockID,
   // Get PBR path, which is the path without the matched field
   auto MatchedFieldStr =
       CurCfg.contains("match_normal") ? CurCfg["match_normal"].get<string>() : CurCfg["match_diffuse"].get<string>();
-  auto MatchedField = ParallaxGenUtil::stringToWstring(MatchedFieldStr);
+  auto MatchedField = ParallaxGenUtil::strToWstr(MatchedFieldStr);
   TexPath.erase(TexPath.length() - MatchedField.length(), MatchedField.length());
 
   // "rename" attribute
   if (CurCfg.contains("rename")) {
-    MatchedField = ParallaxGenUtil::stringToWstring(CurCfg["rename"].get<string>());
+    MatchedField = ParallaxGenUtil::strToWstr(CurCfg["rename"].get<string>());
   }
 
   spdlog::trace(L"NIF: {} | Shape: {} | PBR | {} | PBR texture path created: {}", NIFPath.wstring(), ShapeBlockID, Cfg, MatchedField);

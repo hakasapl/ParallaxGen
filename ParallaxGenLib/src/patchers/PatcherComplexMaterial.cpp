@@ -83,7 +83,7 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<wstring,
   if (!DiffuseMap.empty() && !PGD->isFile(DiffuseMap)) {
     // no Diffuse map
     spdlog::trace(L"NIF: {} | Shape: {} | CM | Shape Rejected: Diffuse map missing: {}", NIFPath.wstring(),
-                  ShapeBlockID, stringToWstring(DiffuseMap));
+                  ShapeBlockID, strToWstr(DiffuseMap));
     EnableResult = false;
     return Result;
   }

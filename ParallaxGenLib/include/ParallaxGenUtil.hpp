@@ -8,24 +8,14 @@
 
 namespace ParallaxGenUtil {
 
-// converts a string to a wstring
-auto stringToWstring(const std::string &Str) -> std::wstring;
-auto stringVecToWstringVec(const std::vector<std::string> &StrVec) -> std::vector<std::wstring>;
-
-// converts a wide string to a utf-8 narrow string
-auto wstringToString(const std::wstring &Str) -> std::string;
+// narrow and wide string conversion functions
+auto strToWstr(const std::string &Str) -> std::wstring;
+auto wstrToStr(const std::wstring &Str) -> std::string;
 
 // Get the file bytes of a file
 auto getFileBytes(const std::filesystem::path &FilePath) -> std::vector<std::byte>;
 
-// Replace last of helpers for string and path
-auto replaceLastOf(const std::filesystem::path &Path, const std::wstring &ToReplace,
-                   const std::wstring &ReplaceWith) -> std::filesystem::path;
-auto replaceLastOf(const std::string &Path, const std::string &ToReplace,
-                   const std::string &ReplaceWith) -> std::string;
-
 // Template Functions
-
 template <typename T> auto isInVector(const std::vector<T> &Vec, const T &Test) -> bool {
   return std::find(Vec.begin(), Vec.end(), Test) != Vec.end();
 }

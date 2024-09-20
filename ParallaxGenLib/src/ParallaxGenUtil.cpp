@@ -6,41 +6,37 @@
 #include <boost/algorithm/string.hpp>
 #include <fstream>
 #include <iostream>
+#include <winnt.h>
 
 using namespace std;
 namespace ParallaxGenUtil {
 
-auto stringToWstring(const string &Str) -> wstring {
-  size_t Length = Str.length() + 1; // Including null terminator
-  std::vector<wchar_t> WBuffer(Length);
-  size_t ConvertedChars = 0;
-
-  errno_t Err = mbstowcs_s(&ConvertedChars, WBuffer.data(), WBuffer.size(), Str.c_str(), Length - 1);
-  if (Err != 0) {
-    throw std::runtime_error("Conversion failed");
-  }
-
-  return std::wstring(WBuffer.data());
-}
-
-auto stringVecToWstringVec(const vector<string> &StrVec) -> vector<wstring> {
-  vector<wstring> WStrVec;
-  WStrVec.reserve(StrVec.size());
-  for (const auto &Str : StrVec) {
-    WStrVec.push_back(stringToWstring(Str));
-  }
-  return WStrVec;
-}
-
-auto wstringToString(const wstring &Str) -> string {
+auto strToWstr(const string &Str) -> wstring {
+  // Just return empty string if empty
   if (Str.empty()) {
     return {};
   }
 
-  int SizeNeeded = WideCharToMultiByte(CP_UTF8, 0, Str.data(), (int)Str.size(), nullptr, 0, nullptr, nullptr);
-  string StrTo(SizeNeeded, 0);
-  WideCharToMultiByte(CP_UTF8, 0, Str.data(), (int)Str.size(), StrTo.data(), SizeNeeded, nullptr, nullptr);
-  return StrTo;
+  // Convert string > wstring
+  int SizeNeeded = MultiByteToWideChar(CP_UTF8, 0, Str.c_str(), (int)Str.length(), nullptr, 0);
+  std::wstring WStr(SizeNeeded, 0);
+  MultiByteToWideChar(CP_UTF8, 0, Str.data(), (int)Str.length(), WStr.data(), SizeNeeded);
+
+  return WStr;
+}
+
+auto wstrToStr(const wstring &WStr) -> string {
+  // Just return empty string if empty
+  if (WStr.empty()) {
+    return {};
+  }
+
+  // Convert wstring > string
+  int SizeNeeded = WideCharToMultiByte(CP_UTF8, 0, WStr.data(), (int)WStr.size(), nullptr, 0, nullptr, nullptr);
+  string Str(SizeNeeded, 0);
+  WideCharToMultiByte(CP_UTF8, 0, WStr.data(), (int)WStr.size(), Str.data(), SizeNeeded, nullptr, nullptr);
+
+  return Str;
 }
 
 auto getFileBytes(const filesystem::path &FilePath) -> vector<std::byte> {
@@ -66,28 +62,5 @@ auto getFileBytes(const filesystem::path &FilePath) -> vector<std::byte> {
   InputFile.close();
 
   return Buffer;
-}
-
-auto replaceLastOf(const filesystem::path &Path, const wstring &ToReplace,
-                   const wstring &ReplaceWith) -> filesystem::path {
-  wstring PathStr = Path.wstring();
-  size_t Pos = PathStr.rfind(ToReplace);
-  if (Pos == wstring::npos) {
-    return Path;
-  }
-
-  PathStr.replace(Pos, ToReplace.size(), ReplaceWith);
-  return PathStr;
-}
-
-auto replaceLastOf(const string &Path, const string &ToReplace, const string &ReplaceWith) -> string {
-  size_t Pos = Path.rfind(ToReplace);
-  if (Pos == wstring::npos) {
-    return Path;
-  }
-
-  string OutPath = Path;
-  OutPath.replace(Pos, ToReplace.size(), ReplaceWith);
-  return OutPath;
 }
 } // namespace ParallaxGenUtil

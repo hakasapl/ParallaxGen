@@ -95,7 +95,12 @@ auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
 
     if (Multithreading) {
       boost::asio::post(MapTextureFromMeshPool, [this, &TaskTracker, &Mesh, &CacheNIFs] {
-        TaskTracker.completeJob(mapTexturesFromNIF(Mesh, CacheNIFs));
+        try {
+          TaskTracker.completeJob(mapTexturesFromNIF(Mesh, CacheNIFs));
+        } catch (const exception &E) {
+          spdlog::error(L"Exception in thread processing NIF \"{}\": {}", Mesh.wstring(), strToWstr(E.what()));
+          TaskTracker.completeJob(ParallaxGenTask::PGResult::FAILURE);
+        }
       });
     } else {
       TaskTracker.completeJob(mapTexturesFromNIF(Mesh, CacheNIFs));
@@ -148,7 +153,7 @@ auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
 
     // Log result
     spdlog::trace(L"Mapping Textures | Mapping Result | Texture: {} | Slot: {} | Type: {}", Texture.wstring(),
-                  static_cast<size_t>(WinningSlot), stringToWstring(NIFUtil::getStrFromTexType(WinningType)));
+                  static_cast<size_t>(WinningSlot), strToWstr(NIFUtil::getStrFromTexType(WinningType)));
 
     // Add to texture map
     if (WinningSlot != NIFUtil::TextureSlots::UNKNOWN) {
@@ -156,6 +161,10 @@ auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
       addToTextureMaps(Texture, WinningSlot, WinningType);
     }
   }
+
+  // cleanup
+  UnconfirmedTextures.clear();
+  UnconfirmedMeshes.clear();
 
   spdlog::info("Mapping textures done");
 }
@@ -189,7 +198,7 @@ auto ParallaxGenDirectory::mapTexturesFromNIF(const filesystem::path &NIFPath,
     NIF = NIFUtil::loadNIFFromBytes(NIFBytes);
   } catch (const exception &E) {
     // Unable to read NIF, delete from Meshes set
-    spdlog::error(L"Error reading NIF File \"{}\" (skipping): {}", NIFPath.wstring(), stringToWstring(E.what()));
+    spdlog::error(L"Error reading NIF File \"{}\" (skipping): {}", NIFPath.wstring(), strToWstr(E.what()));
     return ParallaxGenTask::PGResult::FAILURE;
   }
 
@@ -334,7 +343,7 @@ auto ParallaxGenDirectory::mapTexturesFromNIF(const filesystem::path &NIFPath,
 
       // Log finding
       spdlog::trace(L"Mapping Textures | Slot Found | NIF: {} | Texture: {} | Slot: {} | Type: {}", NIFPath.wstring(),
-                    stringToWstring(Texture), Slot, stringToWstring(NIFUtil::getStrFromTexType(TextureType)));
+                    strToWstr(Texture), Slot, strToWstr(NIFUtil::getStrFromTexType(TextureType)));
 
       // Update unconfirmed textures map
       updateUnconfirmedTexturesMap(Texture, static_cast<NIFUtil::TextureSlots>(Slot), TextureType, UnconfirmedTextures,

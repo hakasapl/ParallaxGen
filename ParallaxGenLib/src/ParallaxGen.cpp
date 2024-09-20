@@ -142,7 +142,7 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
                                         NewComplexMap.GetMetadata(), DirectX::DDS_FLAGS_NONE, OutputPath.c_str());
     if (FAILED(HR)) {
       spdlog::error(L"Unable to save complex material {}: {}", OutputPath.wstring(),
-                    stringToWstring(ParallaxGenD3D::getHRESULTErrorMessage(HR)));
+                    strToWstr(ParallaxGenD3D::getHRESULTErrorMessage(HR)));
       Result = ParallaxGenTask::PGResult::FAILURE;
       return Result;
     }
@@ -175,7 +175,7 @@ void ParallaxGen::deleteMeshes() const {
         filesystem::remove_all(Entry.path());
         spdlog::trace(L"Deleted directory {}", Entry.path().wstring());
       } catch (const exception &E) {
-        spdlog::error(L"Error deleting directory {}: {}", Entry.path().wstring(), stringToWstring(E.what()));
+        spdlog::error(L"Error deleting directory {}: {}", Entry.path().wstring(), strToWstr(E.what()));
       }
     }
 
@@ -184,7 +184,7 @@ void ParallaxGen::deleteMeshes() const {
       try {
         filesystem::remove(Entry.path());
       } catch (const exception &E) {
-        spdlog::error(L"Error deleting state file {}: {}", Entry.path().wstring(), stringToWstring(E.what()));
+        spdlog::error(L"Error deleting state file {}: {}", Entry.path().wstring(), strToWstr(E.what()));
       }
     }
   }
@@ -200,7 +200,7 @@ void ParallaxGen::deleteOutputDir() const {
         filesystem::remove_all(Entry.path());
       }
     } catch (const exception &E) {
-      spdlog::critical(L"Error deleting output directory {}: {}", OutputDir.wstring(), stringToWstring(E.what()));
+      spdlog::critical(L"Error deleting output directory {}: {}", OutputDir.wstring(), strToWstr(E.what()));
       exit(1);
     }
   }
@@ -230,7 +230,7 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
   try {
     NIF = NIFUtil::loadNIFFromBytes(NIFFileData);
   } catch(const exception &E) {
-    spdlog::error(L"NIF: {} | NIF Rejected: Unable to load NIF: {}", NIFFile.wstring(), stringToWstring(E.what()));
+    spdlog::error(L"NIF: {} | NIF Rejected: Unable to load NIF: {}", NIFFile.wstring(), strToWstr(E.what()));
     Result = ParallaxGenTask::PGResult::FAILURE;
     return Result;
   }
@@ -299,10 +299,11 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
     const auto CRCAfter = CRCResultAfter.checksum();
 
     // Add to diff JSON
+    auto JSONKey = wstrToStr(NIFFile.wstring());
     threadSafeJSONUpdate(
         [&](nlohmann::json &JSON) {
-          JSON[NIFFile.string()]["crc32original"] = CRCBefore;
-          JSON[NIFFile.string()]["crc32patched"] = CRCAfter;
+          JSON[JSONKey]["crc32original"] = CRCBefore;
+          JSON[JSONKey]["crc32patched"] = CRCAfter;
         },
         DiffJSON);
   }
@@ -431,7 +432,7 @@ void ParallaxGen::addFileToZip(mz_zip_archive &Zip, const filesystem::path &File
   // get relative path
   filesystem::path ZipRelativePath = FilePath.lexically_relative(OutputDir);
 
-  string ZipFilePath = wstringToString(ZipRelativePath.wstring());
+  string ZipFilePath = wstrToStr(ZipRelativePath.wstring());
 
   // add file to Zip
   if (mz_zip_writer_add_mem(&Zip, ZipFilePath.c_str(), Buffer.data(), Buffer.size(), MZ_NO_COMPRESSION) == 0) {
@@ -453,7 +454,7 @@ void ParallaxGen::zipDirectory(const filesystem::path &DirPath, const filesystem
   }
 
   // initialize file
-  string ZipPathString = wstringToString(ZipPath);
+  string ZipPathString = wstrToStr(ZipPath);
   if (mz_zip_writer_init_file(&Zip, ZipPathString.c_str(), 0) == 0) {
     spdlog::critical(L"Error creating Zip file: {}", ZipPath.wstring());
     exit(1);
