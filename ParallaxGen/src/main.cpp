@@ -2,6 +2,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/stacktrace.hpp>
+#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
@@ -160,6 +161,9 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
     cin.get();
   }
 
+  // Get current time to compare later
+  const auto StartTime = chrono::high_resolution_clock::now();
+
   // Create output directory
   try {
     filesystem::create_directories(Args.OutputDir);
@@ -217,6 +221,9 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
     PG.patchMeshes(!Args.NoMultithread);
   }
 
+  // Release cached files, if any
+  PGD.clearCache();
+
   spdlog::info("ParallaxGen has finished patching meshes.");
 
   // Deploy dynamic cubemap file
@@ -231,6 +238,11 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   if (!Args.NoCleanup) {
     PG.deleteMeshes();
   }
+
+  const auto EndTime = chrono::high_resolution_clock::now();
+  const auto Duration = chrono::duration_cast<chrono::seconds>(EndTime - StartTime).count();
+
+  spdlog::info("ParallaxGen took {} seconds to complete", Duration);
 }
 
 void exitBlocking() {

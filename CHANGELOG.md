@@ -13,6 +13,7 @@
 - Fixed issue of blank DDS files being checked for aspect ratio
 - CM will be rejected on shapes with textures in slots 3, 7, or 8 now
 - Added icon to parallaxgen.exe
+- At the end parallaxgen will now report the time it took to run the patcher
 
 ## [0.5.7] - 2025-09-05
 

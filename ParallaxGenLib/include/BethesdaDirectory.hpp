@@ -108,6 +108,11 @@ public:
                              const bool &CacheFile = false) -> std::vector<std::byte>;
 
   /**
+   * @brief Clear the file cache
+   */
+  auto clearCache() -> void;
+
+  /**
    * @brief Check if a file in the load order is a loose file
    *
    * @param RelPath path to the file relative to the data directory

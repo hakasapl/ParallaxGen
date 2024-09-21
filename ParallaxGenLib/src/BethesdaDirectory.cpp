@@ -155,11 +155,15 @@ auto BethesdaDirectory::getFile(const filesystem::path &RelPath, const bool &Cac
   // cache file if flag is set
   if (CacheFile) {
     lock_guard<mutex> Lock(FileCacheMutex);
-
     FileCache[LowerRelPath] = OutFileBytes;
   }
 
   return OutFileBytes;
+}
+
+auto BethesdaDirectory::clearCache() -> void {
+  lock_guard<mutex> Lock(FileCacheMutex);
+  FileCache.clear();
 }
 
 auto BethesdaDirectory::isLooseFile(const filesystem::path &RelPath) const -> bool {
