@@ -13,13 +13,12 @@ using namespace std;
 using namespace ParallaxGenUtil;
 
 // Statics
-std::unordered_set<LPCWSTR> PatcherComplexMaterial::DynCubemapBlocklist; // NOLINT
+std::unordered_set<wstring> PatcherComplexMaterial::DynCubemapBlocklist; // NOLINT
 bool PatcherComplexMaterial::DisableMLP;
 
 auto PatcherComplexMaterial::loadStatics(const unordered_set<wstring> &DynCubemapBlocklist,
                                          const bool &DisableMLP) -> void {
-  PatcherComplexMaterial::DynCubemapBlocklist =
-      ParallaxGenDirectory::convertWStringSetToLPCWSTRSet(DynCubemapBlocklist);
+  PatcherComplexMaterial::DynCubemapBlocklist = DynCubemapBlocklist;
   PatcherComplexMaterial::DisableMLP = DisableMLP;
 }
 

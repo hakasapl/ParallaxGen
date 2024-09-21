@@ -52,10 +52,9 @@ public:
 private:
   auto mapTexturesFromNIF(const std::filesystem::path &NIFPath, const bool &CacheNIF = false) -> ParallaxGenTask::PGResult;
 
-  static auto updateUnconfirmedTexturesMap(
+  auto updateUnconfirmedTexturesMap(
       const std::filesystem::path &Path, const NIFUtil::TextureSlots &Slot, const NIFUtil::TextureType &Type,
-      std::unordered_map<std::filesystem::path, UnconfirmedTextureProperty> &UnconfirmedTextureSlots,
-      std::mutex &Mutex) -> void;
+      std::unordered_map<std::filesystem::path, UnconfirmedTextureProperty> &UnconfirmedTextureSlots) -> void;
 
   auto addToTextureMaps(const std::filesystem::path &Path, const NIFUtil::TextureSlots &Slot,
                         const NIFUtil::TextureType &Type) -> void;
@@ -63,9 +62,7 @@ private:
   auto addMesh(const std::filesystem::path &Path) -> void;
 
 public:
-  static auto checkGlobMatchInSet(const std::wstring &Check, const std::unordered_set<LPCWSTR> &List) -> bool;
-
-  static auto convertWStringSetToLPCWSTRSet(const std::unordered_set<std::wstring> &Set) -> std::unordered_set<LPCWSTR>;
+  static auto checkGlobMatchInSet(const std::wstring &Check, const std::unordered_set<std::wstring> &List) -> bool;
 
   [[nodiscard]] auto getTextureMap(const NIFUtil::TextureSlots &Slot) -> std::map<std::wstring, NIFUtil::PGTexture> &;
 

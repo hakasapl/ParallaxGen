@@ -67,9 +67,6 @@ auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
                                     const bool &CacheNIFs) -> void {
   spdlog::info("Starting building texture map");
 
-  // Convert Lists to LPCWSTR lists
-  const auto NIFBlocklistCstr = convertWStringSetToLPCWSTRSet(NIFBlocklist);
-
   // Create task tracker
   ParallaxGenTask TaskTracker("Loading NIFs", UnconfirmedMeshes.size(), MAPTEXTURE_PROGRESS_MODULO);
 
@@ -83,7 +80,7 @@ auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
 
   // Loop through each mesh to confirm textures
   for (const auto &Mesh : UnconfirmedMeshes) {
-    if (checkGlobMatchInSet(Mesh.wstring(), NIFBlocklistCstr)) {
+    if (checkGlobMatchInSet(Mesh.wstring(), NIFBlocklist)) {
       // Skip mesh because it is on blocklist
       spdlog::trace(L"Loading NIFs | Skipping Mesh due to Blocklist | Mesh: {}", Mesh.wstring());
       TaskTracker.completeJob(ParallaxGenTask::PGResult::SUCCESS);
@@ -99,12 +96,15 @@ auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
 
     if (Multithreading) {
       boost::asio::post(MapTextureFromMeshPool, [this, &TaskTracker, &Mesh, &CacheNIFs] {
+        ParallaxGenTask::PGResult Result = ParallaxGenTask::PGResult::SUCCESS;
         try {
-          TaskTracker.completeJob(mapTexturesFromNIF(Mesh, CacheNIFs));
+          Result = mapTexturesFromNIF(Mesh, CacheNIFs);
         } catch (const exception &E) {
           spdlog::error(L"Exception in thread loading NIF \"{}\": {}", Mesh.wstring(), strToWstr(E.what()));
-          TaskTracker.completeJob(ParallaxGenTask::PGResult::FAILURE);
+          Result = ParallaxGenTask::PGResult::FAILURE;
         }
+
+        TaskTracker.completeJob(Result);
       });
     } else {
       TaskTracker.completeJob(mapTexturesFromNIF(Mesh, CacheNIFs));
@@ -173,21 +173,12 @@ auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
   spdlog::info("Mapping textures done");
 }
 
-auto ParallaxGenDirectory::checkGlobMatchInSet(const wstring &Check, const unordered_set<LPCWSTR> &List) -> bool {
+auto ParallaxGenDirectory::checkGlobMatchInSet(const wstring &Check, const unordered_set<std::wstring> &List) -> bool {
   // convert wstring to LPCWSTR
   LPCWSTR CheckCstr = Check.c_str();
 
   // check if string matches any glob
-  return std::ranges::any_of(List, [&](LPCWSTR Glob) { return PathMatchSpecW(CheckCstr, Glob); });
-}
-
-auto ParallaxGenDirectory::convertWStringSetToLPCWSTRSet(const unordered_set<wstring> &Set) -> unordered_set<LPCWSTR> {
-  unordered_set<LPCWSTR> Output;
-  for (const auto &Item : Set) {
-    Output.insert(Item.c_str());
-  }
-
-  return Output;
+  return std::ranges::any_of(List, [&](const wstring &Glob) { return PathMatchSpecW(CheckCstr, Glob.c_str()); });
 }
 
 auto ParallaxGenDirectory::mapTexturesFromNIF(const filesystem::path &NIFPath,
@@ -195,7 +186,7 @@ auto ParallaxGenDirectory::mapTexturesFromNIF(const filesystem::path &NIFPath,
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Load NIF
-  const auto &NIFBytes = getFile(NIFPath, CacheNIFs);
+  const auto NIFBytes = getFile(NIFPath, CacheNIFs);
   NifFile NIF;
   try {
     // Attempt to load NIF file
@@ -215,7 +206,11 @@ auto ParallaxGenDirectory::mapTexturesFromNIF(const filesystem::path &NIFPath,
     }
 
     // Get shader
-    const auto &Shader = NIF.GetShader(Shape);
+    auto *const Shader = NIF.GetShader(Shape);
+    if (Shader == nullptr) {
+      // No shader, skip
+      continue;
+    }
 
     if (!Shader->HasTextureSet()) {
       // No texture set, skip
@@ -229,18 +224,23 @@ auto ParallaxGenDirectory::mapTexturesFromNIF(const filesystem::path &NIFPath,
     for (uint32_t Slot = 0; Slot < NUM_TEXTURE_SLOTS; Slot++) {
       string Texture;
       NIF.GetTextureSlot(Shape, Texture, Slot);
-      boost::to_lower(Texture); // Lowercase for comparison
-
       if (Texture.empty()) {
         // No texture in this slot
         continue;
       }
+
+      boost::to_lower(Texture); // Lowercase for comparison
 
       const auto ShaderType = Shader->GetShaderType();
       NIFUtil::TextureType TextureType = {};
 
       // Check to make sure appropriate shaders are set for a given texture
       auto *const ShaderBSSP = dynamic_cast<BSShaderProperty *>(Shader);
+      if (ShaderBSSP == nullptr) {
+        // Not a BSShaderProperty, skip
+        continue;
+      }
+
       switch (static_cast<NIFUtil::TextureSlots>(Slot)) {
       case NIFUtil::TextureSlots::DIFFUSE:
         // Diffuse check
@@ -350,8 +350,7 @@ auto ParallaxGenDirectory::mapTexturesFromNIF(const filesystem::path &NIFPath,
                     strToWstr(Texture), Slot, strToWstr(NIFUtil::getStrFromTexType(TextureType)));
 
       // Update unconfirmed textures map
-      updateUnconfirmedTexturesMap(Texture, static_cast<NIFUtil::TextureSlots>(Slot), TextureType, UnconfirmedTextures,
-                                   UnconfirmedTexturesMutex);
+      updateUnconfirmedTexturesMap(Texture, static_cast<NIFUtil::TextureSlots>(Slot), TextureType, UnconfirmedTextures);
     }
   }
 
@@ -365,9 +364,9 @@ auto ParallaxGenDirectory::mapTexturesFromNIF(const filesystem::path &NIFPath,
 
 auto ParallaxGenDirectory::updateUnconfirmedTexturesMap(
     const filesystem::path &Path, const NIFUtil::TextureSlots &Slot, const NIFUtil::TextureType &Type,
-    unordered_map<filesystem::path, UnconfirmedTextureProperty> &UnconfirmedTextures, mutex &Mutex) -> void {
+    unordered_map<filesystem::path, UnconfirmedTextureProperty> &UnconfirmedTextures) -> void {
   // Use mutex to make this thread safe
-  lock_guard<mutex> Lock(Mutex);
+  lock_guard<mutex> Lock(UnconfirmedTexturesMutex);
 
   // Check if texture is already in map
   if (UnconfirmedTextures.find(Path) != UnconfirmedTextures.end()) {

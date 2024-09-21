@@ -13,6 +13,7 @@
 
 #include "NIFUtil.hpp"
 #include "ParallaxGenDirectory.hpp"
+#include "ParallaxGenTask.hpp"
 #include "ParallaxGenUtil.hpp"
 
 using namespace std;
@@ -66,12 +67,15 @@ void ParallaxGen::patchMeshes(const bool &MultiThread) {
 
     for (const auto &Mesh : Meshes) {
       boost::asio::post(MeshPatchPool, [this, &TaskTracker, &DiffJSON, Mesh] {
+        ParallaxGenTask::PGResult Result = ParallaxGenTask::PGResult::SUCCESS;
         try {
-          TaskTracker.completeJob(processNIF(Mesh, DiffJSON));
+          Result = processNIF(Mesh, DiffJSON);
         } catch (const exception &E) {
           spdlog::error(L"Exception in thread patching NIF {}: {}", Mesh.wstring(), strToWstr(E.what()));
-          TaskTracker.completeJob(ParallaxGenTask::PGResult::FAILURE);
+          Result = ParallaxGenTask::PGResult::FAILURE;
         }
+
+        TaskTracker.completeJob(Result);
       });
     }
 
