@@ -1,15 +1,15 @@
 # Changelog
 
-## [0.5.8] - UNRELEASED
+## [0.5.8] - 2025-09-21
 
 - Fixed PBR bug when multilayer: false is defined
 - Fixed upgrade-shader not generating mipmaps
 - Fixed PBR bug with duplicate texture sets
-- New method for mapping textures to types
+- New method for mapping textures to types by searching in NIFs
 - Added --disable-mlp flag to turn MLP into complex material where possible
 - Removed weapons/armor from dynamic cubemap blocklist
-- Added --high-mem option for paster processing in exchange for high memory usage
-- Added wide string support in filenames
+- Added --high-mem option for faster processing in exchange for high memory usage
+- Added wide string support in NIF filenames
 - Fixed issue of blank DDS files being checked for aspect ratio
 - CM will be rejected on shapes with textures in slots 3, 7, or 8 now
 - Added icon to parallaxgen.exe
