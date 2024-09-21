@@ -56,9 +56,6 @@ public:
   [[nodiscard]] static auto getDiffJSONName() -> std::filesystem::path;
 
 private:
-  void patchMeshBatch(const std::vector<std::filesystem::path> &Meshes, const size_t &Start, const size_t &End,
-                      ParallaxGenTask &TaskTracker, nlohmann::json &DiffJSON);
-
   // thread safe JSON update
   std::mutex JSONUpdateMutex;
   void threadSafeJSONUpdate(const std::function<void(nlohmann::json &)> &Operation, nlohmann::json &DiffJSON);
@@ -72,7 +69,7 @@ private:
   // processes a shape within a NIF file
   auto processShape(const std::filesystem::path &NIFPath, nifly::NifFile &NIF, nifly::NiShape *NIFShape,
                     PatcherVanillaParallax &PatchVP, PatcherComplexMaterial &PatchCM, PatcherTruePBR &PatchTPBR,
-                    bool &ShapeModified) -> ParallaxGenTask::PGResult;
+                    bool &ShapeModified) const -> ParallaxGenTask::PGResult;
 
   // Zip methods
   void addFileToZip(mz_zip_archive &Zip, const std::filesystem::path &FilePath,

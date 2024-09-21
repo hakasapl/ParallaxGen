@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -47,9 +48,13 @@ private:
   std::filesystem::path DataDir;                         /**< Stores the path to the game data directory */
   std::map<std::filesystem::path, BethesdaFile> FileMap; /** < Stores the file map for every file found in the load
                                                             order. Key is a lowercase path, value is a BethesdaFile */
-  bool Logging;                                          /** < Bool for whether logging is enabled or not */
-  BethesdaGame BG;                                       /** < BethesdaGame which stores a BethesdaGame object
-                                                            corresponding to this load order */
+
+  std::unordered_map<std::filesystem::path, std::vector<std::byte>> FileCache; /** < Stores a cache of file bytes */
+  std::mutex FileCacheMutex; /** < Mutex for the file cache map */
+
+  bool Logging;  /** < Bool for whether logging is enabled or not */
+  BethesdaGame BG; /** < BethesdaGame which stores a BethesdaGame object
+                      corresponding to this load order */
 
   /**
    * @brief Returns a vector of strings that represent the fields in the INI
@@ -84,7 +89,7 @@ public:
    *
    * @return std::map<std::filesystem::path, BethesdaFile>
    */
-  [[nodiscard]] auto getFileMap() const -> std::map<std::filesystem::path, BethesdaFile>;
+  [[nodiscard]] auto getFileMap() const -> const std::map<std::filesystem::path, BethesdaFile> &;
 
   /**
    * @brief Get the data directory path
@@ -99,7 +104,13 @@ public:
    * @param RelPath path to the file relative to the data directory
    * @return std::vector<std::byte> vector of bytes of the file
    */
-  [[nodiscard]] auto getFile(const std::filesystem::path &RelPath) const -> std::vector<std::byte>;
+  [[nodiscard]] auto getFile(const std::filesystem::path &RelPath,
+                             const bool &CacheFile = false) -> std::vector<std::byte>;
+
+  /**
+   * @brief Clear the file cache
+   */
+  auto clearCache() -> void;
 
   /**
    * @brief Check if a file in the load order is a loose file

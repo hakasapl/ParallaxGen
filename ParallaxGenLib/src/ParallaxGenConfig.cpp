@@ -1,11 +1,12 @@
 #include "ParallaxGenConfig.hpp"
 
+#include <boost/algorithm/string/case_conv.hpp>
 #include <filesystem>
-#include <nlohmann/json-schema.hpp>
-#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
 #include <spdlog/spdlog.h>
 #include <string>
 
+#include "NIFUtil.hpp"
 #include "ParallaxGenUtil.hpp"
 
 using namespace std;
@@ -21,201 +22,25 @@ auto ParallaxGenConfig::getConfigValidation() -> nlohmann::json {
     "title": "parallaxgen-cfg",
     "type": "object",
     "properties": {
-      "parallax_lookup": {
-        "type": "object",
-        "properties": {
-          "allowlist": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": ".*\\.dds$"
-            }
-          },
-          "blocklist": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "archive_blocklist": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": "^[^\\/\\\\]*$"
-            }
-          }
-        },
-        "required": [
-          "allowlist",
-          "blocklist",
-          "archive_blocklist"
-        ]
-      },
-      "parallax_processing": {
-        "type": "object",
-        "properties": {
-          "lookup_order": {
-            "type": "array",
-            "items": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 8
-            }
-          }
-        },
-        "required": [
-          "lookup_order"
-        ]
-      },
-      "complexmaterial_lookup": {
-        "type": "object",
-        "properties": {
-          "allowlist": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": ".*\\.dds$"
-            }
-          },
-          "blocklist": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "archive_blocklist": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": "^[^\\/\\\\]*$"
-            }
-          }
-        },
-        "required": [
-          "allowlist",
-          "blocklist",
-          "archive_blocklist"
-        ]
-      },
-      "complexmaterial_processing": {
-        "type": "object",
-        "properties": {
-          "lookup_order": {
-            "type": "array",
-            "items": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 8
-            }
-          },
-          "dyncubemap_blocklist": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "lookup_order",
-          "dyncubemap_blocklist"
-        ]
-      },
-      "truepbr_cfg_lookup": {
-        "type": "object",
-        "properties": {
-          "allowlist": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": ".*\\.json$"
-            }
-          },
-          "blocklist": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "archive_blocklist": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": "^[^\\/\\\\]*$"
-            }
-          }
-        },
-        "required": [
-          "allowlist",
-          "blocklist",
-          "archive_blocklist"
-        ]
-      },
-      "truepbr_cfg_processing": {
-        "type": "object",
-        "properties": {
-          "lookup_order": {
-            "type": "array",
-            "items": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 8
-            }
-          }
-        },
-        "required": [
-          "lookup_order"
-        ]
-      },
-      "nif_lookup": {
-        "type": "object",
-        "properties": {
-          "allowlist": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": ".*\\.nif$"
-            }
-          },
-          "blocklist": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "archive_blocklist": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": "^[^\\/\\\\]*$"
-            }
-          }
-        },
-        "required": [
-          "allowlist",
-          "blocklist",
-          "archive_blocklist"
-        ]
-      },
-      "suffixes": {
+      "dyncubemap_blocklist": {
         "type": "array",
         "items": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
+          "type": "string"
+        }
+      },
+      "nif_blocklist": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "texture_map": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string"
         }
       }
-    },
-    "required": [
-      "parallax_lookup",
-      "parallax_processing",
-      "complexmaterial_lookup",
-      "complexmaterial_processing",
-      "truepbr_cfg_lookup",
-      "truepbr_cfg_processing",
-      "nif_lookup",
-      "suffixes"
-    ]
+    }
   }
   )"_json;
 
@@ -223,6 +48,14 @@ auto ParallaxGenConfig::getConfigValidation() -> nlohmann::json {
 }
 
 void ParallaxGenConfig::loadConfig(const bool &LoadNative) {
+  // Initialize Validator
+  try {
+    Validator.set_root_schema(getConfigValidation());
+  } catch (const std::exception &E) {
+    spdlog::critical("Unable to validate JSON validation: {}", E.what());
+    exit(1);
+  }
+
   size_t NumConfigs = 0;
 
   if (LoadNative) {
@@ -231,114 +64,95 @@ void ParallaxGenConfig::loadConfig(const bool &LoadNative) {
     for (const auto &Entry : filesystem::recursive_directory_iterator(DefConfPath)) {
       if (filesystem::is_regular_file(Entry) && Entry.path().filename().extension() == ".json") {
         spdlog::debug(L"Loading ParallaxGen Config: {}", Entry.path().wstring());
-        try {
-          const auto J = nlohmann::json::parse(getFileBytes(Entry.path()));
-          mergeJSONSmart(PGConfig, J);
+
+        nlohmann::json J;
+        if (!parseJSON(Entry.path(), getFileBytes(Entry.path()), J)) {
+          continue;
+        }
+
+        if (!validateJSON(Entry.path(), J)) {
+          continue;
+        }
+
+        if (!J.empty()) {
+          replaceForwardSlashes(J);
+          addConfigJSON(J);
           NumConfigs++;
-        } catch (const nlohmann::json::parse_error &E) {
-          spdlog::error(L"Error parsing ParallaxGen Config File {} (Skipping "
-                        L"this Config): {}",
-                        Entry.path().wstring(), stringToWstring(E.what()));
         }
       }
     }
   }
 
   // loop through PGConfigPaths (in load order)
-  for (const auto &PGConfigFile : PGD->getPGConfigs()) {
+  for (const auto &PGConfigFile : PGD->getPGJSONs()) {
     spdlog::debug(L"Loading ParallaxGen Config: {}", PGConfigFile.wstring());
-    try {
-      const auto J = nlohmann::json::parse(PGD->getFile(PGConfigFile));
-      mergeJSONSmart(PGConfig, J);
-      NumConfigs++;
-    } catch (const nlohmann::json::parse_error &E) {
-      spdlog::error(L"Error parsing ParallaxGen Config File {} (Skipping this "
-                    L"Config): {}",
-                    PGConfigFile.wstring(), stringToWstring(E.what()));
+
+    nlohmann::json J;
+    if (!parseJSON(PGConfigFile, PGD->getFile(PGConfigFile), J)) {
+      continue;
     }
-  }
 
-  // Replace any forward slashes with backslashes
-  replaceForwardSlashes(PGConfig);
+    if (!validateJSON(PGConfigFile, J)) {
+      continue;
+    }
 
-  // Validate the config
-  if (!validateConfig()) {
-    exit(1);
-  }
-
-  // Initialize Member Variables
-  for (const auto &JSON : PGConfig["suffixes"].items()) {
-    CfgSuffixes.push_back(JSON.value().get<vector<string>>());
+    if (!J.empty()) {
+      replaceForwardSlashes(J);
+      addConfigJSON(J);
+      NumConfigs++;
+    }
   }
 
   // Print number of configs loaded
   spdlog::info("Loaded {} ParallaxGen configs successfully", NumConfigs);
 }
 
-auto ParallaxGenConfig::getConfig() const -> const nlohmann::json & { return PGConfig; }
-
-auto ParallaxGenConfig::getSuffix(const unsigned int &Slot) const -> vector<string> {
-  if (Slot >= CfgSuffixes.size()) {
-    return {};
+auto ParallaxGenConfig::addConfigJSON(const nlohmann::json &J) -> void {
+  // "dyncubemap_blocklist" field
+  if (J.contains("dyncubemap_blocklist")) {
+    for (const auto &Item : J["dyncubemap_blocklist"]) {
+      DynCubemapBlocklist.insert(strToWstr(boost::to_lower_copy(Item.get<string>())));
+    }
   }
 
-  return CfgSuffixes[Slot];
+  // "nif_blocklist" field
+  if (J.contains("nif_blocklist")) {
+    for (const auto &Item : J["nif_blocklist"]) {
+      NIFBlocklist.insert(strToWstr(boost::to_lower_copy(Item.get<string>())));
+    }
+  }
+
+  // "texture_map" field
+  if (J.contains("texture_maps")) {
+    for (const auto &Item : J["texture_maps"].items()) {
+      ManualTextureMaps[boost::to_lower_copy(Item.key())] = NIFUtil::getTexTypeFromStr(Item.value().get<string>());
+    }
+  }
 }
 
-auto ParallaxGenConfig::validateConfig() -> bool {
-  // Validate PGConfig against schema
-  static nlohmann::json_schema::json_validator Validator;
+auto ParallaxGenConfig::parseJSON(const std::filesystem::path &JSONFile, const vector<std::byte> &Bytes, nlohmann::json &J) -> bool {
+  // Parse JSON
   try {
-    Validator.set_root_schema(getConfigValidation());
-  } catch (const std::exception &E) {
-    spdlog::critical("Unable to validate JSON validation: {}", E.what());
-    return false;
-  }
-
-  // Validate
-  try {
-    Validator.validate(PGConfig);
-  } catch (const std::exception &E) {
-    spdlog::critical("Error validating ParallaxGen config: {}", E.what());
+    J = nlohmann::json::parse(Bytes);
+  } catch (const nlohmann::json::parse_error &E) {
+    spdlog::error(L"Error parsing JSON file {}: {}", JSONFile.wstring(), strToWstr(E.what()));
+    J = {};
     return false;
   }
 
   return true;
 }
 
-void ParallaxGenConfig::mergeJSONSmart(nlohmann::json &Target, const nlohmann::json &Source) {
-  // recursively merge json objects while preseving lists
-  for (const auto &[Key, Value] : Source.items()) {
-    if (Value.is_object()) {
-      // This is a JSON object
-      if (!Target.contains(Key)) {
-        // Create an object if it doesn't exist in the Target
-        Target[Key] = nlohmann::json::object();
-      }
-
-      mergeJSONSmart(Target[Key], Value);
-    } else if (Value.is_array()) {
-      // This is a list
-
-      if (!Target.contains(Key)) {
-        // Create an array if it doesn't exist in the Target
-        Target[Key] = nlohmann::json::array();
-      }
-
-      // Loop through each item in array and add only if it doesn't already
-      // exist in the list
-      for (const auto &Item : Value) {
-        if (std::find(Target[Key].begin(), Target[Key].end(), Item) == Target[Key].end()) {
-          // Add item to Target
-          Target[Key].push_back(Item);
-        }
-      }
-    } else {
-      // This is a single object
-      // Add item to Target
-      Target[Key] = Value;
-    }
+auto ParallaxGenConfig::validateJSON(const std::filesystem::path &JSONFile, const nlohmann::json &J) -> bool {
+  // Validate JSON
+  try {
+    Validator.validate(J);
+  } catch (const std::exception &E) {
+    spdlog::error(L"Invalid JSON file {}: {}", JSONFile.wstring(), strToWstr(E.what()));
+    return false;
   }
+
+  return true;
 }
 
 void ParallaxGenConfig::replaceForwardSlashes(nlohmann::json &JSON) {
@@ -359,3 +173,9 @@ void ParallaxGenConfig::replaceForwardSlashes(nlohmann::json &JSON) {
     }
   }
 }
+
+auto ParallaxGenConfig::getNIFBlocklist() const -> const unordered_set<wstring> & { return NIFBlocklist; }
+
+auto ParallaxGenConfig::getDynCubemapBlocklist() const -> const unordered_set<wstring> & { return DynCubemapBlocklist; }
+
+auto ParallaxGenConfig::getManualTextureMaps() const -> const unordered_map<filesystem::path, NIFUtil::TextureType> & { return ManualTextureMaps; }

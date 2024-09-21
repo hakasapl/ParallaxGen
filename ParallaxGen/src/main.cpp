@@ -2,6 +2,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/stacktrace.hpp>
+#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
@@ -17,14 +18,13 @@
 #include "ParallaxGenConfig.hpp"
 #include "ParallaxGenD3D.hpp"
 #include "ParallaxGenDirectory.hpp"
-#include "ParallaxGenUtil.hpp"
+#include "patchers/PatcherComplexMaterial.hpp"
 #include "patchers/PatcherTruePBR.hpp"
 
 #define MAX_LOG_SIZE 5242880
 #define MAX_LOG_FILES 100
 
 using namespace std;
-using namespace ParallaxGenUtil;
 
 struct ParallaxGenCLIArgs {
   int Verbosity = 0;
@@ -33,16 +33,19 @@ struct ParallaxGenCLIArgs {
   filesystem::path OutputDir;
   bool Autostart = false;
   bool NoMultithread = false;
+  bool HighMem = false;
   bool NoGPU = false;
   bool NoBSA = false;
   bool UpgradeShaders = false;
   bool OptimizeMeshes = false;
+  bool NoMapFromMeshes = false;
   bool NoZip = false;
   bool NoCleanup = false;
   bool NoDefaultConfig = false;
   bool IgnoreParallax = false;
   bool IgnoreComplexMaterial = false;
   bool IgnoreTruePBR = false;
+  bool DisableMLP = false;
 
   [[nodiscard]] auto getString() const -> string {
     string OutStr;
@@ -52,16 +55,19 @@ struct ParallaxGenCLIArgs {
     OutStr += "OutputDir: " + OutputDir.string() + "\n";
     OutStr += "Autostart: " + to_string(static_cast<int>(Autostart)) + "\n";
     OutStr += "NoMultithread: " + to_string(static_cast<int>(NoMultithread)) + "\n";
+    OutStr += "HighMem: " + to_string(static_cast<int>(HighMem)) + "\n";
     OutStr += "NoGPU: " + to_string(static_cast<int>(NoGPU)) + "\n";
     OutStr += "NoBSA: " + to_string(static_cast<int>(NoBSA)) + "\n";
     OutStr += "UpgradeShaders: " + to_string(static_cast<int>(UpgradeShaders)) + "\n";
     OutStr += "OptimizeMeshes: " + to_string(static_cast<int>(OptimizeMeshes)) + "\n";
+    OutStr += "NoMapFromMeshes: " + to_string(static_cast<int>(NoMapFromMeshes)) + "\n";
     OutStr += "NoZip: " + to_string(static_cast<int>(NoZip)) + "\n";
     OutStr += "NoCleanup: " + to_string(static_cast<int>(NoCleanup)) + "\n";
     OutStr += "NoDefaultConfig: " + to_string(static_cast<int>(NoDefaultConfig)) + "\n";
     OutStr += "IgnoreParallax: " + to_string(static_cast<int>(IgnoreParallax)) + "\n";
     OutStr += "IgnoreComplexMaterial: " + to_string(static_cast<int>(IgnoreComplexMaterial)) + "\n";
     OutStr += "IgnoreTruePBR: " + to_string(static_cast<int>(IgnoreTruePBR));
+    OutStr += "DisableMLP: " + to_string(static_cast<int>(DisableMLP));
 
     return OutStr;
   }
@@ -89,6 +95,25 @@ auto getGameTypeMapStr() -> string {
   return GameTypeStr;
 }
 
+auto deployDynamicCubemapFile(ParallaxGenDirectory *PGD, const filesystem::path &OutputDir,
+                              const filesystem::path &ExePath) -> void {
+  // Install default cubemap file if needed
+  static const filesystem::path DynCubeMapPath = "textures/cubemaps/dynamic1pxcubemap_black.dds";
+  if (!PGD->isFile(DynCubeMapPath)) {
+    spdlog::info("Installing default dynamic cubemap file");
+
+    // Create Directory
+    filesystem::path OutputCubemapPath = OutputDir / DynCubeMapPath.parent_path();
+    filesystem::create_directories(OutputCubemapPath);
+
+    boost::filesystem::path AssetPath = boost::filesystem::path(ExePath) / "assets/dynamic1pxcubemap_black_ENB.dds";
+    boost::filesystem::path OutputPath = boost::filesystem::path(OutputDir) / DynCubeMapPath;
+
+    // Move File
+    boost::filesystem::copy_file(AssetPath, OutputPath, boost::filesystem::copy_options::overwrite_existing);
+  }
+}
+
 void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   // Welcome Message
   spdlog::info("Welcome to ParallaxGen version {}!", PARALLAXGEN_VERSION);
@@ -99,12 +124,11 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
                  PARALLAXGEN_TEST_VERSION);
   }
 
+  // Alpha message
+  spdlog::warn("ParallaxGen is currently in ALPHA. Please file detailed bug reports on nexus or github.");
+
   // Print configuration parameters
   spdlog::debug("Configuration Parameters:\n\n{}\n", Args.getString());
-
-  //
-  // Init
-  //
 
   // print output location
   spdlog::info(L"ParallaxGen output directory (the contents will be deleted if you "
@@ -127,6 +151,19 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
     PGD3D.initGPU();
   }
 
+  //
+  // Generation
+  //
+
+  // User Input to Continue
+  if (!Args.Autostart) {
+    cout << "Press ENTER to start ParallaxGen...";
+    cin.get();
+  }
+
+  // Get current time to compare later
+  const auto StartTime = chrono::high_resolution_clock::now();
+
   // Create output directory
   try {
     filesystem::create_directories(Args.OutputDir);
@@ -140,16 +177,6 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
     spdlog::critical("Output directory cannot be the same directory as your data folder. "
                      "Exiting.");
     exit(1);
-  }
-
-  //
-  // Generation
-  //
-
-  // User Input to Continue
-  if (!Args.Autostart) {
-    cout << "Press ENTER to start ParallaxGen...";
-    cin.get();
   }
 
   // delete existing output
@@ -166,55 +193,23 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   // Populate file map from data directory
   PGD.populateFileMap(!Args.NoBSA);
 
+  // Find relevant files
+  PGD.findFiles();
+
   // Load configs
-  PGD.findPGConfigs();
   PGC.loadConfig(!Args.NoDefaultConfig);
 
-  // Install default cubemap file if needed
-  if (!Args.IgnoreComplexMaterial) {
-    // install default cubemap file if needed
-    if (!PGD.defCubemapExists()) {
-      spdlog::info("Installing default cubemap file");
+  // Map files
+  PGD.mapFiles(PGC.getNIFBlocklist(), PGC.getManualTextureMaps(), !Args.NoMapFromMeshes, !Args.NoMultithread,
+               Args.HighMem);
 
-      // Create Directory
-      filesystem::path OutputCubemapPath = Args.OutputDir / ParallaxGenDirectory::getDefaultCubemapPath().parent_path();
-      filesystem::create_directories(OutputCubemapPath);
+  spdlog::info("Determining texture types");
+  PGD3D.findCMMaps();
+  spdlog::info("Done determining texture types");
 
-      boost::filesystem::path AssetPath = boost::filesystem::path(ExePath) / L"assets/dynamic1pxcubemap_black_ENB.dds";
-      boost::filesystem::path OutputPath =
-          boost::filesystem::path(Args.OutputDir) / ParallaxGenDirectory::getDefaultCubemapPath();
-
-      // Move File
-      boost::filesystem::copy_file(AssetPath, OutputPath, boost::filesystem::copy_options::overwrite_existing);
-    }
-  }
-
-  // Build file vectors
-  if (!Args.IgnoreParallax || Args.UpgradeShaders) {
-    PGD.findHeightMaps(
-        stringVecToWstringVec(PGC.getConfig()["parallax_lookup"]["allowlist"].get<vector<string>>()),
-        stringVecToWstringVec(PGC.getConfig()["parallax_lookup"]["blocklist"].get<vector<string>>()),
-        stringVecToWstringVec(PGC.getConfig()["parallax_lookup"]["archive_blocklist"].get<vector<string>>()));
-  }
-
-  if (!Args.IgnoreComplexMaterial || Args.UpgradeShaders) {
-    PGD.findComplexMaterialMaps(
-        stringVecToWstringVec(PGC.getConfig()["complexmaterial_lookup"]["allowlist"].get<vector<string>>()),
-        stringVecToWstringVec(PGC.getConfig()["complexmaterial_lookup"]["blocklist"].get<vector<string>>()),
-        stringVecToWstringVec(PGC.getConfig()["complexmaterial_lookup"]["archive_blocklist"].get<vector<string>>()));
-    PGD3D.findCMMaps();
-  }
-
-  if (!Args.IgnoreTruePBR) {
-    PGD.findTruePBRConfigs(
-        stringVecToWstringVec(PGC.getConfig()["truepbr_cfg_lookup"]["allowlist"].get<vector<string>>()),
-        stringVecToWstringVec(PGC.getConfig()["truepbr_cfg_lookup"]["blocklist"].get<vector<string>>()),
-        stringVecToWstringVec(PGC.getConfig()["truepbr_cfg_lookup"]["archive_blocklist"].get<vector<string>>()));
-    PatcherTruePBR::loadPatcherBuffers(PGD.getTruePBRConfigs());
-  }
-
-  // Build base vectors
-  PGD.buildBaseMaps(PGC.getConfig()["suffixes"].get<vector<vector<string>>>());
+  // Load patcher static vars
+  PatcherTruePBR::loadPatcherBuffers(PGD.getPBRJSONs(), &PGD);
+  PatcherComplexMaterial::loadStatics(PGC.getDynCubemapBlocklist(), Args.DisableMLP);
 
   // Upgrade shaders if requested
   if (Args.UpgradeShaders) {
@@ -223,13 +218,16 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   // Patch meshes if set
   if (!Args.IgnoreParallax || !Args.IgnoreComplexMaterial || !Args.IgnoreTruePBR) {
-    PGD.findMeshes(stringVecToWstringVec(PGC.getConfig()["nif_lookup"]["allowlist"].get<vector<string>>()),
-                   stringVecToWstringVec(PGC.getConfig()["nif_lookup"]["blocklist"].get<vector<string>>()),
-                   stringVecToWstringVec(PGC.getConfig()["nif_lookup"]["archive_blocklist"].get<vector<string>>()));
     PG.patchMeshes(!Args.NoMultithread);
   }
 
+  // Release cached files, if any
+  PGD.clearCache();
+
   spdlog::info("ParallaxGen has finished patching meshes.");
+
+  // Deploy dynamic cubemap file
+  deployDynamicCubemapFile(&PGD, Args.OutputDir, ExePath);
 
   // archive
   if (!Args.NoZip) {
@@ -240,6 +238,11 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   if (!Args.NoCleanup) {
     PG.deleteMeshes();
   }
+
+  const auto EndTime = chrono::high_resolution_clock::now();
+  const auto Duration = chrono::duration_cast<chrono::seconds>(EndTime - StartTime).count();
+
+  spdlog::info("ParallaxGen took {} seconds to complete", Duration);
 }
 
 void exitBlocking() {
@@ -285,14 +288,20 @@ void addArguments(CLI::App &App, ParallaxGenCLIArgs &Args, const filesystem::pat
   // Output
   App.add_option("-o,--output-dir", Args.OutputDir, "Manually specify output directory");
   App.add_flag("--optimize-meshes", Args.OptimizeMeshes, "Optimize meshes before saving them");
+  App.add_flag("--no-map-from-meshes", Args.NoMapFromMeshes,
+               "Don't map textures from meshes (faster but less accurate)");
+  App.add_flag("--high-mem", Args.HighMem, "Enable high memory usage (faster runtime but uses a lot more RAM)");
   App.add_flag("--no-zip", Args.NoZip, "Don't zip the output meshes (also enables --no-cleanup)");
   App.add_flag("--no-cleanup", Args.NoCleanup, "Don't delete generated meshes after zipping");
   // Patchers
   App.add_flag("--upgrade-shaders", Args.UpgradeShaders, "Upgrade shaders to a better version whenever possible")
       ->excludes(FlagNoGpu);
   App.add_flag("--ignore-parallax", Args.IgnoreParallax, "Don't generate any parallax meshes");
-  App.add_flag("--ignore-complex-material", Args.IgnoreComplexMaterial, "Don't generate any complex material meshes");
+  auto *FlagIgnoreCM = App.add_flag("--ignore-complex-material", Args.IgnoreComplexMaterial,
+                                    "Don't generate any complex material meshes");
   App.add_flag("--ignore-truepbr", Args.IgnoreTruePBR, "Don't apply any TruePBR configs in the load order");
+  App.add_flag("--disable-mlp", Args.DisableMLP, "Disable MLP (Multi-Layer Parallax) if complex material is possible")
+      ->excludes(FlagIgnoreCM);
 
   // Multi-argument Validation
   App.callback([&Args, &ExePath]() {

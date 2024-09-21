@@ -1,99 +1,16 @@
 {
-  "parallax_lookup": {
-    "archive_blocklist": [],
-    "allowlist": [
-      "textures/**_p.dds"
-    ],
-    "blocklist": []
-  },
-  "parallax_processing": {
-    "lookup_order": [
-      0,
-      1
-    ]
-  },
-  "complexmaterial_lookup": {
-    "archive_blocklist": [
-      "Skyrim - Textures*",
-      "_ResourcePack.bsa",
-      "cc*"
-    ],
-    "allowlist": [
-      "textures/**_m.dds",
-      "textures/**_em.dds"
-    ],
-    "blocklist": []
-  },
-  "complexmaterial_processing": {
-    "lookup_order": [
-      0,
-      1
-    ],
-    "dyncubemap_blocklist": [
-      "**/armor/**",
-      "**/weapons/**"
-    ]
-  },
-  "truepbr_cfg_lookup": {
-    "archive_blocklist": [],
-    "allowlist": [
-      "pbrnifpatcher/**.json"
-    ],
-    "blocklist": []
-  },
-  "truepbr_cfg_processing": {
-    "lookup_order": [
-      1,
-      0
-    ]
-  },
-  "nif_lookup": {
-    "archive_blocklist": [],
-    "allowlist": [
-      "meshes/**.nif"
-    ],
-    "blocklist": [
-      "**/cameras/**",
-      "**/decals/**",
-      "**/dyndolod/**",
-      "**/lod/**",
-      "**/magic/**",
-      "**/markers/**",
-      "**/mps/**",
-      "**/sky/**",
-      "**/water/**"
-    ]
-  },
-  "suffixes": [
-    [
-      ".dds"
-    ],
-    [
-      "_n.dds"
-    ],
-    [
-      "_g.dds"
-    ],
-    [
-      "_p.dds"
-    ],
-    [
-      "_e.dds"
-    ],
-    [
-      "_m.dds",
-      "_em.dds",
-      "_rmaos.dds"
-    ],
-    [
-      "_s.dds",
-      "_cnr.dds"
-    ],
-    [
-      "_b.dds",
-      "_bl.dds",
-      "_s.dds"
-    ],
-    []
-  ]
+  "dyncubemap_blocklist": [],
+  "nif_blocklist": [
+    "**/cameras/**",
+    "**/decals/**",
+    "**/dyndolod/**",
+    "**/lod/**",
+    "**/magic/**",
+    "**/markers/**",
+    "**/mps/**",
+    "**/sky/**",
+    "**/water/**",
+    "calientetools/**"
+  ],
+  "texture_maps": {}
 }

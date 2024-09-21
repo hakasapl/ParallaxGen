@@ -8,6 +8,7 @@
 #include <spdlog/spdlog.h>
 #include <winnt.h>
 
+#include "NIFUtil.hpp"
 #include "ParallaxGenTask.hpp"
 #include "ParallaxGenUtil.hpp"
 
@@ -20,25 +21,23 @@ ParallaxGenD3D::ParallaxGenD3D(ParallaxGenDirectory *PGD, filesystem::path Outpu
     : PGD(PGD), OutputDir(std::move(OutputDir)), ExePath(std::move(ExePath)), UseGPU(UseGPU) {}
 
 auto ParallaxGenD3D::findCMMaps() -> ParallaxGenTask::PGResult {
-  const auto &EnvMasks = PGD->getComplexMaterialMaps();
+  auto &EnvMasks = PGD->getTextureMap(NIFUtil::TextureSlots::ENVMASK);
 
   ParallaxGenTask::PGResult PGResult = ParallaxGenTask::PGResult::SUCCESS;
-  vector<filesystem::path> ComplexMaterialMaps;
 
   // loop through maps
-  for (const auto &EnvMask : EnvMasks) {
+  for (auto &EnvMask : EnvMasks) {
     bool Result = false;
-    ParallaxGenTask::updatePGResult(PGResult, checkIfCM(EnvMask, Result),
+    ParallaxGenTask::updatePGResult(PGResult, checkIfCM(EnvMask.second.Path, Result),
                                     ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
 
     if (Result) {
-      ComplexMaterialMaps.push_back(EnvMask);
-      spdlog::debug(L"Found File: {}", EnvMask.wstring());
+      // TODO we need to fill in alpha for non-CM stuff
+      EnvMask.second.Type = NIFUtil::TextureType::COMPLEXMATERIAL;
+      spdlog::debug(L"Found File: {}", EnvMask.second.Path.wstring());
     }
   }
 
-  PGD->setComplexMaterialMaps(ComplexMaterialMaps);
-  spdlog::info("Found {} complex material maps", ComplexMaterialMaps.size());
   return ParallaxGenTask::PGResult::SUCCESS;
 }
 
@@ -341,12 +340,12 @@ auto ParallaxGenD3D::compileShader(const std::filesystem::path &Filename,
   if (FAILED(HR)) {
     if (PtrErrorBlob != nullptr) {
       spdlog::critical(L"Failed to compile shader {}: {}, {}", Filename.wstring(),
-                       stringToWstring(getHRESULTErrorMessage(HR)),
+                       strToWstr(getHRESULTErrorMessage(HR)),
                        static_cast<wchar_t *>(PtrErrorBlob->GetBufferPointer()));
       PtrErrorBlob.Reset();
     } else {
       spdlog::critical(L"Failed to compile shader {}: {}", Filename.wstring(),
-                       stringToWstring(getHRESULTErrorMessage(HR)));
+                       strToWstr(getHRESULTErrorMessage(HR)));
     }
 
     exit(1);
@@ -976,7 +975,7 @@ auto ParallaxGenD3D::getDDS(const filesystem::path &DDSPath,
 
   if (FAILED(HR)) {
     spdlog::error(L"Failed to load DDS file from {}: {}", DDSPath.wstring(),
-                  stringToWstring(getHRESULTErrorMessage(HR)));
+                  strToWstr(getHRESULTErrorMessage(HR)));
     return ParallaxGenTask::PGResult::FAILURE;
   }
 
@@ -1019,7 +1018,7 @@ auto ParallaxGenD3D::getDDSMetadata(const filesystem::path &DDSPath,
 
   if (FAILED(HR)) {
     spdlog::error(L"Failed to load DDS file metadata from {}: {}", DDSPath.wstring(),
-                  stringToWstring(getHRESULTErrorMessage(HR)));
+                  strToWstr(getHRESULTErrorMessage(HR)));
     return ParallaxGenTask::PGResult::FAILURE;
   }
 

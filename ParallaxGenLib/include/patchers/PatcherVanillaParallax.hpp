@@ -14,7 +14,6 @@ class PatcherVanillaParallax {
 private:
   std::filesystem::path NIFPath;
   nifly::NifFile *NIF;
-  std::vector<int> SlotSearch;
   ParallaxGenDirectory *PGD;
   ParallaxGenConfig *PGC;
   ParallaxGenD3D *PGD3D;
@@ -22,14 +21,14 @@ private:
   bool HasAttachedHavok = false;
 
 public:
-  PatcherVanillaParallax(std::filesystem::path NIFPath, nifly::NifFile *NIF, std::vector<int> SlotSearch,
+  PatcherVanillaParallax(std::filesystem::path NIFPath, nifly::NifFile *NIF,
                          ParallaxGenConfig *PGC, ParallaxGenDirectory *PGD, ParallaxGenD3D *PGD3D);
 
   // check if vanilla parallax should be enabled on shape
-  auto shouldApply(nifly::NiShape *NIFShape, const std::array<std::string, NUM_TEXTURE_SLOTS> &SearchPrefixes,
-                   bool &EnableResult, std::string &MatchedPath) const -> ParallaxGenTask::PGResult;
+  auto shouldApply(nifly::NiShape *NIFShape, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes,
+                   bool &EnableResult, std::wstring &MatchedPath) const -> ParallaxGenTask::PGResult;
 
   // enables parallax on a shape in a NIF
-  auto applyPatch(nifly::NiShape *NIFShape, const std::string &MatchedPath,
+  auto applyPatch(nifly::NiShape *NIFShape, const std::wstring &MatchedPath,
                   bool &NIFModified) -> ParallaxGenTask::PGResult;
 };

@@ -11,6 +11,8 @@ public:
   enum class PGResult { SUCCESS, SUCCESS_WITH_WARNINGS, FAILURE };
 
 private:
+  int ProgressPrintModulo;
+
   std::string TaskName;
   size_t TotalJobs;
   size_t LastPerc = 0;
@@ -23,7 +25,7 @@ private:
                                                            {PGResult::FAILURE, "FAILED"}};
 
 public:
-  ParallaxGenTask(std::string TaskName, const size_t &TotalJobs);
+  ParallaxGenTask(std::string TaskName, const size_t &TotalJobs, const int &ProgressPrintModulo = 1);
 
   void completeJob(const PGResult &Result);
   void initJobStatus();

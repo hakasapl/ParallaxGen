@@ -1,23 +1,34 @@
 #include "patchers/PatcherComplexMaterial.hpp"
 
+#include <Shaders.hpp>
 #include <boost/algorithm/string.hpp>
 #include <spdlog/spdlog.h>
 
+#include "NIFUtil.hpp"
 #include "ParallaxGenConfig.hpp"
+#include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenUtil.hpp"
 
 using namespace std;
 using namespace ParallaxGenUtil;
 
-PatcherComplexMaterial::PatcherComplexMaterial(filesystem::path NIFPath, nifly::NifFile *NIF, vector<int> SlotSearch,
-                                               vector<wstring> DynCubemapBlocklist, ParallaxGenConfig *PGC,
-                                               ParallaxGenDirectory *PGD, ParallaxGenD3D *PGD3D)
-    : NIFPath(std::move(NIFPath)), NIF(NIF), SlotSearch(std::move(SlotSearch)),
-      DynCubemapBlocklist(std::move(DynCubemapBlocklist)), PGD(PGD), PGC(PGC), PGD3D(PGD3D) {}
+// Statics
+std::unordered_set<wstring> PatcherComplexMaterial::DynCubemapBlocklist; // NOLINT
+bool PatcherComplexMaterial::DisableMLP;
 
-auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<string, NUM_TEXTURE_SLOTS> &SearchPrefixes,
+auto PatcherComplexMaterial::loadStatics(const unordered_set<wstring> &DynCubemapBlocklist,
+                                         const bool &DisableMLP) -> void {
+  PatcherComplexMaterial::DynCubemapBlocklist = DynCubemapBlocklist;
+  PatcherComplexMaterial::DisableMLP = DisableMLP;
+}
+
+PatcherComplexMaterial::PatcherComplexMaterial(filesystem::path NIFPath, nifly::NifFile *NIF, ParallaxGenConfig *PGC,
+                                               ParallaxGenDirectory *PGD, ParallaxGenD3D *PGD3D)
+    : NIFPath(std::move(NIFPath)), NIF(NIF), PGD(PGD), PGC(PGC), PGD3D(PGD3D) {}
+
+auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes,
                                          bool &EnableResult, bool &EnableDynCubemaps,
-                                         string &MatchedPath) const -> ParallaxGenTask::PGResult {
+                                         wstring &MatchedPath) const -> ParallaxGenTask::PGResult {
 
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
@@ -28,18 +39,18 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<string, 
   auto *NIFShader = NIF->GetShader(NIFShape);
   auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
 
-  static const auto *CMBaseMap = &PGD->getComplexMaterialMapsBases();
+  static const auto *CMBaseMap = &PGD->getTextureMap(NIFUtil::TextureSlots::ENVMASK);
 
   EnableResult = true; // Start with default true
 
   // Check if complex material file exists
+  static const vector<int> SlotSearch = {0, 1}; // Diffuse first, then normal
   for (int Slot : SlotSearch) {
-    string FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], *CMBaseMap).string();
-    if (!FoundMatch.empty()) {
+    auto FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], *CMBaseMap);
+    if (!FoundMatch.Path.empty() && FoundMatch.Type == NIFUtil::TextureType::COMPLEXMATERIAL) {
       // found complex material map
-      spdlog::trace(L"NIF: {} | Shape: {} | CM | Found CM map: {}", NIFPath.wstring(), ShapeBlockID,
-                    stringToWstring(MatchedPath));
-      MatchedPath = FoundMatch;
+      spdlog::trace(L"NIF: {} | Shape: {} | CM | Found CM map: {}", NIFPath.wstring(), ShapeBlockID, MatchedPath);
+      MatchedPath = FoundMatch.Path.wstring();
       break;
     }
   }
@@ -53,7 +64,8 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<string, 
 
   // Get NIFShader type
   auto NIFShaderType = static_cast<nifly::BSLightingShaderPropertyShaderType>(NIFShader->GetShaderType());
-  if (NIFShaderType != BSLSP_DEFAULT && NIFShaderType != BSLSP_ENVMAP && NIFShaderType != BSLSP_PARALLAX) {
+  if (NIFShaderType != BSLSP_DEFAULT && NIFShaderType != BSLSP_ENVMAP && NIFShaderType != BSLSP_PARALLAX &&
+      (NIFShaderType != BSLSP_MULTILAYERPARALLAX || !DisableMLP)) {
     spdlog::trace(L"NIF: {} | Shape: {} | CM | Shape Rejected: Incorrect NIFShader type", NIFPath.wstring(),
                   ShapeBlockID);
     EnableResult = false;
@@ -67,13 +79,24 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<string, 
     return Result;
   }
 
+  // check to make sure there are textures defined in slot 3 or 8
+  if (NIFShaderType != BSLSP_MULTILAYERPARALLAX &&
+      (!NIFUtil::getTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::GLOW).empty() ||
+       !NIFUtil::getTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::TINT).empty() ||
+       !NIFUtil::getTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::BACKLIGHT).empty())) {
+    spdlog::trace(L"NIF: {} | Shape: {} | CM | Shape Rejected: Texture defined in slots 3,7,or 8", NIFPath.wstring(),
+                  ShapeBlockID);
+    EnableResult = false;
+    return Result;
+  }
+
   // verify that maps match each other
   string DiffuseMap;
   NIF->GetTextureSlot(NIFShape, DiffuseMap, 0);
-  if (!DiffuseMap.empty() && !PGD->isFile(DiffuseMap)) {
+  if (DiffuseMap.empty() || !PGD->isFile(DiffuseMap)) {
     // no Diffuse map
     spdlog::trace(L"NIF: {} | Shape: {} | CM | Shape Rejected: Diffuse map missing: {}", NIFPath.wstring(),
-                  ShapeBlockID, stringToWstring(DiffuseMap));
+                  ShapeBlockID, strToWstr(DiffuseMap));
     EnableResult = false;
     return Result;
   }
@@ -89,14 +112,14 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<string, 
   }
 
   // Determine if dynamic cubemaps should be set
-  EnableDynCubemaps = !(ParallaxGenDirectory::checkGlob(NIFPath.wstring(), DynCubemapBlocklist) ||
-                        ParallaxGenDirectory::checkGlob(stringToWstring(MatchedPath), DynCubemapBlocklist));
+  EnableDynCubemaps = !(ParallaxGenDirectory::checkGlobMatchInSet(NIFPath.wstring(), DynCubemapBlocklist) ||
+                        ParallaxGenDirectory::checkGlobMatchInSet(MatchedPath, DynCubemapBlocklist));
 
   spdlog::trace(L"NIF: {} | Shape: {} | CM | Shape Accepted", NIFPath.wstring(), ShapeBlockID);
   return Result;
 }
 
-auto PatcherComplexMaterial::applyPatch(NiShape *NIFShape, const string &MatchedPath, const bool &ApplyDynCubemaps,
+auto PatcherComplexMaterial::applyPatch(NiShape *NIFShape, const wstring &MatchedPath, const bool &ApplyDynCubemaps,
                                         bool &NIFModified) const -> ParallaxGenTask::PGResult {
   // enable complex material on shape
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
@@ -105,6 +128,15 @@ auto PatcherComplexMaterial::applyPatch(NiShape *NIFShape, const string &Matched
   auto *NIFShader = NIF->GetShader(NIFShape);
   auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
 
+  // Remove texture slots if disabling MLP
+  if (DisableMLP && NIFShaderBSLSP->GetShaderType() == BSLSP_MULTILAYERPARALLAX) {
+    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::GLOW, "", NIFModified);
+    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::TINT, "", NIFModified);
+    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::BACKLIGHT, "", NIFModified);
+
+    NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF2_MULTI_LAYER_PARALLAX, NIFModified);
+  }
+
   // Set NIFShader type to env map
   NIFUtil::setShaderType(NIFShader, BSLSP_ENVMAP, NIFModified);
   // Set NIFShader flags
@@ -112,13 +144,13 @@ auto PatcherComplexMaterial::applyPatch(NiShape *NIFShape, const string &Matched
   NIFUtil::setShaderFlag(NIFShaderBSLSP, SLSF1_ENVIRONMENT_MAPPING, NIFModified);
   // Set complex material texture
   string NewParallax;
-  NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::Parallax, NewParallax, NIFModified);
-  NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::EnvMask, MatchedPath, NIFModified);
+  NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::PARALLAX, NewParallax, NIFModified);
+  NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::ENVMASK, MatchedPath, NIFModified);
 
   // Dynamic cubemaps (if enabled)
   if (ApplyDynCubemaps) {
-    string NewCubemap = ParallaxGenDirectory::getDefaultCubemapPath().string();
-    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::Cubemap, NewCubemap, NIFModified);
+    NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::CUBEMAP,
+                            "textures\\cubemaps\\dynamic1pxcubemap_black.dds", NIFModified);
   }
 
   return Result;

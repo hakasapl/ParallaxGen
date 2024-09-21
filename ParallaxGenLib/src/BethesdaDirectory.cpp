@@ -1,6 +1,7 @@
 #include "BethesdaDirectory.hpp"
 
 #include <boost/algorithm/string/predicate.hpp>
+#include <mutex>
 #include <shlwapi.h>
 #include <spdlog/spdlog.h>
 
@@ -74,9 +75,9 @@ void BethesdaDirectory::populateFileMap(bool IncludeBSAs) {
   addLooseFilesToMap();
 }
 
-auto BethesdaDirectory::getFileMap() const -> map<filesystem::path, BethesdaDirectory::BethesdaFile> { return FileMap; }
+auto BethesdaDirectory::getFileMap() const -> const map<filesystem::path, BethesdaDirectory::BethesdaFile>& { return FileMap; }
 
-auto BethesdaDirectory::getFile(const filesystem::path &RelPath) const -> vector<std::byte> {
+auto BethesdaDirectory::getFile(const filesystem::path &RelPath, const bool &CacheFile) -> vector<std::byte> {
   // find bsa/loose file to open
   BethesdaFile File = getFileFromMap(RelPath);
   if (File.Path.empty()) {
@@ -87,6 +88,20 @@ auto BethesdaDirectory::getFile(const filesystem::path &RelPath) const -> vector
     }
   }
 
+  auto LowerRelPath = getPathLower(RelPath);
+  if (!CacheFile) {
+    lock_guard<mutex> Lock(FileCacheMutex);
+
+    if (FileCache.find(LowerRelPath) != FileCache.end()) {
+      if (Logging) {
+        spdlog::trace(L"Reading file from cache: {}", RelPath.wstring());
+      }
+
+      return FileCache[LowerRelPath];
+    }
+  }
+
+  vector<std::byte> OutFileBytes;
   shared_ptr<BSAFile> BSAStruct = File.BSAFile;
   if (BSAStruct == nullptr) {
     if (Logging) {
@@ -95,10 +110,8 @@ auto BethesdaDirectory::getFile(const filesystem::path &RelPath) const -> vector
 
     filesystem::path FilePath = DataDir / RelPath;
 
-    return getFileBytes(FilePath);
-  }
-
-  if (BSAStruct != nullptr) {
+    OutFileBytes = getFileBytes(FilePath);
+  } else {
     filesystem::path BSAPath = BSAStruct->Path;
 
     if (Logging) {
@@ -109,8 +122,8 @@ auto BethesdaDirectory::getFile(const filesystem::path &RelPath) const -> vector
     bsa::tes4::version BSAVersion = BSAStruct->Version;
     bsa::tes4::archive BSAObj = BSAStruct->Archive;
 
-    string ParentPath = wstringToString(RelPath.parent_path().wstring());
-    string Filename = wstringToString(RelPath.filename().wstring());
+    string ParentPath = wstrToStr(RelPath.parent_path().wstring());
+    string Filename = wstrToStr(RelPath.filename().wstring());
 
     const auto File = BSAObj[ParentPath][Filename];
     if (File) {
@@ -120,22 +133,37 @@ auto BethesdaDirectory::getFile(const filesystem::path &RelPath) const -> vector
         File->write(AOS, BSAVersion);
       } catch (const std::exception &E) {
         if (Logging) {
-          spdlog::error(L"Failed to read file {}: {}", RelPath.wstring(), stringToWstring(E.what()));
+          spdlog::error(L"Failed to read file {}: {}", RelPath.wstring(), strToWstr(E.what()));
         }
       }
 
       auto &S = AOS.get<binary_io::memory_ostream>();
-      return S.rdbuf();
-    }
-
-    if (Logging) {
-      spdlog::error(L"File not found in BSA archive: {}", RelPath.wstring());
+      OutFileBytes = S.rdbuf();
     } else {
-      throw runtime_error("File not found in BSA archive");
+      if (Logging) {
+        spdlog::error(L"File not found in BSA archive: {}", RelPath.wstring());
+      } else {
+        throw runtime_error("File not found in BSA archive");
+      }
     }
   }
 
-  return {};
+  if (OutFileBytes.empty()) {
+    return {};
+  }
+
+  // cache file if flag is set
+  if (CacheFile) {
+    lock_guard<mutex> Lock(FileCacheMutex);
+    FileCache[LowerRelPath] = OutFileBytes;
+  }
+
+  return OutFileBytes;
+}
+
+auto BethesdaDirectory::clearCache() -> void {
+  lock_guard<mutex> Lock(FileCacheMutex);
+  FileCache.clear();
 }
 
 auto BethesdaDirectory::isLooseFile(const filesystem::path &RelPath) const -> bool {
@@ -255,7 +283,7 @@ void BethesdaDirectory::addBSAFilesToMap() {
       addBSAToFileMap(BSAName);
     } catch (const std::exception &E) {
       if (Logging) {
-        spdlog::error(L"Failed to add BSA file {} to map (Skipping): {}", BSAName, stringToWstring(E.what()));
+        spdlog::error(L"Failed to add BSA file {} to map (Skipping): {}", BSAName, strToWstr(E.what()));
       }
       continue;
     }
@@ -287,7 +315,7 @@ void BethesdaDirectory::addLooseFilesToMap() {
       }
     } catch (const std::exception &E) {
       if (Logging) {
-        spdlog::error(L"Failed to load file from iterator (Skipping): {}", stringToWstring(E.what()));
+        spdlog::error(L"Failed to load file from iterator (Skipping): {}", strToWstr(E.what()));
       }
       continue;
     }
@@ -347,7 +375,7 @@ void BethesdaDirectory::addBSAToFileMap(const wstring &BSAName) {
       }
     } catch (const std::exception &E) {
       if (Logging) {
-        spdlog::error(L"Failed to get file pointer from BSA, skipping {}: {}", BSAName, stringToWstring(E.what()));
+        spdlog::error(L"Failed to get file pointer from BSA, skipping {}: {}", BSAName, strToWstr(E.what()));
       }
       continue;
     }
@@ -464,10 +492,10 @@ auto BethesdaDirectory::getBSAFilesFromINIs() const -> vector<wstring> {
     // loop through each ini file
     wstring INIVal;
     for (const auto &INIPath : INIFileOrder) {
-      wstring CurVal = readINIValue(INIPath, L"Archive", stringToWstring(Field), Logging, FirstINIRead);
+      wstring CurVal = readINIValue(INIPath, L"Archive", strToWstr(Field), Logging, FirstINIRead);
 
       if (Logging) {
-        spdlog::trace(L"Found ini key pair from INI {}: {}: {}", INIPath.wstring(), stringToWstring(Field), CurVal);
+        spdlog::trace(L"Found ini key pair from INI {}: {}: {}", INIPath.wstring(), strToWstr(Field), CurVal);
       }
 
       if (CurVal.empty()) {
@@ -484,7 +512,7 @@ auto BethesdaDirectory::getBSAFilesFromINIs() const -> vector<wstring> {
     }
 
     if (Logging) {
-      spdlog::trace(L"Found BSA files from INI field {}: {}", stringToWstring(Field), INIVal);
+      spdlog::trace(L"Found BSA files from INI field {}: {}", strToWstr(Field), INIVal);
     }
 
     // split into components

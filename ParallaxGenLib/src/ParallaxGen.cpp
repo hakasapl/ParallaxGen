@@ -13,6 +13,7 @@
 
 #include "NIFUtil.hpp"
 #include "ParallaxGenDirectory.hpp"
+#include "ParallaxGenTask.hpp"
 #include "ParallaxGenUtil.hpp"
 
 using namespace std;
@@ -32,13 +33,13 @@ ParallaxGen::ParallaxGen(filesystem::path OutputDir, ParallaxGenDirectory *PGD, 
 
 void ParallaxGen::upgradeShaders() {
   // Get height maps (vanilla _p.dds files)
-  auto HeightMaps = PGD->getHeightMaps();
+  const auto &HeightMaps = PGD->getTextureMapConst(NIFUtil::TextureSlots::PARALLAX);
 
   // Define task parameters
   ParallaxGenTask TaskTracker("Shader Upgrades", HeightMaps.size());
 
   for (const auto &HeightMap : HeightMaps) {
-    TaskTracker.completeJob(convertHeightMapToComplexMaterial(HeightMap));
+    TaskTracker.completeJob(convertHeightMapToComplexMaterial(HeightMap.second.Path));
   }
 }
 
@@ -64,31 +65,27 @@ void ParallaxGen::patchMeshes(const bool &MultiThread) {
 
     boost::asio::thread_pool MeshPatchPool(NumThreads);
 
-    // Exception vars
-    exception_ptr ThreadException = nullptr;
-    mutex ExceptionMutex;
-
     for (const auto &Mesh : Meshes) {
-      boost::asio::post(MeshPatchPool, [this, &TaskTracker, &DiffJSON, Mesh, &ThreadException, &ExceptionMutex] {
+      boost::asio::post(MeshPatchPool, [this, &TaskTracker, &DiffJSON, Mesh] {
+        ParallaxGenTask::PGResult Result = ParallaxGenTask::PGResult::SUCCESS;
         try {
-          TaskTracker.completeJob(processNIF(Mesh, DiffJSON));
-        } catch (...) {
-          lock_guard<mutex> Lock(ExceptionMutex);
-          ThreadException = current_exception();
+          Result = processNIF(Mesh, DiffJSON);
+        } catch (const exception &E) {
+          spdlog::error(L"Exception in thread patching NIF {}: {}", Mesh.wstring(), strToWstr(E.what()));
+          Result = ParallaxGenTask::PGResult::FAILURE;
         }
+
+        TaskTracker.completeJob(Result);
       });
     }
 
     // Wait for all threads to complete
     MeshPatchPool.join();
 
-    // Rethrow exception if one occurred
-    if (ThreadException) {
-      rethrow_exception(ThreadException);
-    }
-
   } else {
-    patchMeshBatch(Meshes, 0, Meshes.size(), TaskTracker, DiffJSON);
+    for (const auto &Mesh : Meshes) {
+      TaskTracker.completeJob(processNIF(Mesh, DiffJSON));
+    }
   }
 
   // Write DiffJSON file
@@ -99,13 +96,6 @@ void ParallaxGen::patchMeshes(const bool &MultiThread) {
   DiffJSONFile.close();
 }
 
-void ParallaxGen::patchMeshBatch(const std::vector<std::filesystem::path> &Meshes, const size_t &Start,
-                                 const size_t &End, ParallaxGenTask &TaskTracker, nlohmann::json &DiffJSON) {
-  for (size_t I = Start; I < End; I++) {
-    TaskTracker.completeJob(processNIF(Meshes[I], DiffJSON));
-  }
-}
-
 auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &HeightMap) -> ParallaxGenTask::PGResult {
   spdlog::trace(L"Upgrading height map: {}", HeightMap.wstring());
 
@@ -114,32 +104,26 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
   string HeightMapStr = HeightMap.string();
 
   // Get texture base (remove _p.dds)
-  static const auto ParallaxSuffixes = PGC->getConfig()["suffixes"][3].get<vector<string>>();
-  string TexBase = NIFUtil::getTexBase(HeightMapStr, ParallaxSuffixes);
+  const auto TexBase = NIFUtil::getTexBase(HeightMapStr);
   if (TexBase.empty()) {
     // no height map (this shouldn't happen)
     return Result;
   }
 
-  static const auto *CMBaseMap = &PGD->getComplexMaterialMapsBases();
+  static const auto *CMBaseMap = &PGD->getTextureMapConst(NIFUtil::TextureSlots::ENVMASK);
   auto ExistingCM = NIFUtil::getTexMatch(TexBase, *CMBaseMap);
-  if (!ExistingCM.empty()) {
-    // complex material already exists
-    return Result;
-  }
-
-  // Check if vanilla env mask exists (should be included in CM map)
   filesystem::path EnvMask = filesystem::path();
-  vector<filesystem::path> EnvMaskPossibilities = {TexBase + "_m.dds", TexBase + "_em.dds"};
-  for (const auto &EnvMaskPossibility : EnvMaskPossibilities) {
-    if (PGD->isFile(EnvMaskPossibility)) {
-      // found env mask
-      EnvMask = EnvMaskPossibility;
-      break;
+  if (!ExistingCM.Path.empty()) {
+    if (ExistingCM.Type == NIFUtil::TextureType::COMPLEXMATERIAL) {
+      // complex material already exists
+      return Result;
     }
+
+    // env mask exists, but it's not a complex material
+    EnvMask = ExistingCM.Path;
   }
 
-  const filesystem::path ComplexMap = TexBase + "_m.dds";
+  const filesystem::path ComplexMap = TexBase + L"_m.dds";
 
   // upgrade to complex material
   DirectX::ScratchImage NewComplexMap = PGD3D->upgradeToComplexMaterial(HeightMap, EnvMask);
@@ -153,13 +137,13 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
                                         NewComplexMap.GetMetadata(), DirectX::DDS_FLAGS_NONE, OutputPath.c_str());
     if (FAILED(HR)) {
       spdlog::error(L"Unable to save complex material {}: {}", OutputPath.wstring(),
-                    stringToWstring(ParallaxGenD3D::getHRESULTErrorMessage(HR)));
+                    strToWstr(ParallaxGenD3D::getHRESULTErrorMessage(HR)));
       Result = ParallaxGenTask::PGResult::FAILURE;
       return Result;
     }
 
     // add newly created file to complexMaterialMaps for later processing
-    PGD->addComplexMaterialMap(ComplexMap, TexBase);
+    PGD->getTextureMap(NIFUtil::TextureSlots::ENVMASK)[TexBase] = {ComplexMap, NIFUtil::TextureType::COMPLEXMATERIAL};
 
     spdlog::debug(L"Generated complex material map: {}", ComplexMap.wstring());
   } else {
@@ -186,7 +170,7 @@ void ParallaxGen::deleteMeshes() const {
         filesystem::remove_all(Entry.path());
         spdlog::trace(L"Deleted directory {}", Entry.path().wstring());
       } catch (const exception &E) {
-        spdlog::error(L"Error deleting directory {}: {}", Entry.path().wstring(), stringToWstring(E.what()));
+        spdlog::error(L"Error deleting directory {}: {}", Entry.path().wstring(), strToWstr(E.what()));
       }
     }
 
@@ -195,7 +179,7 @@ void ParallaxGen::deleteMeshes() const {
       try {
         filesystem::remove(Entry.path());
       } catch (const exception &E) {
-        spdlog::error(L"Error deleting state file {}: {}", Entry.path().wstring(), stringToWstring(E.what()));
+        spdlog::error(L"Error deleting state file {}: {}", Entry.path().wstring(), strToWstr(E.what()));
       }
     }
   }
@@ -211,7 +195,7 @@ void ParallaxGen::deleteOutputDir() const {
         filesystem::remove_all(Entry.path());
       }
     } catch (const exception &E) {
-      spdlog::critical(L"Error deleting output directory {}: {}", OutputDir.wstring(), stringToWstring(E.what()));
+      spdlog::critical(L"Error deleting output directory {}: {}", OutputDir.wstring(), strToWstr(E.what()));
       exit(1);
     }
   }
@@ -235,32 +219,13 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
     return Result;
   }
 
-  // NIF file object
-  NifFile NIF;
-
-  // Get NIF Bytes
+  // Load NIF file
   const vector<std::byte> NIFFileData = PGD->getFile(NIFFile);
-  if (NIFFileData.empty()) {
-    spdlog::error(L"NIF: {} | NIF Rejected: File is empty", NIFFile.wstring());
-    Result = ParallaxGenTask::PGResult::FAILURE;
-    return Result;
-  }
-
-  // Convert Byte Vector to Stream
-  boost::iostreams::array_source NIFArraySource(reinterpret_cast<const char *>(NIFFileData.data()), NIFFileData.size());
-  boost::iostreams::stream<boost::iostreams::array_source> NIFStream(NIFArraySource);
-
+  NifFile NIF;
   try {
-    // try block for loading nif
-    NIF.Load(NIFStream);
-  } catch (const exception &E) {
-    spdlog::error(L"NIF: {} | NIF Rejected: Unable to read from BSA", NIFFile.wstring(), stringToWstring(E.what()));
-    Result = ParallaxGenTask::PGResult::FAILURE;
-    return Result;
-  }
-
-  if (!NIF.IsValid()) {
-    spdlog::error(L"NIF: {} | NIF Rejected: Invalid NIF", NIFFile.wstring());
+    NIF = NIFUtil::loadNIFFromBytes(NIFFileData);
+  } catch(const exception &E) {
+    spdlog::error(L"NIF: {} | NIF Rejected: Unable to load NIF: {}", NIFFile.wstring(), strToWstr(E.what()));
     Result = ParallaxGenTask::PGResult::FAILURE;
     return Result;
   }
@@ -268,15 +233,9 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
   // Stores whether the NIF has been modified throughout the patching process
   bool NIFModified = false;
 
-  // Build static search vectors
-  static const auto SlotSearchVP = PGC->getConfig()["parallax_processing"]["lookup_order"].get<vector<int>>();
-  static const auto SlotSearchCM = PGC->getConfig()["complexmaterial_processing"]["lookup_order"].get<vector<int>>();
-  static const auto DynCubeBlocklist = stringVecToWstringVec(
-      PGC->getConfig()["complexmaterial_processing"]["dyncubemap_blocklist"].get<vector<string>>());
-
   // Create Patcher objects
-  PatcherVanillaParallax PatchVP(NIFFile, &NIF, SlotSearchVP, PGC, PGD, PGD3D);
-  PatcherComplexMaterial PatchCM(NIFFile, &NIF, SlotSearchCM, DynCubeBlocklist, PGC, PGD, PGD3D);
+  PatcherVanillaParallax PatchVP(NIFFile, &NIF, PGC, PGD, PGD3D);
+  PatcherComplexMaterial PatchCM(NIFFile, &NIF, PGC, PGD, PGD3D);
   PatcherTruePBR PatchTPBR(NIFFile, &NIF, PGD);
 
   // Patch each shape in NIF
@@ -335,10 +294,11 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
     const auto CRCAfter = CRCResultAfter.checksum();
 
     // Add to diff JSON
+    auto JSONKey = wstrToStr(NIFFile.wstring());
     threadSafeJSONUpdate(
         [&](nlohmann::json &JSON) {
-          JSON[NIFFile.string()]["crc32original"] = CRCBefore;
-          JSON[NIFFile.string()]["crc32patched"] = CRCAfter;
+          JSON[JSONKey]["crc32original"] = CRCBefore;
+          JSON[JSONKey]["crc32patched"] = CRCAfter;
         },
         DiffJSON);
   }
@@ -348,7 +308,7 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
 
 auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, NiShape *NIFShape,
                                PatcherVanillaParallax &PatchVP, PatcherComplexMaterial &PatchCM,
-                               PatcherTruePBR &PatchTPBR, bool &ShapeModified) -> ParallaxGenTask::PGResult {
+                               PatcherTruePBR &PatchTPBR, bool &ShapeModified) const -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Prep
@@ -391,14 +351,13 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
   }
 
   // Find search prefixes
-  static const vector<vector<string>> Suffixes = PGC->getConfig()["suffixes"].get<vector<vector<string>>>();
-  auto SearchPrefixes = NIFUtil::getSearchPrefixes(NIF, NIFShape, Suffixes);
-  string MatchedPath;
+  auto SearchPrefixes = NIFUtil::getSearchPrefixes(NIF, NIFShape);
+  wstring MatchedPath;
 
   // TRUEPBR CONFIG
   if (!IgnoreTruePBR) {
     bool EnableTruePBR = false;
-    map<size_t, tuple<nlohmann::json, string>> TruePBRData;
+    map<size_t, tuple<nlohmann::json, wstring>> TruePBRData;
     ParallaxGenTask::updatePGResult(Result,
                                     PatchTPBR.shouldApply(NIFShape, SearchPrefixes, EnableTruePBR, TruePBRData),
                                     ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
@@ -419,7 +378,7 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
   if (!IgnoreCM) {
     bool EnableCM = false;
     bool EnableDynCubemaps = false;
-    MatchedPath = "";
+    MatchedPath = L"";
     ParallaxGenTask::updatePGResult(
         Result, PatchCM.shouldApply(NIFShape, SearchPrefixes, EnableCM, EnableDynCubemaps, MatchedPath),
         ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
@@ -435,7 +394,7 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
   // VANILLA PARALLAX
   if (!IgnoreParallax) {
     bool EnableParallax = false;
-    MatchedPath = "";
+    MatchedPath = L"";
     ParallaxGenTask::updatePGResult(Result, PatchVP.shouldApply(NIFShape, SearchPrefixes, EnableParallax, MatchedPath),
                                     ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
     if (EnableParallax) {
@@ -468,7 +427,7 @@ void ParallaxGen::addFileToZip(mz_zip_archive &Zip, const filesystem::path &File
   // get relative path
   filesystem::path ZipRelativePath = FilePath.lexically_relative(OutputDir);
 
-  string ZipFilePath = wstringToString(ZipRelativePath.wstring());
+  string ZipFilePath = wstrToStr(ZipRelativePath.wstring());
 
   // add file to Zip
   if (mz_zip_writer_add_mem(&Zip, ZipFilePath.c_str(), Buffer.data(), Buffer.size(), MZ_NO_COMPRESSION) == 0) {
@@ -490,7 +449,7 @@ void ParallaxGen::zipDirectory(const filesystem::path &DirPath, const filesystem
   }
 
   // initialize file
-  string ZipPathString = wstringToString(ZipPath);
+  string ZipPathString = wstrToStr(ZipPath);
   if (mz_zip_writer_init_file(&Zip, ZipPathString.c_str(), 0) == 0) {
     spdlog::critical(L"Error creating Zip file: {}", ZipPath.wstring());
     exit(1);
