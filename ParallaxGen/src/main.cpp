@@ -18,6 +18,7 @@
 #include "ParallaxGenConfig.hpp"
 #include "ParallaxGenD3D.hpp"
 #include "ParallaxGenDirectory.hpp"
+#include "ParallaxGenPlugin.hpp"
 #include "patchers/PatcherComplexMaterial.hpp"
 #include "patchers/PatcherTruePBR.hpp"
 
@@ -160,6 +161,10 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
     cout << "Press ENTER to start ParallaxGen...";
     cin.get();
   }
+
+  // DEBUG
+  ParallaxGenPlugin PGP = ParallaxGenPlugin(BG);
+  PGP.init();
 
   // Get current time to compare later
   const auto StartTime = chrono::high_resolution_clock::now();

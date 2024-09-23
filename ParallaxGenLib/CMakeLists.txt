@@ -6,12 +6,14 @@ set(HEADERS
     "include/ParallaxGen.hpp"
     "include/ParallaxGenConfig.hpp"
     "include/ParallaxGenD3D.hpp"
+    "include/ParallaxGenPlugin.hpp"
     "include/ParallaxGenTask.hpp"
     "include/ParallaxGenUtil.hpp"
     "include/ParallaxGenDirectory.hpp"
     "include/patchers/PatcherComplexMaterial.hpp"
     "include/patchers/PatcherTruePBR.hpp"
     "include/patchers/PatcherVanillaParallax.hpp"
+    "include/XEditLibCpp.hpp"
 )
 
 set(SOURCES
@@ -21,12 +23,14 @@ set(SOURCES
     "src/ParallaxGen.cpp"
     "src/ParallaxGenConfig.cpp"
     "src/ParallaxGenD3D.cpp"
+    "src/ParallaxGenPlugin.cpp"
     "src/ParallaxGenTask.cpp"
     "src/ParallaxGenUtil.cpp"
     "src/ParallaxGenDirectory.cpp"
     "src/patchers/PatcherComplexMaterial.cpp"
     "src/patchers/PatcherTruePBR.cpp"
     "src/patchers/PatcherVanillaParallax.cpp"
+    "src/XEditLibCpp.cpp"
 )
 
 include_directories("include")
