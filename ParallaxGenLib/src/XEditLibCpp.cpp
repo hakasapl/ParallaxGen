@@ -2,6 +2,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <memory>
+#include <wtypes.h>
 
 #include "ParallaxGenUtil.hpp"
 
@@ -12,251 +13,251 @@ XEditLibCpp::XEditLibCpp() : HModule(LoadLibrary(TEXT("XEditLib.dll"))) {
     // Meta
     XELibInitXEdit = reinterpret_cast<void (*)()>(GetProcAddress(HModule, "InitXEdit"));
     XELibCloseXEdit = reinterpret_cast<void (*)()>(GetProcAddress(HModule, "CloseXEdit"));
-    XELibGetResultString = reinterpret_cast<bool (*)(wchar_t *, int)>(GetProcAddress(HModule, "GetResultString"));
-    XELibGetResultArray = reinterpret_cast<bool (*)(unsigned int *, int)>(GetProcAddress(HModule, "GetResultArray"));
-    XELibGetResultBytes = reinterpret_cast<bool (*)(unsigned char *, int)>(GetProcAddress(HModule, "GetResultBytes"));
-    XELibGetGlobal = reinterpret_cast<bool (*)(const wchar_t *, int *)>(GetProcAddress(HModule, "GetGlobal"));
-    XELibGetGlobals = reinterpret_cast<bool (*)(int *)>(GetProcAddress(HModule, "GetGlobals"));
-    XELibSetSortMode = reinterpret_cast<bool (*)(const unsigned char, const bool)>(GetProcAddress(HModule, "SetSortMode"));
-    XELibRelease = reinterpret_cast<bool (*)(const unsigned int)>(GetProcAddress(HModule, "Release"));
-    XELibReleaseNodes = reinterpret_cast<bool (*)(const unsigned int)>(GetProcAddress(HModule, "ReleaseNodes"));
-    XELibSwitch = reinterpret_cast<bool (*)(const unsigned int, const unsigned int)>(GetProcAddress(HModule, "Switch"));
+    XELibGetResultString = reinterpret_cast<VARIANT_BOOL (*)(wchar_t *, int)>(GetProcAddress(HModule, "GetResultString"));
+    XELibGetResultArray = reinterpret_cast<VARIANT_BOOL (*)(unsigned int *, int)>(GetProcAddress(HModule, "GetResultArray"));
+    XELibGetResultBytes = reinterpret_cast<VARIANT_BOOL (*)(unsigned char *, int)>(GetProcAddress(HModule, "GetResultBytes"));
+    XELibGetGlobal = reinterpret_cast<VARIANT_BOOL (*)(const wchar_t *, int *)>(GetProcAddress(HModule, "GetGlobal"));
+    XELibGetGlobals = reinterpret_cast<VARIANT_BOOL (*)(int *)>(GetProcAddress(HModule, "GetGlobals"));
+    XELibSetSortMode = reinterpret_cast<VARIANT_BOOL (*)(const unsigned char, const VARIANT_BOOL)>(GetProcAddress(HModule, "SetSortMode"));
+    XELibRelease = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int)>(GetProcAddress(HModule, "Release"));
+    XELibReleaseNodes = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int)>(GetProcAddress(HModule, "ReleaseNodes"));
+    XELibSwitch = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const unsigned int)>(GetProcAddress(HModule, "Switch"));
     XELibGetDuplicateHandles =
-        reinterpret_cast<bool (*)(const unsigned int, int *)>(GetProcAddress(HModule, "GetDuplicateHandles"));
-    XELibResetStore = reinterpret_cast<bool (*)()>(GetProcAddress(HModule, "ResetStore"));
+        reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, int *)>(GetProcAddress(HModule, "GetDuplicateHandles"));
+    XELibResetStore = reinterpret_cast<VARIANT_BOOL (*)()>(GetProcAddress(HModule, "ResetStore"));
 
     // Message
     XELibGetMessagesLength = reinterpret_cast<void (*)(int *)>(GetProcAddress(HModule, "GetMessagesLength"));
-    XELibGetMessages = reinterpret_cast<bool (*)(wchar_t *, int)>(GetProcAddress(HModule, "GetMessages"));
+    XELibGetMessages = reinterpret_cast<VARIANT_BOOL (*)(wchar_t *, int)>(GetProcAddress(HModule, "GetMessages"));
     XELibClearMessages = reinterpret_cast<void (*)()>(GetProcAddress(HModule, "ClearMessages"));
     XELibGetExceptionMessageLength = reinterpret_cast<void (*)(int *)>(GetProcAddress(HModule, "GetExceptionMessageLength"));
-    XELibGetExceptionMessage = reinterpret_cast<bool (*)(wchar_t *, int)>(GetProcAddress(HModule, "GetExceptionMessage"));
+    XELibGetExceptionMessage = reinterpret_cast<VARIANT_BOOL (*)(wchar_t *, int)>(GetProcAddress(HModule, "GetExceptionMessage"));
 
     // Setup
-    XELibGetGamePath = reinterpret_cast<bool (*)(const int, int *)>(GetProcAddress(HModule, "GetGamePath"));
-    XELibSetGamePath = reinterpret_cast<bool (*)(const wchar_t *)>(GetProcAddress(HModule, "SetGamePath"));
-    XELibGetGameLanguage = reinterpret_cast<bool (*)(const int, int *)>(GetProcAddress(HModule, "GetGameLanguage"));
-    XELibSetLanguage = reinterpret_cast<bool (*)(const wchar_t *)>(GetProcAddress(HModule, "SetLanguage"));
-    XELibSetBackupPath = reinterpret_cast<bool (*)(const wchar_t *)>(GetProcAddress(HModule, "SetBackupPath"));
-    XELibSetGameMode = reinterpret_cast<bool (*)(const int)>(GetProcAddress(HModule, "SetGameMode"));
-    XELibGetLoadOrder = reinterpret_cast<bool (*)(int *)>(GetProcAddress(HModule, "GetLoadOrder"));
-    XELibGetActivePlugins = reinterpret_cast<bool (*)(int *)>(GetProcAddress(HModule, "GetActivePlugins"));
-    XELibLoadPlugins = reinterpret_cast<bool (*)(const wchar_t *, const bool)>(GetProcAddress(HModule, "LoadPlugins"));
-    XELibLoadPlugin = reinterpret_cast<bool (*)(const wchar_t *)>(GetProcAddress(HModule, "LoadPlugin"));
+    XELibGetGamePath = reinterpret_cast<VARIANT_BOOL (*)(const int, int *)>(GetProcAddress(HModule, "GetGamePath"));
+    XELibSetGamePath = reinterpret_cast<VARIANT_BOOL (*)(const wchar_t *)>(GetProcAddress(HModule, "SetGamePath"));
+    XELibGetGameLanguage = reinterpret_cast<VARIANT_BOOL (*)(const int, int *)>(GetProcAddress(HModule, "GetGameLanguage"));
+    XELibSetLanguage = reinterpret_cast<VARIANT_BOOL (*)(const wchar_t *)>(GetProcAddress(HModule, "SetLanguage"));
+    XELibSetBackupPath = reinterpret_cast<VARIANT_BOOL (*)(const wchar_t *)>(GetProcAddress(HModule, "SetBackupPath"));
+    XELibSetGameMode = reinterpret_cast<VARIANT_BOOL (*)(const int)>(GetProcAddress(HModule, "SetGameMode"));
+    XELibGetLoadOrder = reinterpret_cast<VARIANT_BOOL (*)(int *)>(GetProcAddress(HModule, "GetLoadOrder"));
+    XELibGetActivePlugins = reinterpret_cast<VARIANT_BOOL (*)(int *)>(GetProcAddress(HModule, "GetActivePlugins"));
+    XELibLoadPlugins = reinterpret_cast<VARIANT_BOOL (*)(const wchar_t *, const VARIANT_BOOL)>(GetProcAddress(HModule, "LoadPlugins"));
+    XELibLoadPlugin = reinterpret_cast<VARIANT_BOOL (*)(const wchar_t *)>(GetProcAddress(HModule, "LoadPlugin"));
     XELibLoadPluginHeader =
-        reinterpret_cast<bool (*)(const wchar_t *, unsigned int *)>(GetProcAddress(HModule, "LoadPluginHeader"));
+        reinterpret_cast<VARIANT_BOOL (*)(const wchar_t *, unsigned int *)>(GetProcAddress(HModule, "LoadPluginHeader"));
     XELibBuildReferences =
-        reinterpret_cast<bool (*)(const unsigned int, const bool)>(GetProcAddress(HModule, "BuildReferences"));
-    XELibGetLoaderStatus = reinterpret_cast<bool (*)(unsigned char *)>(GetProcAddress(HModule, "GetLoaderStatus"));
-    XELibUnloadPlugin = reinterpret_cast<bool (*)(const unsigned int)>(GetProcAddress(HModule, "UnloadPlugin"));
+        reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const VARIANT_BOOL)>(GetProcAddress(HModule, "BuildReferences"));
+    XELibGetLoaderStatus = reinterpret_cast<VARIANT_BOOL (*)(unsigned char *)>(GetProcAddress(HModule, "GetLoaderStatus"));
+    XELibUnloadPlugin = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int)>(GetProcAddress(HModule, "UnloadPlugin"));
 
     // Files
-    XELibAddFile = reinterpret_cast<bool (*)(const wchar_t *, unsigned int *)>(GetProcAddress(HModule, "AddFile"));
-    XELibFileByIndex = reinterpret_cast<bool (*)(const int, unsigned int *)>(GetProcAddress(HModule, "FileByIndex"));
-    XELibFileByLoadOrder = reinterpret_cast<bool (*)(const int, unsigned int *)>(GetProcAddress(HModule, "FileByLoadOrder"));
-    XELibFileByName = reinterpret_cast<bool (*)(const wchar_t *, unsigned int *)>(GetProcAddress(HModule, "FileByName"));
-    XELibFileByAuthor = reinterpret_cast<bool (*)(const wchar_t *, unsigned int *)>(GetProcAddress(HModule, "FileByAuthor"));
-    XELibSaveFile = reinterpret_cast<bool (*)(const unsigned int, const wchar_t *)>(GetProcAddress(HModule, "SaveFile"));
-    XELibGetRecordCount = reinterpret_cast<bool (*)(const unsigned int, int *)>(GetProcAddress(HModule, "GetRecordCount"));
+    XELibAddFile = reinterpret_cast<VARIANT_BOOL (*)(const wchar_t *, unsigned int *)>(GetProcAddress(HModule, "AddFile"));
+    XELibFileByIndex = reinterpret_cast<VARIANT_BOOL (*)(const int, unsigned int *)>(GetProcAddress(HModule, "FileByIndex"));
+    XELibFileByLoadOrder = reinterpret_cast<VARIANT_BOOL (*)(const int, unsigned int *)>(GetProcAddress(HModule, "FileByLoadOrder"));
+    XELibFileByName = reinterpret_cast<VARIANT_BOOL (*)(const wchar_t *, unsigned int *)>(GetProcAddress(HModule, "FileByName"));
+    XELibFileByAuthor = reinterpret_cast<VARIANT_BOOL (*)(const wchar_t *, unsigned int *)>(GetProcAddress(HModule, "FileByAuthor"));
+    XELibSaveFile = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *)>(GetProcAddress(HModule, "SaveFile"));
+    XELibGetRecordCount = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, int *)>(GetProcAddress(HModule, "GetRecordCount"));
     XELibGetOverrideRecordCount =
-        reinterpret_cast<bool (*)(const unsigned int, int *)>(GetProcAddress(HModule, "GetOverrideRecordCount"));
-    XELibMD5Hash = reinterpret_cast<bool (*)(const unsigned int, int *)>(GetProcAddress(HModule, "MD5Hash"));
-    XELibCRCHash = reinterpret_cast<bool (*)(const unsigned int, int *)>(GetProcAddress(HModule, "CRCHash"));
-    XELibSortEditorIDs = reinterpret_cast<bool (*)(const unsigned int, wchar_t *)>(GetProcAddress(HModule, "SortEditorIDs"));
-    XELibSortNames = reinterpret_cast<bool (*)(const unsigned int, wchar_t *)>(GetProcAddress(HModule, "SortNames"));
+        reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, int *)>(GetProcAddress(HModule, "GetOverrideRecordCount"));
+    XELibMD5Hash = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, int *)>(GetProcAddress(HModule, "MD5Hash"));
+    XELibCRCHash = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, int *)>(GetProcAddress(HModule, "CRCHash"));
+    XELibSortEditorIDs = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, wchar_t *)>(GetProcAddress(HModule, "SortEditorIDs"));
+    XELibSortNames = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, wchar_t *)>(GetProcAddress(HModule, "SortNames"));
     XELibGetFileLoadOrder =
-        reinterpret_cast<bool (*)(const unsigned int, int *)>(GetProcAddress(HModule, "GetFileLoadOrder"));
+        reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, int *)>(GetProcAddress(HModule, "GetFileLoadOrder"));
 
     // Archives
     XELibExtractContainer =
-        reinterpret_cast<bool (*)(const wchar_t *, const wchar_t *, bool)>(GetProcAddress(HModule, "ExtractContainer"));
-    XELibExtractFile = reinterpret_cast<bool (*)(const wchar_t *, const wchar_t *, const wchar_t *)>(
+        reinterpret_cast<VARIANT_BOOL (*)(const wchar_t *, const wchar_t *, VARIANT_BOOL)>(GetProcAddress(HModule, "ExtractContainer"));
+    XELibExtractFile = reinterpret_cast<VARIANT_BOOL (*)(const wchar_t *, const wchar_t *, const wchar_t *)>(
         GetProcAddress(HModule, "ExtractFile"));
-    XELibGetContainerFiles = reinterpret_cast<bool (*)(const wchar_t *, const wchar_t *, int *)>(
+    XELibGetContainerFiles = reinterpret_cast<VARIANT_BOOL (*)(const wchar_t *, const wchar_t *, int *)>(
         GetProcAddress(HModule, "GetContainerFiles"));
-    XELibGetFileContainer = reinterpret_cast<bool (*)(const wchar_t *, int *)>(GetProcAddress(HModule, "GetFileContainer"));
-    XELibGetLoadedContainers = reinterpret_cast<bool (*)(int *)>(GetProcAddress(HModule, "GetLoadedContainers"));
-    XELibLoadContainer = reinterpret_cast<bool (*)(const wchar_t *)>(GetProcAddress(HModule, "LoadContainer"));
+    XELibGetFileContainer = reinterpret_cast<VARIANT_BOOL (*)(const wchar_t *, int *)>(GetProcAddress(HModule, "GetFileContainer"));
+    XELibGetLoadedContainers = reinterpret_cast<VARIANT_BOOL (*)(int *)>(GetProcAddress(HModule, "GetLoadedContainers"));
+    XELibLoadContainer = reinterpret_cast<VARIANT_BOOL (*)(const wchar_t *)>(GetProcAddress(HModule, "LoadContainer"));
     XELibBuildArchive =
-        reinterpret_cast<bool (*)(const wchar_t *, const wchar_t *, const wchar_t *, const int, const bool, const bool,
+        reinterpret_cast<VARIANT_BOOL (*)(const wchar_t *, const wchar_t *, const wchar_t *, const int, const VARIANT_BOOL, const VARIANT_BOOL,
                                   const wchar_t *, const wchar_t *)>(GetProcAddress(HModule, "BuildArchive"));
     XELibGetTextureData =
-        reinterpret_cast<bool (*)(const wchar_t *, int *, int *)>(GetProcAddress(HModule, "GetTextureData"));
+        reinterpret_cast<VARIANT_BOOL (*)(const wchar_t *, int *, int *)>(GetProcAddress(HModule, "GetTextureData"));
 
     // Masters
-    XELibCleanMasters = reinterpret_cast<bool (*)(unsigned int)>(GetProcAddress(HModule, "CleanMasters"));
-    XELibSortMasters = reinterpret_cast<bool (*)(unsigned int)>(GetProcAddress(HModule, "SortMasters"));
-    XELibAddMaster = reinterpret_cast<bool (*)(unsigned int, wchar_t *)>(GetProcAddress(HModule, "AddMaster"));
-    XELibAddMasters = reinterpret_cast<bool (*)(unsigned int, wchar_t *)>(GetProcAddress(HModule, "AddMasters"));
+    XELibCleanMasters = reinterpret_cast<VARIANT_BOOL (*)(unsigned int)>(GetProcAddress(HModule, "CleanMasters"));
+    XELibSortMasters = reinterpret_cast<VARIANT_BOOL (*)(unsigned int)>(GetProcAddress(HModule, "SortMasters"));
+    XELibAddMaster = reinterpret_cast<VARIANT_BOOL (*)(unsigned int, wchar_t *)>(GetProcAddress(HModule, "AddMaster"));
+    XELibAddMasters = reinterpret_cast<VARIANT_BOOL (*)(unsigned int, wchar_t *)>(GetProcAddress(HModule, "AddMasters"));
     XELibAddRequiredMasters =
-        reinterpret_cast<bool (*)(unsigned int, unsigned int, bool)>(GetProcAddress(HModule, "AddRequiredMasters"));
-    XELibGetMasters = reinterpret_cast<bool (*)(unsigned int, int *)>(GetProcAddress(HModule, "GetMasters"));
-    XELibGetRequiredBy = reinterpret_cast<bool (*)(unsigned int, int *)>(GetProcAddress(HModule, "GetRequiredBy"));
-    XELibGetMasterNames = reinterpret_cast<bool (*)(unsigned int, int *)>(GetProcAddress(HModule, "GetMasterNames"));
+        reinterpret_cast<VARIANT_BOOL (*)(unsigned int, unsigned int, VARIANT_BOOL)>(GetProcAddress(HModule, "AddRequiredMasters"));
+    XELibGetMasters = reinterpret_cast<VARIANT_BOOL (*)(unsigned int, int *)>(GetProcAddress(HModule, "GetMasters"));
+    XELibGetRequiredBy = reinterpret_cast<VARIANT_BOOL (*)(unsigned int, int *)>(GetProcAddress(HModule, "GetRequiredBy"));
+    XELibGetMasterNames = reinterpret_cast<VARIANT_BOOL (*)(unsigned int, int *)>(GetProcAddress(HModule, "GetMasterNames"));
 
     // Elements
     XELibHasElement =
-        reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, bool *)>(GetProcAddress(HModule, "HasElement"));
-    XELibGetElement = reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, unsigned int *)>(
+        reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, VARIANT_BOOL *)>(GetProcAddress(HModule, "HasElement"));
+    XELibGetElement = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, unsigned int *)>(
         GetProcAddress(HModule, "GetElement"));
-    XELibAddElement = reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, unsigned int *)>(
+    XELibAddElement = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, unsigned int *)>(
         GetProcAddress(HModule, "AddElement"));
-    XELibAddElementValue = reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, const wchar_t *, unsigned int *)>(
+    XELibAddElementValue = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, const wchar_t *, unsigned int *)>(
         GetProcAddress(HModule, "AddElementValue"));
     XELibRemoveElement =
-        reinterpret_cast<bool (*)(const unsigned int, const wchar_t *)>(GetProcAddress(HModule, "RemoveElement"));
+        reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *)>(GetProcAddress(HModule, "RemoveElement"));
     XELibRemoveElementOrParent =
-        reinterpret_cast<bool (*)(const unsigned int)>(GetProcAddress(HModule, "RemoveElementOrParent"));
+        reinterpret_cast<VARIANT_BOOL (*)(const unsigned int)>(GetProcAddress(HModule, "RemoveElementOrParent"));
     XELibSetElement =
-        reinterpret_cast<bool (*)(const unsigned int, const unsigned int)>(GetProcAddress(HModule, "SetElement"));
-    XELibGetElements = reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, const bool, const bool, int *)>(
+        reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const unsigned int)>(GetProcAddress(HModule, "SetElement"));
+    XELibGetElements = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, const VARIANT_BOOL, const VARIANT_BOOL, int *)>(
         GetProcAddress(HModule, "GetElements"));
-    XELibGetDefNames = reinterpret_cast<bool (*)(const unsigned int, int *)>(GetProcAddress(HModule, "GetDefNames"));
-    XELibGetAddList = reinterpret_cast<bool (*)(const unsigned int, int *)>(GetProcAddress(HModule, "GetAddList"));
-    XELibGetLinksTo = reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, unsigned int *)>(
+    XELibGetDefNames = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, int *)>(GetProcAddress(HModule, "GetDefNames"));
+    XELibGetAddList = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, int *)>(GetProcAddress(HModule, "GetAddList"));
+    XELibGetLinksTo = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, unsigned int *)>(
         GetProcAddress(HModule, "GetLinksTo"));
-    XELibSetLinksTo = reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, const unsigned int)>(
+    XELibSetLinksTo = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, const unsigned int)>(
         GetProcAddress(HModule, "SetLinksTo"));
-    XELibGetElementIndex = reinterpret_cast<bool (*)(const unsigned int, int *)>(GetProcAddress(HModule, "GetElementIndex"));
+    XELibGetElementIndex = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, int *)>(GetProcAddress(HModule, "GetElementIndex"));
     XELibGetContainer =
-        reinterpret_cast<bool (*)(const unsigned int, unsigned int *)>(GetProcAddress(HModule, "GetContainer"));
+        reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, unsigned int *)>(GetProcAddress(HModule, "GetContainer"));
     XELibGetElementFile =
-        reinterpret_cast<bool (*)(const unsigned int, unsigned int *)>(GetProcAddress(HModule, "GetElementFile"));
+        reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, unsigned int *)>(GetProcAddress(HModule, "GetElementFile"));
     XELibGetElementRecord =
-        reinterpret_cast<bool (*)(const unsigned int, unsigned int *)>(GetProcAddress(HModule, "GetElementRecord"));
-    XELibElementCount = reinterpret_cast<bool (*)(const unsigned int, int *)>(GetProcAddress(HModule, "ElementCount"));
-    XELibElementEquals = reinterpret_cast<bool (*)(const unsigned int, const unsigned int, bool *)>(
+        reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, unsigned int *)>(GetProcAddress(HModule, "GetElementRecord"));
+    XELibElementCount = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, int *)>(GetProcAddress(HModule, "ElementCount"));
+    XELibElementEquals = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const unsigned int, VARIANT_BOOL *)>(
         GetProcAddress(HModule, "ElementEquals"));
-    XELibElementMatches = reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, const wchar_t *, bool *)>(
+    XELibElementMatches = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, const wchar_t *, VARIANT_BOOL *)>(
         GetProcAddress(HModule, "ElementMatches"));
     XELibHasArrayItem =
-        reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, const wchar_t *, const wchar_t *, bool *)>(
+        reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, const wchar_t *, const wchar_t *, VARIANT_BOOL *)>(
             GetProcAddress(HModule, "HasArrayItem"));
-    XELibGetArrayItem = reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, const wchar_t *, const wchar_t *,
+    XELibGetArrayItem = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, const wchar_t *, const wchar_t *,
                                              unsigned int *)>(GetProcAddress(HModule, "GetArrayItem"));
-    XELibAddArrayItem = reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, const wchar_t *, const wchar_t *,
+    XELibAddArrayItem = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, const wchar_t *, const wchar_t *,
                                              unsigned int *)>(GetProcAddress(HModule, "AddArrayItem"));
-    XELibRemoveArrayItem = reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, const wchar_t *, const wchar_t *)>(
+    XELibRemoveArrayItem = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, const wchar_t *, const wchar_t *)>(
         GetProcAddress(HModule, "RemoveArrayItem"));
-    XELibMoveArrayItem = reinterpret_cast<bool (*)(const unsigned int, const int)>(GetProcAddress(HModule, "MoveArrayItem"));
-    XELibCopyElement = reinterpret_cast<bool (*)(const unsigned int, const unsigned int, const bool, unsigned int *)>(
+    XELibMoveArrayItem = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const int)>(GetProcAddress(HModule, "MoveArrayItem"));
+    XELibCopyElement = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const unsigned int, const VARIANT_BOOL, unsigned int *)>(
         GetProcAddress(HModule, "CopyElement"));
-    XELibGetSignatureAllowed = reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, bool *)>(
+    XELibGetSignatureAllowed = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, VARIANT_BOOL *)>(
         GetProcAddress(HModule, "GetSignatureAllowed"));
     XELibGetAllowedSignatures =
-        reinterpret_cast<bool (*)(const unsigned int, int *)>(GetProcAddress(HModule, "GetAllowedSignatuRes"));
-    XELibGetIsModified = reinterpret_cast<bool (*)(const unsigned int, bool *)>(GetProcAddress(HModule, "GetIsModified"));
-    XELibGetIsEditable = reinterpret_cast<bool (*)(const unsigned int, bool *)>(GetProcAddress(HModule, "GetIsEditable"));
+        reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, int *)>(GetProcAddress(HModule, "GetAllowedSignatuRes"));
+    XELibGetIsModified = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, VARIANT_BOOL *)>(GetProcAddress(HModule, "GetIsModified"));
+    XELibGetIsEditable = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, VARIANT_BOOL *)>(GetProcAddress(HModule, "GetIsEditable"));
     XELibGetIsRemoveable =
-        reinterpret_cast<bool (*)(const unsigned int, bool *)>(GetProcAddress(HModule, "GetIsRemoveable"));
-    XELibGetCanAdd = reinterpret_cast<bool (*)(const unsigned int, bool *)>(GetProcAddress(HModule, "GetCanAdd"));
-    XELibSortKey = reinterpret_cast<bool (*)(const unsigned int, int *)>(GetProcAddress(HModule, "SortKey"));
+        reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, VARIANT_BOOL *)>(GetProcAddress(HModule, "GetIsRemoveable"));
+    XELibGetCanAdd = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, VARIANT_BOOL *)>(GetProcAddress(HModule, "GetCanAdd"));
+    XELibSortKey = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, int *)>(GetProcAddress(HModule, "SortKey"));
     XELibElementType =
-        reinterpret_cast<bool (*)(const unsigned int, unsigned char *)>(GetProcAddress(HModule, "ElementType"));
-    XELibDefType = reinterpret_cast<bool (*)(const unsigned int, unsigned char *)>(GetProcAddress(HModule, "DefType"));
-    XELibSmashType = reinterpret_cast<bool (*)(const unsigned int, unsigned char *)>(GetProcAddress(HModule, "SmashType"));
-    XELibValueType = reinterpret_cast<bool (*)(const unsigned int, unsigned char *)>(GetProcAddress(HModule, "ValueType"));
-    XELibIsSorted = reinterpret_cast<bool (*)(const unsigned int, bool *)>(GetProcAddress(HModule, "IsSorted"));
+        reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, unsigned char *)>(GetProcAddress(HModule, "ElementType"));
+    XELibDefType = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, unsigned char *)>(GetProcAddress(HModule, "DefType"));
+    XELibSmashType = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, unsigned char *)>(GetProcAddress(HModule, "SmashType"));
+    XELibValueType = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, unsigned char *)>(GetProcAddress(HModule, "ValueType"));
+    XELibIsSorted = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, VARIANT_BOOL *)>(GetProcAddress(HModule, "IsSorted"));
 
     // Element Value
-    XELibName = reinterpret_cast<bool (*)(const unsigned int, int *)>(GetProcAddress(HModule, "Name"));
-    XELibLongName = reinterpret_cast<bool (*)(const unsigned int, int *)>(GetProcAddress(HModule, "LongName"));
-    XELibDisplayName = reinterpret_cast<bool (*)(const unsigned int, int *)>(GetProcAddress(HModule, "DisplayName"));
+    XELibName = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, int *)>(GetProcAddress(HModule, "Name"));
+    XELibLongName = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, int *)>(GetProcAddress(HModule, "LongName"));
+    XELibDisplayName = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, int *)>(GetProcAddress(HModule, "DisplayName"));
     XELibPath =
-        reinterpret_cast<bool (*)(const unsigned int, const bool, const bool, int *)>(GetProcAddress(HModule, "Path"));
-    XELibSignature = reinterpret_cast<bool (*)(const unsigned int, int *)>(GetProcAddress(HModule, "Signature"));
+        reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const VARIANT_BOOL, const VARIANT_BOOL, int *)>(GetProcAddress(HModule, "Path"));
+    XELibSignature = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, int *)>(GetProcAddress(HModule, "Signature"));
     XELibGetValue =
-        reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, int *)>(GetProcAddress(HModule, "GetValue"));
-    XELibSetValue = reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, const wchar_t *)>(
+        reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, int *)>(GetProcAddress(HModule, "GetValue"));
+    XELibSetValue = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, const wchar_t *)>(
         GetProcAddress(HModule, "SetValue"));
     XELibGetIntValue =
-        reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, int *)>(GetProcAddress(HModule, "GetIntValue"));
-    XELibSetIntValue = reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, const int)>(
+        reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, int *)>(GetProcAddress(HModule, "GetIntValue"));
+    XELibSetIntValue = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, const int)>(
         GetProcAddress(HModule, "SetIntValue"));
-    XELibGetUIntValue = reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, unsigned int *)>(
+    XELibGetUIntValue = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, unsigned int *)>(
         GetProcAddress(HModule, "GetUIntValue"));
-    XELibSetUIntValue = reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, const unsigned int)>(
+    XELibSetUIntValue = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, const unsigned int)>(
         GetProcAddress(HModule, "SetUIntValue"));
-    XELibGetFloatValue = reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, double *)>(
+    XELibGetFloatValue = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, double *)>(
         GetProcAddress(HModule, "GetFloatValue"));
-    XELibSetFloatValue = reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, const double)>(
+    XELibSetFloatValue = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, const double)>(
         GetProcAddress(HModule, "SetFloatValue"));
-    XELibGetFlag = reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, const wchar_t *, bool *)>(
+    XELibGetFlag = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, const wchar_t *, VARIANT_BOOL *)>(
         GetProcAddress(HModule, "GetFlag"));
-    XELibSetFlag = reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, const wchar_t *, const bool)>(
+    XELibSetFlag = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, const wchar_t *, const VARIANT_BOOL)>(
         GetProcAddress(HModule, "SetFlag"));
     XELibGetAllFlags =
-        reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, int *)>(GetProcAddress(HModule, "GetAllFlags"));
-    XELibGetEnabledFlags = reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, int *)>(
+        reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, int *)>(GetProcAddress(HModule, "GetAllFlags"));
+    XELibGetEnabledFlags = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, int *)>(
         GetProcAddress(HModule, "GetEnabledFlags"));
-    XELibSetEnabledFlags = reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, const wchar_t *)>(
+    XELibSetEnabledFlags = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, const wchar_t *)>(
         GetProcAddress(HModule, "SetEnabledFlags"));
-    XELibGetEnumOptions = reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, int *)>(
+    XELibGetEnumOptions = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, int *)>(
         GetProcAddress(HModule, "GetEnumOptions"));
     XELibSignatureFromName =
-        reinterpret_cast<bool (*)(const wchar_t *, int *)>(GetProcAddress(HModule, "SignatureFromName"));
+        reinterpret_cast<VARIANT_BOOL (*)(const wchar_t *, int *)>(GetProcAddress(HModule, "SignatureFromName"));
     XELibNameFromSignature =
-        reinterpret_cast<bool (*)(const wchar_t *, int *)>(GetProcAddress(HModule, "NameFromSignature"));
-    XELibGetSignatureNameMap = reinterpret_cast<bool (*)(int *)>(GetProcAddress(HModule, "GetSignatureNameMap"));
+        reinterpret_cast<VARIANT_BOOL (*)(const wchar_t *, int *)>(GetProcAddress(HModule, "NameFromSignature"));
+    XELibGetSignatureNameMap = reinterpret_cast<VARIANT_BOOL (*)(int *)>(GetProcAddress(HModule, "GetSignatureNameMap"));
 
     // Serialization
-    XELibElementToJson = reinterpret_cast<bool (*)(const unsigned int, int *)>(GetProcAddress(HModule, "ElementToJson"));
-    XELibElementFromJson = reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, const wchar_t *)>(
+    XELibElementToJson = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, int *)>(GetProcAddress(HModule, "ElementToJson"));
+    XELibElementFromJson = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, const wchar_t *)>(
         GetProcAddress(HModule, "ElementFromJson"));
 
     // Records
-    XELibGetFormID = reinterpret_cast<bool (*)(const unsigned int, unsigned int *, const bool)>(
+    XELibGetFormID = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, unsigned int *, const VARIANT_BOOL)>(
         GetProcAddress(HModule, "GetFormID"));
-    XELibSetFormID = reinterpret_cast<bool (*)(const unsigned int, const unsigned int, const bool, const bool)>(
+    XELibSetFormID = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const unsigned int, const VARIANT_BOOL, const VARIANT_BOOL)>(
         GetProcAddress(HModule, "SetFormID"));
-    XELibGetRecord = reinterpret_cast<bool (*)(const unsigned int, const unsigned int, const bool, unsigned int *)>(
+    XELibGetRecord = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const unsigned int, const VARIANT_BOOL, unsigned int *)>(
         GetProcAddress(HModule, "GetRecord"));
-    XELibGetRecords = reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, const bool, int *)>(
+    XELibGetRecords = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, const VARIANT_BOOL, int *)>(
         GetProcAddress(HModule, "GetRecords"));
-    XELibGetREFRs = reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, const unsigned int, int *)>(
+    XELibGetREFRs = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, const unsigned int, int *)>(
         GetProcAddress(HModule, "GetREFRs"));
-    XELibGetOverrides = reinterpret_cast<bool (*)(const unsigned int, int *)>(GetProcAddress(HModule, "GetOverrides"));
+    XELibGetOverrides = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, int *)>(GetProcAddress(HModule, "GetOverrides"));
     XELibGetMasterRecord =
-        reinterpret_cast<bool (*)(const unsigned int, unsigned int *)>(GetProcAddress(HModule, "GetMasterRecord"));
+        reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, unsigned int *)>(GetProcAddress(HModule, "GetMasterRecord"));
     XELibGetWinningOverride =
-        reinterpret_cast<bool (*)(const unsigned int, unsigned int *)>(GetProcAddress(HModule, "GetWinningOverride"));
+        reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, unsigned int *)>(GetProcAddress(HModule, "GetWinningOverride"));
     XELibGetInjectionTarget =
-        reinterpret_cast<bool (*)(const unsigned int, unsigned int *)>(GetProcAddress(HModule, "GetInjectionTarget"));
+        reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, unsigned int *)>(GetProcAddress(HModule, "GetInjectionTarget"));
     XELibFindNextRecord =
-        reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, const bool, const bool, unsigned int *)>(
+        reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, const VARIANT_BOOL, const VARIANT_BOOL, unsigned int *)>(
             GetProcAddress(HModule, "FindNextRecord"));
     XELibFindPreviousRecord =
-        reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, const bool, const bool, unsigned int *)>(
+        reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, const VARIANT_BOOL, const VARIANT_BOOL, unsigned int *)>(
             GetProcAddress(HModule, "FindPreviousRecord"));
     XELibFindValidReferences =
-        reinterpret_cast<bool (*)(const unsigned int, const wchar_t *, const wchar_t *, const int, int *)>(
+        reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *, const wchar_t *, const int, int *)>(
             GetProcAddress(HModule, "FindValidReferences"));
-    XELibGetReferencedBy = reinterpret_cast<bool (*)(const unsigned int, int *)>(GetProcAddress(HModule, "GetReferencedBy"));
-    XELibExchangeReferences = reinterpret_cast<bool (*)(const unsigned int, const unsigned int, const unsigned int)>(
+    XELibGetReferencedBy = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, int *)>(GetProcAddress(HModule, "GetReferencedBy"));
+    XELibExchangeReferences = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const unsigned int, const unsigned int)>(
         GetProcAddress(HModule, "ExchangeReferences"));
-    XELibIsMaster = reinterpret_cast<bool (*)(const unsigned int, bool *)>(GetProcAddress(HModule, "IsMaster"));
-    XELibIsInjected = reinterpret_cast<bool (*)(const unsigned int, bool *)>(GetProcAddress(HModule, "IsInjected"));
-    XELibIsOverride = reinterpret_cast<bool (*)(const unsigned int, bool *)>(GetProcAddress(HModule, "IsOverride"));
+    XELibIsMaster = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, VARIANT_BOOL *)>(GetProcAddress(HModule, "IsMaster"));
+    XELibIsInjected = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, VARIANT_BOOL *)>(GetProcAddress(HModule, "IsInjected"));
+    XELibIsOverride = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, VARIANT_BOOL *)>(GetProcAddress(HModule, "IsOverride"));
     XELibIsWinningOverride =
-        reinterpret_cast<bool (*)(const unsigned int, bool *)>(GetProcAddress(HModule, "IsWinningOverride"));
-    XELibGetNodes = reinterpret_cast<bool (*)(const unsigned int, unsigned int *)>(GetProcAddress(HModule, "GetNodes"));
+        reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, VARIANT_BOOL *)>(GetProcAddress(HModule, "IsWinningOverride"));
+    XELibGetNodes = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, unsigned int *)>(GetProcAddress(HModule, "GetNodes"));
     XELibGetConflictData =
-        reinterpret_cast<bool (*)(const unsigned int, const unsigned int, unsigned char *, unsigned char *)>(
+        reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const unsigned int, unsigned char *, unsigned char *)>(
             GetProcAddress(HModule, "GetConflictData"));
-    XELibGetNodeElements = reinterpret_cast<bool (*)(const unsigned int, const unsigned int, int *)>(
+    XELibGetNodeElements = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const unsigned int, int *)>(
         GetProcAddress(HModule, "GetNodeElements"));
 
     // Errors
-    XELibCheckForErrors = reinterpret_cast<bool (*)(const unsigned int)>(GetProcAddress(HModule, "CheckForErrors"));
-    XELibGetErrorThreadDone = reinterpret_cast<bool (*)()>(GetProcAddress(HModule, "GetErrorThreadDone"));
-    XELibGetErrors = reinterpret_cast<bool (*)(int *)>(GetProcAddress(HModule, "GetErrors"));
-    XELibGetErrorString = reinterpret_cast<bool (*)(const unsigned int, int *)>(GetProcAddress(HModule, "GetErrorString"));
-    XELibRemoveIdenticalRecords = reinterpret_cast<bool (*)(const unsigned int, const bool, const bool)>(
+    XELibCheckForErrors = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int)>(GetProcAddress(HModule, "CheckForErrors"));
+    XELibGetErrorThreadDone = reinterpret_cast<VARIANT_BOOL (*)()>(GetProcAddress(HModule, "GetErrorThreadDone"));
+    XELibGetErrors = reinterpret_cast<VARIANT_BOOL (*)(int *)>(GetProcAddress(HModule, "GetErrors"));
+    XELibGetErrorString = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, int *)>(GetProcAddress(HModule, "GetErrorString"));
+    XELibRemoveIdenticalRecords = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const VARIANT_BOOL, const VARIANT_BOOL)>(
         GetProcAddress(HModule, "RemoveIdenticalRecords"));
 
     // Filters
-    XELibFilterRecord = reinterpret_cast<bool (*)(const unsigned int)>(GetProcAddress(HModule, "FilterRecord"));
-    XELibResetFilter = reinterpret_cast<bool (*)()>(GetProcAddress(HModule, "ResetFilter"));
+    XELibFilterRecord = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int)>(GetProcAddress(HModule, "FilterRecord"));
+    XELibResetFilter = reinterpret_cast<VARIANT_BOOL (*)()>(GetProcAddress(HModule, "ResetFilter"));
   }
 
   XELibInitXEdit();
@@ -313,15 +314,15 @@ auto XEditLibCpp::getResultBytesSafe(int Len) -> std::vector<unsigned char> {
 }
 
 auto XEditLibCpp::getExceptionMessageSafe() -> std::string {
-  auto Len = make_unique<int>();
-  XELibGetExceptionMessageLength(Len.get());
+  int Len = 0;
+  XELibGetExceptionMessageLength(&Len);
 
-  if (Len == nullptr || *Len == 0) {
+  if (Len == 0) {
     return {};
   }
 
-  auto ExceptionMessage = make_unique<wchar_t[]>(*Len);
-  XELibGetExceptionMessage(ExceptionMessage.get(), *Len);
+  auto ExceptionMessage = make_unique<wchar_t[]>(Len);
+  XELibGetExceptionMessage(ExceptionMessage.get(), Len);
 
   return ParallaxGenUtil::wstrToStr(ExceptionMessage.get());
 }
@@ -333,85 +334,93 @@ void XEditLibCpp::throwExceptionIfExists() {
   }
 }
 
+auto XEditLibCpp::boolToVariantBool(bool Value) -> VARIANT_BOOL {
+  if (Value) {
+    return VARIANT_TRUE;
+  }
+
+  return VARIANT_FALSE;
+}
+
 //
 // Function Implementation
 //
 
 // Meta
 auto XEditLibCpp::getProgramPath() -> std::filesystem::path {
-  auto Len = make_unique<int>();
-  XELibGetGlobal(L"ProgramPath", Len.get());
+  int Len = 0;
+  XELibGetGlobal(L"ProgramPath", &Len);
   throwExceptionIfExists();
 
-  return getResultStringSafe(*Len);
+  return getResultStringSafe(Len);
 }
 
 auto XEditLibCpp::getVersion() -> std::wstring {
-  auto Len = make_unique<int>();
-  XELibGetGlobal(L"Version", Len.get());
+  int Len = 0;
+  XELibGetGlobal(L"Version", &Len);
   throwExceptionIfExists();
 
-  return getResultStringSafe(*Len);
+  return getResultStringSafe(Len);
 }
 
 auto XEditLibCpp::getGameName() -> std::wstring {
-  auto Len = make_unique<int>();
-  XELibGetGlobal(L"GameName", Len.get());
+  int Len = 0;
+  XELibGetGlobal(L"GameName", &Len);
   throwExceptionIfExists();
 
-  return getResultStringSafe(*Len);
+  return getResultStringSafe(Len);
 }
 
 auto XEditLibCpp::getAppName() -> std::wstring {
-  auto Len = make_unique<int>();
-  XELibGetGlobal(L"AppName", Len.get());
+  int Len = 0;
+  XELibGetGlobal(L"AppName", &Len);
   throwExceptionIfExists();
 
-  return getResultStringSafe(*Len);
+  return getResultStringSafe(Len);
 }
 
 auto XEditLibCpp::getLongGameName() -> std::wstring {
-  auto Len = make_unique<int>();
-  XELibGetGlobal(L"LongGameName", Len.get());
+  int Len = 0;
+  XELibGetGlobal(L"LongGameName", &Len);
   throwExceptionIfExists();
 
-  return getResultStringSafe(*Len);
+  return getResultStringSafe(Len);
 }
 
 auto XEditLibCpp::getDataPath() -> std::filesystem::path {
-  auto Len = make_unique<int>();
-  XELibGetGlobal(L"DataPath", Len.get());
+  int Len = 0;
+  XELibGetGlobal(L"DataPath", &Len);
   throwExceptionIfExists();
 
-  return getResultStringSafe(*Len);
+  return getResultStringSafe(Len);
 }
 
 auto XEditLibCpp::getAppDataPath() -> std::filesystem::path {
-  auto Len = make_unique<int>();
-  XELibGetGlobal(L"AppDataPath", Len.get());
+  int Len = 0;
+  XELibGetGlobal(L"AppDataPath", &Len);
   throwExceptionIfExists();
 
-  return getResultStringSafe(*Len);
+  return getResultStringSafe(Len);
 }
 
 auto XEditLibCpp::getMyGamesPath() -> std::filesystem::path {
-  auto Len = make_unique<int>();
-  XELibGetGlobal(L"MyGamesPath", Len.get());
+  int Len = 0;
+  XELibGetGlobal(L"MyGamesPath", &Len);
   throwExceptionIfExists();
 
-  return getResultStringSafe(*Len);
+  return getResultStringSafe(Len);
 }
 
 auto XEditLibCpp::getGameIniPath() -> std::filesystem::path {
-  auto Len = make_unique<int>();
-  XELibGetGlobal(L"GameIniPath", Len.get());
+  int Len = 0;
+  XELibGetGlobal(L"GameIniPath", &Len);
   throwExceptionIfExists();
 
-  return getResultStringSafe(*Len);
+  return getResultStringSafe(Len);
 }
 
 void XEditLibCpp::setSortMode(const SortBy &SortBy, bool Reverse) {
-  XELibSetSortMode(static_cast<unsigned char>(SortBy), Reverse);
+  XELibSetSortMode(static_cast<unsigned char>(SortBy), boolToVariantBool(Reverse));
   throwExceptionIfExists();
 }
 
@@ -426,22 +435,22 @@ void XEditLibCpp::releaseNodes(unsigned int Id) {
 }
 
 auto XEditLibCpp::getDuplicateHandles(unsigned int Id) -> std::vector<unsigned int> {
-  auto Len = make_unique<int>();
-  XELibGetDuplicateHandles(Id, Len.get());
+  int Len = 0;
+  XELibGetDuplicateHandles(Id, &Len);
   throwExceptionIfExists();
 
-  return getResultArraySafe(*Len);
+  return getResultArraySafe(Len);
 }
 
 // Messages
 
 auto XEditLibCpp::getMessages() -> std::wstring {
-  auto Len = make_unique<int>();
-  XELibGetMessagesLength(Len.get());
+  int Len = 0;
+  XELibGetMessagesLength(&Len);
   throwExceptionIfExists();
 
-  auto Messages = make_unique<wchar_t[]>(*Len);
-  XELibGetMessages(Messages.get(), *Len);
+  auto Messages = make_unique<wchar_t[]>(Len);
+  XELibGetMessages(Messages.get(), Len);
   throwExceptionIfExists();
 
   return Messages.get();
@@ -450,11 +459,11 @@ auto XEditLibCpp::getMessages() -> std::wstring {
 // Setup
 
 auto XEditLibCpp::getGamePath(const GameMode &Mode) -> std::filesystem::path {
-  auto Len = make_unique<int>();
-  XELibGetGamePath(static_cast<int>(Mode), Len.get());
+  int Len = 0;
+  XELibGetGamePath(static_cast<int>(Mode), &Len);
   throwExceptionIfExists();
 
-  return getResultStringSafe(*Len);
+  return getResultStringSafe(Len);
 }
 
 void XEditLibCpp::setGamePath(const std::filesystem::path &Path) {
@@ -463,11 +472,11 @@ void XEditLibCpp::setGamePath(const std::filesystem::path &Path) {
 }
 
 auto XEditLibCpp::getGameLanguage(const GameMode &Mode) -> wstring {
-  auto Len = make_unique<int>();
-  XELibGetGameLanguage(static_cast<int>(Mode), Len.get());
+  int Len = 0;
+  XELibGetGameLanguage(static_cast<int>(Mode), &Len);
   throwExceptionIfExists();
 
-  return getResultStringSafe(*Len);
+  return getResultStringSafe(Len);
 }
 
 void XEditLibCpp::setLanguage(const wstring &Lang) {
@@ -486,11 +495,11 @@ void XEditLibCpp::setGameMode(const GameMode &Mode) {
 }
 
 auto XEditLibCpp::getLoadOrder() -> std::vector<wstring> {
-  auto Len = make_unique<int>();
-  XELibGetLoadOrder(Len.get());
+  int Len = 0;
+  XELibGetLoadOrder(&Len);
   throwExceptionIfExists();
 
-  const auto LoadOrderStr = getResultStringSafe(*Len);
+  const auto LoadOrderStr = getResultStringSafe(Len);
 
   vector<wstring> OutputLoadOrder;
   boost::split(OutputLoadOrder, LoadOrderStr, boost::is_any_of("\r\n"), boost::token_compress_on);
@@ -499,11 +508,11 @@ auto XEditLibCpp::getLoadOrder() -> std::vector<wstring> {
 }
 
 auto XEditLibCpp::getActivePlugins() -> std::vector<wstring> {
-  auto Len = make_unique<int>();
-  XELibGetActivePlugins(Len.get());
+  int Len = 0;
+  XELibGetActivePlugins(&Len);
   throwExceptionIfExists();
 
-  const auto ActivePluginsStr = getResultStringSafe(*Len);
+  const auto ActivePluginsStr = getResultStringSafe(Len);
 
   vector<wstring> OutputActivePlugins;
   boost::split(OutputActivePlugins, ActivePluginsStr, boost::is_any_of("\r\n"), boost::token_compress_on);
@@ -513,7 +522,7 @@ auto XEditLibCpp::getActivePlugins() -> std::vector<wstring> {
 
 void XEditLibCpp::loadPlugins(const std::vector<wstring> &LoadOrder, bool SmartLoad) {
   const wstring LoadOrderStr = boost::algorithm::join(LoadOrder, L"\r\n");
-  XELibLoadPlugins(LoadOrderStr.c_str(), SmartLoad);
+  XELibLoadPlugins(LoadOrderStr.c_str(), boolToVariantBool(SmartLoad));
   throwExceptionIfExists();
 }
 
@@ -523,15 +532,15 @@ void XEditLibCpp::loadPlugin(const std::wstring &Filename) {
 }
 
 auto XEditLibCpp::loadPluginHeader(const std::wstring &Filename) -> unsigned int {
-  auto Res = make_unique<unsigned int>();
-  XELibLoadPluginHeader(Filename.c_str(), Res.get());
+  unsigned int Res = 0;
+  XELibLoadPluginHeader(Filename.c_str(), &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 void XEditLibCpp::buildReferences(const unsigned int &Id, const bool &Synchronous) {
-  XELibBuildReferences(Id, Synchronous);
+  XELibBuildReferences(Id, boolToVariantBool(Synchronous));
   throwExceptionIfExists();
 }
 
@@ -551,43 +560,43 @@ void XEditLibCpp::unloadPlugin(const unsigned int &Id) {
 // Files
 
 auto XEditLibCpp::addFile(const std::filesystem::path &Path) -> unsigned int {
-  auto Res = make_unique<unsigned int>();
-  XELibAddFile(Path.wstring().c_str(), Res.get());
+  unsigned int Res = 0;
+  XELibAddFile(Path.wstring().c_str(), &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 auto XEditLibCpp::fileByIndex(int Index) -> unsigned int {
-  auto Res = make_unique<unsigned int>();
-  XELibFileByIndex(Index, Res.get());
+  unsigned int Res = 0;
+  XELibFileByIndex(Index, &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 auto XEditLibCpp::fileByLoadOrder(int LoadOrder) -> unsigned int {
-  auto Res = make_unique<unsigned int>();
-  XELibFileByLoadOrder(LoadOrder, Res.get());
+  unsigned int Res = 0;
+  XELibFileByLoadOrder(LoadOrder, &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 auto XEditLibCpp::fileByName(const std::wstring &Filename) -> unsigned int {
-  auto Res = make_unique<unsigned int>();
-  XELibFileByName(Filename.c_str(), Res.get());
+  unsigned int Res = 0;
+  XELibFileByName(Filename.c_str(), &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 auto XEditLibCpp::fileByAuthor(const std::wstring &Author) -> unsigned int {
-  auto Res = make_unique<unsigned int>();
-  XELibFileByAuthor(Author.c_str(), Res.get());
+  unsigned int Res = 0;
+  XELibFileByAuthor(Author.c_str(), &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 void XEditLibCpp::saveFile(const unsigned int &Id, const std::filesystem::path &Path) {
@@ -596,50 +605,50 @@ void XEditLibCpp::saveFile(const unsigned int &Id, const std::filesystem::path &
 }
 
 auto XEditLibCpp::getRecordCount(const unsigned int &Id) -> int {
-  auto Res = make_unique<int>();
-  XELibGetRecordCount(Id, Res.get());
+  int Res = 0;
+  XELibGetRecordCount(Id, &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 auto XEditLibCpp::getOverrideRecordCount(const unsigned int &Id) -> int {
-  auto Res = make_unique<int>();
-  XELibGetOverrideRecordCount(Id, Res.get());
+  int Res = 0;
+  XELibGetOverrideRecordCount(Id, &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 auto XEditLibCpp::md5Hash(const unsigned int &Id) -> wstring {
-  auto Len = make_unique<int>();
-  XELibMD5Hash(Id, Len.get());
+  int Len = 0;
+  XELibMD5Hash(Id, &Len);
   throwExceptionIfExists();
 
-  return getResultStringSafe(*Len);
+  return getResultStringSafe(Len);
 }
 
 auto XEditLibCpp::crcHash(const unsigned int &Id) -> wstring {
-  auto Len = make_unique<int>();
-  XELibCRCHash(Id, Len.get());
+  int Len = 0;
+  XELibCRCHash(Id, &Len);
   throwExceptionIfExists();
 
-  return getResultStringSafe(*Len);
+  return getResultStringSafe(Len);
 }
 
 auto XEditLibCpp::getFileLoadOrder(const unsigned int &Id) -> int {
-  auto Res = make_unique<int>();
-  XELibGetFileLoadOrder(Id, Res.get());
+  int Res = 0;
+  XELibGetFileLoadOrder(Id, &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 // Archives
 
 void XEditLibCpp::extractContainer(const std::wstring &Name, const std::filesystem::path &Destination,
                                    const bool &Replace) {
-  XELibExtractContainer(Name.c_str(), Destination.wstring().c_str(), Replace);
+  XELibExtractContainer(Name.c_str(), Destination.wstring().c_str(), boolToVariantBool(Replace));
   throwExceptionIfExists();
 }
 
@@ -651,11 +660,11 @@ void XEditLibCpp::extractFile(const std::wstring &Name, const std::filesystem::p
 
 auto XEditLibCpp::getContainerFiles(const std::wstring &Name,
                                     const std::filesystem::path &Path) -> std::vector<std::wstring> {
-  auto Len = make_unique<int>();
-  XELibGetContainerFiles(Name.c_str(), Path.wstring().c_str(), Len.get());
+  int Len = 0;
+  XELibGetContainerFiles(Name.c_str(), Path.wstring().c_str(), &Len);
   throwExceptionIfExists();
 
-  const auto ContainerFilesStr = getResultStringSafe(*Len);
+  const auto ContainerFilesStr = getResultStringSafe(Len);
 
   vector<wstring> OutputContainerFiles;
   boost::split(OutputContainerFiles, ContainerFilesStr, boost::is_any_of("\r\n"), boost::token_compress_on);
@@ -664,19 +673,19 @@ auto XEditLibCpp::getContainerFiles(const std::wstring &Name,
 }
 
 auto XEditLibCpp::getFileContainer(const std::filesystem::path &Path) -> std::wstring {
-  auto Len = make_unique<int>();
-  XELibGetFileContainer(Path.wstring().c_str(), Len.get());
+  int Len = 0;
+  XELibGetFileContainer(Path.wstring().c_str(), &Len);
   throwExceptionIfExists();
 
-  return getResultStringSafe(*Len);
+  return getResultStringSafe(Len);
 }
 
 auto XEditLibCpp::getLoadedContainers() -> std::vector<std::wstring> {
-  auto Len = make_unique<int>();
-  XELibGetLoadedContainers(Len.get());
+  int Len = 0;
+  XELibGetLoadedContainers(&Len);
   throwExceptionIfExists();
 
-  const auto LoadedContainersStr = getResultStringSafe(*Len);
+  const auto LoadedContainersStr = getResultStringSafe(Len);
 
   vector<wstring> OutputLoadedContainers;
   boost::split(OutputLoadedContainers, LoadedContainersStr, boost::is_any_of("\r\n"), boost::token_compress_on);
@@ -700,7 +709,7 @@ for (const auto &FilePath : FilePaths) {
   }
 
   XELibBuildArchive(Name.c_str(), Folder.wstring().c_str(), boost::algorithm::join(FilePathsStr, L"\r\n").c_str(),
-               static_cast<int>(Type), BCompress, BShare, AF.c_str(), FF.c_str());
+               static_cast<int>(Type), boolToVariantBool(BCompress), boolToVariantBool(BShare), AF.c_str(), FF.c_str());
   throwExceptionIfExists();
 }
 
@@ -716,36 +725,36 @@ auto XEditLibCpp::getTextureData(const std::wstring &ResourceName) -> std::pair<
 // Elements
 
 auto XEditLibCpp::hasElement(const unsigned int &Id, const std::wstring &Key) -> bool {
-  auto Res = make_unique<bool>();
-  XELibHasElement(Id, Key.c_str(), Res.get());
+  auto Res = VARIANT_FALSE;
+  XELibHasElement(Id, Key.c_str(), &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res == VARIANT_TRUE;
 }
 
 auto XEditLibCpp::getElement(const unsigned int &Id, const std::wstring &Key) -> unsigned int {
-  auto Res = make_unique<unsigned int>();
-  XELibGetElement(Id, Key.c_str(), Res.get());
+  unsigned int Res = 0;
+  XELibGetElement(Id, Key.c_str(), &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 auto XEditLibCpp::addElement(const unsigned int &Id, const std::wstring &Key) -> unsigned int {
-  auto Res = make_unique<unsigned int>();
-  XELibAddElement(Id, Key.c_str(), Res.get());
+  unsigned int Res = 0;
+  XELibAddElement(Id, Key.c_str(), &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 auto XEditLibCpp::addElementValue(const unsigned int &Id, const std::wstring &Key,
                                   const std::wstring &Value) -> unsigned int {
-  auto Res = make_unique<unsigned int>();
-  XELibAddElementValue(Id, Key.c_str(), Value.c_str(), Res.get());
+  unsigned int Res = 0;
+  XELibAddElementValue(Id, Key.c_str(), Value.c_str(), &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 void XEditLibCpp::removeElement(const unsigned int &Id, const std::wstring &Key) {
@@ -765,19 +774,19 @@ void XEditLibCpp::setElement(const unsigned int &Id, const unsigned int &Id2) {
 
 auto XEditLibCpp::getElements(const unsigned int &Id, const std::wstring &Key, const bool &Sort,
                               const bool &Filter) -> std::vector<unsigned int> {
-  auto Len = make_unique<int>();
-  XELibGetElements(Id, Key.c_str(), Sort, Filter, Len.get());
+  int Len = 0;
+  XELibGetElements(Id, Key.c_str(), boolToVariantBool(Sort), boolToVariantBool(Filter), &Len);
   throwExceptionIfExists();
 
-  return getResultArraySafe(*Len);
+  return getResultArraySafe(Len);
 }
 
 auto XEditLibCpp::getDefNames(const unsigned int &Id) -> std::vector<std::wstring> {
-  auto Len = make_unique<int>();
-  XELibGetDefNames(Id, Len.get());
+  int Len = 0;
+  XELibGetDefNames(Id, &Len);
   throwExceptionIfExists();
 
-  const auto DefNamesStr = getResultStringSafe(*Len);
+  const auto DefNamesStr = getResultStringSafe(Len);
 
   vector<wstring> OutputDefNames;
   boost::split(OutputDefNames, DefNamesStr, boost::is_any_of("\r\n"), boost::token_compress_on);
@@ -786,11 +795,11 @@ auto XEditLibCpp::getDefNames(const unsigned int &Id) -> std::vector<std::wstrin
 }
 
 auto XEditLibCpp::getAddList(const unsigned int &Id) -> std::vector<std::wstring> {
-  auto Len = make_unique<int>();
-  XELibGetAddList(Id, Len.get());
+  int Len = 0;
+  XELibGetAddList(Id, &Len);
   throwExceptionIfExists();
 
-  const auto AddListStr = getResultStringSafe(*Len);
+  const auto AddListStr = getResultStringSafe(Len);
 
   vector<wstring> OutputAddList;
   boost::split(OutputAddList, AddListStr, boost::is_any_of("\r\n"), boost::token_compress_on);
@@ -799,11 +808,11 @@ auto XEditLibCpp::getAddList(const unsigned int &Id) -> std::vector<std::wstring
 }
 
 auto XEditLibCpp::getLinksTo(const unsigned int &Id, const std::wstring &Key) -> unsigned int {
-  auto Res = make_unique<unsigned int>();
-  XELibGetLinksTo(Id, Key.c_str(), Res.get());
+  unsigned int Res = 0;
+  XELibGetLinksTo(Id, Key.c_str(), &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 void XEditLibCpp::setLinksTo(const unsigned int &Id, const std::wstring &Key, const unsigned int &Id2) {
@@ -812,86 +821,86 @@ void XEditLibCpp::setLinksTo(const unsigned int &Id, const std::wstring &Key, co
 }
 
 auto XEditLibCpp::getElementIndex(const unsigned int &Id) -> int {
-  auto Res = make_unique<int>();
-  XELibGetElementIndex(Id, Res.get());
+  int Res = 0;
+  XELibGetElementIndex(Id, &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 auto XEditLibCpp::getContainer(const unsigned int &Id) -> unsigned int {
-  auto Res = make_unique<unsigned int>();
-  XELibGetContainer(Id, Res.get());
+  unsigned int Res = 0;
+  XELibGetContainer(Id, &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 auto XEditLibCpp::getElementFile(const unsigned int &Id) -> unsigned int {
-  auto Res = make_unique<unsigned int>();
-  XELibGetElementFile(Id, Res.get());
+  unsigned int Res = 0;
+  XELibGetElementFile(Id, &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 auto XEditLibCpp::getElementRecord(const unsigned int &Id) -> unsigned int {
-  auto Res = make_unique<unsigned int>();
-  XELibGetElementRecord(Id, Res.get());
+  unsigned int Res = 0;
+  XELibGetElementRecord(Id, &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 auto XEditLibCpp::elementCount(const unsigned int &Id) -> int {
-  auto Res = make_unique<int>();
-  XELibElementCount(Id, Res.get());
+  int Res = 0;
+  XELibElementCount(Id, &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 auto XEditLibCpp::elementEquals(const unsigned int &Id, const unsigned int &Id2) -> bool {
-  auto Res = make_unique<bool>();
-  XELibElementEquals(Id, Id2, Res.get());
+  auto Res = VARIANT_FALSE;
+  XELibElementEquals(Id, Id2, &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res == VARIANT_TRUE;
 }
 
 auto XEditLibCpp::elementMatches(const unsigned int &Id, const std::wstring &Key, const std::wstring &Value) -> bool {
-  auto Res = make_unique<bool>();
-  XELibElementMatches(Id, Key.c_str(), Value.c_str(), Res.get());
+  auto Res = VARIANT_FALSE;
+  XELibElementMatches(Id, Key.c_str(), Value.c_str(), &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res == VARIANT_TRUE;
 }
 
 auto XEditLibCpp::hasArrayItem(const unsigned int &Id, const std::wstring &Key, const std::wstring &SubKey,
                                const std::wstring &Value) -> bool {
-  auto Res = make_unique<bool>();
-  XELibHasArrayItem(Id, Key.c_str(), SubKey.c_str(), Value.c_str(), Res.get());
+  auto Res = VARIANT_FALSE;
+  XELibHasArrayItem(Id, Key.c_str(), SubKey.c_str(), Value.c_str(), &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res == VARIANT_TRUE;
 }
 
 auto XEditLibCpp::getArrayItem(const unsigned int &Id, const std::wstring &Key, const std::wstring &SubKey,
                                const std::wstring &Value) -> unsigned int {
-  auto Res = make_unique<unsigned int>();
-  XELibGetArrayItem(Id, Key.c_str(), SubKey.c_str(), Value.c_str(), Res.get());
+  unsigned int Res = 0;
+  XELibGetArrayItem(Id, Key.c_str(), SubKey.c_str(), Value.c_str(), &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 auto XEditLibCpp::addArrayItem(const unsigned int &Id, const std::wstring &Key, const std::wstring &SubKey,
                                const std::wstring &Value) -> unsigned int {
-  auto Res = make_unique<unsigned int>();
-  XELibAddArrayItem(Id, Key.c_str(), SubKey.c_str(), Value.c_str(), Res.get());
+  unsigned int Res = 0;
+  XELibAddArrayItem(Id, Key.c_str(), SubKey.c_str(), Value.c_str(), &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 void XEditLibCpp::removeArrayItem(const unsigned int &Id, const std::wstring &Key, const std::wstring &SubKey,
@@ -906,27 +915,27 @@ void XEditLibCpp::moveArrayItem(const unsigned int &Id, const int &Index) {
 }
 
 auto XEditLibCpp::copyElement(const unsigned int &Id, const unsigned int &Id2, const bool &AsNew) -> unsigned int {
-  auto Res = make_unique<unsigned int>();
-  XELibCopyElement(Id, Id2, AsNew, Res.get());
+  unsigned int Res = 0;
+  XELibCopyElement(Id, Id2, boolToVariantBool(AsNew), &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 auto XEditLibCpp::getSignatureAllowed(const unsigned int &Id, const std::wstring &Signature) -> bool {
-  auto Res = make_unique<bool>();
-  XELibGetSignatureAllowed(Id, Signature.c_str(), Res.get());
+  auto Res = VARIANT_FALSE;
+  XELibGetSignatureAllowed(Id, Signature.c_str(), &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res == VARIANT_TRUE;
 }
 
 auto XEditLibCpp::getAllowedSignatures(const unsigned int &Id) -> std::vector<std::wstring> {
-  auto Len = make_unique<int>();
-  XELibGetAllowedSignatures(Id, Len.get());
+  int Len = 0;
+  XELibGetAllowedSignatures(Id, &Len);
   throwExceptionIfExists();
 
-  const auto AllowedSignaturesStr = getResultStringSafe(*Len);
+  const auto AllowedSignaturesStr = getResultStringSafe(Len);
 
   vector<wstring> OutputAllowedSignatures;
   boost::split(OutputAllowedSignatures, AllowedSignaturesStr, boost::is_any_of("\r\n"), boost::token_compress_on);
@@ -935,133 +944,133 @@ auto XEditLibCpp::getAllowedSignatures(const unsigned int &Id) -> std::vector<st
 }
 
 auto XEditLibCpp::getIsModified(const unsigned int &Id) -> bool {
-  auto Res = make_unique<bool>();
-  XELibGetIsModified(Id, Res.get());
+  auto Res = VARIANT_FALSE;
+  XELibGetIsModified(Id, &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res == VARIANT_TRUE;
 }
 
 auto XEditLibCpp::getIsEditable(const unsigned int &Id) -> bool {
-  auto Res = make_unique<bool>();
-  XELibGetIsEditable(Id, Res.get());
+  auto Res = VARIANT_FALSE;
+  XELibGetIsEditable(Id, &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res == VARIANT_TRUE;
 }
 
 auto XEditLibCpp::getIsRemoveable(const unsigned int &Id) -> bool {
-  auto Res = make_unique<bool>();
-  XELibGetIsRemoveable(Id, Res.get());
+  auto Res = VARIANT_FALSE;
+  XELibGetIsRemoveable(Id, &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res == VARIANT_TRUE;
 }
 
 auto XEditLibCpp::getCanAdd(const unsigned int &Id) -> bool {
-  auto Res = make_unique<bool>();
-  XELibGetCanAdd(Id, Res.get());
+  auto Res = VARIANT_FALSE;
+  XELibGetCanAdd(Id, &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res == VARIANT_TRUE;
 }
 
 auto XEditLibCpp::sortKey(const unsigned int &Id) -> wstring {
-  auto Len = make_unique<int>();
-  XELibSortKey(Id, Len.get());
+  int Len = 0;
+  XELibSortKey(Id, &Len);
   throwExceptionIfExists();
 
-  return getResultStringSafe(*Len);
+  return getResultStringSafe(Len);
 }
 
 auto XEditLibCpp::elementType(const unsigned int &Id) -> ElementType {
-  auto Res = make_unique<unsigned char>();
-  XELibElementType(Id, Res.get());
+  unsigned char Res = 0;
+  XELibElementType(Id, &Res);
   throwExceptionIfExists();
 
-  return static_cast<ElementType>(*Res);
+  return static_cast<ElementType>(Res);
 }
 
 auto XEditLibCpp::defType(const unsigned int &Id) -> DefType {
-  auto Res = make_unique<unsigned char>();
-  XELibDefType(Id, Res.get());
+  unsigned char Res = 0;
+  XELibDefType(Id, &Res);
   throwExceptionIfExists();
 
-  return static_cast<DefType>(*Res);
+  return static_cast<DefType>(Res);
 }
 
 auto XEditLibCpp::smashType(const unsigned int &Id) -> SmashType {
-  auto Res = make_unique<unsigned char>();
-  XELibSmashType(Id, Res.get());
+  unsigned char Res = 0;
+  XELibSmashType(Id, &Res);
   throwExceptionIfExists();
 
-  return static_cast<SmashType>(*Res);
+  return static_cast<SmashType>(Res);
 }
 
 auto XEditLibCpp::valueType(const unsigned int &Id) -> ValueType {
-  auto Res = make_unique<unsigned char>();
-  XELibValueType(Id, Res.get());
+  unsigned char Res = 0;
+  XELibValueType(Id, &Res);
   throwExceptionIfExists();
 
-  return static_cast<ValueType>(*Res);
+  return static_cast<ValueType>(Res);
 }
 
 auto XEditLibCpp::isSorted(const unsigned int &Id) -> bool {
-  auto Res = make_unique<bool>();
-  XELibIsSorted(Id, Res.get());
+  auto Res = VARIANT_FALSE;
+  XELibIsSorted(Id, &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res == VARIANT_TRUE;
 }
 
 // Element Value
 
 auto XEditLibCpp::name(const unsigned int &Id) -> wstring {
-  auto Len = make_unique<int>();
-  XELibName(Id, Len.get());
+  int Len = 0;
+  XELibName(Id, &Len);
   throwExceptionIfExists();
 
-  return getResultStringSafe(*Len);
+  return getResultStringSafe(Len);
 }
 
 auto XEditLibCpp::longName(const unsigned int &Id) -> wstring {
-  auto Len = make_unique<int>();
-  XELibLongName(Id, Len.get());
+  int Len = 0;
+  XELibLongName(Id, &Len);
   throwExceptionIfExists();
 
-  return getResultStringSafe(*Len);
+  return getResultStringSafe(Len);
 }
 
 auto XEditLibCpp::displayName(const unsigned int &Id) -> wstring {
-  auto Len = make_unique<int>();
-  XELibDisplayName(Id, Len.get());
+  int Len = 0;
+  XELibDisplayName(Id, &Len);
   throwExceptionIfExists();
 
-  return getResultStringSafe(*Len);
+  return getResultStringSafe(Len);
 }
 
 auto XEditLibCpp::path(const unsigned int &Id, const bool &ShortPath, const bool &Local) -> std::wstring {
-  auto Len = make_unique<int>();
-  XELibPath(Id, ShortPath, Local, Len.get());
+  int Len = 0;
+  XELibPath(Id, boolToVariantBool(ShortPath), boolToVariantBool(Local), &Len);
   throwExceptionIfExists();
 
-  return getResultStringSafe(*Len);
+  return getResultStringSafe(Len);
 }
 
 auto XEditLibCpp::signature(const unsigned int &Id) -> wstring {
-  auto Len = make_unique<int>();
-  XELibSignature(Id, Len.get());
+  int Len = 0;
+  XELibSignature(Id, &Len);
   throwExceptionIfExists();
 
-  return getResultStringSafe(*Len);
+  return getResultStringSafe(Len);
 }
 
 auto XEditLibCpp::getValue(const unsigned int &Id, const std::wstring &Key) -> wstring {
-  auto Len = make_unique<int>();
-  XELibGetValue(Id, Key.c_str(), Len.get());
+  int Len = 0;
+  XELibGetValue(Id, Key.c_str(), &Len);
   throwExceptionIfExists();
 
-  return getResultStringSafe(*Len);
+  return getResultStringSafe(Len);
 }
 
 void XEditLibCpp::setValue(const unsigned int &Id, const std::wstring &Key, const std::wstring &Value) {
@@ -1070,11 +1079,11 @@ void XEditLibCpp::setValue(const unsigned int &Id, const std::wstring &Key, cons
 }
 
 auto XEditLibCpp::getIntValue(const unsigned int &Id, const std::wstring &Key) -> int {
-  auto Res = make_unique<int>();
-  XELibGetIntValue(Id, Key.c_str(), Res.get());
+  int Res = 0;
+  XELibGetIntValue(Id, Key.c_str(), &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 void XEditLibCpp::setIntValue(const unsigned int &Id, const std::wstring &Key, const int &Value) {
@@ -1083,11 +1092,11 @@ void XEditLibCpp::setIntValue(const unsigned int &Id, const std::wstring &Key, c
 }
 
 auto XEditLibCpp::getUIntValue(const unsigned int &Id, const std::wstring &Key) -> unsigned int {
-  auto Res = make_unique<unsigned int>();
-  XELibGetUIntValue(Id, Key.c_str(), Res.get());
+  unsigned int Res = 0;
+  XELibGetUIntValue(Id, Key.c_str(), &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 void XEditLibCpp::setUIntValue(const unsigned int &Id, const std::wstring &Key, const unsigned int &Value) {
@@ -1096,11 +1105,11 @@ void XEditLibCpp::setUIntValue(const unsigned int &Id, const std::wstring &Key, 
 }
 
 auto XEditLibCpp::getFloatValue(const unsigned int &Id, const std::wstring &Key) -> double {
-  auto Res = make_unique<double>();
-  XELibGetFloatValue(Id, Key.c_str(), Res.get());
+  double Res = 0;
+  XELibGetFloatValue(Id, Key.c_str(), &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 void XEditLibCpp::setFloatValue(const unsigned int &Id, const std::wstring &Key, const double &Value) {
@@ -1109,25 +1118,25 @@ void XEditLibCpp::setFloatValue(const unsigned int &Id, const std::wstring &Key,
 }
 
 auto XEditLibCpp::getFlag(const unsigned int &Id, const std::wstring &Key, const std::wstring &Flag) -> bool {
-  auto Res = make_unique<bool>();
-  XELibGetFlag(Id, Key.c_str(), Flag.c_str(), Res.get());
+  auto Res = VARIANT_FALSE;
+  XELibGetFlag(Id, Key.c_str(), Flag.c_str(), &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res == VARIANT_TRUE;
 }
 
 void XEditLibCpp::setFlag(const unsigned int &Id, const std::wstring &Key, const std::wstring &Flag,
                           const bool &Enabled) {
-  XELibSetFlag(Id, Key.c_str(), Flag.c_str(), Enabled);
+  XELibSetFlag(Id, Key.c_str(), Flag.c_str(), boolToVariantBool(Enabled));
   throwExceptionIfExists();
 }
 
 auto XEditLibCpp::getAllFlags(const unsigned int &Id, const std::wstring &Key) -> std::vector<std::wstring> {
-  auto Len = make_unique<int>();
-  XELibGetAllFlags(Id, Key.c_str(), Len.get());
+  int Len = 0;
+  XELibGetAllFlags(Id, Key.c_str(), &Len);
   throwExceptionIfExists();
 
-  const auto AllFlagsStr = getResultStringSafe(*Len);
+  const auto AllFlagsStr = getResultStringSafe(Len);
 
   vector<wstring> OutputAllFlags;
   boost::split(OutputAllFlags, AllFlagsStr, boost::is_any_of("\r\n"), boost::token_compress_on);
@@ -1136,11 +1145,11 @@ auto XEditLibCpp::getAllFlags(const unsigned int &Id, const std::wstring &Key) -
 }
 
 auto XEditLibCpp::getEnabledFlags(const unsigned int &Id, const std::wstring &Key) -> std::vector<std::wstring> {
-  auto Len = make_unique<int>();
-  XELibGetEnabledFlags(Id, Key.c_str(), Len.get());
+  int Len = 0;
+  XELibGetEnabledFlags(Id, Key.c_str(), &Len);
   throwExceptionIfExists();
 
-  const auto EnabledFlagsStr = getResultStringSafe(*Len);
+  const auto EnabledFlagsStr = getResultStringSafe(Len);
 
   vector<wstring> OutputEnabledFlags;
   boost::split(OutputEnabledFlags, EnabledFlagsStr, boost::is_any_of("\r\n"), boost::token_compress_on);
@@ -1154,11 +1163,11 @@ void XEditLibCpp::setEnabledFlags(const unsigned int &Id, const std::wstring &Ke
 }
 
 auto XEditLibCpp::getEnumOptions(const unsigned int &Id, const std::wstring &Key) -> std::vector<std::wstring> {
-  auto Len = make_unique<int>();
-  XELibGetEnumOptions(Id, Key.c_str(), Len.get());
+  int Len = 0;
+  XELibGetEnumOptions(Id, Key.c_str(), &Len);
   throwExceptionIfExists();
 
-  const auto EnumOptionsStr = getResultStringSafe(*Len);
+  const auto EnumOptionsStr = getResultStringSafe(Len);
 
   vector<wstring> OutputEnumOptions;
   boost::split(OutputEnumOptions, EnumOptionsStr, boost::is_any_of("\r\n"), boost::token_compress_on);
@@ -1167,27 +1176,27 @@ auto XEditLibCpp::getEnumOptions(const unsigned int &Id, const std::wstring &Key
 }
 
 auto XEditLibCpp::signatureFromName(const std::wstring &Name) -> wstring {
-  auto Len = make_unique<int>();
-  XELibSignatureFromName(Name.c_str(), Len.get());
+  int Len = 0;
+  XELibSignatureFromName(Name.c_str(), &Len);
   throwExceptionIfExists();
 
-  return getResultStringSafe(*Len);
+  return getResultStringSafe(Len);
 }
 
 auto XEditLibCpp::nameFromSignature(const std::wstring &Signature) -> wstring {
-  auto Len = make_unique<int>();
-  XELibNameFromSignature(Signature.c_str(), Len.get());
+  int Len = 0;
+  XELibNameFromSignature(Signature.c_str(), &Len);
   throwExceptionIfExists();
 
-  return getResultStringSafe(*Len);
+  return getResultStringSafe(Len);
 }
 
 auto XEditLibCpp::getSignatureNameMap() -> vector<wstring> {
-  auto Len = make_unique<int>();
-  XELibGetSignatureNameMap(Len.get());
+  int Len = 0;
+  XELibGetSignatureNameMap(&Len);
   throwExceptionIfExists();
 
-  const auto SignatureNameMapStr = getResultStringSafe(*Len);
+  const auto SignatureNameMapStr = getResultStringSafe(Len);
 
   vector<wstring> OutputSignatureNameMap;
   boost::split(OutputSignatureNameMap, SignatureNameMapStr, boost::is_any_of("\r\n"), boost::token_compress_on);
@@ -1198,11 +1207,11 @@ auto XEditLibCpp::getSignatureNameMap() -> vector<wstring> {
 // Serialization
 
 auto XEditLibCpp::elementToJson(const unsigned int &Id) -> wstring {
-  auto Len = make_unique<int>();
-  XELibElementToJson(Id, Len.get());
+  int Len = 0;
+  XELibElementToJson(Id, &Len);
   throwExceptionIfExists();
 
-  return getResultStringSafe(*Len);
+  return getResultStringSafe(Len);
 }
 
 void XEditLibCpp::elementFromJson(const unsigned int &Id, const std::filesystem::path &Path, const std::wstring &JSON) {
@@ -1213,111 +1222,111 @@ void XEditLibCpp::elementFromJson(const unsigned int &Id, const std::filesystem:
 // Records
 
 auto XEditLibCpp::getFormID(const unsigned int &Id, const bool &Local) -> unsigned int {
-  auto Res = make_unique<unsigned int>();
-  XELibGetFormID(Id, Res.get(), Local);
+  unsigned int Res = 0;
+  XELibGetFormID(Id, &Res, boolToVariantBool(Local));
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 void XEditLibCpp::setFormID(const unsigned int &Id, const unsigned int &FormID, const bool &Local,
                             const bool &FixRefs) {
-  XELibSetFormID(Id, FormID, Local, FixRefs);
+  XELibSetFormID(Id, FormID, boolToVariantBool(Local), boolToVariantBool(FixRefs));
   throwExceptionIfExists();
 }
 
 auto XEditLibCpp::getRecord(const unsigned int &Id, const unsigned int &FormID,
                             const bool &SearchMasters) -> unsigned int {
-  auto Res = make_unique<unsigned int>();
-  XELibGetRecord(Id, FormID, SearchMasters, Res.get());
+  unsigned int Res = 0;
+  XELibGetRecord(Id, FormID, boolToVariantBool(SearchMasters), &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 auto XEditLibCpp::getRecords(const unsigned int &Id, const std::wstring &Search,
                              const bool &IncludeOverrides) -> std::vector<unsigned int> {
-  auto Len = make_unique<int>();
-  XELibGetRecords(Id, Search.c_str(), IncludeOverrides, Len.get());
+  int Len = 0;
+  XELibGetRecords(Id, Search.c_str(), boolToVariantBool(IncludeOverrides), &Len);
   throwExceptionIfExists();
 
-  return getResultArraySafe(*Len);
+  return getResultArraySafe(Len);
 }
 
 auto XEditLibCpp::getREFRs(const unsigned int &Id, const std::wstring &Search,
                            const unsigned int &Flags) -> std::vector<unsigned int> {
-  auto Len = make_unique<int>();
-  XELibGetREFRs(Id, Search.c_str(), Flags, Len.get());
+  int Len = 0;
+  XELibGetREFRs(Id, Search.c_str(), Flags, &Len);
   throwExceptionIfExists();
 
-  return getResultArraySafe(*Len);
+  return getResultArraySafe(Len);
 }
 
 auto XEditLibCpp::getOverrides(const unsigned int &Id) -> std::vector<unsigned int> {
-  auto Len = make_unique<int>();
-  XELibGetOverrides(Id, Len.get());
+  int Len = 0;
+  XELibGetOverrides(Id, &Len);
   throwExceptionIfExists();
 
-  return getResultArraySafe(*Len);
+  return getResultArraySafe(Len);
 }
 
 auto XEditLibCpp::getMasterRecord(const unsigned int &Id) -> unsigned int {
-  auto Res = make_unique<unsigned int>();
-  XELibGetMasterRecord(Id, Res.get());
+  unsigned int Res = 0;
+  XELibGetMasterRecord(Id, &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 auto XEditLibCpp::getWinningOverride(const unsigned int &Id) -> unsigned int {
-  auto Res = make_unique<unsigned int>();
-  XELibGetWinningOverride(Id, Res.get());
+  unsigned int Res = 0;
+  XELibGetWinningOverride(Id, &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 auto XEditLibCpp::getInjectionTarget(const unsigned int &Id) -> unsigned int {
-  auto Res = make_unique<unsigned int>();
-  XELibGetInjectionTarget(Id, Res.get());
+  unsigned int Res = 0;
+  XELibGetInjectionTarget(Id, &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 auto XEditLibCpp::findNextRecord(const unsigned int &Id, const std::wstring &Search, const bool &ByEdid,
                                  const bool &ByName) -> unsigned int {
-  auto Res = make_unique<unsigned int>();
-  XELibFindNextRecord(Id, Search.c_str(), ByEdid, ByName, Res.get());
+  unsigned int Res = 0;
+  XELibFindNextRecord(Id, Search.c_str(), boolToVariantBool(ByEdid), boolToVariantBool(ByName), &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 auto XEditLibCpp::findPreviousRecord(const unsigned int &Id, const std::wstring &Search, const bool &ByEdid,
                                      const bool &ByName) -> unsigned int {
-  auto Res = make_unique<unsigned int>();
-  XELibFindPreviousRecord(Id, Search.c_str(), ByEdid, ByName, Res.get());
+  unsigned int Res = 0;
+  XELibFindPreviousRecord(Id, Search.c_str(), boolToVariantBool(ByEdid), boolToVariantBool(ByName), &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 auto XEditLibCpp::findValidReferences(const unsigned int &Id, const std::wstring &Signature, const std::wstring &Search,
                                       const int &LimitTo) -> std::vector<unsigned int> {
-  auto Len = make_unique<int>();
-  XELibFindValidReferences(Id, Signature.c_str(), Search.c_str(), LimitTo, Len.get());
+  int Len = 0;
+  XELibFindValidReferences(Id, Signature.c_str(), Search.c_str(), LimitTo, &Len);
   throwExceptionIfExists();
 
-  return getResultArraySafe(*Len);
+  return getResultArraySafe(Len);
 }
 
 auto XEditLibCpp::getReferencedBy(const unsigned int &Id) -> std::vector<unsigned int> {
-  auto Len = make_unique<int>();
-  XELibGetReferencedBy(Id, Len.get());
+  int Len = 0;
+  XELibGetReferencedBy(Id, &Len);
   throwExceptionIfExists();
 
-  return getResultArraySafe(*Len);
+  return getResultArraySafe(Len);
 }
 
 void XEditLibCpp::exchangeReferences(const unsigned int &Id, const unsigned int &OldFormID,
@@ -1327,61 +1336,61 @@ void XEditLibCpp::exchangeReferences(const unsigned int &Id, const unsigned int 
 }
 
 auto XEditLibCpp::isMaster(const unsigned int &Id) -> bool {
-  auto Res = make_unique<bool>();
-  XELibIsMaster(Id, Res.get());
+  auto Res = VARIANT_FALSE;
+  XELibIsMaster(Id, &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res == VARIANT_TRUE;
 }
 
 auto XEditLibCpp::isInjected(const unsigned int &Id) -> bool {
-  auto Res = make_unique<bool>();
-  XELibIsInjected(Id, Res.get());
+  auto Res = VARIANT_FALSE;
+  XELibIsInjected(Id, &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res == VARIANT_TRUE;
 }
 
 auto XEditLibCpp::isOverride(const unsigned int &Id) -> bool {
-  auto Res = make_unique<bool>();
-  XELibIsOverride(Id, Res.get());
+  auto Res = VARIANT_FALSE;
+  XELibIsOverride(Id, &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res == VARIANT_TRUE;
 }
 
 auto XEditLibCpp::isWinningOverride(const unsigned int &Id) -> bool {
-  auto Res = make_unique<bool>();
-  XELibIsWinningOverride(Id, Res.get());
+  auto Res = VARIANT_FALSE;
+  XELibIsWinningOverride(Id, &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res == VARIANT_TRUE;
 }
 
 auto XEditLibCpp::getNodes(const unsigned int &Id) -> unsigned int {
-  auto Res = make_unique<unsigned int>();
-  XELibGetNodes(Id, Res.get());
+  unsigned int Res = 0;
+  XELibGetNodes(Id, &Res);
   throwExceptionIfExists();
 
-  return *Res;
+  return Res;
 }
 
 auto XEditLibCpp::getConflictData(const unsigned int &Id,
                                   const unsigned int &Id2) -> std::pair<ConflictAll, ConflictThis> {
-  auto Res1 = make_unique<unsigned char>();
-  auto Res2 = make_unique<unsigned char>();
-  XELibGetConflictData(Id, Id2, Res1.get(), Res2.get());
+  unsigned char Res1 = 0;
+  unsigned char Res2 = 0;
+  XELibGetConflictData(Id, Id2, &Res1, &Res2);
   throwExceptionIfExists();
 
-  return {static_cast<ConflictAll>(*Res1), static_cast<ConflictThis>(*Res2)};
+  return {static_cast<ConflictAll>(Res1), static_cast<ConflictThis>(Res2)};
 }
 
 auto XEditLibCpp::getNodeElements(const unsigned int &Id, const unsigned int &Id2) -> vector<unsigned int> {
-  auto Res = make_unique<int>();
-  XELibGetNodeElements(Id, Id2, Res.get());
+  int Res = 0;
+  XELibGetNodeElements(Id, Id2, &Res);
   throwExceptionIfExists();
 
-  return getResultArraySafe(*Res);
+  return getResultArraySafe(Res);
 }
 
 // Errors
@@ -1392,17 +1401,17 @@ void XEditLibCpp::checkForErrors(const unsigned int &Id) {
 }
 
 auto XEditLibCpp::getErrorThreadDone() -> bool {
-  bool Result = XELibGetErrorThreadDone();
+  bool Result = XELibGetErrorThreadDone() != 0;
   throwExceptionIfExists();
   return Result;
 }
 
 auto XEditLibCpp::getErrors() -> std::vector<std::wstring> {
-  auto Len = make_unique<int>();
-  XELibGetErrors(Len.get());
+  int Len = 0;
+  XELibGetErrors(&Len);
   throwExceptionIfExists();
 
-  const auto ErrorsStr = getResultStringSafe(*Len);
+  const auto ErrorsStr = getResultStringSafe(Len);
 
   vector<wstring> OutputErrors;
   boost::split(OutputErrors, ErrorsStr, boost::is_any_of("\r\n"), boost::token_compress_on);
@@ -1411,15 +1420,15 @@ auto XEditLibCpp::getErrors() -> std::vector<std::wstring> {
 }
 
 auto XEditLibCpp::getErrorString(const unsigned int &Id) -> std::wstring {
-  auto Len = make_unique<int>();
-  XELibGetErrorString(Id, Len.get());
+  int Len = 0;
+  XELibGetErrorString(Id, &Len);
   throwExceptionIfExists();
 
-  return getResultStringSafe(*Len);
+  return getResultStringSafe(Len);
 }
 
 void XEditLibCpp::removeIdenticalRecords(const unsigned int &Id, const bool &RemoveITMs, const bool &RemoveITPOs) {
-  XELibRemoveIdenticalRecords(Id, RemoveITMs, RemoveITPOs);
+  XELibRemoveIdenticalRecords(Id, boolToVariantBool(RemoveITMs), boolToVariantBool(RemoveITPOs));
   throwExceptionIfExists();
 }
 

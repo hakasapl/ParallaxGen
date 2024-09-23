@@ -31,184 +31,184 @@ private:
   // Meta
   void (*XELibInitXEdit)();                                 // Not exposed
   void (*XELibCloseXEdit)();                                // Not exposed
-  bool (*XELibGetResultString)(wchar_t *Str, int Len);      // Not exposed
-  bool (*XELibGetResultArray)(unsigned int *Res, int Len);  // Not exposed
-  bool (*XELibGetResultBytes)(unsigned char *Res, int Len); // Not exposed
-  bool (*XELibGetGlobal)(const wchar_t *Key, int *Len);     // Not exposed
-  bool (*XELibGetGlobals)(int *Len);                        // Not exposed
-  bool (*XELibSetSortMode)(const unsigned char SortBy, const bool Reverse);
-  bool (*XELibRelease)(const unsigned int Id);
-  bool (*XELibReleaseNodes)(const unsigned int Id);
-  bool (*XELibSwitch)(const unsigned int Id, const unsigned int Id2); // NO DOCS
-  bool (*XELibGetDuplicateHandles)(const unsigned int Id, int *Len);
-  bool (*XELibResetStore)(); // NO DOCS
+  VARIANT_BOOL (*XELibGetResultString)(wchar_t *Str, int Len);      // Not exposed
+  VARIANT_BOOL (*XELibGetResultArray)(unsigned int *Res, int Len);  // Not exposed
+  VARIANT_BOOL (*XELibGetResultBytes)(unsigned char *Res, int Len); // Not exposed
+  VARIANT_BOOL (*XELibGetGlobal)(const wchar_t *Key, int *Len);     // Not exposed
+  VARIANT_BOOL (*XELibGetGlobals)(int *Len);                        // Not exposed
+  VARIANT_BOOL (*XELibSetSortMode)(const unsigned char SortBy, const VARIANT_BOOL Reverse);
+  VARIANT_BOOL (*XELibRelease)(const unsigned int Id);
+  VARIANT_BOOL (*XELibReleaseNodes)(const unsigned int Id);
+  VARIANT_BOOL (*XELibSwitch)(const unsigned int Id, const unsigned int Id2); // NO DOCS
+  VARIANT_BOOL (*XELibGetDuplicateHandles)(const unsigned int Id, int *Len);
+  VARIANT_BOOL (*XELibResetStore)(); // NO DOCS
 
   // Message
   void (*XELibGetMessagesLength)(int *Len); // Not exposed
-  bool (*XELibGetMessages)(wchar_t *Str, int Len);
+  VARIANT_BOOL (*XELibGetMessages)(wchar_t *Str, int Len);
   void (*XELibClearMessages)();                            // Not exposed
   void (*XELibGetExceptionMessageLength)(int *Len);        // Not exposed
-  bool (*XELibGetExceptionMessage)(wchar_t *Str, int Len); // Not exposed
+  VARIANT_BOOL (*XELibGetExceptionMessage)(wchar_t *Str, int Len); // Not exposed
 
   // Setup
-  bool (*XELibGetGamePath)(const int Mode, int *Len);
-  bool (*XELibSetGamePath)(const wchar_t *Path);
-  bool (*XELibGetGameLanguage)(const int Mode, int *Len);
-  bool (*XELibSetLanguage)(const wchar_t *Lang);
-  bool (*XELibSetBackupPath)(const wchar_t *Path);
-  bool (*XELibSetGameMode)(const int Mode);
-  bool (*XELibGetLoadOrder)(int *Len);
-  bool (*XELibGetActivePlugins)(int *Len);
-  bool (*XELibLoadPlugins)(const wchar_t *LoadOrder, const bool SmartLoad);
-  bool (*XELibLoadPlugin)(const wchar_t *Filename);
-  bool (*XELibLoadPluginHeader)(const wchar_t *Filename, unsigned int *Res);
-  bool (*XELibBuildReferences)(const unsigned int Id, const bool Synchronous);
-  bool (*XELibGetLoaderStatus)(unsigned char *Status);
-  bool (*XELibUnloadPlugin)(const unsigned int Id);
+  VARIANT_BOOL (*XELibGetGamePath)(const int Mode, int *Len);
+  VARIANT_BOOL (*XELibSetGamePath)(const wchar_t *Path);
+  VARIANT_BOOL (*XELibGetGameLanguage)(const int Mode, int *Len);
+  VARIANT_BOOL (*XELibSetLanguage)(const wchar_t *Lang);
+  VARIANT_BOOL (*XELibSetBackupPath)(const wchar_t *Path);
+  VARIANT_BOOL (*XELibSetGameMode)(const int Mode);
+  VARIANT_BOOL (*XELibGetLoadOrder)(int *Len);
+  VARIANT_BOOL (*XELibGetActivePlugins)(int *Len);
+  VARIANT_BOOL (*XELibLoadPlugins)(const wchar_t *LoadOrder, const VARIANT_BOOL SmartLoad);
+  VARIANT_BOOL (*XELibLoadPlugin)(const wchar_t *Filename);
+  VARIANT_BOOL (*XELibLoadPluginHeader)(const wchar_t *Filename, unsigned int *Res);
+  VARIANT_BOOL (*XELibBuildReferences)(const unsigned int Id, const VARIANT_BOOL Synchronous);
+  VARIANT_BOOL (*XELibGetLoaderStatus)(unsigned char *Status);
+  VARIANT_BOOL (*XELibUnloadPlugin)(const unsigned int Id);
 
   // Files
-  bool (*XELibAddFile)(const wchar_t *Filename, unsigned int *Res);
-  bool (*XELibFileByIndex)(const int Index, unsigned int *Res);
-  bool (*XELibFileByLoadOrder)(const int LoadOrder, unsigned int *Res);
-  bool (*XELibFileByName)(const wchar_t *Name, unsigned int *Res);
-  bool (*XELibFileByAuthor)(const wchar_t *Author, unsigned int *Res);
-  bool (*XELibSaveFile)(const unsigned int Id, const wchar_t *FilePath);
-  bool (*XELibGetRecordCount)(const unsigned int Id, int *Count);
-  bool (*XELibGetOverrideRecordCount)(const unsigned int Id, int *Count);
-  bool (*XELibMD5Hash)(const unsigned int Id, int *Len);
-  bool (*XELibCRCHash)(const unsigned int Id, int *Len);
-  bool (*XELibSortEditorIDs)(const unsigned int Id, wchar_t *Sig); // NO DOCS
-  bool (*XELibSortNames)(const unsigned int Id, wchar_t *Sig);     // NO DOCS
-  bool (*XELibGetFileLoadOrder)(const unsigned int Id, int *LoadOrder);
+  VARIANT_BOOL (*XELibAddFile)(const wchar_t *Filename, unsigned int *Res);
+  VARIANT_BOOL (*XELibFileByIndex)(const int Index, unsigned int *Res);
+  VARIANT_BOOL (*XELibFileByLoadOrder)(const int LoadOrder, unsigned int *Res);
+  VARIANT_BOOL (*XELibFileByName)(const wchar_t *Name, unsigned int *Res);
+  VARIANT_BOOL (*XELibFileByAuthor)(const wchar_t *Author, unsigned int *Res);
+  VARIANT_BOOL (*XELibSaveFile)(const unsigned int Id, const wchar_t *FilePath);
+  VARIANT_BOOL (*XELibGetRecordCount)(const unsigned int Id, int *Count);
+  VARIANT_BOOL (*XELibGetOverrideRecordCount)(const unsigned int Id, int *Count);
+  VARIANT_BOOL (*XELibMD5Hash)(const unsigned int Id, int *Len);
+  VARIANT_BOOL (*XELibCRCHash)(const unsigned int Id, int *Len);
+  VARIANT_BOOL (*XELibSortEditorIDs)(const unsigned int Id, wchar_t *Sig); // NO DOCS
+  VARIANT_BOOL (*XELibSortNames)(const unsigned int Id, wchar_t *Sig);     // NO DOCS
+  VARIANT_BOOL (*XELibGetFileLoadOrder)(const unsigned int Id, int *LoadOrder);
 
   // Archives
-  bool (*XELibExtractContainer)(const wchar_t *Name, const wchar_t *Destination, const bool Replace);
-  bool (*XELibExtractFile)(const wchar_t *Name, const wchar_t *Source, const wchar_t *Destination);
-  bool (*XELibGetContainerFiles)(const wchar_t *Name, const wchar_t *Path, int *Len);
-  bool (*XELibGetFileContainer)(const wchar_t *Path, int *Len);
-  bool (*XELibGetLoadedContainers)(int *Len);
-  bool (*XELibLoadContainer)(const wchar_t *FilePath);
-  bool (*XELibBuildArchive)(const wchar_t *Name, const wchar_t *Folder, const wchar_t *FilePaths, const int ArchiveType,
-                       const bool BCompress, const bool BShare, const wchar_t *AF, const wchar_t *FF);
-  bool (*XELibGetTextureData)(const wchar_t *ResourceName, int *Width, int *Height);
+  VARIANT_BOOL (*XELibExtractContainer)(const wchar_t *Name, const wchar_t *Destination, const VARIANT_BOOL Replace);
+  VARIANT_BOOL (*XELibExtractFile)(const wchar_t *Name, const wchar_t *Source, const wchar_t *Destination);
+  VARIANT_BOOL (*XELibGetContainerFiles)(const wchar_t *Name, const wchar_t *Path, int *Len);
+  VARIANT_BOOL (*XELibGetFileContainer)(const wchar_t *Path, int *Len);
+  VARIANT_BOOL (*XELibGetLoadedContainers)(int *Len);
+  VARIANT_BOOL (*XELibLoadContainer)(const wchar_t *FilePath);
+  VARIANT_BOOL (*XELibBuildArchive)(const wchar_t *Name, const wchar_t *Folder, const wchar_t *FilePaths, const int ArchiveType,
+                       const VARIANT_BOOL BCompress, const VARIANT_BOOL BShare, const wchar_t *AF, const wchar_t *FF);
+  VARIANT_BOOL (*XELibGetTextureData)(const wchar_t *ResourceName, int *Width, int *Height);
 
   // Masters
-  bool (*XELibCleanMasters)(unsigned int Id);
-  bool (*XELibSortMasters)(unsigned int Id);
-  bool (*XELibAddMaster)(unsigned int Id, wchar_t *MasterName);
-  bool (*XELibAddMasters)(unsigned int Id, wchar_t *Masters);
-  bool (*XELibAddRequiredMasters)(unsigned int Id, unsigned int Id2, bool AsNew);
-  bool (*XELibGetMasters)(unsigned int Id, int *Len);
-  bool (*XELibGetRequiredBy)(unsigned int Id, int *Len);
-  bool (*XELibGetMasterNames)(unsigned int Id, int *Len);
+  VARIANT_BOOL (*XELibCleanMasters)(unsigned int Id);
+  VARIANT_BOOL (*XELibSortMasters)(unsigned int Id);
+  VARIANT_BOOL (*XELibAddMaster)(unsigned int Id, wchar_t *MasterName);
+  VARIANT_BOOL (*XELibAddMasters)(unsigned int Id, wchar_t *Masters);
+  VARIANT_BOOL (*XELibAddRequiredMasters)(unsigned int Id, unsigned int Id2, VARIANT_BOOL AsNew);
+  VARIANT_BOOL (*XELibGetMasters)(unsigned int Id, int *Len);
+  VARIANT_BOOL (*XELibGetRequiredBy)(unsigned int Id, int *Len);
+  VARIANT_BOOL (*XELibGetMasterNames)(unsigned int Id, int *Len);
 
   // Elements
-  bool (*XELibHasElement)(const unsigned int Id, const wchar_t *Key, bool *BoolVal);
-  bool (*XELibGetElement)(const unsigned int Id, const wchar_t *Key, unsigned int *Res);
-  bool (*XELibAddElement)(const unsigned int Id, const wchar_t *Key, unsigned int *Res);
-  bool (*XELibAddElementValue)(const unsigned int Id, const wchar_t *Key, const wchar_t *Value, unsigned int *Res);
-  bool (*XELibRemoveElement)(const unsigned int Id, const wchar_t *Key);
-  bool (*XELibRemoveElementOrParent)(const unsigned int Id);
-  bool (*XELibSetElement)(const unsigned int Id, const unsigned int Id2);
-  bool (*XELibGetElements)(const unsigned int Id, const wchar_t *Key, const bool Sort, const bool Filter, int *Len);
-  bool (*XELibGetDefNames)(const unsigned int Id, int *Len);
-  bool (*XELibGetAddList)(const unsigned int Id, int *Len);
-  bool (*XELibGetLinksTo)(const unsigned int Id, const wchar_t *Key, unsigned int *Res);
-  bool (*XELibSetLinksTo)(const unsigned int Id, const wchar_t *Key, const unsigned int Id2);
-  bool (*XELibGetElementIndex)(const unsigned int Id, int *Index);
-  bool (*XELibGetContainer)(const unsigned int Id, unsigned int *Res);
-  bool (*XELibGetElementFile)(const unsigned int Id, unsigned int *Res);
-  bool (*XELibGetElementRecord)(const unsigned int Id, unsigned int *Res);
-  bool (*XELibElementCount)(const unsigned int Id, int *Count);
-  bool (*XELibElementEquals)(const unsigned int Id, const unsigned int Id2, bool *BoolVal);
-  bool (*XELibElementMatches)(const unsigned int Id, const wchar_t *Path, const wchar_t *Value, bool *BoolVal);
-  bool (*XELibHasArrayItem)(const unsigned int Id, const wchar_t *Path, const wchar_t *SubPath, const wchar_t *Value,
-                       bool *BoolVal);
-  bool (*XELibGetArrayItem)(const unsigned int Id, const wchar_t *Path, const wchar_t *SubPath, const wchar_t *Value,
+  VARIANT_BOOL (*XELibHasElement)(const unsigned int Id, const wchar_t *Key, VARIANT_BOOL *BoolVal);
+  VARIANT_BOOL (*XELibGetElement)(const unsigned int Id, const wchar_t *Key, unsigned int *Res);
+  VARIANT_BOOL (*XELibAddElement)(const unsigned int Id, const wchar_t *Key, unsigned int *Res);
+  VARIANT_BOOL (*XELibAddElementValue)(const unsigned int Id, const wchar_t *Key, const wchar_t *Value, unsigned int *Res);
+  VARIANT_BOOL (*XELibRemoveElement)(const unsigned int Id, const wchar_t *Key);
+  VARIANT_BOOL (*XELibRemoveElementOrParent)(const unsigned int Id);
+  VARIANT_BOOL (*XELibSetElement)(const unsigned int Id, const unsigned int Id2);
+  VARIANT_BOOL (*XELibGetElements)(const unsigned int Id, const wchar_t *Key, const VARIANT_BOOL Sort, const VARIANT_BOOL Filter, int *Len);
+  VARIANT_BOOL (*XELibGetDefNames)(const unsigned int Id, int *Len);
+  VARIANT_BOOL (*XELibGetAddList)(const unsigned int Id, int *Len);
+  VARIANT_BOOL (*XELibGetLinksTo)(const unsigned int Id, const wchar_t *Key, unsigned int *Res);
+  VARIANT_BOOL (*XELibSetLinksTo)(const unsigned int Id, const wchar_t *Key, const unsigned int Id2);
+  VARIANT_BOOL (*XELibGetElementIndex)(const unsigned int Id, int *Index);
+  VARIANT_BOOL (*XELibGetContainer)(const unsigned int Id, unsigned int *Res);
+  VARIANT_BOOL (*XELibGetElementFile)(const unsigned int Id, unsigned int *Res);
+  VARIANT_BOOL (*XELibGetElementRecord)(const unsigned int Id, unsigned int *Res);
+  VARIANT_BOOL (*XELibElementCount)(const unsigned int Id, int *Count);
+  VARIANT_BOOL (*XELibElementEquals)(const unsigned int Id, const unsigned int Id2, VARIANT_BOOL *BoolVal);
+  VARIANT_BOOL (*XELibElementMatches)(const unsigned int Id, const wchar_t *Path, const wchar_t *Value, VARIANT_BOOL *BoolVal);
+  VARIANT_BOOL (*XELibHasArrayItem)(const unsigned int Id, const wchar_t *Path, const wchar_t *SubPath, const wchar_t *Value,
+                       VARIANT_BOOL *BoolVal);
+  VARIANT_BOOL (*XELibGetArrayItem)(const unsigned int Id, const wchar_t *Path, const wchar_t *SubPath, const wchar_t *Value,
                        unsigned int *Res);
-  bool (*XELibAddArrayItem)(const unsigned int Id, const wchar_t *Path, const wchar_t *SubPath, const wchar_t *Value,
+  VARIANT_BOOL (*XELibAddArrayItem)(const unsigned int Id, const wchar_t *Path, const wchar_t *SubPath, const wchar_t *Value,
                        unsigned int *Res);
-  bool (*XELibRemoveArrayItem)(const unsigned int Id, const wchar_t *Path, const wchar_t *SubPath, const wchar_t *Value);
-  bool (*XELibMoveArrayItem)(const unsigned int Id, const int Index);
-  bool (*XELibCopyElement)(const unsigned int Id, const unsigned int Id2, const bool AsNew, unsigned int *Res);
-  bool (*XELibGetSignatureAllowed)(const unsigned int Id, const wchar_t *Sig, bool *BoolVal);
-  bool (*XELibGetAllowedSignatures)(const unsigned int Id, int *Len);
-  bool (*XELibGetIsModified)(const unsigned int Id, bool *BoolVal);
-  bool (*XELibGetIsEditable)(const unsigned int Id, bool *BoolVal);
-  bool (*XELibGetIsRemoveable)(const unsigned int Id, bool *BoolVal);
-  bool (*XELibGetCanAdd)(const unsigned int Id, bool *BoolVal);
-  bool (*XELibSortKey)(const unsigned int Id, int *Len);
-  bool (*XELibElementType)(const unsigned int Id, unsigned char *EnumVal);
-  bool (*XELibDefType)(const unsigned int Id, unsigned char *EnumVal);
-  bool (*XELibSmashType)(const unsigned int Id, unsigned char *EnumVal);
-  bool (*XELibValueType)(const unsigned int Id, unsigned char *EnumVal);
-  bool (*XELibIsSorted)(unsigned int Id, bool *BoolVal);
+  VARIANT_BOOL (*XELibRemoveArrayItem)(const unsigned int Id, const wchar_t *Path, const wchar_t *SubPath, const wchar_t *Value);
+  VARIANT_BOOL (*XELibMoveArrayItem)(const unsigned int Id, const int Index);
+  VARIANT_BOOL (*XELibCopyElement)(const unsigned int Id, const unsigned int Id2, const VARIANT_BOOL AsNew, unsigned int *Res);
+  VARIANT_BOOL (*XELibGetSignatureAllowed)(const unsigned int Id, const wchar_t *Sig, VARIANT_BOOL *BoolVal);
+  VARIANT_BOOL (*XELibGetAllowedSignatures)(const unsigned int Id, int *Len);
+  VARIANT_BOOL (*XELibGetIsModified)(const unsigned int Id, VARIANT_BOOL *BoolVal);
+  VARIANT_BOOL (*XELibGetIsEditable)(const unsigned int Id, VARIANT_BOOL *BoolVal);
+  VARIANT_BOOL (*XELibGetIsRemoveable)(const unsigned int Id, VARIANT_BOOL *BoolVal);
+  VARIANT_BOOL (*XELibGetCanAdd)(const unsigned int Id, VARIANT_BOOL *BoolVal);
+  VARIANT_BOOL (*XELibSortKey)(const unsigned int Id, int *Len);
+  VARIANT_BOOL (*XELibElementType)(const unsigned int Id, unsigned char *EnumVal);
+  VARIANT_BOOL (*XELibDefType)(const unsigned int Id, unsigned char *EnumVal);
+  VARIANT_BOOL (*XELibSmashType)(const unsigned int Id, unsigned char *EnumVal);
+  VARIANT_BOOL (*XELibValueType)(const unsigned int Id, unsigned char *EnumVal);
+  VARIANT_BOOL (*XELibIsSorted)(unsigned int Id, VARIANT_BOOL *BoolVal);
 
   // Element Value
-  bool (*XELibName)(const unsigned int Id, int *Len);
-  bool (*XELibLongName)(const unsigned int Id, int *Len);
-  bool (*XELibDisplayName)(const unsigned int Id, int *Len);
-  bool (*XELibPath)(const unsigned int Id, const bool ShortPath, const bool Local, int *Len);
-  bool (*XELibSignature)(const unsigned int Id, int *Len);
-  bool (*XELibGetValue)(const unsigned int Id, const wchar_t *Path, int *Len);
-  bool (*XELibSetValue)(const unsigned int Id, const wchar_t *Path, const wchar_t *Value);
-  bool (*XELibGetIntValue)(const unsigned int Id, const wchar_t *Path, int *Value);
-  bool (*XELibSetIntValue)(const unsigned int Id, const wchar_t *Path, const int Value);
-  bool (*XELibGetUIntValue)(const unsigned int Id, const wchar_t *Path, unsigned int *Value);
-  bool (*XELibSetUIntValue)(const unsigned int Id, const wchar_t *Path, const unsigned int Value);
-  bool (*XELibGetFloatValue)(const unsigned int Id, const wchar_t *Path, double *Value);
-  bool (*XELibSetFloatValue)(const unsigned int Id, const wchar_t *Path, const double Value);
-  bool (*XELibGetFlag)(const unsigned int Id, const wchar_t *Path, const wchar_t *Name, bool *Enabled);
-  bool (*XELibSetFlag)(const unsigned int Id, const wchar_t *Path, const wchar_t *Name, const bool Enabled);
-  bool (*XELibGetAllFlags)(const unsigned int Id, const wchar_t *Path, int *Len);
-  bool (*XELibGetEnabledFlags)(const unsigned int Id, const wchar_t *Path, int *Len);
-  bool (*XELibSetEnabledFlags)(const unsigned int Id, const wchar_t *Path, const wchar_t *Flags);
-  bool (*XELibGetEnumOptions)(const unsigned int Id, const wchar_t *Path, int *Len);
-  bool (*XELibSignatureFromName)(const wchar_t *Name, int *Len);
-  bool (*XELibNameFromSignature)(const wchar_t *Sig, int *Len);
-  bool (*XELibGetSignatureNameMap)(int *Len);
+  VARIANT_BOOL (*XELibName)(const unsigned int Id, int *Len);
+  VARIANT_BOOL (*XELibLongName)(const unsigned int Id, int *Len);
+  VARIANT_BOOL (*XELibDisplayName)(const unsigned int Id, int *Len);
+  VARIANT_BOOL (*XELibPath)(const unsigned int Id, const VARIANT_BOOL ShortPath, const VARIANT_BOOL Local, int *Len);
+  VARIANT_BOOL (*XELibSignature)(const unsigned int Id, int *Len);
+  VARIANT_BOOL (*XELibGetValue)(const unsigned int Id, const wchar_t *Path, int *Len);
+  VARIANT_BOOL (*XELibSetValue)(const unsigned int Id, const wchar_t *Path, const wchar_t *Value);
+  VARIANT_BOOL (*XELibGetIntValue)(const unsigned int Id, const wchar_t *Path, int *Value);
+  VARIANT_BOOL (*XELibSetIntValue)(const unsigned int Id, const wchar_t *Path, const int Value);
+  VARIANT_BOOL (*XELibGetUIntValue)(const unsigned int Id, const wchar_t *Path, unsigned int *Value);
+  VARIANT_BOOL (*XELibSetUIntValue)(const unsigned int Id, const wchar_t *Path, const unsigned int Value);
+  VARIANT_BOOL (*XELibGetFloatValue)(const unsigned int Id, const wchar_t *Path, double *Value);
+  VARIANT_BOOL (*XELibSetFloatValue)(const unsigned int Id, const wchar_t *Path, const double Value);
+  VARIANT_BOOL (*XELibGetFlag)(const unsigned int Id, const wchar_t *Path, const wchar_t *Name, VARIANT_BOOL *Enabled);
+  VARIANT_BOOL (*XELibSetFlag)(const unsigned int Id, const wchar_t *Path, const wchar_t *Name, const VARIANT_BOOL Enabled);
+  VARIANT_BOOL (*XELibGetAllFlags)(const unsigned int Id, const wchar_t *Path, int *Len);
+  VARIANT_BOOL (*XELibGetEnabledFlags)(const unsigned int Id, const wchar_t *Path, int *Len);
+  VARIANT_BOOL (*XELibSetEnabledFlags)(const unsigned int Id, const wchar_t *Path, const wchar_t *Flags);
+  VARIANT_BOOL (*XELibGetEnumOptions)(const unsigned int Id, const wchar_t *Path, int *Len);
+  VARIANT_BOOL (*XELibSignatureFromName)(const wchar_t *Name, int *Len);
+  VARIANT_BOOL (*XELibNameFromSignature)(const wchar_t *Sig, int *Len);
+  VARIANT_BOOL (*XELibGetSignatureNameMap)(int *Len);
 
   // Serialization
-  bool (*XELibElementToJson)(const unsigned int Id, int *Len);
-  bool (*XELibElementFromJson)(const unsigned int Id, const wchar_t *Path, const wchar_t *JSON);
+  VARIANT_BOOL (*XELibElementToJson)(const unsigned int Id, int *Len);
+  VARIANT_BOOL (*XELibElementFromJson)(const unsigned int Id, const wchar_t *Path, const wchar_t *JSON);
 
   // Records
-  bool (*XELibGetFormID)(const unsigned int Id, unsigned int *FormID, const bool Local);
-  bool (*XELibSetFormID)(const unsigned int Id, const unsigned int FormID, const bool Local, const bool FixReferences);
-  bool (*XELibGetRecord)(const unsigned int Id, const unsigned int FormID, const bool SearchMasters, unsigned int *Res);
-  bool (*XELibGetRecords)(const unsigned int Id, const wchar_t *Search, const bool IncludeOverrides, int *Len);
-  bool (*XELibGetREFRs)(const unsigned int Id, const wchar_t *Search, const unsigned int Flags, int *Len);
-  bool (*XELibGetOverrides)(const unsigned int Id, int *Len);
-  bool (*XELibGetMasterRecord)(const unsigned int Id, unsigned int *Res);
-  bool (*XELibGetWinningOverride)(const unsigned int Id, unsigned int *Res);
-  bool (*XELibGetInjectionTarget)(const unsigned int Id, unsigned int *Res);
-  bool (*XELibFindNextRecord)(const unsigned int Id, const wchar_t *Search, const bool ByEdid, const bool ByName,
+  VARIANT_BOOL (*XELibGetFormID)(const unsigned int Id, unsigned int *FormID, const VARIANT_BOOL Local);
+  VARIANT_BOOL (*XELibSetFormID)(const unsigned int Id, const unsigned int FormID, const VARIANT_BOOL Local, const VARIANT_BOOL FixReferences);
+  VARIANT_BOOL (*XELibGetRecord)(const unsigned int Id, const unsigned int FormID, const VARIANT_BOOL SearchMasters, unsigned int *Res);
+  VARIANT_BOOL (*XELibGetRecords)(const unsigned int Id, const wchar_t *Search, const VARIANT_BOOL IncludeOverrides, int *Len);
+  VARIANT_BOOL (*XELibGetREFRs)(const unsigned int Id, const wchar_t *Search, const unsigned int Flags, int *Len);
+  VARIANT_BOOL (*XELibGetOverrides)(const unsigned int Id, int *Len);
+  VARIANT_BOOL (*XELibGetMasterRecord)(const unsigned int Id, unsigned int *Res);
+  VARIANT_BOOL (*XELibGetWinningOverride)(const unsigned int Id, unsigned int *Res);
+  VARIANT_BOOL (*XELibGetInjectionTarget)(const unsigned int Id, unsigned int *Res);
+  VARIANT_BOOL (*XELibFindNextRecord)(const unsigned int Id, const wchar_t *Search, const VARIANT_BOOL ByEdid, const VARIANT_BOOL ByName,
                          unsigned int *Res);
-  bool (*XELibFindPreviousRecord)(const unsigned int Id, const wchar_t *Search, const bool ByEdid, const bool ByName,
+  VARIANT_BOOL (*XELibFindPreviousRecord)(const unsigned int Id, const wchar_t *Search, const VARIANT_BOOL ByEdid, const VARIANT_BOOL ByName,
                              unsigned int *Res);
-  bool (*XELibFindValidReferences)(const unsigned int Id, const wchar_t *Signature, const wchar_t *Search, const int LimitTo,
+  VARIANT_BOOL (*XELibFindValidReferences)(const unsigned int Id, const wchar_t *Signature, const wchar_t *Search, const int LimitTo,
                               int *Len);
-  bool (*XELibGetReferencedBy)(const unsigned int Id, int *Len);
-  bool (*XELibExchangeReferences)(const unsigned int Id, const unsigned int OldFormID, const unsigned int NewFormID);
-  bool (*XELibIsMaster)(const unsigned int Id, bool *BoolVal);
-  bool (*XELibIsInjected)(const unsigned int Id, bool *BoolVal);
-  bool (*XELibIsOverride)(const unsigned int Id, bool *BoolVal);
-  bool (*XELibIsWinningOverride)(const unsigned int Id, bool *BoolVal);
-  bool (*XELibGetNodes)(const unsigned int Id, unsigned int *Res);
-  bool (*XELibGetConflictData)(const unsigned int Id, const unsigned int Id2, unsigned char *ConflictAll,
+  VARIANT_BOOL (*XELibGetReferencedBy)(const unsigned int Id, int *Len);
+  VARIANT_BOOL (*XELibExchangeReferences)(const unsigned int Id, const unsigned int OldFormID, const unsigned int NewFormID);
+  VARIANT_BOOL (*XELibIsMaster)(const unsigned int Id, VARIANT_BOOL *BoolVal);
+  VARIANT_BOOL (*XELibIsInjected)(const unsigned int Id, VARIANT_BOOL *BoolVal);
+  VARIANT_BOOL (*XELibIsOverride)(const unsigned int Id, VARIANT_BOOL *BoolVal);
+  VARIANT_BOOL (*XELibIsWinningOverride)(const unsigned int Id, VARIANT_BOOL *BoolVal);
+  VARIANT_BOOL (*XELibGetNodes)(const unsigned int Id, unsigned int *Res);
+  VARIANT_BOOL (*XELibGetConflictData)(const unsigned int Id, const unsigned int Id2, unsigned char *ConflictAll,
                           unsigned char *ConflictThis);
-  bool (*XELibGetNodeElements)(const unsigned int Id, const unsigned int Id2, int *Len);
+  VARIANT_BOOL (*XELibGetNodeElements)(const unsigned int Id, const unsigned int Id2, int *Len);
 
   // Errors
-  bool (*XELibCheckForErrors)(const unsigned int Id);
-  bool (*XELibGetErrorThreadDone)();
-  bool (*XELibGetErrors)(int *Len);
-  bool (*XELibGetErrorString)(const unsigned int Id, int *Len); // Not Exposed
-  bool (*XELibRemoveIdenticalRecords)(const unsigned int Id, const bool RemoveITMs, const bool RemoveITPOs);
+  VARIANT_BOOL (*XELibCheckForErrors)(const unsigned int Id);
+  VARIANT_BOOL (*XELibGetErrorThreadDone)();
+  VARIANT_BOOL (*XELibGetErrors)(int *Len);
+  VARIANT_BOOL (*XELibGetErrorString)(const unsigned int Id, int *Len); // Not Exposed
+  VARIANT_BOOL (*XELibRemoveIdenticalRecords)(const unsigned int Id, const VARIANT_BOOL RemoveITMs, const VARIANT_BOOL RemoveITPOs);
 
   // Filters
-  bool (*XELibFilterRecord)(const unsigned int Id);
-  bool (*XELibResetFilter)();
+  VARIANT_BOOL (*XELibFilterRecord)(const unsigned int Id);
+  VARIANT_BOOL (*XELibResetFilter)();
 
   // Helpers
   auto getResultStringSafe(int Len) -> std::wstring;
@@ -217,6 +217,8 @@ private:
 
   auto getExceptionMessageSafe() -> std::string;
   void throwExceptionIfExists();
+
+  static auto boolToVariantBool(bool Value) -> VARIANT_BOOL;
 
 public:
   //
