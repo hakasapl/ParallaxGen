@@ -79,6 +79,8 @@ target_link_libraries(ParallaxGenLib PUBLIC
 )
 target_include_directories(ParallaxGenLib PUBLIC include)
 
+file(COPY ${CMAKE_SOURCE_DIR}/ParallaxGenLib/external/XEditLib.dll DESTINATION ${CMAKE_BINARY_DIR}/)
+
 install(FILES $<TARGET_RUNTIME_DLLS:ParallaxGenLib> DESTINATION . )
 
 # manual copy DLLs not caught by TARGET_RUNTIME_DLLS TODO why do I have to do this manually?
@@ -89,3 +91,5 @@ elseif(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/lz4d.dll DESTINATION . )
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/zlibd1.dll DESTINATION . )
 endif()
+
+install(FILES ${CMAKE_BINARY_DIR}/XEditLib.dll DESTINATION . )

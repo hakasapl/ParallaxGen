@@ -93,14 +93,14 @@ private:
   VARIANT_BOOL (*XELibGetTextureData)(const wchar_t *ResourceName, int *Width, int *Height);
 
   // Masters
-  VARIANT_BOOL (*XELibCleanMasters)(unsigned int Id);
-  VARIANT_BOOL (*XELibSortMasters)(unsigned int Id);
-  VARIANT_BOOL (*XELibAddMaster)(unsigned int Id, wchar_t *MasterName);
-  VARIANT_BOOL (*XELibAddMasters)(unsigned int Id, wchar_t *Masters);
-  VARIANT_BOOL (*XELibAddRequiredMasters)(unsigned int Id, unsigned int Id2, VARIANT_BOOL AsNew);
-  VARIANT_BOOL (*XELibGetMasters)(unsigned int Id, int *Len);
-  VARIANT_BOOL (*XELibGetRequiredBy)(unsigned int Id, int *Len);
-  VARIANT_BOOL (*XELibGetMasterNames)(unsigned int Id, int *Len);
+  VARIANT_BOOL (*XELibCleanMasters)(const unsigned int Id);
+  VARIANT_BOOL (*XELibSortMasters)(const unsigned int Id);
+  VARIANT_BOOL (*XELibAddMaster)(const unsigned int Id, const wchar_t *MasterName);
+  VARIANT_BOOL (*XELibAddMasters)(const unsigned int Id, const wchar_t *Masters);
+  VARIANT_BOOL (*XELibAddRequiredMasters)(const unsigned int Id, const unsigned int Id2, const VARIANT_BOOL AsNew);
+  VARIANT_BOOL (*XELibGetMasters)(const unsigned int Id, int *Len);
+  VARIANT_BOOL (*XELibGetRequiredBy)(const unsigned int Id, int *Len);
+  VARIANT_BOOL (*XELibGetMasterNames)(const unsigned int Id, int *Len);
 
   // Elements
   VARIANT_BOOL (*XELibHasElement)(const unsigned int Id, const wchar_t *Key, VARIANT_BOOL *BoolVal);
@@ -294,6 +294,17 @@ public:
                     bool BShare, const std::wstring &AF, const std::wstring &FF);
   [[nodiscard]] auto getTextureData(const std::wstring &ResourceName) -> std::pair<int, int>;
 
+  // Masters
+
+  void cleanMasters(const unsigned int &Id);
+  void sortMasters(const unsigned int &Id);
+  void addMaster(const unsigned int &Id, const std::wstring &MasterName);
+  void addMasters(const unsigned int &Id, const std::wstring &Masters);
+  void addRequiredMasters(const unsigned int &Id, const unsigned int &Id2, const bool &AsNew);
+  [[nodiscard]] auto getMasters(const unsigned int &Id) -> std::vector<std::wstring>;
+  [[nodiscard]] auto getRequiredBy(const unsigned int &Id) -> std::vector<std::wstring>;
+  [[nodiscard]] auto getMasterNames(const unsigned int &Id) -> std::vector<std::wstring>;
+
   // Elements
   enum class ElementType : unsigned char {
     ETFile = 0,
@@ -366,8 +377,8 @@ public:
 
   [[nodiscard]] auto hasElement(const unsigned int &Id, const std::wstring &Key) -> bool;
   [[nodiscard]] auto getElement(const unsigned int &Id, const std::wstring &Key) -> unsigned int;
-  [[nodiscard]] auto addElement(const unsigned int &Id, const std::wstring &Key) -> unsigned int;
-  [[nodiscard]] auto addElementValue(const unsigned int &Id, const std::wstring &Key,
+  auto addElement(const unsigned int &Id, const std::wstring &Key) -> unsigned int;
+  auto addElementValue(const unsigned int &Id, const std::wstring &Key,
                                      const std::wstring &Value) -> unsigned int;
   void removeElement(const unsigned int &Id, const std::wstring &Key);
   void removeElementOrParent(const unsigned int &Id);

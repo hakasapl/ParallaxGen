@@ -21,6 +21,7 @@
 #include "ParallaxGenPlugin.hpp"
 #include "patchers/PatcherComplexMaterial.hpp"
 #include "patchers/PatcherTruePBR.hpp"
+#include "patchers/PatcherVanillaParallax.hpp"
 
 #define MAX_LOG_SIZE 5242880
 #define MAX_LOG_FILES 100
@@ -40,6 +41,7 @@ struct ParallaxGenCLIArgs {
   bool UpgradeShaders = false;
   bool OptimizeMeshes = false;
   bool NoMapFromMeshes = false;
+  bool NoPlugin = false;
   bool NoZip = false;
   bool NoCleanup = false;
   bool NoDefaultConfig = false;
@@ -62,6 +64,7 @@ struct ParallaxGenCLIArgs {
     OutStr += "UpgradeShaders: " + to_string(static_cast<int>(UpgradeShaders)) + "\n";
     OutStr += "OptimizeMeshes: " + to_string(static_cast<int>(OptimizeMeshes)) + "\n";
     OutStr += "NoMapFromMeshes: " + to_string(static_cast<int>(NoMapFromMeshes)) + "\n";
+    OutStr += "NoPlugin: " + to_string(static_cast<int>(NoPlugin)) + "\n";
     OutStr += "NoZip: " + to_string(static_cast<int>(NoZip)) + "\n";
     OutStr += "NoCleanup: " + to_string(static_cast<int>(NoCleanup)) + "\n";
     OutStr += "NoDefaultConfig: " + to_string(static_cast<int>(NoDefaultConfig)) + "\n";
@@ -141,6 +144,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   // Create relevant objects
   BethesdaGame BG = BethesdaGame(BGType, Args.GameDir, true);
+  ParallaxGenPlugin PGP = ParallaxGenPlugin(BG);
   ParallaxGenDirectory PGD = ParallaxGenDirectory(BG);
   ParallaxGenConfig PGC = ParallaxGenConfig(&PGD, ExePath);
   ParallaxGenD3D PGD3D = ParallaxGenD3D(&PGD, Args.OutputDir, ExePath, !Args.NoGPU);
@@ -162,9 +166,10 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
     cin.get();
   }
 
-  // DEBUG
-  ParallaxGenPlugin PGP = ParallaxGenPlugin(BG);
-  PGP.init();
+  // Launch PGP init thread
+  if (!Args.NoPlugin) {
+    PGP.initThread();
+  }
 
   // Get current time to compare later
   const auto StartTime = chrono::high_resolution_clock::now();
@@ -214,7 +219,8 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   // Load patcher static vars
   PatcherTruePBR::loadPatcherBuffers(PGD.getPBRJSONs(), &PGD);
-  PatcherComplexMaterial::loadStatics(PGC.getDynCubemapBlocklist(), Args.DisableMLP);
+  PatcherComplexMaterial::loadStatics(PGC.getDynCubemapBlocklist(), Args.DisableMLP, &PGD);
+  PatcherVanillaParallax::loadStatics(&PGD);
 
   // Upgrade shaders if requested
   if (Args.UpgradeShaders) {
@@ -233,6 +239,25 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   // Deploy dynamic cubemap file
   deployDynamicCubemapFile(&PGD, Args.OutputDir, ExePath);
+
+  if (!Args.NoPlugin) {
+    // Wait for plugin init to finish
+    if (!PGP.isInitDone()) {
+      spdlog::info("Waiting for plugin loader to finish initialization...");
+    }
+
+    while (!PGP.isInitDone()) {
+      Sleep(PLUGIN_LOADER_CHECK_INTERVAL);
+    }
+
+    if (PGP.getInitResult() != 1) {
+      spdlog::critical("Failed to initialize ParallaxGen plugin");
+      exit(1);
+    }
+
+    // Create plugin
+    PGP.createPlugin(Args.OutputDir, PG.getTXSTRefsMap());
+  }
 
   // archive
   if (!Args.NoZip) {
@@ -295,6 +320,7 @@ void addArguments(CLI::App &App, ParallaxGenCLIArgs &Args, const filesystem::pat
   App.add_flag("--optimize-meshes", Args.OptimizeMeshes, "Optimize meshes before saving them");
   App.add_flag("--no-map-from-meshes", Args.NoMapFromMeshes,
                "Don't map textures from meshes (faster but less accurate)");
+  App.add_flag("--no-plugin", Args.NoPlugin, "Don't create a ParallaxGen.esp plugin");
   App.add_flag("--high-mem", Args.HighMem, "Enable high memory usage (faster runtime but uses a lot more RAM)");
   App.add_flag("--no-zip", Args.NoZip, "Don't zip the output meshes (also enables --no-cleanup)");
   App.add_flag("--no-cleanup", Args.NoCleanup, "Don't delete generated meshes after zipping");

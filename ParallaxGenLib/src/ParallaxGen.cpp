@@ -2,17 +2,20 @@
 
 #include <DirectXTex.h>
 #include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio.hpp>
 #include <boost/crc.hpp>
 #include <boost/iostreams/device/array.hpp>
 #include <boost/iostreams/stream.hpp>
 #include <boost/thread.hpp>
 #include <fstream>
+#include <mutex>
 #include <spdlog/spdlog.h>
 #include <vector>
 
 #include "NIFUtil.hpp"
 #include "ParallaxGenDirectory.hpp"
+#include "ParallaxGenPlugin.hpp"
 #include "ParallaxGenTask.hpp"
 #include "ParallaxGenUtil.hpp"
 
@@ -234,30 +237,51 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
   bool NIFModified = false;
 
   // Create Patcher objects
-  PatcherVanillaParallax PatchVP(NIFFile, &NIF, PGC, PGD, PGD3D);
-  PatcherComplexMaterial PatchCM(NIFFile, &NIF, PGC, PGD, PGD3D);
-  PatcherTruePBR PatchTPBR(NIFFile, &NIF, PGD);
+  // TODO make more of these static
+  PatcherVanillaParallax PatchVP(NIFFile, &NIF, PGC, PGD3D);
+  PatcherComplexMaterial PatchCM(NIFFile, &NIF, PGC, PGD3D);
+  PatcherTruePBR PatchTPBR(NIFFile, &NIF);
 
   // Patch each shape in NIF
   size_t NumShapes = 0;
+  int PluginShapeIndex = 0;
   bool OneShapeSuccess = false;
   for (NiShape *NIFShape : NIF.GetShapes()) {
     NumShapes++;
 
     bool ShapeModified = false;
-    string ShaderApplied;
+    NIFUtil::ShapeShader ShaderApplied = NIFUtil::ShapeShader::NONE;
     ParallaxGenTask::updatePGResult(Result,
-                                    processShape(NIFFile, NIF, NIFShape, PatchVP, PatchCM, PatchTPBR, ShapeModified),
+                                    processShape(NIFFile, NIF, NIFShape, PatchVP, PatchCM, PatchTPBR, ShapeModified, ShaderApplied),
                                     ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
 
     // Update NIFModified if shape was modified
     if (ShapeModified) {
       NIFModified = true;
+
+      // Lock guard for modifying TXSTRefsMap
+      lock_guard<mutex> Lock(TXSTRefsMapMutex);
+
+      // Create plugin key
+      auto ShapeName = strToWstr(NIFShape->name.get());
+
+      wstring NIFPathKey = boost::to_lower_copy(NIFFile.wstring());
+      // Remove meshes from the start of the string
+      if (boost::starts_with(NIFPathKey, L"meshes\\")) {
+        NIFPathKey = NIFPathKey.substr(MESHES_LENGTH);
+      }
+
+      auto PluginKey = ParallaxGenPlugin::TXSTRefID(NIFPathKey, ShapeName, PluginShapeIndex);
+
+      // Add to member var
+      TXSTRefsMap[PluginKey] = ShaderApplied;
     }
 
     if (Result == ParallaxGenTask::PGResult::SUCCESS) {
       OneShapeSuccess = true;
     }
+
+    PluginShapeIndex++;
   }
 
   if (!OneShapeSuccess && NumShapes > 0) {
@@ -308,7 +332,7 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
 
 auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, NiShape *NIFShape,
                                PatcherVanillaParallax &PatchVP, PatcherComplexMaterial &PatchCM,
-                               PatcherTruePBR &PatchTPBR, bool &ShapeModified) const -> ParallaxGenTask::PGResult {
+                               PatcherTruePBR &PatchTPBR, bool &ShapeModified, NIFUtil::ShapeShader &ShaderApplied) const -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Prep
@@ -370,6 +394,8 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
                                                                      get<1>(TruePBRCFG.second), ShapeModified));
       }
 
+      ShaderApplied = NIFUtil::ShapeShader::TRUEPBR;
+
       return Result;
     }
   }
@@ -387,6 +413,8 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
       ParallaxGenTask::updatePGResult(Result,
                                       PatchCM.applyPatch(NIFShape, MatchedPath, EnableDynCubemaps, ShapeModified));
 
+      ShaderApplied = NIFUtil::ShapeShader::COMPLEXMATERIAL;
+
       return Result;
     }
   }
@@ -400,6 +428,8 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
     if (EnableParallax) {
       // Enable Parallax on shape
       ParallaxGenTask::updatePGResult(Result, PatchVP.applyPatch(NIFShape, MatchedPath, ShapeModified));
+
+      ShaderApplied = NIFUtil::ShapeShader::VANILLAPARALLAX;
 
       return Result;
     }

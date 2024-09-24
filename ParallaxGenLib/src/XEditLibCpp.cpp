@@ -85,15 +85,15 @@ XEditLibCpp::XEditLibCpp() : HModule(LoadLibrary(TEXT("XEditLib.dll"))) {
         reinterpret_cast<VARIANT_BOOL (*)(const wchar_t *, int *, int *)>(GetProcAddress(HModule, "GetTextureData"));
 
     // Masters
-    XELibCleanMasters = reinterpret_cast<VARIANT_BOOL (*)(unsigned int)>(GetProcAddress(HModule, "CleanMasters"));
-    XELibSortMasters = reinterpret_cast<VARIANT_BOOL (*)(unsigned int)>(GetProcAddress(HModule, "SortMasters"));
-    XELibAddMaster = reinterpret_cast<VARIANT_BOOL (*)(unsigned int, wchar_t *)>(GetProcAddress(HModule, "AddMaster"));
-    XELibAddMasters = reinterpret_cast<VARIANT_BOOL (*)(unsigned int, wchar_t *)>(GetProcAddress(HModule, "AddMasters"));
+    XELibCleanMasters = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int)>(GetProcAddress(HModule, "CleanMasters"));
+    XELibSortMasters = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int)>(GetProcAddress(HModule, "SortMasters"));
+    XELibAddMaster = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *)>(GetProcAddress(HModule, "AddMaster"));
+    XELibAddMasters = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const wchar_t *)>(GetProcAddress(HModule, "AddMasters"));
     XELibAddRequiredMasters =
-        reinterpret_cast<VARIANT_BOOL (*)(unsigned int, unsigned int, VARIANT_BOOL)>(GetProcAddress(HModule, "AddRequiredMasters"));
-    XELibGetMasters = reinterpret_cast<VARIANT_BOOL (*)(unsigned int, int *)>(GetProcAddress(HModule, "GetMasters"));
-    XELibGetRequiredBy = reinterpret_cast<VARIANT_BOOL (*)(unsigned int, int *)>(GetProcAddress(HModule, "GetRequiredBy"));
-    XELibGetMasterNames = reinterpret_cast<VARIANT_BOOL (*)(unsigned int, int *)>(GetProcAddress(HModule, "GetMasterNames"));
+        reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, const unsigned int, VARIANT_BOOL)>(GetProcAddress(HModule, "AddRequiredMasters"));
+    XELibGetMasters = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, int *)>(GetProcAddress(HModule, "GetMasters"));
+    XELibGetRequiredBy = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, int *)>(GetProcAddress(HModule, "GetRequiredBy"));
+    XELibGetMasterNames = reinterpret_cast<VARIANT_BOOL (*)(const unsigned int, int *)>(GetProcAddress(HModule, "GetMasterNames"));
 
     // Elements
     XELibHasElement =
@@ -720,6 +720,72 @@ auto XEditLibCpp::getTextureData(const std::wstring &ResourceName) -> std::pair<
   throwExceptionIfExists();
 
   return {*Width, *Height};
+}
+
+// Masters
+
+void XEditLibCpp::cleanMasters(const unsigned int &Id) {
+  XELibCleanMasters(Id);
+  throwExceptionIfExists();
+}
+
+void XEditLibCpp::sortMasters(const unsigned int &Id) {
+  XELibSortMasters(Id);
+  throwExceptionIfExists();
+}
+
+void XEditLibCpp::addMaster(const unsigned int &Id, const std::wstring &MasterName) {
+  XELibAddMaster(Id, MasterName.c_str());
+  throwExceptionIfExists();
+}
+
+void XEditLibCpp::addMasters(const unsigned int &Id, const std::wstring &Masters) {
+  XELibAddMasters(Id, Masters.c_str());
+  throwExceptionIfExists();
+}
+
+void XEditLibCpp::addRequiredMasters(const unsigned int &Id, const unsigned int &Id2, const bool &AsNew) {
+  XELibAddRequiredMasters(Id, Id2, boolToVariantBool(AsNew));
+  throwExceptionIfExists();
+}
+
+auto XEditLibCpp::getMasters(const unsigned int &Id) -> std::vector<std::wstring> {
+  int Len = 0;
+  XELibGetMasters(Id, &Len);
+  throwExceptionIfExists();
+
+  const auto MastersStr = getResultStringSafe(Len);
+
+  vector<wstring> OutputMasters;
+  boost::split(OutputMasters, MastersStr, boost::is_any_of("\r\n"), boost::token_compress_on);
+
+  return OutputMasters;
+}
+
+auto XEditLibCpp::getRequiredBy(const unsigned int &Id) -> std::vector<std::wstring> {
+  int Len = 0;
+  XELibGetRequiredBy(Id, &Len);
+  throwExceptionIfExists();
+
+  const auto RequiredByStr = getResultStringSafe(Len);
+
+  vector<wstring> OutputRequiredBy;
+  boost::split(OutputRequiredBy, RequiredByStr, boost::is_any_of("\r\n"), boost::token_compress_on);
+
+  return OutputRequiredBy;
+}
+
+auto XEditLibCpp::getMasterNames(const unsigned int &Id) -> std::vector<std::wstring> {
+  int Len = 0;
+  XELibGetMasterNames(Id, &Len);
+  throwExceptionIfExists();
+
+  const auto MasterNamesStr = getResultStringSafe(Len);
+
+  vector<wstring> OutputMasterNames;
+  boost::split(OutputMasterNames, MasterNamesStr, boost::is_any_of("\r\n"), boost::token_compress_on);
+
+  return OutputMasterNames;
 }
 
 // Elements

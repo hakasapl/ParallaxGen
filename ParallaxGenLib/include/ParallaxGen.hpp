@@ -6,13 +6,17 @@
 #include <mutex>
 #include <nlohmann/json.hpp>
 
+#include "NIFUtil.hpp"
 #include "ParallaxGenConfig.hpp"
 #include "ParallaxGenD3D.hpp"
 #include "ParallaxGenDirectory.hpp"
+#include "ParallaxGenPlugin.hpp"
 #include "ParallaxGenTask.hpp"
 #include "patchers/PatcherComplexMaterial.hpp"
 #include "patchers/PatcherTruePBR.hpp"
 #include "patchers/PatcherVanillaParallax.hpp"
+
+#define MESHES_LENGTH 7
 
 class ParallaxGen {
 private:
@@ -30,6 +34,10 @@ private:
   bool IgnoreParallax;
   bool IgnoreCM;
   bool IgnoreTruePBR;
+
+  // Members vars
+  std::unordered_map<ParallaxGenPlugin::TXSTRefID, NIFUtil::ShapeShader, ParallaxGenPlugin::TXSTRefIDHash> TXSTRefsMap;
+  std::mutex TXSTRefsMapMutex;
 
 public:
   //
@@ -54,6 +62,10 @@ public:
   [[nodiscard]] static auto getOutputZipName() -> std::filesystem::path;
   // get diff json name
   [[nodiscard]] static auto getDiffJSONName() -> std::filesystem::path;
+  // get txstrefs
+  [[nodiscard]] auto getTXSTRefsMap() const -> const std::unordered_map<ParallaxGenPlugin::TXSTRefID, NIFUtil::ShapeShader, ParallaxGenPlugin::TXSTRefIDHash> & {
+    return TXSTRefsMap;
+  }
 
 private:
   // thread safe JSON update
@@ -69,7 +81,7 @@ private:
   // processes a shape within a NIF file
   auto processShape(const std::filesystem::path &NIFPath, nifly::NifFile &NIF, nifly::NiShape *NIFShape,
                     PatcherVanillaParallax &PatchVP, PatcherComplexMaterial &PatchCM, PatcherTruePBR &PatchTPBR,
-                    bool &ShapeModified) const -> ParallaxGenTask::PGResult;
+                    bool &ShapeModified, NIFUtil::ShapeShader &ShaderApplied) const -> ParallaxGenTask::PGResult;
 
   // Zip methods
   void addFileToZip(mz_zip_archive &Zip, const std::filesystem::path &FilePath,

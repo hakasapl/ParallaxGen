@@ -346,3 +346,18 @@ auto NIFUtil::getSearchPrefixes(NifFile &NIF, nifly::NiShape *NIFShape) -> array
 
   return OutPrefixes;
 }
+
+auto NIFUtil::getSearchPrefixes(const array<wstring, NUM_TEXTURE_SLOTS> &OldSlots) -> array<wstring, NUM_TEXTURE_SLOTS> {
+  array<wstring, NUM_TEXTURE_SLOTS> OutSlots;
+
+  for (uint32_t I = 0; I < NUM_TEXTURE_SLOTS; I++) {
+    if (OldSlots[I].empty()) {
+      continue;
+    }
+
+    const auto TexBase = getTexBase(OldSlots[I]);
+    OutSlots[I] = TexBase;
+  }
+
+  return OutSlots;
+}
