@@ -49,7 +49,8 @@ void ParallaxGenPlugin::initThread() {
 
 auto ParallaxGenPlugin::init() -> ParallaxGenTask::PGResult {
   // Load Plugins
-  loadPlugins(ActivePlugins, false);
+  loadPlugins(ActivePlugins, true);
+  // TODO ignore plugins with missing masters so it doesn't cause issues
 
   auto LoaderStatus = getLoaderStatus();
   while (LoaderStatus != XEditLibCpp::LoaderStates::IsDone && LoaderStatus != XEditLibCpp::LoaderStates::IsError) {
