@@ -41,7 +41,7 @@ auto ParallaxGenD3D::findCMMaps(std::set<std::wstring> BSAExcludes) -> ParallaxG
     if (Result) {
       // TODO we need to fill in alpha for non-CM stuff
       EnvMask.second.Type = NIFUtil::TextureType::COMPLEXMATERIAL;
-      spdlog::info(L"Found complex material env mask: {}", EnvMask.second.Path.wstring());
+      spdlog::debug(L"Found complex material env mask: {}", EnvMask.second.Path.wstring());
     }
   }
 
