@@ -34,14 +34,14 @@ auto ParallaxGenD3D::findCMMaps(std::set<std::wstring> BSAExcludes) -> ParallaxG
         ParallaxGenTask::updatePGResult(PGResult, checkIfCM(EnvMask.second.Path, Result),
                                         ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
       } else {
-        spdlog::debug(L"Envmask {} is contained in excluded BSA - skipping complex material check", EnvMask.second.Path.wstring());
+        spdlog::trace(L"Envmask {} is contained in excluded BSA - skipping complex material check", EnvMask.second.Path.wstring());
       }
 
 
     if (Result) {
       // TODO we need to fill in alpha for non-CM stuff
       EnvMask.second.Type = NIFUtil::TextureType::COMPLEXMATERIAL;
-      spdlog::debug(L"Found complex material env mask: {}", EnvMask.second.Path.wstring());
+      spdlog::trace(L"Found complex material env mask: {}", EnvMask.second.Path.wstring());
     }
   }
 
