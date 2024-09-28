@@ -203,8 +203,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   PGD.mapFiles(PGC.getNIFBlocklist(), PGC.getManualTextureMaps(), !Args.NoMapFromMeshes, !Args.NoMultithread,
                Args.HighMem);
 
-
-  // TODO: read from JSON
+  // TODO: add additional files from JSON
   std::set<std::wstring> BSAExcludes = {L"Skyrim - Textures0.bsa",
                                         L"Skyrim - Textures1.bsa",
                                         L"Skyrim - Textures2.bsa",
@@ -213,16 +212,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
                                         L"Skyrim - Textures5.bsa",
                                         L"Skyrim - Textures6.bsa",
                                         L"Skyrim - Textures7.bsa",
-                                        L"Skyrim - Textures8.bsa",
-                                        L"Project Clarity AIO Half Res Packed.bsa",
-                                        L"Project Clarity AIO Half Res Packed - Textures.bsa",
-                                        L"Project Clarity AIO Half Res Packed0 - Textures.bsa",
-                                        L"Project Clarity AIO Half Res Packed1 - Textures.bsa",
-                                        L"Project Clarity AIO Half Res Packed2 - Textures.bsa",
-                                        L"Project Clarity AIO Half Res Packed3 - Textures.bsa",
-                                        L"Project Clarity AIO Half Res Packed4 - Textures.bsa",
-                                        L"Project Clarity AIO Half Res Packed5 - Textures.bsa",
-                                        L"Project Clarity AIO Half Res Packed6 - Textures.bsa"};
+                                        L"Skyrim - Textures8.bsa"};
 
   spdlog::info("Finding complex material env maps");
   PGD3D.findCMMaps(BSAExcludes);
