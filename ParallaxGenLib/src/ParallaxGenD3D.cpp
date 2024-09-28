@@ -20,21 +20,28 @@ ParallaxGenD3D::ParallaxGenD3D(ParallaxGenDirectory *PGD, filesystem::path Outpu
                                const bool &UseGPU)
     : PGD(PGD), OutputDir(std::move(OutputDir)), ExePath(std::move(ExePath)), UseGPU(UseGPU) {}
 
-auto ParallaxGenD3D::findCMMaps() -> ParallaxGenTask::PGResult {
+auto ParallaxGenD3D::findCMMaps(std::set<std::wstring> BSAExcludes) -> ParallaxGenTask::PGResult {
   auto &EnvMasks = PGD->getTextureMap(NIFUtil::TextureSlots::ENVMASK);
 
   ParallaxGenTask::PGResult PGResult = ParallaxGenTask::PGResult::SUCCESS;
 
   // loop through maps
   for (auto &EnvMask : EnvMasks) {
+    bool bFileInVanillaBSA = PGD->isFileInBSA(EnvMask.second.Path, BSAExcludes);
+
     bool Result = false;
-    ParallaxGenTask::updatePGResult(PGResult, checkIfCM(EnvMask.second.Path, Result),
-                                    ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
+      if (!bFileInVanillaBSA) {
+        ParallaxGenTask::updatePGResult(PGResult, checkIfCM(EnvMask.second.Path, Result),
+                                        ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
+      } else {
+        spdlog::debug(L"Envmask {} is contained in excluded BSA - skipping complex material check", EnvMask.second.Path.wstring());
+      }
+
 
     if (Result) {
       // TODO we need to fill in alpha for non-CM stuff
       EnvMask.second.Type = NIFUtil::TextureType::COMPLEXMATERIAL;
-      spdlog::debug(L"Found File: {}", EnvMask.second.Path.wstring());
+      spdlog::info(L"Found complex material env mask: {}", EnvMask.second.Path.wstring());
     }
   }
 

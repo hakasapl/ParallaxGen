@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "BethesdaGame.hpp"
+#include <set>
 
 #define ASCII_UPPER_BOUND 127
 
@@ -200,6 +201,11 @@ public:
    * @return false When path has other than ascii chars
    */
   [[nodiscard]] static auto isPathAscii(const std::filesystem::path &Path) -> bool;
+
+  /*
+  * @brief Checks if the given file is included in any of the given BSA files
+  */
+  [[nodiscard]] auto isFileInBSA(std::filesystem::path file, std::set<std::wstring> BSAFiles) -> bool;
 
   /**
    * @brief Get the lowercase path of a path

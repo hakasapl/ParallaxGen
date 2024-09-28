@@ -61,7 +61,8 @@ public:
   void initGPU();
 
   // Check methods
-  auto findCMMaps() -> ParallaxGenTask::PGResult;
+  // files found in the bsa excludes are never CM maps, used for vanilla env masks
+  auto findCMMaps(std::set<std::wstring> BSAExcludes) -> ParallaxGenTask::PGResult;
 
   static auto getNumChannelsByFormat(const DXGI_FORMAT &Format) -> int;
 

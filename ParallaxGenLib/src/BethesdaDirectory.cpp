@@ -629,6 +629,18 @@ void BethesdaDirectory::updateFileMap(const filesystem::path &FilePath,
   FileMap[LowerPath] = NewBFile;
 }
 
+auto BethesdaDirectory::isFileInBSA(filesystem::path file, std::set<std::wstring> BSAFiles) -> bool {
+  if (isBSAFile(file)){
+      BethesdaFile bethFile = getFileFromMap(file);
+      std::filesystem::path bsaFilename = bethFile.BSAFile->Path.filename();
+      if (std::find(BSAFiles.begin(), BSAFiles.end(), bsaFilename.wstring()) != BSAFiles.end()) {
+         return true;
+       }
+  }
+  return false;
+}
+
+
 auto BethesdaDirectory::checkIfAnyComponentIs(const filesystem::path &Path, const vector<wstring> &Components) -> bool {
   for (const auto &Component : Path) {
     for (const auto &Comp : Components) {
