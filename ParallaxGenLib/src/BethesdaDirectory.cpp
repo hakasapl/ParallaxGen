@@ -5,11 +5,15 @@
 #include <shlwapi.h>
 #include <spdlog/spdlog.h>
 
+#include <algorithm>
 #include <binary_io/binary_io.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/iostreams/device/mapped_file.hpp>
+#include <filesystem>
 #include <fstream>
+#include <set>
+#include <string>
 
 // BSA Includes
 #include <cstdio>
@@ -75,7 +79,9 @@ void BethesdaDirectory::populateFileMap(bool IncludeBSAs) {
   addLooseFilesToMap();
 }
 
-auto BethesdaDirectory::getFileMap() const -> const map<filesystem::path, BethesdaDirectory::BethesdaFile>& { return FileMap; }
+auto BethesdaDirectory::getFileMap() const -> const map<filesystem::path, BethesdaDirectory::BethesdaFile> & {
+  return FileMap;
+}
 
 auto BethesdaDirectory::getFile(const filesystem::path &RelPath, const bool &CacheFile) -> vector<std::byte> {
   // find bsa/loose file to open
@@ -629,17 +635,17 @@ void BethesdaDirectory::updateFileMap(const filesystem::path &FilePath,
   FileMap[LowerPath] = NewBFile;
 }
 
-auto BethesdaDirectory::isFileInBSA(filesystem::path file, std::set<std::wstring> BSAFiles) -> bool {
-  if (isBSAFile(file)){
-      BethesdaFile bethFile = getFileFromMap(file);
-      std::filesystem::path bsaFilename = bethFile.BSAFile->Path.filename();
-      if (std::find(BSAFiles.begin(), BSAFiles.end(), bsaFilename.wstring()) != BSAFiles.end()) {
-         return true;
-       }
+auto BethesdaDirectory::isFileInBSA(const filesystem::path &File, const std::set<std::wstring> &BSAFiles) -> bool {
+  if (isBSAFile(File)) {
+    BethesdaFile const BethFile = getFileFromMap(File);
+    std::filesystem::path const BsaFilename = BethFile.BSAFile->Path.filename();
+
+    if (BSAFiles.find(BsaFilename.wstring()) != BSAFiles.end()) {
+      return true;
+    }
   }
   return false;
 }
-
 
 auto BethesdaDirectory::checkIfAnyComponentIs(const filesystem::path &Path, const vector<wstring> &Components) -> bool {
   for (const auto &Component : Path) {

@@ -203,7 +203,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   PGD.mapFiles(PGC.getNIFBlocklist(), PGC.getManualTextureMaps(), !Args.NoMapFromMeshes, !Args.NoMultithread,
                Args.HighMem);
 
-  // TODO: add additional files from JSON
+  // TODO: allow files to be configured on runtime in the json config
   std::set<std::wstring> BSAExcludes = {L"Skyrim - Textures0.bsa",
                                         L"Skyrim - Textures1.bsa",
                                         L"Skyrim - Textures2.bsa",
