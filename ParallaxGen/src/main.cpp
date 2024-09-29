@@ -203,16 +203,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   PGD.mapFiles(PGC.getNIFBlocklist(), PGC.getManualTextureMaps(), !Args.NoMapFromMeshes, !Args.NoMultithread,
                Args.HighMem);
 
-  // TODO: allow files to be configured on runtime in the json config
-  std::set<std::wstring> BSAExcludes = {L"Skyrim - Textures0.bsa",
-                                        L"Skyrim - Textures1.bsa",
-                                        L"Skyrim - Textures2.bsa",
-                                        L"Skyrim - Textures3.bsa",
-                                        L"Skyrim - Textures4.bsa",
-                                        L"Skyrim - Textures5.bsa",
-                                        L"Skyrim - Textures6.bsa",
-                                        L"Skyrim - Textures7.bsa",
-                                        L"Skyrim - Textures8.bsa"};
+  auto BSAExcludes = PGC.getBSAExlusionList();
 
   spdlog::info("Finding complex material env maps");
   PGD3D.findCMMaps(BSAExcludes);
