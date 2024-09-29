@@ -21,8 +21,8 @@
 #include "patchers/PatcherComplexMaterial.hpp"
 #include "patchers/PatcherTruePBR.hpp"
 
-#define MAX_LOG_SIZE 5242880
-#define MAX_LOG_FILES 100
+constexpr unsigned MAX_LOG_SIZE = 5242880;
+constexpr unsigned MAX_LOG_FILES = 100;
 
 using namespace std;
 
@@ -103,7 +103,7 @@ auto deployDynamicCubemapFile(ParallaxGenDirectory *PGD, const filesystem::path 
     spdlog::info("Installing default dynamic cubemap file");
 
     // Create Directory
-    filesystem::path OutputCubemapPath = OutputDir / DynCubeMapPath.parent_path();
+    const filesystem::path OutputCubemapPath = OutputDir / DynCubeMapPath.parent_path();
     filesystem::create_directories(OutputCubemapPath);
 
     boost::filesystem::path AssetPath = boost::filesystem::path(ExePath) / "assets/dynamic1pxcubemap_black_ENB.dds";
@@ -139,7 +139,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   BethesdaGame::GameType BGType = getGameTypeMap().at(Args.GameType);
 
   // Create relevant objects
-  BethesdaGame BG = BethesdaGame(BGType, Args.GameDir, true);
+  const BethesdaGame BG = BethesdaGame(BGType, Args.GameDir, true);
   ParallaxGenDirectory PGD = ParallaxGenDirectory(BG);
   ParallaxGenConfig PGC = ParallaxGenConfig(&PGD, ExePath);
   ParallaxGenD3D PGD3D = ParallaxGenD3D(&PGD, Args.OutputDir, ExePath, !Args.NoGPU);

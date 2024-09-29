@@ -12,3 +12,4 @@ vcpkg_installed
 
 # clangd cache
 .cache
+/CMakeSettings.json

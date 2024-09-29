@@ -12,11 +12,14 @@ Checks: '-*,
          -cppcoreguidelines-pro-type-reinterpret-cast,
          -cppcoreguidelines-pro-bounds-constant-array-index,
          llvm-*,
+         -llvm-header-guard,
          misc-*,
          -misc-no-recursion,
          -misc-non-private-member-variables-in-classes,
+         -misc-include-cleaner,
          modernize-*,
          -modernize-avoid-c-arrays,
+         -modernize-use-nullptr,
          performance-*,
          portability-*,
          readability-*,
@@ -39,5 +42,7 @@ CheckOptions:
     value:           CamelCase
   - key:             readability-identifier-naming.VariableCase
     value:           CamelCase
+  - key:             readability-identifier-naming.ConstexprVariableCase
+    value:           UPPER_CASE
   - key:             readability-identifier-naming.IgnoreMainLikeFunctions
     value:           1

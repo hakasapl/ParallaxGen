@@ -332,7 +332,7 @@ auto NIFUtil::getSearchPrefixes(NifFile &NIF, nifly::NiShape *NIFShape) -> array
   // Loop through each texture Slot
   for (uint32_t I = 0; I < NUM_TEXTURE_SLOTS; I++) {
     string Texture;
-    uint32_t Result = NIF.GetTextureSlot(NIFShape, Texture, I);
+    const uint32_t Result = NIF.GetTextureSlot(NIFShape, Texture, I);
 
     if (Result == 0 || Texture.empty()) {
       // no texture in Slot

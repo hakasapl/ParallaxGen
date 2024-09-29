@@ -49,7 +49,7 @@ private:
   };
   Microsoft::WRL::ComPtr<ID3D11ComputeShader> ShaderCountAlphaValues;
 
-  std::unordered_map<std::filesystem::path, DirectX::TexMetadata> DDSMetaDataCache;
+  std::unordered_map<std::filesystem::path, DirectX::TexMetadata> DDSMetaDataCache{};
   std::mutex DDSMetaDataMutex;
 
 public:

@@ -50,7 +50,7 @@ void ParallaxGen::patchMeshes(const bool &MultiThread) {
   ParallaxGenTask TaskTracker("Mesh Patcher", Meshes.size());
 
   // Create thread group
-  boost::thread_group ThreadGroup;
+  const boost::thread_group ThreadGroup;
 
   // Define diff JSON
   nlohmann::json DiffJSON;
@@ -60,7 +60,7 @@ void ParallaxGen::patchMeshes(const bool &MultiThread) {
 #ifdef _DEBUG
     size_t NumThreads = 1;
 #else
-    size_t NumThreads = boost::thread::hardware_concurrency();
+    const size_t NumThreads = boost::thread::hardware_concurrency();
 #endif
 
     boost::asio::thread_pool MeshPatchPool(NumThreads);
@@ -90,7 +90,7 @@ void ParallaxGen::patchMeshes(const bool &MultiThread) {
 
   // Write DiffJSON file
   spdlog::info("Saving diff JSON file...");
-  filesystem::path DiffJSONPath = OutputDir / getDiffJSONName();
+  const filesystem::path DiffJSONPath = OutputDir / getDiffJSONName();
   ofstream DiffJSONFile(DiffJSONPath);
   DiffJSONFile << DiffJSON << endl;
   DiffJSONFile.close();
@@ -101,7 +101,7 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
 
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
-  string HeightMapStr = HeightMap.string();
+  const string HeightMapStr = HeightMap.string();
 
   // Get texture base (remove _p.dds)
   const auto TexBase = NIFUtil::getTexBase(HeightMapStr);
@@ -126,14 +126,14 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
   const filesystem::path ComplexMap = TexBase + L"_m.dds";
 
   // upgrade to complex material
-  DirectX::ScratchImage NewComplexMap = PGD3D->upgradeToComplexMaterial(HeightMap, EnvMask);
+  const DirectX::ScratchImage NewComplexMap = PGD3D->upgradeToComplexMaterial(HeightMap, EnvMask);
 
   // save to file
   if (NewComplexMap.GetImageCount() > 0) {
-    filesystem::path OutputPath = OutputDir / ComplexMap;
+    const filesystem::path OutputPath = OutputDir / ComplexMap;
     filesystem::create_directories(OutputPath.parent_path());
 
-    HRESULT HR = DirectX::SaveToDDSFile(NewComplexMap.GetImages(), NewComplexMap.GetImageCount(),
+    const HRESULT HR = DirectX::SaveToDDSFile(NewComplexMap.GetImages(), NewComplexMap.GetImageCount(),
                                         NewComplexMap.GetMetadata(), DirectX::DDS_FLAGS_NONE, OutputPath.c_str());
     if (FAILED(HR)) {
       spdlog::error(L"Unable to save complex material {}: {}", OutputPath.wstring(),
@@ -269,7 +269,7 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
   // Save patched NIF if it was modified
   if (NIFModified) {
     // Calculate CRC32 hash before
-    boost::crc_32_type CRCBeforeResult;
+    boost::crc_32_type CRCBeforeResult{};
     CRCBeforeResult.process_bytes(NIFFileData.data(), NIFFileData.size());
     const auto CRCBefore = CRCBeforeResult.checksum();
 
@@ -289,7 +289,7 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
 
     // Calculate CRC32 hash after
     const auto OutputFileBytes = getFileBytes(OutputFile);
-    boost::crc_32_type CRCResultAfter;
+    boost::crc_32_type CRCResultAfter{};
     CRCResultAfter.process_bytes(OutputFileBytes.data(), OutputFileBytes.size());
     const auto CRCAfter = CRCResultAfter.checksum();
 
@@ -410,7 +410,7 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
 
 void ParallaxGen::threadSafeJSONUpdate(const std::function<void(nlohmann::json &)> &Operation,
                                        nlohmann::json &DiffJSON) {
-  std::lock_guard<std::mutex> Lock(JSONUpdateMutex);
+  const std::lock_guard<std::mutex> Lock(JSONUpdateMutex);
   Operation(DiffJSON);
 }
 
@@ -425,9 +425,9 @@ void ParallaxGen::addFileToZip(mz_zip_archive &Zip, const filesystem::path &File
   vector<std::byte> Buffer = getFileBytes(FilePath);
 
   // get relative path
-  filesystem::path ZipRelativePath = FilePath.lexically_relative(OutputDir);
+  const filesystem::path ZipRelativePath = FilePath.lexically_relative(OutputDir);
 
-  string ZipFilePath = wstrToStr(ZipRelativePath.wstring());
+  const string ZipFilePath = wstrToStr(ZipRelativePath.wstring());
 
   // add file to Zip
   if (mz_zip_writer_add_mem(&Zip, ZipFilePath.c_str(), Buffer.data(), Buffer.size(), MZ_NO_COMPRESSION) == 0) {
@@ -449,7 +449,7 @@ void ParallaxGen::zipDirectory(const filesystem::path &DirPath, const filesystem
   }
 
   // initialize file
-  string ZipPathString = wstrToStr(ZipPath);
+  const string ZipPathString = wstrToStr(ZipPath);
   if (mz_zip_writer_init_file(&Zip, ZipPathString.c_str(), 0) == 0) {
     spdlog::critical(L"Error creating Zip file: {}", ZipPath.wstring());
     exit(1);

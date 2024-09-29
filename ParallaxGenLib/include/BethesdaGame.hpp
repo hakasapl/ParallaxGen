@@ -5,13 +5,15 @@
 #include <filesystem>
 
 // Steam game ID definitions
-#define STEAMGAMEID_SKYRIM_SE 489830
-#define STEAMGAMEID_SKYRIM_VR 611670
-#define STEAMGAMEID_SKYRIM 72850
-#define STEAMGAMEID_ENDERAL 933480
-#define STEAMGAMEID_ENDERAL_SE 976620
+enum {
+  STEAMGAMEID_SKYRIM_SE = 489830,
+  STEAMGAMEID_SKYRIM_VR = 611670,
+  STEAMGAMEID_SKYRIM = 72850,
+  STEAMGAMEID_ENDERAL = 933480,
+  STEAMGAMEID_ENDERAL_SE = 976620
+};
 
-#define REG_BUFFER_SIZE 1024
+constexpr unsigned REG_BUFFER_SIZE = 1024;
 
 class BethesdaGame {
 public:
@@ -47,7 +49,7 @@ private:
 
 public:
   // constructor
-  BethesdaGame(enum GameType GameType, const std::filesystem::path &GamePath, const bool &Logging = false);
+  BethesdaGame(GameType GameType, const std::filesystem::path &GamePath, const bool &Logging = false);
 
   // get functions
   [[nodiscard]] auto getGameType() const -> GameType;

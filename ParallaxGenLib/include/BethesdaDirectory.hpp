@@ -13,7 +13,7 @@
 #include "BethesdaGame.hpp"
 #include <set>
 
-#define ASCII_UPPER_BOUND 127
+constexpr unsigned ASCII_UPPER_BOUND = 127;
 
 class BethesdaDirectory {
 private:

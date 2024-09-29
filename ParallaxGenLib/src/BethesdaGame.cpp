@@ -208,7 +208,7 @@ auto BethesdaGame::findGamePathFromSteam() const -> filesystem::path {
     return {};
   }
 
-  string RegPath =
+  const string RegPath =
       R"(Software\Microsoft\Windows\CurrentVersion\Uninstall\Steam App )" + to_string(this->getSteamGameID());
 
   HKEY HKey = nullptr;
@@ -235,7 +235,7 @@ auto BethesdaGame::findGamePathFromSteam() const -> filesystem::path {
 
 auto BethesdaGame::getINIPaths() const -> BethesdaGame::ININame {
   BethesdaGame::ININame Output = getINILocations();
-  filesystem::path GameDocsPath = getGameDocumentPath();
+  const filesystem::path GameDocsPath = getGameDocumentPath();
 
   // normal ini file
   Output.INI = GameDocsPath / Output.INI;
@@ -246,8 +246,8 @@ auto BethesdaGame::getINIPaths() const -> BethesdaGame::ININame {
 }
 
 auto BethesdaGame::getLoadOrderFile() const -> filesystem::path {
-  filesystem::path GameAppdataPath = getGameAppdataPath();
-  filesystem::path LoadOrderFile = GameAppdataPath / "loadorder.txt";
+  const filesystem::path GameAppdataPath = getGameAppdataPath();
+  const filesystem::path LoadOrderFile = GameAppdataPath / "loadorder.txt";
   return LoadOrderFile;
 }
 
@@ -273,7 +273,7 @@ auto BethesdaGame::getGameAppdataPath() const -> filesystem::path {
 
 auto BethesdaGame::getSystemPath(const GUID &FolderID) -> filesystem::path {
   PWSTR Path = nullptr;
-  HRESULT Result = SHGetKnownFolderPath(FolderID, 0, nullptr, &Path);
+  const HRESULT Result = SHGetKnownFolderPath(FolderID, 0, nullptr, &Path);
   if (SUCCEEDED(Result)) {
     wstring OutPath(Path);
     CoTaskMemFree(Path); // Free the memory allocated for the path

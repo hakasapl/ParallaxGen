@@ -219,7 +219,7 @@ auto PatcherTruePBR::getPathContainsMatch(const uint32_t &ShapeBlockID,
     }
   }
 
-  wstring SlotLabel = L"path_contains";
+  const wstring SlotLabel = L"path_contains";
   if (NumMatches > 0) {
     spdlog::trace(L"NIF: {} | Shape: {} | PBR | {} | Matched {} PBR JSONs for \"{}\"", NIFPath.wstring(), ShapeBlockID,
                   SlotLabel, NumMatches, Diffuse);
@@ -317,8 +317,8 @@ auto PatcherTruePBR::applyPatch(NiShape *NIFShape, nlohmann::json &TruePBRData, 
   // Prep
   auto *NIFShader = NIF->GetShader(NIFShape);
   auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
-  bool EnableTruePBR = !MatchedPath.empty();
-  bool EnableEnvMapping = TruePBRData.contains("env_mapping") && TruePBRData["env_mapping"] && !EnableTruePBR;
+  const bool EnableTruePBR = !MatchedPath.empty();
+  const bool EnableEnvMapping = TruePBRData.contains("env_mapping") && TruePBRData["env_mapping"] && !EnableTruePBR;
 
   // "delete" attribute
   if (TruePBRData.contains("delete") && TruePBRData["delete"]) {
@@ -509,7 +509,7 @@ auto PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader
     NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::PARALLAX, NewParallax, NIFModified);
   }
 
-  string Slot4;
+  const string Slot4;
   NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::CUBEMAP, Slot4, NIFModified);
 
   // "lock_rmaos" attribute
