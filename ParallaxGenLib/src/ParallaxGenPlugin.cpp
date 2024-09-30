@@ -180,6 +180,7 @@ void ParallaxGenPlugin::populateObjs() { libPopulateObjs(); }
 void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, const wstring &NIFPath,
                                      const wstring &Name3D, const int &Index3DOld, const int &Index3DNew) {
   if (AppliedShader == NIFUtil::ShapeShader::NONE) {
+    spdlog::trace(L"Plugin Patching | {} | {} | {} | Skipping: No shader applied", NIFPath, Name3D, Index3DOld);
     return;
   }
 
@@ -198,11 +199,14 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
         if (TXSTModMap[TXSTIndex].find(AppliedShader) == TXSTModMap[TXSTIndex].end()) {
           // TXST was patched, but not for the current shader. We need to make a new TXST record
           NewTXST = true;
+          spdlog::trace(L"Plugin Patching | {} | {} | {} | New TXST record needed", NIFPath, Name3D, Index3DOld);
         } else {
           // TXST was patched, and for the current shader. We need to determine if AltTex is set correctly
+          spdlog::trace(L"Plugin Patching | {} | {} | {} | TXST record already patched correctly", NIFPath, Name3D, Index3DOld);
           TXSTId = TXSTModMap[TXSTIndex][AppliedShader];
           if (TXSTId != TXSTIndex) {
             // We need to set it
+            spdlog::trace(L"Plugin Patching | {} | {} | {} | Setting alternate texture ID", NIFPath, Name3D, Index3DOld);
             libSetModelAltTex(AltTexIndex, TXSTId);
           }
           continue;
@@ -273,12 +277,14 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
     // Check if oldprefix is the same as newprefix
     if (OldSlots == NewSlots) {
       // No need to patch
+      spdlog::trace(L"Plugin Patching | {} | {} | {} | Not patching because nothing to change", NIFPath, Name3D, Index3DOld);
       continue;
     }
 
     // Patch record
     if (NewTXST) {
       // Create a new TXST record
+      spdlog::trace(L"Plugin Patching | {} | {} | {} | Creating a new TXST record and patching", NIFPath, Name3D, Index3DOld);
       TXSTId = libCreateNewTXSTPatch(AltTexIndex, NewSlots);
       {
         lock_guard<mutex> Lock(TXSTModMapMutex);
@@ -286,6 +292,7 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
       }
     } else {
       // Update the existing TXST record
+      spdlog::trace(L"Plugin Patching | {} | {} | {} | Patching an existing TXST record", NIFPath, Name3D, Index3DOld);
       libCreateTXSTPatch(TXSTIndex, NewSlots);
       {
         lock_guard<mutex> Lock(TXSTModMapMutex);
@@ -295,6 +302,7 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
 
     // Check if 3d index needs to be patched
     if (Index3DNew != Index3DOld) {
+      spdlog::trace(L"Plugin Patching | {} | {} | {} | Setting 3D index due to shape deletion", NIFPath, Name3D, Index3DOld);
       libSet3DIndex(AltTexIndex, Index3DNew);
     }
   }
