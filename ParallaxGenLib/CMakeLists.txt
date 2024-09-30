@@ -78,7 +78,7 @@ target_link_libraries(ParallaxGenLib PUBLIC
 target_include_directories(ParallaxGenLib PUBLIC include)
 
 # DNNE setup
-set(DNNE_OUTPUT_DIR ${CMAKE_SOURCE_DIR}/ParallaxGenMutagenWrapper/bin/Release/net8.0)
+set(DNNE_OUTPUT_DIR ${CMAKE_SOURCE_DIR}/ParallaxGenMutagenWrapper/x64/Release/net8.0)
 include_directories(${DNNE_OUTPUT_DIR})
 target_link_libraries(ParallaxGenLib PUBLIC ${DNNE_OUTPUT_DIR}/ParallaxGenMutagenWrapperNE.lib)
 file(GLOB PGMutagenWrapperDLLs "${DNNE_OUTPUT_DIR}/*.dll")
