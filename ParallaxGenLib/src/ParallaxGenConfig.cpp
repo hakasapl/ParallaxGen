@@ -135,11 +135,11 @@ auto ParallaxGenConfig::addConfigJSON(const nlohmann::json &J) -> void {
       ManualTextureMaps[boost::to_lower_copy(Item.key())] = NIFUtil::getTexTypeFromStr(Item.value().get<string>());
     }
   }
-
-  // "bsa_exclusionlist" field
-  if (J.contains("bsa_exclusionlist")) {
-    for (const auto &Item : J["bsa_exclusionlist"]) {
-      BSAExclusionList.insert(strToWstr(Item.get<string>()));
+  
+  // "vanilla_bsas" field
+  if (J.contains("vanilla_bsas")) {
+    for (const auto &Item : J["vanilla_bsas"]) {
+      VanillaBSAList.insert(strToWstr(Item.get<string>()));
     }
   }
 }
@@ -194,4 +194,4 @@ auto ParallaxGenConfig::getDynCubemapBlocklist() const -> const unordered_set<ws
 
 auto ParallaxGenConfig::getManualTextureMaps() const -> const unordered_map<filesystem::path, NIFUtil::TextureType> & { return ManualTextureMaps; }
 
-auto ParallaxGenConfig::getBSAExlusionList() const -> const std::set<std::wstring> & { return BSAExclusionList; }
+auto ParallaxGenConfig::getVanillaBSAList() const -> const std::set<std::wstring> & { return VanillaBSAList; }

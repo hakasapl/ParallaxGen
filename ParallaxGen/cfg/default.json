@@ -13,7 +13,7 @@
     "calientetools/**"
   ],
   "texture_maps": {},
-  "bsa_exclusionlist": [
+  "vanilla_bsas": [
     "Skyrim - Textures0.bsa",
     "Skyrim - Textures1.bsa",
     "Skyrim - Textures2.bsa",

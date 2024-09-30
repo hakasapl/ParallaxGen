@@ -203,10 +203,10 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   PGD.mapFiles(PGC.getNIFBlocklist(), PGC.getManualTextureMaps(), !Args.NoMapFromMeshes, !Args.NoMultithread,
                Args.HighMem);
 
-  auto BSAExcludes = PGC.getBSAExlusionList();
+  auto VanillaBSAList = PGC.getVanillaBSAList();
 
   spdlog::info("Finding complex material env maps");
-  PGD3D.findCMMaps(BSAExcludes);
+  PGD3D.findCMMaps(VanillaBSAList);
   spdlog::info("Done finding complex material env maps");
 
   // Load patcher static vars
