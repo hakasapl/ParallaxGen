@@ -136,7 +136,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
                Args.OutputDir.wstring());
 
   // Create bethesda game type object
-  BethesdaGame::GameType BGType = getGameTypeMap().at(Args.GameType);
+  BethesdaGame::GameType BGType = getGameTypeMap().at(Args.GameType); // NOLINT
 
   // Create relevant objects
   const BethesdaGame BG = BethesdaGame(BGType, Args.GameDir, true);

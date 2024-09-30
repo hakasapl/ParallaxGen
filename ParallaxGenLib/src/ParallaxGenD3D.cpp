@@ -371,8 +371,8 @@ auto ParallaxGenD3D::createComputeShader(const wstring &ShaderPath,
   compileShader(ShaderPath, CompiledShader);
 
   // Create shader
-  HRESULT HR = PtrDevice->CreateComputeShader(CompiledShader->GetBufferPointer(), CompiledShader->GetBufferSize(),
-                                              nullptr, ShaderDest.ReleaseAndGetAddressOf());
+  HRESULT HR = PtrDevice->CreateComputeShader(CompiledShader->GetBufferPointer(), CompiledShader->GetBufferSize(), // NOLINT
+                                              nullptr, ShaderDest.ReleaseAndGetAddressOf()); 
   if (FAILED(HR)) {
     spdlog::debug("Failed to create compute shader: {}", getHRESULTErrorMessage(HR));
     return ParallaxGenTask::PGResult::FAILURE;
@@ -770,7 +770,7 @@ auto ParallaxGenD3D::createBuffer(const void *Data, D3D11_BUFFER_DESC &Desc,
   D3D11_SUBRESOURCE_DATA InitData = {};
   InitData.pSysMem = Data;
 
-  HRESULT HR = PtrDevice->CreateBuffer(&Desc, &InitData, Dest.ReleaseAndGetAddressOf());
+  HRESULT HR = PtrDevice->CreateBuffer(&Desc, &InitData, Dest.ReleaseAndGetAddressOf()); // NOLINT
   if (FAILED(HR)) {
     spdlog::debug("Failed to create ID3D11Buffer on GPU: {}", getHRESULTErrorMessage(HR));
     return ParallaxGenTask::PGResult::FAILURE;

@@ -14,7 +14,7 @@ using namespace ParallaxGenUtil;
 
 // Statics
 std::unordered_set<wstring> PatcherComplexMaterial::DynCubemapBlocklist; // NOLINT
-bool PatcherComplexMaterial::DisableMLP;
+bool PatcherComplexMaterial::DisableMLP; // NOLINT
 
 auto PatcherComplexMaterial::loadStatics(const unordered_set<wstring> &DynCubemapBlocklist,
                                          const bool &DisableMLP) -> void {
