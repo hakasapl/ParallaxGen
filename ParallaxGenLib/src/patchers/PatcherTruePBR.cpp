@@ -91,6 +91,7 @@ void PatcherTruePBR::loadPatcherBuffers(const std::vector<std::filesystem::path>
     // "match_normal" attribute
     if (Config.second.contains("match_normal")) {
       auto RevNormal = ParallaxGenUtil::strToWstr(Config.second["match_normal"].get<string>());
+      RevNormal = NIFUtil::getTexBase(RevNormal);
       reverse(RevNormal.begin(), RevNormal.end());
 
       getTruePBRNormalInverse()[boost::to_lower_copy(RevNormal)].push_back(Config.first);
@@ -100,6 +101,7 @@ void PatcherTruePBR::loadPatcherBuffers(const std::vector<std::filesystem::path>
     // "match_diffuse" attribute
     if (Config.second.contains("match_diffuse")) {
       auto RevDiffuse = ParallaxGenUtil::strToWstr(Config.second["match_diffuse"].get<string>());
+      RevDiffuse = NIFUtil::getTexBase(RevDiffuse);
       reverse(RevDiffuse.begin(), RevDiffuse.end());
 
       getTruePBRDiffuseInverse()[boost::to_lower_copy(RevDiffuse)].push_back(Config.first);
@@ -275,12 +277,15 @@ auto PatcherTruePBR::insertTruePBRData(const wstring &LogPrefix,
   // Get PBR path, which is the path without the matched field
   auto MatchedFieldStr =
       CurCfg.contains("match_normal") ? CurCfg["match_normal"].get<string>() : CurCfg["match_diffuse"].get<string>();
-  auto MatchedField = ParallaxGenUtil::strToWstr(MatchedFieldStr);
+  auto MatchedField = NIFUtil::getTexBase(MatchedFieldStr);
   TexPath.erase(TexPath.length() - MatchedField.length(), MatchedField.length());
 
   // "rename" attribute
   if (CurCfg.contains("rename")) {
-    MatchedField = ParallaxGenUtil::strToWstr(CurCfg["rename"].get<string>());
+    auto RenameField = CurCfg["rename"].get<string>();
+    if (!boost::iequals(RenameField, MatchedField)) {
+      MatchedField = ParallaxGenUtil::strToWstr(RenameField);
+    }
   }
 
   spdlog::trace(L"{}PBR | {} | PBR texture path created: {}", LogPrefix, Cfg, MatchedField);
@@ -288,9 +293,11 @@ auto PatcherTruePBR::insertTruePBRData(const wstring &LogPrefix,
   // Check if named_field is a directory
   wstring MatchedPath = boost::to_lower_copy(TexPath + MatchedField);
   bool EnableTruePBR = (!CurCfg.contains("pbr") || CurCfg["pbr"]) && !MatchedPath.empty();
-  if (EnableTruePBR && !PGD->isPrefix(MatchedPath)) {
-    spdlog::trace(L"{}PBR | {} | PBR JSON Rejected: Path {} is not a prefix", LogPrefix, Cfg, MatchedPath);
-    return;
+  if (!CurCfg.contains("delete") || !CurCfg["delete"].get<bool>()) {
+    if (EnableTruePBR && !PGD->isPrefix(MatchedPath)) {
+      spdlog::trace(L"{}PBR | {} | PBR JSON Rejected: Path {} is not a prefix", LogPrefix, Cfg, MatchedPath);
+      return;
+    }
   }
 
   // If no pbr clear MatchedPath
