@@ -9,6 +9,13 @@
 #define NUM_TEXTURE_SLOTS 9
 
 namespace NIFUtil {
+enum class ShapeShader {
+  NONE,
+  TRUEPBR,
+  COMPLEXMATERIAL,
+  VANILLAPARALLAX
+};
+
 enum class TextureSlots : unsigned int {
   DIFFUSE,
   NORMAL,
@@ -96,6 +103,9 @@ auto getTexMatch(const std::wstring &Base,
                  const std::map<std::wstring, PGTexture> &SearchMap) -> PGTexture;
 // Gets all the texture prefixes for a textureset. ie. _n.dds is removed etc. for each slot
 auto getSearchPrefixes(nifly::NifFile &NIF, nifly::NiShape *NIFShape)
+    -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;
+
+auto getSearchPrefixes(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots)
     -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;
 
 } // namespace NIFUtil

@@ -6,6 +6,7 @@ set(HEADERS
     "include/ParallaxGen.hpp"
     "include/ParallaxGenConfig.hpp"
     "include/ParallaxGenD3D.hpp"
+    "include/ParallaxGenPlugin.hpp"
     "include/ParallaxGenTask.hpp"
     "include/ParallaxGenUtil.hpp"
     "include/ParallaxGenDirectory.hpp"
@@ -21,6 +22,7 @@ set(SOURCES
     "src/ParallaxGen.cpp"
     "src/ParallaxGenConfig.cpp"
     "src/ParallaxGenD3D.cpp"
+    "src/ParallaxGenPlugin.cpp"
     "src/ParallaxGenTask.cpp"
     "src/ParallaxGenUtil.cpp"
     "src/ParallaxGenDirectory.cpp"
@@ -74,6 +76,14 @@ target_link_libraries(ParallaxGenLib PUBLIC
     nlohmann_json_schema_validator::validator
 )
 target_include_directories(ParallaxGenLib PUBLIC include)
+
+# DNNE setup
+set(DNNE_OUTPUT_DIR ${CMAKE_SOURCE_DIR}/ParallaxGenMutagenWrapper/bin/Release/net8.0)
+include_directories(${DNNE_OUTPUT_DIR})
+target_link_libraries(ParallaxGenLib PUBLIC ${DNNE_OUTPUT_DIR}/ParallaxGenMutagenWrapperNE.lib)
+file(GLOB PGMutagenWrapperDLLs "${DNNE_OUTPUT_DIR}/*.dll")
+install(FILES ${PGMutagenWrapperDLLs} DESTINATION . )
+install(FILES ${DNNE_OUTPUT_DIR}/ParallaxGenMutagenWrapper.runtimeconfig.json DESTINATION . )
 
 install(FILES $<TARGET_RUNTIME_DLLS:ParallaxGenLib> DESTINATION . )
 

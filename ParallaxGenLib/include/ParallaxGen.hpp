@@ -6,6 +6,7 @@
 #include <mutex>
 #include <nlohmann/json.hpp>
 
+#include "NIFUtil.hpp"
 #include "ParallaxGenConfig.hpp"
 #include "ParallaxGenD3D.hpp"
 #include "ParallaxGenDirectory.hpp"
@@ -13,6 +14,8 @@
 #include "patchers/PatcherComplexMaterial.hpp"
 #include "patchers/PatcherTruePBR.hpp"
 #include "patchers/PatcherVanillaParallax.hpp"
+
+#define MESHES_LENGTH 7
 
 class ParallaxGen {
 private:
@@ -69,7 +72,7 @@ private:
   // processes a shape within a NIF file
   auto processShape(const std::filesystem::path &NIFPath, nifly::NifFile &NIF, nifly::NiShape *NIFShape,
                     PatcherVanillaParallax &PatchVP, PatcherComplexMaterial &PatchCM, PatcherTruePBR &PatchTPBR,
-                    bool &ShapeModified) const -> ParallaxGenTask::PGResult;
+                    bool &ShapeModified, bool &ShapeDeleted, NIFUtil::ShapeShader &ShaderApplied) const -> ParallaxGenTask::PGResult;
 
   // Zip methods
   void addFileToZip(mz_zip_archive &Zip, const std::filesystem::path &FilePath,

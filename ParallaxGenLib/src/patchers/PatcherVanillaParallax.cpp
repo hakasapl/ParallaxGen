@@ -4,14 +4,23 @@
 #include <spdlog/spdlog.h>
 
 #include "NIFUtil.hpp"
+#include "ParallaxGenDirectory.hpp"
+#include "ParallaxGenTask.hpp"
 #include "ParallaxGenUtil.hpp"
 
 using namespace std;
 using namespace ParallaxGenUtil;
 
-PatcherVanillaParallax::PatcherVanillaParallax(filesystem::path NIFPath, nifly::NifFile *NIF,
-                                               ParallaxGenConfig *PGC, ParallaxGenDirectory *PGD, ParallaxGenD3D *PGD3D)
-    : NIFPath(std::move(NIFPath)), NIF(NIF), PGD(PGD), PGC(PGC), PGD3D(PGD3D) {
+// Statics
+ParallaxGenDirectory *PatcherVanillaParallax::PGD;
+
+auto PatcherVanillaParallax::loadStatics(ParallaxGenDirectory *PGD) -> void {
+  PatcherVanillaParallax::PGD = PGD;
+}
+
+PatcherVanillaParallax::PatcherVanillaParallax(filesystem::path NIFPath, nifly::NifFile *NIF, ParallaxGenConfig *PGC,
+                                               ParallaxGenD3D *PGD3D)
+    : NIFPath(std::move(NIFPath)), NIF(NIF), PGC(PGC), PGD3D(PGD3D) {
   // Determine if NIF has attached havok animations
   vector<NiObject *> NIFBlockTree;
   NIF->GetTree(NIFBlockTree);
@@ -34,8 +43,6 @@ auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<wstring,
   auto *NIFShader = NIF->GetShader(NIFShape);
   auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
 
-  static const auto *HeightBaseMap = &PGD->getTextureMapConst(NIFUtil::TextureSlots::PARALLAX);
-
   EnableResult = true; // Start with default true
 
   // Check if nif has attached havok (Results in crashes for vanilla Parallax)
@@ -46,20 +53,10 @@ auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<wstring,
     return Result;
   }
 
-  // Check if vanilla parallax file exists
-  static const vector<int> SlotSearch = {0, 1};  // Diffuse first, then normal
-  for (int Slot : SlotSearch) {
-    auto FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], *HeightBaseMap).Path.wstring();
-    if (!FoundMatch.empty()) {
-      // found parallax map
-      spdlog::trace(L"NIF: {} | Shape: {} | Parallax | Found parallax map: {}", NIFPath.wstring(), ShapeBlockID, MatchedPath);
-      MatchedPath = FoundMatch;
-      break;
-    }
-  }
-
-  if (MatchedPath.empty()) {
-    // no parallax map
+  // Check if parallax map exists
+  if (shouldApplySlots(SearchPrefixes, MatchedPath)) {
+    spdlog::trace(L"NIF: {} | Shape: {} | Parallax | Found parallax map: {}", NIFPath.wstring(), ShapeBlockID, MatchedPath);
+  } else {
     spdlog::trace(L"NIF: {} | Shape: {} | Parallax | No parallax map found", NIFPath.wstring(), ShapeBlockID);
     EnableResult = false;
     return Result;
@@ -134,6 +131,24 @@ auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<wstring,
   return Result;
 }
 
+auto PatcherVanillaParallax::shouldApplySlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes,
+                                              std::wstring &MatchedPath) -> bool {
+  static const auto *HeightBaseMap = &PGD->getTextureMapConst(NIFUtil::TextureSlots::PARALLAX);
+
+  // Check if vanilla parallax file exists
+  static const vector<int> SlotSearch = {0, 1}; // Diffuse first, then normal
+  for (int Slot : SlotSearch) {
+    auto FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], *HeightBaseMap).Path.wstring();
+    if (!FoundMatch.empty()) {
+      // found parallax map
+      MatchedPath = FoundMatch;
+      break;
+    }
+  }
+
+  return !MatchedPath.empty();
+}
+
 auto PatcherVanillaParallax::applyPatch(NiShape *NIFShape, const wstring &MatchedPath,
                                         bool &NIFModified) -> ParallaxGenTask::PGResult {
   // enable Parallax on shape
@@ -162,4 +177,13 @@ auto PatcherVanillaParallax::applyPatch(NiShape *NIFShape, const wstring &Matche
   NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::PARALLAX, MatchedPath, NIFModified);
 
   return Result;
+}
+
+auto PatcherVanillaParallax::applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
+                                             const std::wstring &MatchedPath) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
+  array<wstring, NUM_TEXTURE_SLOTS> NewSlots = OldSlots;
+
+  NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::PARALLAX)] = MatchedPath;
+
+  return NewSlots;
 }
