@@ -5,15 +5,11 @@
 #include <shlwapi.h>
 #include <spdlog/spdlog.h>
 
-#include <algorithm>
 #include <binary_io/binary_io.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/iostreams/device/mapped_file.hpp>
-#include <filesystem>
 #include <fstream>
-#include <set>
-#include <string>
 
 // BSA Includes
 #include <cstdio>
@@ -79,9 +75,7 @@ void BethesdaDirectory::populateFileMap(bool IncludeBSAs) {
   addLooseFilesToMap();
 }
 
-auto BethesdaDirectory::getFileMap() const -> const map<filesystem::path, BethesdaDirectory::BethesdaFile> & {
-  return FileMap;
-}
+auto BethesdaDirectory::getFileMap() const -> const map<filesystem::path, BethesdaDirectory::BethesdaFile>& { return FileMap; }
 
 auto BethesdaDirectory::getFile(const filesystem::path &RelPath, const bool &CacheFile) -> vector<std::byte> {
   // find bsa/loose file to open

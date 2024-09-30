@@ -9,9 +9,10 @@
 #include <mutex>
 #include <string>
 #include <vector>
+#include <set>
 
 #include "BethesdaGame.hpp"
-#include <set>
+
 
 constexpr unsigned ASCII_UPPER_BOUND = 127;
 
