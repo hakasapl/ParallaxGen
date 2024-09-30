@@ -1,7 +1,9 @@
 #include "ParallaxGenPlugin.hpp"
 
+#include <mutex>
 #include <spdlog/spdlog.h>
 #include <unordered_map>
+#include <winbase.h>
 
 #include "NIFUtil.hpp"
 #include "ParallaxGenMutagenWrapperNE.h"
@@ -138,18 +140,31 @@ void ParallaxGenPlugin::libSet3DIndex(const int &AltTexIndex, const int &Index3D
   libThrowExceptionIfExists();
 }
 
-auto ParallaxGenPlugin::libGetTXSTFormID(const int &TXSTIndex) -> unsigned int {
+auto ParallaxGenPlugin::libGetTXSTFormID(const int &TXSTIndex) -> tuple<unsigned int, wstring> {
   lock_guard<mutex> Lock(LibMutex);
 
+  wchar_t* PluginName = nullptr;
   unsigned int FormID = 0;
-  GetTXSTFormID(TXSTIndex, &FormID);
+  GetTXSTFormID(TXSTIndex, &FormID, &PluginName);
   libThrowExceptionIfExists();
 
-  return FormID;
+  wstring PluginNameString;
+  if (PluginName != nullptr) {
+    PluginNameString = wstring(PluginName);
+    GlobalFree(static_cast<HGLOBAL>(PluginName));  // Only free if memory was allocated.
+  } else {
+    // Handle the case where PluginName is null (e.g., log an error, throw an exception, etc.).
+    PluginNameString = L"Unknown";  // Or some default behavior.
+  }
+
+  return make_tuple(FormID, PluginNameString);
 }
 
 mutex ParallaxGenPlugin::TXSTModMapMutex;
 unordered_map<int, unordered_map<NIFUtil::ShapeShader, int>> ParallaxGenPlugin::TXSTModMap;  // NOLINT
+
+mutex ParallaxGenPlugin::TXSTWarningMapMutex;
+unordered_map<int, NIFUtil::ShapeShader> ParallaxGenPlugin::TXSTWarningMap;  // NOLINT
 
 void ParallaxGenPlugin::initialize(const BethesdaGame &Game) {
   static const unordered_map<BethesdaGame::GameType, int> MutagenGameTypeMap = {
@@ -242,9 +257,16 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
 
     // Check if TXST was able to be patched
     if (!PatchTXST) {
-      // TODO only show one warning per TXST record
-      spdlog::warn("TXST record with Form ID {} is not able to be patched with {}. This will cause issues",
-                   libGetTXSTFormID(TXSTIndex), ShaderLabel);
+      lock_guard<mutex> Lock(TXSTWarningMapMutex);
+
+      if (TXSTWarningMap.find(TXSTIndex) != TXSTWarningMap.end() && TXSTWarningMap[TXSTIndex] == AppliedShader) {
+        // Warning already issued
+        continue;
+      }
+
+      TXSTWarningMap[TXSTIndex] = AppliedShader;
+      const auto [FormID, PluginName] = libGetTXSTFormID(TXSTIndex);
+      spdlog::warn(L"TXST record is not able to patched for {}: {} / {}", ParallaxGenUtil::strToWstr(ShaderLabel), PluginName, FormID);
       continue;
     }
 

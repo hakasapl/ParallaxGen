@@ -46,7 +46,7 @@ void ParallaxGen::upgradeShaders() {
   }
 }
 
-void ParallaxGen::patchMeshes(const bool &MultiThread) {
+void ParallaxGen::patchMeshes(const bool &MultiThread, const bool &PatchPlugin) {
   auto Meshes = PGD->getMeshes();
 
   // Create task tracker
@@ -69,10 +69,10 @@ void ParallaxGen::patchMeshes(const bool &MultiThread) {
     boost::asio::thread_pool MeshPatchPool(NumThreads);
 
     for (const auto &Mesh : Meshes) {
-      boost::asio::post(MeshPatchPool, [this, &TaskTracker, &DiffJSON, Mesh] {
+      boost::asio::post(MeshPatchPool, [this, &TaskTracker, &DiffJSON, &Mesh, &PatchPlugin] {
         ParallaxGenTask::PGResult Result = ParallaxGenTask::PGResult::SUCCESS;
         try {
-          Result = processNIF(Mesh, DiffJSON);
+          Result = processNIF(Mesh, DiffJSON, PatchPlugin);
         } catch (const exception &E) {
           spdlog::error(L"Exception in thread patching NIF {}: {}", Mesh.wstring(), strToWstr(E.what()));
           Result = ParallaxGenTask::PGResult::FAILURE;
@@ -209,7 +209,7 @@ auto ParallaxGen::getOutputZipName() -> filesystem::path { return "ParallaxGen_O
 auto ParallaxGen::getDiffJSONName() -> filesystem::path { return "ParallaxGen_Diff.json"; }
 
 // shorten some enum names
-auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &DiffJSON) -> ParallaxGenTask::PGResult {
+auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &DiffJSON, const bool &PatchPlugin) -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   spdlog::trace(L"NIF: {} | Starting processing", NIFFile.wstring());
@@ -261,9 +261,11 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
     if (ShapeModified) {
       NIFModified = true;
 
-      // Process plugin
-      auto ShapeName = strToWstr(NIFShape->name.get());
-      ParallaxGenPlugin::processShape(ShaderApplied, NIFFile.wstring(), ShapeName, OldShapeIndex, NewShapeIndex);
+      if (PatchPlugin) {
+        // Process plugin
+        auto ShapeName = strToWstr(NIFShape->name.get());
+        ParallaxGenPlugin::processShape(ShaderApplied, NIFFile.wstring(), ShapeName, OldShapeIndex, NewShapeIndex);
+      }
     }
 
     if (Result == ParallaxGenTask::PGResult::SUCCESS) {

@@ -21,10 +21,13 @@ private:
   static auto libCreateNewTXSTPatch(const int &AltTexIndex, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots) -> int;
   static void libSetModelAltTex(const int &AltTexIndex, const int &TXSTIndex);
   static void libSet3DIndex(const int &AltTexIndex, const int &Index3D);
-  static auto libGetTXSTFormID(const int &TXSTIndex) -> unsigned int;
+  static auto libGetTXSTFormID(const int &TXSTIndex) -> std::tuple<unsigned int, std::wstring>;
 
   static std::mutex TXSTModMapMutex;
   static std::unordered_map<int, std::unordered_map<NIFUtil::ShapeShader, int>> TXSTModMap;
+
+  static std::mutex TXSTWarningMapMutex;
+  static std::unordered_map<int, NIFUtil::ShapeShader> TXSTWarningMap;
 
 public:
   static void initialize(const BethesdaGame &Game);

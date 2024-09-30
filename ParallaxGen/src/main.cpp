@@ -149,7 +149,6 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   auto PGD3D = ParallaxGenD3D(&PGD, Args.OutputDir, ExePath, !Args.NoGPU);
   auto PG = ParallaxGen(Args.OutputDir, &PGD, &PGC, &PGD3D, Args.OptimizeMeshes, Args.IgnoreParallax,
                                Args.IgnoreComplexMaterial, Args.IgnoreTruePBR);
-  ParallaxGenPlugin::initialize(BG);
 
   // Check if GPU needs to be initialized
   if (!Args.NoGPU) {
@@ -165,9 +164,6 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
     cout << "Press ENTER to start ParallaxGen...";
     cin.get();
   }
-
-  // Init PGP library
-  ParallaxGenPlugin::populateObjs();
 
   // Get current time to compare later
   const auto StartTime = chrono::high_resolution_clock::now();
@@ -196,6 +192,13 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
     spdlog::critical("ParallaxGen meshes exist in your data directory, please delete before "
                      "re-running.");
     exit(1);
+  }
+
+  // Init PGP library
+  if (!Args.NoPlugin) {
+    spdlog::info("Initializing plugin patcher");
+    ParallaxGenPlugin::initialize(BG);
+    ParallaxGenPlugin::populateObjs();
   }
 
   // Populate file map from data directory
@@ -227,7 +230,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   // Patch meshes if set
   if (!Args.IgnoreParallax || !Args.IgnoreComplexMaterial || !Args.IgnoreTruePBR) {
-    PG.patchMeshes(!Args.NoMultithread);
+    PG.patchMeshes(!Args.NoMultithread, !Args.NoPlugin);
   }
 
   // Release cached files, if any
@@ -236,7 +239,10 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   spdlog::info("ParallaxGen has finished patching meshes.");
 
   // Write plugin
-  ParallaxGenPlugin::savePlugin(Args.OutputDir);
+  if (!Args.NoPlugin) {
+    spdlog::info("Saving ParallaxGen.esp");
+    ParallaxGenPlugin::savePlugin(Args.OutputDir);
+  }
 
   // Deploy dynamic cubemap file
   deployDynamicCubemapFile(&PGD, Args.OutputDir, ExePath);

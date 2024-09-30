@@ -753,7 +753,6 @@ public class PGMutagen
   [UnmanagedCallersOnly(EntryPoint = "Set3DIndex", CallConvs = [typeof(CallConvCdecl)])]
   public static void Set3DIndex([DNNE.C99Type("const int")] int AltTexHandle, [DNNE.C99Type("const int")] int NewIndex)
   {
-    // TODO we very likely need to redo all the indexes here instead of just matching
     try
     {
       var oldAltTex = AltTexRefs[AltTexHandle];
@@ -769,6 +768,7 @@ public class PGMutagen
           continue;
         }
 
+        bool foundMatch = false;
         foreach (var alternateTexture in modelRec.AlternateTextures)
         {
           if (alternateTexture.Name == oldAltTex.Name && alternateTexture.Index == oldAltTex.Index && alternateTexture.NewTexture == oldAltTex.NewTexture)
@@ -776,8 +776,17 @@ public class PGMutagen
             // Found the one to update
             ModifiedModeledRecords.Add(ModeledRecordId);
             alternateTexture.Index = NewIndex;
-            return;
+            foundMatch = true;
           }
+
+          if (foundMatch) {
+            // After finding a match decrement all indices by 1
+            alternateTexture.Index--;
+          }
+        }
+
+        if (foundMatch) {
+          return;
         }
       }
     }
@@ -788,11 +797,12 @@ public class PGMutagen
   }
 
   [UnmanagedCallersOnly(EntryPoint = "GetTXSTFormID", CallConvs = [typeof(CallConvCdecl)])]
-  public static unsafe void GetTXSTFormID([DNNE.C99Type("const int")] int TXSTHandle, [DNNE.C99Type("unsigned int*")] uint* FormID)
+  public static unsafe void GetTXSTFormID([DNNE.C99Type("const int")] int TXSTHandle, [DNNE.C99Type("unsigned int*")] uint* FormID, [DNNE.C99Type("wchar_t**")] IntPtr* PluginName)
   {
     try
     {
       var txstObj = TXSTObjs[TXSTHandle];
+      *PluginName = Marshal.StringToHGlobalUni(txstObj.FormKey.ModKey.FileName);
       *FormID = txstObj.FormKey.ID;
     }
     catch (Exception ex)

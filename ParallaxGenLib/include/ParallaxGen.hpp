@@ -46,7 +46,7 @@ public:
   // upgrades textures whenever possible
   void upgradeShaders();
   // enables parallax on relevant meshes
-  void patchMeshes(const bool &MultiThread = true);
+  void patchMeshes(const bool &MultiThread = true, const bool &PatchPlugin = true);
   // zips all meshes and removes originals
   void zipMeshes() const;
   // deletes generated meshes
@@ -67,7 +67,7 @@ private:
   auto convertHeightMapToComplexMaterial(const std::filesystem::path &HeightMap) -> ParallaxGenTask::PGResult;
 
   // processes a NIF file (enable parallax if needed)
-  auto processNIF(const std::filesystem::path &NIFFile, nlohmann::json &DiffJSON) -> ParallaxGenTask::PGResult;
+  auto processNIF(const std::filesystem::path &NIFFile, nlohmann::json &DiffJSON, const bool &PatchPlugin = true) -> ParallaxGenTask::PGResult;
 
   // processes a shape within a NIF file
   auto processShape(const std::filesystem::path &NIFPath, nifly::NifFile &NIF, nifly::NiShape *NIFShape,
