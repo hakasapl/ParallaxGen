@@ -244,44 +244,37 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
 
   // Patch each shape in NIF
   size_t NumShapes = 0;
-  int PluginShapeIndex = 0;
+  int OldShapeIndex = 0;
+  int NewShapeIndex = 0;
   bool OneShapeSuccess = false;
   for (NiShape *NIFShape : NIF.GetShapes()) {
     NumShapes++;
 
     bool ShapeModified = false;
+    bool ShapeDeleted = false;
     NIFUtil::ShapeShader ShaderApplied = NIFUtil::ShapeShader::NONE;
     ParallaxGenTask::updatePGResult(Result,
-                                    processShape(NIFFile, NIF, NIFShape, PatchVP, PatchCM, PatchTPBR, ShapeModified, ShaderApplied),
+                                    processShape(NIFFile, NIF, NIFShape, PatchVP, PatchCM, PatchTPBR, ShapeModified, ShapeDeleted, ShaderApplied),
                                     ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
 
     // Update NIFModified if shape was modified
     if (ShapeModified) {
       NIFModified = true;
 
-      // Lock guard for modifying TXSTRefsMap
-      lock_guard<mutex> Lock(TXSTRefsMapMutex);
-
-      // Create plugin key
+      // Process plugin
       auto ShapeName = strToWstr(NIFShape->name.get());
-
-      wstring NIFPathKey = boost::to_lower_copy(NIFFile.wstring());
-      // Remove meshes from the start of the string
-      if (boost::starts_with(NIFPathKey, L"meshes\\")) {
-        NIFPathKey = NIFPathKey.substr(MESHES_LENGTH);
-      }
-
-      auto PluginKey = ParallaxGenPlugin::TXSTRefID(NIFPathKey, ShapeName, PluginShapeIndex);
-
-      // Add to member var
-      TXSTRefsMap[PluginKey] = ShaderApplied;
+      ParallaxGenPlugin::processShape(ShaderApplied, NIFFile.wstring(), ShapeName, OldShapeIndex, NewShapeIndex);
     }
 
     if (Result == ParallaxGenTask::PGResult::SUCCESS) {
       OneShapeSuccess = true;
     }
 
-    PluginShapeIndex++;
+    if (!ShapeDeleted) {
+      NewShapeIndex++;
+    }
+
+    OldShapeIndex++;
   }
 
   if (!OneShapeSuccess && NumShapes > 0) {
@@ -332,7 +325,7 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
 
 auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, NiShape *NIFShape,
                                PatcherVanillaParallax &PatchVP, PatcherComplexMaterial &PatchCM,
-                               PatcherTruePBR &PatchTPBR, bool &ShapeModified, NIFUtil::ShapeShader &ShaderApplied) const -> ParallaxGenTask::PGResult {
+                               PatcherTruePBR &PatchTPBR, bool &ShapeModified, bool &ShapeDeleted, NIFUtil::ShapeShader &ShaderApplied) const -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Prep
@@ -391,10 +384,12 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
         spdlog::trace(L"NIF: {} | Shape: {} | PBR | Applying PBR Config {}", NIFPath.wstring(), ShapeBlockID,
                       TruePBRCFG.first);
         ParallaxGenTask::updatePGResult(Result, PatchTPBR.applyPatch(NIFShape, get<0>(TruePBRCFG.second),
-                                                                     get<1>(TruePBRCFG.second), ShapeModified));
+                                                                     get<1>(TruePBRCFG.second), ShapeModified, ShapeDeleted));
       }
 
-      ShaderApplied = NIFUtil::ShapeShader::TRUEPBR;
+      if (!ShapeDeleted) {
+        ShaderApplied = NIFUtil::ShapeShader::TRUEPBR;
+      }
 
       return Result;
     }

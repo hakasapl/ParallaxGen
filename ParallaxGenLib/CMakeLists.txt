@@ -13,7 +13,6 @@ set(HEADERS
     "include/patchers/PatcherComplexMaterial.hpp"
     "include/patchers/PatcherTruePBR.hpp"
     "include/patchers/PatcherVanillaParallax.hpp"
-    "include/XEditLibCpp.hpp"
 )
 
 set(SOURCES
@@ -30,7 +29,6 @@ set(SOURCES
     "src/patchers/PatcherComplexMaterial.cpp"
     "src/patchers/PatcherTruePBR.cpp"
     "src/patchers/PatcherVanillaParallax.cpp"
-    "src/XEditLibCpp.cpp"
 )
 
 include_directories("include")
@@ -79,7 +77,13 @@ target_link_libraries(ParallaxGenLib PUBLIC
 )
 target_include_directories(ParallaxGenLib PUBLIC include)
 
-file(COPY ${CMAKE_SOURCE_DIR}/ParallaxGenLib/external/XEditLib.dll DESTINATION ${CMAKE_BINARY_DIR}/)
+# DNNE setup
+set(DNNE_OUTPUT_DIR ${CMAKE_SOURCE_DIR}/ParallaxGenMutagenWrapper/bin/Release/net8.0)
+include_directories(${DNNE_OUTPUT_DIR})
+target_link_libraries(ParallaxGenLib PUBLIC ${DNNE_OUTPUT_DIR}/ParallaxGenMutagenWrapperNE.lib)
+file(GLOB PGMutagenWrapperDLLs "${DNNE_OUTPUT_DIR}/*.dll")
+install(FILES ${PGMutagenWrapperDLLs} DESTINATION . )
+install(FILES ${DNNE_OUTPUT_DIR}/ParallaxGenMutagenWrapper.runtimeconfig.json DESTINATION . )
 
 install(FILES $<TARGET_RUNTIME_DLLS:ParallaxGenLib> DESTINATION . )
 
@@ -91,5 +95,3 @@ elseif(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/lz4d.dll DESTINATION . )
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/zlibd1.dll DESTINATION . )
 endif()
-
-install(FILES ${CMAKE_BINARY_DIR}/XEditLib.dll DESTINATION . )

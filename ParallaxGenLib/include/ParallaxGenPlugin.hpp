@@ -1,83 +1,37 @@
 #pragma once
 
-#include <string>
+#include <filesystem>
+#include <mutex>
 #include <unordered_map>
-#include <unordered_set>
-#include <vector>
+#include <windows.h>
 
 #include "BethesdaGame.hpp"
 #include "NIFUtil.hpp"
-#include "ParallaxGenTask.hpp"
-#include "XEditLibCpp.hpp"
 
-#define PLUGIN_LOADER_CHECK_INTERVAL 100
-#define HASH_GOLDENRATIO 0x9e3779b9
-#define HASH_LEFTWISE 6
-#define HASH_RIGHTWISE 2
-
-#define TEXTURES_LENGTH 9
-
-#define FORMID_BASE 16
-
-class ParallaxGenPlugin : public XEditLibCpp {
+class ParallaxGenPlugin {
 private:
-  std::vector<std::wstring> ActivePlugins;
+  static std::mutex LibMutex;
+  static void libThrowExceptionIfExists();
+  static void libInitialize(const int &GameType, const std::wstring &DataPath, const std::wstring &OutputPlugin);
+  static void libPopulateObjs();
+  static void libFinalize(const std::filesystem::path &OutputPath);
+  static auto libGetMatchingTXSTObjs(const std::wstring &NIFName, const std::wstring &Name3D, const int &Index3D) -> std::vector<std::tuple<int, int>>;
+  static auto libGetTXSTSlots(const int &TXSTIndex) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;
+  static void libCreateTXSTPatch(const int &TXSTIndex, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots);
+  static auto libCreateNewTXSTPatch(const int &AltTexIndex, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots) -> int;
+  static void libSetModelAltTex(const int &AltTexIndex, const int &TXSTIndex);
+  static void libSet3DIndex(const int &AltTexIndex, const int &Index3D);
+  static auto libGetTXSTFormID(const int &TXSTIndex) -> unsigned int;
 
-  // A helper to combine hash values
-  template <typename T> static void hashCombine(std::size_t &Seed, const T &Value) {
-    std::hash<T> Hasher;
-    Seed ^= Hasher(Value) + HASH_GOLDENRATIO + (Seed << HASH_LEFTWISE) + (Seed >> HASH_RIGHTWISE);
-  }
-
-  std::unordered_set<unsigned int> PatchedTXSTTracker;
+  static std::mutex TXSTModMapMutex;
+  static std::unordered_map<int, std::unordered_map<NIFUtil::ShapeShader, int>> TXSTModMap;
 
 public:
-  struct TXSTRefID {
-    std::wstring NIFPath;
-    std::wstring Name3D;
-    int Index3D;
+  static void initialize(const BethesdaGame &Game);
 
-    // Equality operator (needed for std::unordered_map)
-    auto operator==(const TXSTRefID &Other) const -> bool {
-      return NIFPath == Other.NIFPath && Name3D == Other.Name3D && Index3D == Other.Index3D;
-    }
-  };
+  static void populateObjs();
 
-  struct TXSTRefIDHash {
-    auto operator()(const TXSTRefID &Object) const -> size_t {
-      std::size_t Seed = 0;
+  static void processShape(const NIFUtil::ShapeShader &AppliedShader, const std::wstring &NIFPath, const std::wstring &Name3D, const int &Index3DOld, const int &Index3DNew);
 
-      // Hash each element of the tuple and combine them
-      hashCombine(Seed, Object.NIFPath); // Hash the first wstring
-      hashCombine(Seed, Object.Name3D);  // Hash the second wstring
-      hashCombine(Seed, Object.Index3D); // Hash the int
-
-      return Seed;
-    }
-  };
-
-private:
-  std::unordered_map<TXSTRefID, std::unordered_set<unsigned int>, TXSTRefIDHash> TXSTRefsMap;
-  int InitResult = 0;
-
-  static auto getPluginSlotFromNifSlot(const NIFUtil::TextureSlots &Slot) -> std::wstring;
-  static auto getNifSlotFromPluginSlot(const std::wstring &Slot) -> NIFUtil::TextureSlots;
-
-public:
-  ParallaxGenPlugin(const BethesdaGame &Game);
-
-  void initThread();
-  auto init() -> ParallaxGenTask::PGResult;
-  [[nodiscard]] auto isInitDone() const -> bool;
-  [[nodiscard]] auto getInitResult() const -> int;
-
-  auto
-  createPlugin(const std::filesystem::path &OutputDir,
-               const std::unordered_map<ParallaxGenPlugin::TXSTRefID, NIFUtil::ShapeShader,
-                                        ParallaxGenPlugin::TXSTRefIDHash> &MeshTXSTMap) -> ParallaxGenTask::PGResult;
-
-private:
-  void addAlternateTexturesToMap(const unsigned int &Id, const std::wstring &MDLKey, const std::wstring &AltTXSTKey,
-                                 const std::string &TXSTFormIDHex, const unsigned int &TXSTId);
-  static auto getOutputPluginName() -> std::filesystem::path;
+  static void savePlugin(const std::filesystem::path &OutputDir);
 };

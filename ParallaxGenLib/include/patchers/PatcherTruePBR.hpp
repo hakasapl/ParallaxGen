@@ -57,7 +57,7 @@ public:
   // applies truepbr config on a shape in a NIF (always applies with config, but
   // maybe PBR is disabled)
   auto applyPatch(nifly::NiShape *NIFShape, nlohmann::json &TruePBRData, const std::wstring &MatchedPath,
-                  bool &NIFModified) const -> ParallaxGenTask::PGResult;
+                  bool &NIFModified, bool &ShapeDeleted) const -> ParallaxGenTask::PGResult;
 
   static auto applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots, const nlohmann::json &TruePBRData, const std::wstring &MatchedPath) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;
 

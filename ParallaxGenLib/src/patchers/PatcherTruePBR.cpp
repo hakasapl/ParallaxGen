@@ -303,7 +303,7 @@ auto PatcherTruePBR::insertTruePBRData(const wstring &LogPrefix,
 }
 
 auto PatcherTruePBR::applyPatch(NiShape *NIFShape, nlohmann::json &TruePBRData, const std::wstring &MatchedPath,
-                                bool &NIFModified) const -> ParallaxGenTask::PGResult {
+                                bool &NIFModified, bool &ShapeDeleted) const -> ParallaxGenTask::PGResult {
 
   // enable TruePBR on shape
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
@@ -318,6 +318,7 @@ auto PatcherTruePBR::applyPatch(NiShape *NIFShape, nlohmann::json &TruePBRData, 
   if (TruePBRData.contains("delete") && TruePBRData["delete"]) {
     NIF->DeleteShape(NIFShape);
     NIFModified = true;
+    ShapeDeleted = true;
     return Result;
   }
 

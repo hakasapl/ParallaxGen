@@ -143,13 +143,13 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   BethesdaGame::GameType BGType = getGameTypeMap().at(Args.GameType);
 
   // Create relevant objects
-  BethesdaGame BG = BethesdaGame(BGType, Args.GameDir, true);
-  ParallaxGenPlugin PGP = ParallaxGenPlugin(BG);
-  ParallaxGenDirectory PGD = ParallaxGenDirectory(BG);
-  ParallaxGenConfig PGC = ParallaxGenConfig(&PGD, ExePath);
-  ParallaxGenD3D PGD3D = ParallaxGenD3D(&PGD, Args.OutputDir, ExePath, !Args.NoGPU);
-  ParallaxGen PG = ParallaxGen(Args.OutputDir, &PGD, &PGC, &PGD3D, Args.OptimizeMeshes, Args.IgnoreParallax,
+  auto BG = BethesdaGame(BGType, Args.GameDir, true);
+  auto PGD = ParallaxGenDirectory(BG);
+  auto PGC = ParallaxGenConfig(&PGD, ExePath);
+  auto PGD3D = ParallaxGenD3D(&PGD, Args.OutputDir, ExePath, !Args.NoGPU);
+  auto PG = ParallaxGen(Args.OutputDir, &PGD, &PGC, &PGD3D, Args.OptimizeMeshes, Args.IgnoreParallax,
                                Args.IgnoreComplexMaterial, Args.IgnoreTruePBR);
+  ParallaxGenPlugin::initialize(BG);
 
   // Check if GPU needs to be initialized
   if (!Args.NoGPU) {
@@ -166,10 +166,8 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
     cin.get();
   }
 
-  // Launch PGP init thread
-  if (!Args.NoPlugin) {
-    PGP.initThread();
-  }
+  // Init PGP library
+  ParallaxGenPlugin::populateObjs();
 
   // Get current time to compare later
   const auto StartTime = chrono::high_resolution_clock::now();
@@ -237,27 +235,11 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   spdlog::info("ParallaxGen has finished patching meshes.");
 
+  // Write plugin
+  ParallaxGenPlugin::savePlugin(Args.OutputDir);
+
   // Deploy dynamic cubemap file
   deployDynamicCubemapFile(&PGD, Args.OutputDir, ExePath);
-
-  if (!Args.NoPlugin) {
-    // Wait for plugin init to finish
-    if (!PGP.isInitDone()) {
-      spdlog::info("Waiting for plugin loader to finish initialization...");
-    }
-
-    while (!PGP.isInitDone()) {
-      Sleep(PLUGIN_LOADER_CHECK_INTERVAL);
-    }
-
-    if (PGP.getInitResult() != 1) {
-      spdlog::critical("Failed to initialize ParallaxGen plugin");
-      exit(1);
-    }
-
-    // Create plugin
-    PGP.createPlugin(Args.OutputDir, PG.getTXSTRefsMap());
-  }
 
   // archive
   if (!Args.NoZip) {
@@ -438,10 +420,11 @@ auto main(int ArgC, char **ArgV) -> int {
   try {
     mainRunner(Args, ExePath);
   } catch (const exception &E) {
+    auto Trace = boost::stacktrace::stacktrace();
     spdlog::critical("An unhandled exception occurred (Please provide this entire message "
                      "in your bug report).\n\nException type: {}\nMessage: {}\nStack Trace: "
                      "\n{}",
-                     typeid(E).name(), E.what(), boost::stacktrace::to_string(boost::stacktrace::stacktrace()));
+                     typeid(E).name(), E.what(), boost::stacktrace::to_string(Trace));
     cout << "Press ENTER to abort...";
     cin.get();
     abort();

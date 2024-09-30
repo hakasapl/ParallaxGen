@@ -3,6 +3,7 @@
     "boost-algorithm",
     "boost-asio",
     "boost-container",
+    "boost-crc",
     "boost-filesystem",
     "boost-iostreams",
     "boost-stacktrace",
@@ -30,7 +31,6 @@
         "wchar"
       ]
     },
-    "zlib",
-    "boost-crc"
+    "zlib"
   ]
 }
