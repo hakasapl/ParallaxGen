@@ -41,7 +41,7 @@ auto ParallaxGenConfig::getConfigValidation() -> nlohmann::json {
           "type": "string"
         }
       },
-      "bsa_exclusionlist" : {
+      "vanilla_bsas" : {
         "type" : "array",
         "items": {
             "type": "string"
@@ -194,4 +194,4 @@ auto ParallaxGenConfig::getDynCubemapBlocklist() const -> const unordered_set<ws
 
 auto ParallaxGenConfig::getManualTextureMaps() const -> const unordered_map<filesystem::path, NIFUtil::TextureType> & { return ManualTextureMaps; }
 
-auto ParallaxGenConfig::getVanillaBSAList() const -> const std::set<std::wstring> & { return VanillaBSAList; }
+auto ParallaxGenConfig::getVanillaBSAList() const -> const std::unordered_set<std::wstring> & { return VanillaBSAList; }
