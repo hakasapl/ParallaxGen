@@ -1,6 +1,5 @@
 ﻿namespace ParallaxGenMutagenWrapper;
 
-// TODO debug CLI
 // Base Imports
 using System;
 using System.IO;
@@ -14,7 +13,6 @@ using Mutagen.Bethesda.Environments;
 using Mutagen.Bethesda.Plugins;
 using Mutagen.Bethesda.Plugins.Binary.Parameters;
 using Mutagen.Bethesda.Plugins.Records;
-using FluentResults;
 using Noggog;
 
 public static class ExceptionHandler
@@ -26,32 +24,52 @@ public static class ExceptionHandler
     // Find the deepest inner exception
     while (ex is not null)
     {
-      LastExceptionMessage += "\n" + ex.Message;
+      LastExceptionMessage += "\n" + ex.Message + "\n" + ex.StackTrace;
       ex = ex.InnerException;
     }
   }
 
-  [UnmanagedCallersOnly(EntryPoint = "GetLastExceptionLength", CallConvs = [typeof(CallConvCdecl)])]
-  public static unsafe void GetLastExceptionLength([DNNE.C99Type("int*")] int* length)
-  {
-    *length = LastExceptionMessage?.Length ?? 0;
-  }
-
   [UnmanagedCallersOnly(EntryPoint = "GetLastException", CallConvs = [typeof(CallConvCdecl)])]
-  public static void GetLastException([DNNE.C99Type("wchar_t*")] IntPtr errorMessagePtr)
+  public static unsafe void GetLastException([DNNE.C99Type("wchar_t**")] IntPtr* errorMessagePtr)
   {
     string? errorMessage = LastExceptionMessage ?? string.Empty;
 
-    if (errorMessagePtr == IntPtr.Zero)
+    if (LastExceptionMessage.IsNullOrEmpty())
     {
       return;
     }
 
-    // Copy the error message to the provided memory
-    Marshal.Copy(errorMessage.ToCharArray(), 0, errorMessagePtr, errorMessage.Length);
-    Marshal.WriteInt16(errorMessagePtr + errorMessage.Length * sizeof(char), '\0');  // Null-terminate
+    *errorMessagePtr = Marshal.StringToHGlobalUni(errorMessage);
+  }
+}
 
-    LastExceptionMessage = null;
+public static class MessageHandler {
+  private static Queue<Tuple<string, int>> LogQueue = [];
+
+  public static void Log(string message, int level = 0)
+  {
+    // Level values
+    // 0: Trace
+    // 1: Debug
+    // 2: Info
+    // 3: Warning
+    // 4: Error
+    // 5: Critical
+    LogQueue.Enqueue(new Tuple<string, int>(message, level));
+  }
+
+  [UnmanagedCallersOnly(EntryPoint = "GetLogMessage", CallConvs = [typeof(CallConvCdecl)])]
+  public static unsafe void GetLogMessage([DNNE.C99Type("wchar_t**")] IntPtr* messagePtr, [DNNE.C99Type("int*")] int* level)
+  {
+    if (LogQueue.Count == 0)
+    {
+      return;
+    }
+
+    var logMessage = LogQueue.Dequeue();
+    string message = logMessage.Item1;
+    *messagePtr = Marshal.StringToHGlobalUni(logMessage.Item1);
+    *level = logMessage.Item2;
   }
 }
 
@@ -76,7 +94,7 @@ public class PGMutagen
 
     return Env.LoadOrder.PriorityOrder.Activator().WinningOverrides()
             .Concat<IMajorRecordGetter>(Env.LoadOrder.PriorityOrder.AddonNode().WinningOverrides())
-            .Concat(Env.LoadOrder.PriorityOrder.Ammunition().WinningOverrides())
+            .Concat<IMajorRecordGetter>(Env.LoadOrder.PriorityOrder.Ammunition().WinningOverrides())
             .Concat(Env.LoadOrder.PriorityOrder.AnimatedObject().WinningOverrides())
             .Concat(Env.LoadOrder.PriorityOrder.Armor().WinningOverrides())
             .Concat(Env.LoadOrder.PriorityOrder.ArmorAddon().WinningOverrides())
@@ -236,13 +254,26 @@ public class PGMutagen
         }
 
         // Deep copy master record
-        ModelCopies.Add(txstRefObj.DeepCopy());
+        try
+        {
+          ModelCopies.Add(txstRefObj.DeepCopy());
+        }
+        catch (Exception)
+        {
+          MessageHandler.Log("Failed to copy record: " + txstRefObj.FormKey.ModKey.FileName + " / " + txstRefObj.FormKey.ID.ToString("X6"), 4);
+          continue;
+        }
+
         var DCIdx = ModelCopies.Count - 1;
 
         foreach (var modelRec in ModelRecs)
         {
           // find lowercase nifname
           string nifName = modelRec.File;
+
+          // Otherwise this causes issues with deepcopy
+          nifName = removePrefixIfExists("\\", nifName);
+
           nifName = nifName.ToLower();
           nifName = addPrefixIfNotExists("meshes\\", nifName);
 
@@ -299,7 +330,11 @@ public class PGMutagen
       foreach (var recId in ModifiedModeledRecords)
       {
         var ModifiedRecord = ModelCopies[recId];
-        if (ModifiedRecord is Ammunition)
+        if (ModifiedRecord is Mutagen.Bethesda.Skyrim.Activator)
+        {
+          OutMod.Activators.Add((Mutagen.Bethesda.Skyrim.Activator)ModifiedRecord);
+        }
+        else if (ModifiedRecord is Ammunition)
         {
           OutMod.Ammunitions.Add((Ammunition)ModifiedRecord);
         }
@@ -779,13 +814,15 @@ public class PGMutagen
             foundMatch = true;
           }
 
-          if (foundMatch) {
+          if (foundMatch)
+          {
             // After finding a match decrement all indices by 1
             alternateTexture.Index--;
           }
         }
 
-        if (foundMatch) {
+        if (foundMatch)
+        {
           return;
         }
       }

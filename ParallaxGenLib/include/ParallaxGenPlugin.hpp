@@ -8,9 +8,12 @@
 #include "BethesdaGame.hpp"
 #include "NIFUtil.hpp"
 
+#define LOG_POLL_INTERVAL 1000
+
 class ParallaxGenPlugin {
 private:
   static std::mutex LibMutex;
+  static void libLogMessageIfExists();
   static void libThrowExceptionIfExists();
   static void libInitialize(const int &GameType, const std::wstring &DataPath, const std::wstring &OutputPlugin);
   static void libPopulateObjs();
@@ -28,6 +31,9 @@ private:
 
   static std::mutex TXSTWarningMapMutex;
   static std::unordered_map<int, NIFUtil::ShapeShader> TXSTWarningMap;
+
+  static bool LoggingEnabled;
+  static void logMessages();
 
 public:
   static void initialize(const BethesdaGame &Game);
