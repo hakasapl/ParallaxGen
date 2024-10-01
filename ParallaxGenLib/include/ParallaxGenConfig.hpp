@@ -37,7 +37,7 @@ public:
 
   [[nodiscard]] auto getManualTextureMaps() const -> const std::unordered_map<std::filesystem::path, NIFUtil::TextureType> &;
 
-  [[nodiscard]] auto getVanillaBSAList() const -> const std::set<std::wstring> &;
+  [[nodiscard]] auto getVanillaBSAList() const -> const std::unordered_set<std::wstring> &;
 
 private:
   static auto parseJSON(const std::filesystem::path &JSONFile, const std::vector<std::byte> &Bytes, nlohmann::json &J) -> bool;

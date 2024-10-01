@@ -629,7 +629,7 @@ void BethesdaDirectory::updateFileMap(const filesystem::path &FilePath,
   FileMap[LowerPath] = NewBFile;
 }
 
-auto BethesdaDirectory::isFileInBSA(const filesystem::path &File, const std::set<std::wstring> &BSAFiles) -> bool {
+auto BethesdaDirectory::isFileInBSA(const filesystem::path &File, const std::unordered_set<std::wstring> &BSAFiles) -> bool {
   if (isBSAFile(File)) {
     BethesdaFile const BethFile = getFileFromMap(File);
     std::filesystem::path const BsaFilepath = BethFile.BSAFile->Path.filename();

@@ -62,7 +62,7 @@ public:
 
   // Check methods
   // files found in the bsa excludes are never CM maps, used for vanilla env masks
-  auto findCMMaps(const std::set<std::wstring>& BSAExcludes) -> ParallaxGenTask::PGResult;
+  auto findCMMaps(const std::unordered_set<std::wstring>& BSAExcludes) -> ParallaxGenTask::PGResult;
 
   static auto getNumChannelsByFormat(const DXGI_FORMAT &Format) -> int;
 
