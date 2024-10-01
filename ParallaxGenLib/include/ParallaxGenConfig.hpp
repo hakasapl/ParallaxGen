@@ -20,7 +20,7 @@ private:
   std::unordered_set<std::wstring> NIFBlocklist {};
   std::unordered_set<std::wstring> DynCubemapBlocklist{};
   std::unordered_map<std::filesystem::path, NIFUtil::TextureType> ManualTextureMaps{};
-  std::set<std::wstring> VanillaBSAList{};
+  std::unordered_set<std::wstring> VanillaBSAList{};
 
   // Validator
   nlohmann::json_schema::json_validator Validator;
