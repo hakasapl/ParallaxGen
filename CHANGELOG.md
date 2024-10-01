@@ -4,6 +4,7 @@
 
 - Added plugin patching
 - Fixed PBR rename not functions with certain suffixes
+- Fixed ParallaxGen thinking RMAOS files were CM
 
 ## [0.5.8] - 2025-09-21
 
