@@ -269,6 +269,14 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
 
     // Get TXST slots
     auto OldSlots = libGetTXSTSlots(TXSTIndex);
+    auto BaseSlots = OldSlots;
+    for (auto &Slot : BaseSlots) {
+      // Remove PBR from beginning if its there so that we can actually process it
+      if (boost::istarts_with(Slot, L"textures\\pbr\\")) {
+        Slot.replace(0, 13, L"textures\\");
+      }
+    }
+
     auto SearchPrefixes = NIFUtil::getSearchPrefixes(OldSlots);
     array<wstring, NUM_TEXTURE_SLOTS> NewSlots;
 
@@ -281,7 +289,7 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
       bool ShouldApply = PatcherVanillaParallax::shouldApplySlots(SearchPrefixes, MatchedPath);
 
       if (ShouldApply) {
-        NewSlots = PatcherVanillaParallax::applyPatchSlots(OldSlots, MatchedPath);
+        NewSlots = PatcherVanillaParallax::applyPatchSlots(BaseSlots, MatchedPath);
         PatchTXST = true;
       }
     } else if (AppliedShader == NIFUtil::ShapeShader::COMPLEXMATERIAL) {
@@ -292,7 +300,7 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
           PatcherComplexMaterial::shouldApplySlots(SearchPrefixes, MatchedPath, EnableDynCubemaps, NIFPath);
 
       if (ShouldApply) {
-        NewSlots = PatcherComplexMaterial::applyPatchSlots(OldSlots, MatchedPath, EnableDynCubemaps);
+        NewSlots = PatcherComplexMaterial::applyPatchSlots(BaseSlots, MatchedPath, EnableDynCubemaps);
         PatchTXST = true;
       }
     } else if (AppliedShader == NIFUtil::ShapeShader::TRUEPBR) {
@@ -301,7 +309,7 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
       bool ShouldApply = PatcherTruePBR::shouldApplySlots(L"Plugin Patching | ", SearchPrefixes, NIFPath, TruePBRData);
 
       if (ShouldApply) {
-        auto TempSlots = OldSlots;
+        auto TempSlots = BaseSlots;
         for (auto &TruePBRCFG : TruePBRData) {
           TempSlots = PatcherTruePBR::applyPatchSlots(TempSlots, get<0>(TruePBRCFG.second), get<1>(TruePBRCFG.second));
         }
@@ -330,7 +338,14 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
     }
 
     // Check if oldprefix is the same as newprefix
-    if (OldSlots == NewSlots) {
+    bool FoundDiff = false;
+    for (int I = 0; I < NUM_TEXTURE_SLOTS; ++I) {
+      if (!boost::iequals(OldSlots[I], NewSlots[I])) {
+        FoundDiff = true;
+      }
+    }
+
+    if (!FoundDiff) {
       // No need to patch
       spdlog::trace(L"Plugin Patching | {} | {} | {} | Not patching because nothing to change", NIFPath, Name3D,
                     Index3DOld);

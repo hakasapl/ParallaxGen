@@ -27,6 +27,10 @@ auto ParallaxGenD3D::findCMMaps() -> ParallaxGenTask::PGResult {
 
   // loop through maps
   for (auto &EnvMask : EnvMasks) {
+    if (EnvMask.second.Type != NIFUtil::TextureType::ENVIRONMENTMASK) {
+      continue;
+    }
+
     bool Result = false;
     ParallaxGenTask::updatePGResult(PGResult, checkIfCM(EnvMask.second.Path, Result),
                                     ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);

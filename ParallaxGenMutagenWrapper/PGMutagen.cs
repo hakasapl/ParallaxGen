@@ -629,44 +629,45 @@ public class PGMutagen
       var origTXSTObj = TXSTObjs[txstIndex];
       var newTXSTObj = OutMod.TextureSets.GetOrAddAsOverride(origTXSTObj);
 
+      // TODO maybe there's a way to not have to have a value for every empty value? (check old slots?)
       // Define slot actions for assigning texture set slots
       string? NewDiffuse = Marshal.PtrToStringUni(slots[0]);
-      if (!NewDiffuse.IsNullOrEmpty())
+      if (NewDiffuse is not null)
       {
         newTXSTObj.Diffuse = removePrefixIfExists("textures\\", NewDiffuse);
       }
       string? NewNormalOrGloss = Marshal.PtrToStringUni(slots[1]);
-      if (!NewNormalOrGloss.IsNullOrEmpty())
+      if (NewNormalOrGloss is not null)
       {
         newTXSTObj.NormalOrGloss = removePrefixIfExists("textures\\", NewNormalOrGloss);
       }
       string? NewGlowOrDetailMap = Marshal.PtrToStringUni(slots[2]);
-      if (!NewGlowOrDetailMap.IsNullOrEmpty())
+      if (NewGlowOrDetailMap is not null)
       {
         newTXSTObj.GlowOrDetailMap = removePrefixIfExists("textures\\", NewGlowOrDetailMap);
       }
       string? NewHeight = Marshal.PtrToStringUni(slots[3]);
-      if (!NewHeight.IsNullOrEmpty())
+      if (NewHeight is not null)
       {
         newTXSTObj.Height = removePrefixIfExists("textures\\", NewHeight);
       }
       string? NewEnvironment = Marshal.PtrToStringUni(slots[4]);
-      if (!NewEnvironment.IsNullOrEmpty())
+      if (NewEnvironment is not null)
       {
         newTXSTObj.Environment = removePrefixIfExists("textures\\", NewEnvironment);
       }
       string? NewEnvironmentMaskOrSubsurfaceTint = Marshal.PtrToStringUni(slots[5]);
-      if (!NewEnvironmentMaskOrSubsurfaceTint.IsNullOrEmpty())
+      if (NewEnvironmentMaskOrSubsurfaceTint is not null)
       {
         newTXSTObj.EnvironmentMaskOrSubsurfaceTint = removePrefixIfExists("textures\\", NewEnvironmentMaskOrSubsurfaceTint);
       }
       string? NewMultilayer = Marshal.PtrToStringUni(slots[6]);
-      if (!NewMultilayer.IsNullOrEmpty())
+      if (NewMultilayer is not null)
       {
         newTXSTObj.Multilayer = removePrefixIfExists("textures\\", NewMultilayer);
       }
       string? NewBacklightMaskOrSpecular = Marshal.PtrToStringUni(slots[7]);
-      if (!NewBacklightMaskOrSpecular.IsNullOrEmpty())
+      if (NewBacklightMaskOrSpecular is not null)
       {
         newTXSTObj.BacklightMaskOrSpecular = removePrefixIfExists("textures\\", NewBacklightMaskOrSpecular);
       }
@@ -852,7 +853,7 @@ public class PGMutagen
 
   private static string removePrefixIfExists(string prefix, string str)
   {
-    if (str.StartsWith(prefix))
+    if (str.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
     {
       return str[prefix.Length..];
     }
@@ -861,7 +862,7 @@ public class PGMutagen
 
   private static string addPrefixIfNotExists(string prefix, string str)
   {
-    if (!str.StartsWith(prefix))
+    if (!str.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
     {
       return prefix + str;
     }
