@@ -12,5 +12,25 @@
     "**/water/**",
     "calientetools/**"
   ],
-  "texture_maps": {}
+  "texture_maps": {},
+  "vanilla_bsas": [
+    "Skyrim - Textures0.bsa",
+    "Skyrim - Textures1.bsa",
+    "Skyrim - Textures2.bsa",
+    "Skyrim - Textures3.bsa",
+    "Skyrim - Textures4.bsa",
+    "Skyrim - Textures5.bsa",
+    "Skyrim - Textures6.bsa",
+    "Skyrim - Textures7.bsa",
+    "Skyrim - Textures8.bsa",
+    "Project Clarity AIO Half Res Packed.bsa",
+    "Project Clarity AIO Half Res Packed - Textures.bsa",
+    "Project Clarity AIO Half Res Packed0 - Textures.bsa",
+    "Project Clarity AIO Half Res Packed1 - Textures.bsa",
+    "Project Clarity AIO Half Res Packed2 - Textures.bsa",
+    "Project Clarity AIO Half Res Packed3 - Textures.bsa",
+    "Project Clarity AIO Half Res Packed4 - Textures.bsa",
+    "Project Clarity AIO Half Res Packed5 - Textures.bsa",
+    "Project Clarity AIO Half Res Packed6 - Textures.bsa"
+  ]
 }

@@ -203,9 +203,11 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   PGD.mapFiles(PGC.getNIFBlocklist(), PGC.getManualTextureMaps(), !Args.NoMapFromMeshes, !Args.NoMultithread,
                Args.HighMem);
 
-  spdlog::info("Determining texture types");
-  PGD3D.findCMMaps();
-  spdlog::info("Done determining texture types");
+  auto VanillaBSAList = PGC.getVanillaBSAList();
+
+  spdlog::info("Finding complex material env maps");
+  PGD3D.findCMMaps(VanillaBSAList);
+  spdlog::info("Done finding complex material env maps");
 
   // Load patcher static vars
   PatcherTruePBR::loadPatcherBuffers(PGD.getPBRJSONs(), &PGD);
