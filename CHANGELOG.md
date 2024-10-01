@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.6.0] - UNRELEASED
+
+- Added a function to classify vanilla BSAs in the config, which will ignore complex material and parallax files from them
+
 ## [0.5.8] - 2025-09-21
 
 - Fixed PBR bug when multilayer: false is defined
