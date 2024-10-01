@@ -277,7 +277,7 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
       }
     }
 
-    auto SearchPrefixes = NIFUtil::getSearchPrefixes(OldSlots);
+    auto SearchPrefixes = NIFUtil::getSearchPrefixes(BaseSlots);
     array<wstring, NUM_TEXTURE_SLOTS> NewSlots;
 
     // Attempt to patch the relevant shader
