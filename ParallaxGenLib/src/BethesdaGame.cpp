@@ -1,8 +1,18 @@
 #include "BethesdaGame.hpp"
 
-#include <knownfolders.h>
-#include <shlobj.h>
 #include <spdlog/spdlog.h>
+
+#include <guiddef.h>
+#include <shlobj.h>
+
+#include <objbase.h>
+#include <windows.h>
+
+#include <filesystem>
+#include <stdexcept>
+#include <string>
+
+#include <cstdlib>
 
 using namespace std;
 

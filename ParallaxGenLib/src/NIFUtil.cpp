@@ -1,12 +1,28 @@
 #include "NIFUtil.hpp"
-#include <NifFile.hpp>
-#include <boost/algorithm/string.hpp>
+#include "ParallaxGenUtil.hpp"
+
+#include <nifly/Geometry.hpp>
+#include <nifly/NifFile.hpp>
+#include <nifly/Object3d.hpp>
+#include <nifly/Shaders.hpp>
+
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/iostreams/device/array.hpp>
 #include <boost/iostreams/stream.hpp>
-#include <unordered_map>
 
-#include "ParallaxGenUtil.hpp"
+
+#include <array>
+#include <filesystem>
+#include <map>
+#include <unordered_map>
+#include <stdexcept>
+#include <string>
+#include <tuple>
+#include <vector>
+
+#include <cstddef>
+#include <cstdint>
 
 using namespace std;
 

@@ -6,7 +6,7 @@
 #include <array>
 #include <tuple>
 
-#define NUM_TEXTURE_SLOTS 9
+constexpr unsigned NUM_TEXTURE_SLOTS = 9;
 
 namespace NIFUtil {
 enum class TextureSlots : unsigned int {
@@ -51,7 +51,7 @@ auto getSlotFromTexType(const TextureType &Type) -> TextureSlots;
 
 struct PGTexture {
   std::filesystem::path Path;
-  TextureType Type;
+  TextureType Type{};
 };
 
 auto getDefaultTextureType(const TextureSlots &Slot) -> TextureType;
