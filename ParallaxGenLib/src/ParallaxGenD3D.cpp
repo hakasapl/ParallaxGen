@@ -1,16 +1,39 @@
 #include "ParallaxGenD3D.hpp"
 
-#include <DirectXTex.h>
-#include <algorithm>
-#include <comdef.h>
-#include <d3d11.h>
-#include <d3dcompiler.h>
-#include <spdlog/spdlog.h>
-#include <winnt.h>
-
-#include "NIFUtil.hpp"
+#include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenTask.hpp"
 #include "ParallaxGenUtil.hpp"
+#include "NIFUtil.hpp"
+
+#include <spdlog/spdlog.h>
+
+#include <DirectXTex.h>
+#include <DirectXMath.h>
+
+// windows
+#include <windows.h>
+
+// COM support
+#include <comdef.h>
+
+// D3D
+#include <d3d11.h>
+
+// DXGI
+#include <dxgi.h>
+
+// HLSL
+#include <d3dcompiler.h>
+#include <dxcapi.h>
+
+#include <algorithm>
+#include <filesystem>
+#include <mutex>
+#include <string>
+
+#include <climits>
+#include <cstdlib>
+#include <cstring>
 
 using namespace std;
 using namespace ParallaxGenUtil;
@@ -76,6 +99,7 @@ auto ParallaxGenD3D::checkIfCM(const filesystem::path &DDSPath, bool &Result) ->
   case DXGI_FORMAT_BC7_UNORM_SRGB:
   case DXGI_FORMAT_BC7_TYPELESS:
     BCCompressed = true;
+    [[fallthrough]];
   case DXGI_FORMAT_R32G32B32A32_TYPELESS:
   case DXGI_FORMAT_R32G32B32A32_FLOAT:
   case DXGI_FORMAT_R32G32B32A32_UINT:
