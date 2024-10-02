@@ -17,7 +17,7 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/stacktrace/stacktrace.hpp>
 
-#include <errhandlingapi.h>
+#include <windows.h>
 
 #include <chrono>
 #include <exception>
