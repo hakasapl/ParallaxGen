@@ -1,21 +1,46 @@
 #include "BethesdaDirectory.hpp"
 
-#include <boost/algorithm/string/predicate.hpp>
-#include <mutex>
-#include <shlwapi.h>
+#include "BethesdaGame.hpp"
+#include "ParallaxGenUtil.hpp"
+
+#include <bsa/tes4.hpp>
+
 #include <spdlog/spdlog.h>
 
-#include <binary_io/binary_io.hpp>
-#include <boost/algorithm/string.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/iostreams/device/mapped_file.hpp>
-#include <fstream>
+#include <binary_io/memory_stream.hpp>
+#include <binary_io/any_stream.hpp>
 
-// BSA Includes
-#include <cstdio>
+#include <boost/algorithm/string/case_conv.hpp>
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/join.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/trim.hpp>
+
+#include <shlwapi.h>
+#include <winnt.h>
+
+#include <algorithm>
+#include <exception>
+#include <fstream>
+#include <filesystem>
+#include <iterator>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <vector>
+#include <unordered_set>
 #include <utility>
 
-#include "ParallaxGenUtil.hpp"
+#include <cctype>
+#include <cstddef>
+#include <cstdio>
+#include <cstdlib>
+
+
 
 using namespace std;
 using namespace ParallaxGenUtil;

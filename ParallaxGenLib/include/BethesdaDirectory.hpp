@@ -1,18 +1,18 @@
 #pragma once
+#include "BethesdaGame.hpp"
+
+#include <bsa/tes4.hpp>
 
 #include <boost/algorithm/string.hpp>
-#include <bsa/tes4.hpp>
+
 #include <cstddef>
 #include <filesystem>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <string>
-#include <vector>
 #include <unordered_set>
-
-#include "BethesdaGame.hpp"
-
+#include <vector>
 
 constexpr unsigned ASCII_UPPER_BOUND = 127;
 

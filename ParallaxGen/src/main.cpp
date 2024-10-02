@@ -1,25 +1,32 @@
-#include <CLI/CLI.hpp>
-#include <boost/algorithm/string.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/stacktrace.hpp>
-#include <chrono>
-#include <cstdlib>
-#include <filesystem>
-#include <iostream>
-#include <spdlog/sinks/rotating_file_sink.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/spdlog.h>
-#include <string>
-#include <unordered_map>
-#include <windows.h>
-
 #include "BethesdaGame.hpp"
 #include "ParallaxGen.hpp"
 #include "ParallaxGenConfig.hpp"
 #include "ParallaxGenD3D.hpp"
 #include "ParallaxGenDirectory.hpp"
-#include "patchers/PatcherComplexMaterial.hpp"
-#include "patchers/PatcherTruePBR.hpp"
+
+#include <CLI/CLI.hpp>
+
+#include <spdlog/common.h>
+#include <spdlog/logger.h>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/rotating_file_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+
+#include <boost/algorithm/string/join.hpp>
+#include <boost/filesystem/path.hpp>
+#include <boost/filesystem/operations.hpp>
+#include <boost/stacktrace/stacktrace.hpp>
+
+#include <errhandlingapi.h>
+
+#include <chrono>
+#include <exception>
+#include <filesystem>
+#include <iostream>
+#include <string>
+#include <unordered_map>
+
+#include <cstdlib>
 
 constexpr unsigned MAX_LOG_SIZE = 5242880;
 constexpr unsigned MAX_LOG_FILES = 100;
@@ -415,6 +422,6 @@ auto main(int ArgC, char **ArgV) -> int {
                      typeid(E).name(), E.what(), boost::stacktrace::to_string(boost::stacktrace::stacktrace()));
     cout << "Press ENTER to abort...";
     cin.get();
-    abort();
+    std::abort();
   }
 }
