@@ -135,7 +135,7 @@ auto ParallaxGenConfig::addConfigJSON(const nlohmann::json &J) -> void {
       ManualTextureMaps[boost::to_lower_copy(Item.key())] = NIFUtil::getTexTypeFromStr(Item.value().get<string>());
     }
   }
-  
+
   // "vanilla_bsas" field
   if (J.contains("vanilla_bsas")) {
     for (const auto &Item : J["vanilla_bsas"]) {
