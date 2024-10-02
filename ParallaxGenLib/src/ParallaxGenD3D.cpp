@@ -372,7 +372,7 @@ auto ParallaxGenD3D::createComputeShader(const wstring &ShaderPath,
 
   // Create shader
   HRESULT HR = PtrDevice->CreateComputeShader(CompiledShader->GetBufferPointer(), CompiledShader->GetBufferSize(), // NOLINT
-                                              nullptr, ShaderDest.ReleaseAndGetAddressOf()); 
+                                              nullptr, ShaderDest.ReleaseAndGetAddressOf());
   if (FAILED(HR)) {
     spdlog::debug("Failed to create compute shader: {}", getHRESULTErrorMessage(HR));
     return ParallaxGenTask::PGResult::FAILURE;
