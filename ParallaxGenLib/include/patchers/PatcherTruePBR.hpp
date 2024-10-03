@@ -11,7 +11,7 @@
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenTask.hpp"
 
-#define TEXTURE_STR_LENGTH 9
+constexpr unsigned TEXTURE_STR_LENGTH = 9;
 
 class PatcherTruePBR {
 private:
@@ -32,7 +32,7 @@ private:
   };
 
   // Set that stores already matched texture sets
-  std::unordered_map<uint32_t, std::map<size_t, std::tuple<nlohmann::json, std::wstring>>> MatchedTextureSets;
+  std::unordered_map<uint32_t, std::map<size_t, std::tuple<nlohmann::json, std::wstring>>> MatchedTextureSets{};
 
 public:
   static auto getTruePBRConfigs() -> std::map<size_t, nlohmann::json> &;

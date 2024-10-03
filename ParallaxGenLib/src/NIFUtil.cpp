@@ -1,12 +1,28 @@
 #include "NIFUtil.hpp"
-#include <NifFile.hpp>
-#include <boost/algorithm/string.hpp>
+#include "ParallaxGenUtil.hpp"
+
+#include <nifly/Geometry.hpp>
+#include <nifly/NifFile.hpp>
+#include <nifly/Object3d.hpp>
+#include <nifly/Shaders.hpp>
+
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/iostreams/device/array.hpp>
 #include <boost/iostreams/stream.hpp>
-#include <unordered_map>
 
-#include "ParallaxGenUtil.hpp"
+
+#include <array>
+#include <filesystem>
+#include <map>
+#include <unordered_map>
+#include <stdexcept>
+#include <string>
+#include <tuple>
+#include <vector>
+
+#include <cstddef>
+#include <cstdint>
 
 using namespace std;
 
@@ -332,7 +348,7 @@ auto NIFUtil::getSearchPrefixes(NifFile &NIF, nifly::NiShape *NIFShape) -> array
   // Loop through each texture Slot
   for (uint32_t I = 0; I < NUM_TEXTURE_SLOTS; I++) {
     string Texture;
-    uint32_t Result = NIF.GetTextureSlot(NIFShape, Texture, I);
+    const uint32_t Result = NIF.GetTextureSlot(NIFShape, Texture, I);
 
     if (Result == 0 || Texture.empty()) {
       // no texture in Slot

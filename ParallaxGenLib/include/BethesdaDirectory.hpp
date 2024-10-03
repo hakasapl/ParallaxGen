@@ -1,20 +1,20 @@
 #pragma once
+#include "BethesdaGame.hpp"
+
+#include <bsa/tes4.hpp>
 
 #include <boost/algorithm/string.hpp>
-#include <bsa/tes4.hpp>
+
 #include <cstddef>
 #include <filesystem>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <string>
-#include <vector>
 #include <unordered_set>
+#include <vector>
 
-#include "BethesdaGame.hpp"
-
-
-#define ASCII_UPPER_BOUND 127
+constexpr unsigned ASCII_UPPER_BOUND = 127;
 
 class BethesdaDirectory {
 private:

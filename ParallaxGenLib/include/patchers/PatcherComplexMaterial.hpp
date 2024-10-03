@@ -21,8 +21,8 @@ private:
   ParallaxGenConfig *PGC;
   ParallaxGenD3D *PGD3D;
 
-  static std::unordered_set<std::wstring> DynCubemapBlocklist;
-  static bool DisableMLP;
+  static std::unordered_set<std::wstring> DynCubemapBlocklist; // NOLINT
+  static bool DisableMLP; // NOLINT
 
 public:
   static auto loadStatics(const std::unordered_set<std::wstring> &DynCubemapBlocklist, const bool &DisableMLP) -> void;

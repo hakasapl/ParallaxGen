@@ -1,14 +1,20 @@
 #include "ParallaxGenConfig.hpp"
 
-#include <boost/algorithm/string/case_conv.hpp>
-#include <filesystem>
-#include <nlohmann/json.hpp>
-#include <nlohmann/json_fwd.hpp>
-#include <spdlog/spdlog.h>
-#include <string>
-
 #include "NIFUtil.hpp"
 #include "ParallaxGenUtil.hpp"
+
+#include <spdlog/spdlog.h>
+
+#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
+
+#include <boost/algorithm/string/case_conv.hpp>
+
+#include <exception>
+#include <filesystem>
+#include <string>
+
+#include <cstdlib>
 
 using namespace std;
 using namespace ParallaxGenUtil;

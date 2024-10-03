@@ -1,10 +1,19 @@
 #include "BethesdaGame.hpp"
 
-#include <knownfolders.h>
-#include <shlobj.h>
 #include <spdlog/spdlog.h>
 
+#include <guiddef.h>
+#include <shlobj.h>
+
+#include <objbase.h>
+#include <windows.h>
+
+#include <filesystem>
 #include <map>
+#include <stdexcept>
+#include <string>
+
+#include <cstdlib>
 
 using namespace std;
 
@@ -239,7 +248,7 @@ auto BethesdaGame::findGamePathFromSteam() const -> filesystem::path {
 
 auto BethesdaGame::getINIPaths() const -> BethesdaGame::ININame {
   BethesdaGame::ININame Output = getINILocations();
-  filesystem::path GameDocsPath = getGameDocumentPath();
+  const filesystem::path GameDocsPath = getGameDocumentPath();
 
   // normal ini file
   Output.INI = GameDocsPath / Output.INI;
@@ -250,8 +259,8 @@ auto BethesdaGame::getINIPaths() const -> BethesdaGame::ININame {
 }
 
 auto BethesdaGame::getLoadOrderFile() const -> filesystem::path {
-  filesystem::path GameAppdataPath = getGameAppdataPath();
-  filesystem::path LoadOrderFile = GameAppdataPath / "loadorder.txt";
+  const filesystem::path GameAppdataPath = getGameAppdataPath();
+  const filesystem::path LoadOrderFile = GameAppdataPath / "loadorder.txt";
   return LoadOrderFile;
 }
 
@@ -277,7 +286,7 @@ auto BethesdaGame::getGameAppdataPath() const -> filesystem::path {
 
 auto BethesdaGame::getSystemPath(const GUID &FolderID) -> filesystem::path {
   PWSTR Path = nullptr;
-  HRESULT Result = SHGetKnownFolderPath(FolderID, 0, nullptr, &Path);
+  const HRESULT Result = SHGetKnownFolderPath(FolderID, 0, nullptr, &Path);
   if (SUCCEEDED(Result)) {
     wstring OutPath(Path);
     CoTaskMemFree(Path); // Free the memory allocated for the path

@@ -1,16 +1,39 @@
 #include "ParallaxGenD3D.hpp"
 
-#include <DirectXTex.h>
-#include <algorithm>
-#include <comdef.h>
-#include <d3d11.h>
-#include <d3dcompiler.h>
-#include <spdlog/spdlog.h>
-#include <winnt.h>
-
-#include "NIFUtil.hpp"
+#include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenTask.hpp"
 #include "ParallaxGenUtil.hpp"
+#include "NIFUtil.hpp"
+
+#include <spdlog/spdlog.h>
+
+#include <DirectXTex.h>
+#include <DirectXMath.h>
+
+// windows
+#include <windows.h>
+
+// COM support
+#include <comdef.h>
+
+// D3D
+#include <d3d11.h>
+
+// DXGI
+#include <dxgi.h>
+
+// HLSL
+#include <d3dcompiler.h>
+#include <dxcapi.h>
+
+#include <algorithm>
+#include <filesystem>
+#include <mutex>
+#include <string>
+
+#include <climits>
+#include <cstdlib>
+#include <cstring>
 
 using namespace std;
 using namespace ParallaxGenUtil;
@@ -76,6 +99,7 @@ auto ParallaxGenD3D::checkIfCM(const filesystem::path &DDSPath, bool &Result) ->
   case DXGI_FORMAT_BC7_UNORM_SRGB:
   case DXGI_FORMAT_BC7_TYPELESS:
     BCCompressed = true;
+    [[fallthrough]];
   case DXGI_FORMAT_R32G32B32A32_TYPELESS:
   case DXGI_FORMAT_R32G32B32A32_FLOAT:
   case DXGI_FORMAT_R32G32B32A32_UINT:
@@ -118,7 +142,7 @@ auto ParallaxGenD3D::checkIfCM(const filesystem::path &DDSPath, bool &Result) ->
     AlphaValues = countAlphaValuesCPU(Image, BCCompressed);
   }
 
-  size_t NumPixels = DDSImageMeta.width * DDSImageMeta.height;
+  const size_t NumPixels = DDSImageMeta.width * DDSImageMeta.height;
   if (AlphaValues > NumPixels / 2) {
     Result = false;
     return ParallaxGenTask::PGResult::SUCCESS;
@@ -173,7 +197,7 @@ auto ParallaxGenD3D::countAlphaValuesGPU(const DirectX::ScratchImage &Image) -> 
   PtrContext->CSSetShaderResources(0, 1, InputSRV.GetAddressOf());
   PtrContext->CSSetUnorderedAccessViews(0, 1, OutputBufferUAV.GetAddressOf(), nullptr);
 
-  DirectX::TexMetadata ImageMeta = Image.GetMetadata();
+  const DirectX::TexMetadata ImageMeta = Image.GetMetadata();
   if (BlockingDispatch(static_cast<UINT>(ImageMeta.width), static_cast<UINT>(ImageMeta.height), 1) !=
       ParallaxGenTask::PGResult::SUCCESS) {
     return -1;
@@ -235,7 +259,7 @@ auto ParallaxGenD3D::countAlphaValuesCPU(const DirectX::ScratchImage &Image, con
   const auto *Pixels = InImage.GetPixels();
   for (size_t Y = 0; Y < InImage.GetMetadata().height; ++Y) {
     for (size_t X = 0; X < InImage.GetMetadata().width; ++X) {
-      size_t PixelIndex = (Y * RowPitch) + (X * 4); // Assuming 4 bytes per pixel (RGBA)
+      const size_t PixelIndex = (Y * RowPitch) + (X * 4); // Assuming 4 bytes per pixel (RGBA)
       uint8_t Alpha = Pixels[PixelIndex + 3];       // NOLINT
       if (Alpha == 255) {                           // NOLINT
         AlphaValues++;
@@ -266,8 +290,8 @@ auto ParallaxGenD3D::checkIfAspectRatioMatches(const std::filesystem::path &DDSP
   }
 
   // calculate aspect ratios
-  float AspectRatio1 = static_cast<float>(DDSImageMeta1.width) / static_cast<float>(DDSImageMeta1.height);
-  float AspectRatio2 = static_cast<float>(DDSImageMeta2.width) / static_cast<float>(DDSImageMeta2.height);
+  const float AspectRatio1 = static_cast<float>(DDSImageMeta1.width) / static_cast<float>(DDSImageMeta1.height);
+  const float AspectRatio2 = static_cast<float>(DDSImageMeta2.width) / static_cast<float>(DDSImageMeta2.height);
 
   // check if aspect ratios don't match
   CheckAspect = AspectRatio1 == AspectRatio2;
@@ -284,7 +308,7 @@ void ParallaxGenD3D::initGPU() {
 #ifdef _DEBUG
   UINT DeviceFlags = D3D11_CREATE_DEVICE_DEBUG;
 #else
-  UINT DeviceFlags = 0;
+  const UINT DeviceFlags = 0;
 #endif
 
   HRESULT HR{};
@@ -371,7 +395,7 @@ auto ParallaxGenD3D::createComputeShader(const wstring &ShaderPath,
   compileShader(ShaderPath, CompiledShader);
 
   // Create shader
-  HRESULT HR = PtrDevice->CreateComputeShader(CompiledShader->GetBufferPointer(), CompiledShader->GetBufferSize(),
+  HRESULT HR = PtrDevice->CreateComputeShader(CompiledShader->GetBufferPointer(), CompiledShader->GetBufferSize(), // NOLINT
                                               nullptr, ShaderDest.ReleaseAndGetAddressOf());
   if (FAILED(HR)) {
     spdlog::debug("Failed to create compute shader: {}", getHRESULTErrorMessage(HR));
@@ -386,8 +410,8 @@ auto ParallaxGenD3D::upgradeToComplexMaterial(const std::filesystem::path &Paral
 
   ParallaxGenTask::PGResult PGResult{};
 
-  bool ParallaxExists = !ParallaxMap.empty();
-  bool EnvExists = !EnvMap.empty();
+  const bool ParallaxExists = !ParallaxMap.empty();
+  const bool EnvExists = !EnvMap.empty();
 
   // Check if any texture was supplied
   if (!ParallaxExists && !EnvExists) {
@@ -403,7 +427,7 @@ auto ParallaxGenD3D::upgradeToComplexMaterial(const std::filesystem::path &Paral
     spdlog::error(L"Failed to load DDS file: {}", ParallaxMap.wstring());
     return {};
   }
-  DirectX::TexMetadata ParallaxMeta = ParallaxMapDDS.GetMetadata();
+  const DirectX::TexMetadata ParallaxMeta = ParallaxMapDDS.GetMetadata();
 
   // get env map
   DirectX::ScratchImage EnvMapDDS;
@@ -411,7 +435,7 @@ auto ParallaxGenD3D::upgradeToComplexMaterial(const std::filesystem::path &Paral
     spdlog::error(L"Failed to load DDS file: {}", ParallaxMap.wstring());
     return {};
   }
-  DirectX::TexMetadata EnvMeta = EnvMapDDS.GetMetadata();
+  const DirectX::TexMetadata EnvMeta = EnvMapDDS.GetMetadata();
 
   // Check dimensions
   size_t ParallaxHeight = 0;
@@ -770,7 +794,7 @@ auto ParallaxGenD3D::createBuffer(const void *Data, D3D11_BUFFER_DESC &Desc,
   D3D11_SUBRESOURCE_DATA InitData = {};
   InitData.pSysMem = Data;
 
-  HRESULT HR = PtrDevice->CreateBuffer(&Desc, &InitData, Dest.ReleaseAndGetAddressOf());
+  HRESULT HR = PtrDevice->CreateBuffer(&Desc, &InitData, Dest.ReleaseAndGetAddressOf()); // NOLINT
   if (FAILED(HR)) {
     spdlog::debug("Failed to create ID3D11Buffer on GPU: {}", getHRESULTErrorMessage(HR));
     return ParallaxGenTask::PGResult::FAILURE;
@@ -856,7 +880,7 @@ auto ParallaxGenD3D::readBack(const ComPtr<ID3D11Texture2D> &GPUResource,
   // Grab texture description
   D3D11_TEXTURE2D_DESC StagingTex2DDesc;
   GPUResource->GetDesc(&StagingTex2DDesc);
-  UINT MipLevels = StagingTex2DDesc.MipLevels;  // Number of mip levels to read back
+  const UINT MipLevels = StagingTex2DDesc.MipLevels; // Number of mip levels to read back
 
   // Enable flags for CPU access
   StagingTex2DDesc.Usage = D3D11_USAGE_STAGING;
@@ -1036,12 +1060,12 @@ auto ParallaxGenD3D::getDDSMetadata(const filesystem::path &DDSPath,
   return ParallaxGenTask::PGResult::SUCCESS;
 }
 
-DirectX::ScratchImage ParallaxGenD3D::loadRawPixelsToScratchImage(const vector<unsigned char> &RawPixels,
+auto ParallaxGenD3D::loadRawPixelsToScratchImage(const vector<unsigned char> &RawPixels,
                                                                   const size_t &Width, const size_t &Height,
-                                                                  const size_t &Mips, DXGI_FORMAT Format) {
+                                                                  const size_t &Mips, DXGI_FORMAT Format) -> DirectX::ScratchImage{
   // Initialize a ScratchImage
   DirectX::ScratchImage Image;
-  HRESULT HR = Image.Initialize2D(Format, Width, Height, 1,
+  const HRESULT HR = Image.Initialize2D(Format, Width, Height, 1,
                                   Mips); // 1 array slice, 1 mipmap level
   if (FAILED(HR)) {
     spdlog::debug("Failed to initialize ScratchImage: {}", getHRESULTErrorMessage(HR));
@@ -1063,6 +1087,6 @@ DirectX::ScratchImage ParallaxGenD3D::loadRawPixelsToScratchImage(const vector<u
 
 auto ParallaxGenD3D::getHRESULTErrorMessage(HRESULT HR) -> string {
   // Get error message
-  _com_error Err(HR);
+  const _com_error Err(HR);
   return Err.ErrorMessage();
 }

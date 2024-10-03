@@ -74,7 +74,7 @@ auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
 #ifdef _DEBUG
   size_t NumThreads = 1;
 #else
-  size_t NumThreads = boost::thread::hardware_concurrency();
+  const size_t NumThreads = boost::thread::hardware_concurrency();
 #endif
   boost::asio::thread_pool MapTextureFromMeshPool(NumThreads);
 
