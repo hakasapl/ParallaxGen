@@ -490,8 +490,8 @@ auto BethesdaDirectory::getPluginLoadOrder(const bool &TrimExtension) const -> v
   return OutputLO;
 }
 
-auto BethesdaDirectory::getPathLower(const filesystem::path &Path)-> filesystem::path{
-    return {boost::to_lower_copy(Path.wstring())};
+auto BethesdaDirectory::getPathLower(const filesystem::path &Path) -> filesystem::path {
+  return {boost::to_lower_copy(Path.wstring())};
 }
 
 auto BethesdaDirectory::pathEqualityIgnoreCase(const filesystem::path &Path1, const filesystem::path &Path2) -> bool {

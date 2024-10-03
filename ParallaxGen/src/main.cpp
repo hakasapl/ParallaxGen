@@ -422,6 +422,6 @@ auto main(int ArgC, char **ArgV) -> int {
                      typeid(E).name(), E.what(), boost::stacktrace::to_string(boost::stacktrace::stacktrace()));
     cout << "Press ENTER to abort...";
     cin.get();
-    std::abort();
+    abort();
   }
 }
