@@ -9,6 +9,7 @@
 #include <windows.h>
 
 #include <filesystem>
+#include <map>
 #include <stdexcept>
 #include <string>
 
@@ -207,37 +208,39 @@ auto BethesdaGame::getGamePath() const -> filesystem::path {
   return GamePath;
 }
 
+auto BethesdaGame::getGameRegistryPath() const -> std::string {
+  const string BasePathSkyrim = R"(SOFTWARE\WOW6432Node\bethesda softworks\)";
+  const string BasePathEnderal = R"(Software\Sure AI\)";
+
+  const std::map<GameType, string> GameToPathMap{{GameType::SKYRIM_SE, BasePathSkyrim + "Skyrim Special Edition"},
+                                                 {GameType::SKYRIM, BasePathSkyrim + "Skyrim"},
+                                                 {GameType::SKYRIM_VR, BasePathSkyrim + "Skyrim VR"},
+                                                 {GameType::ENDERAL, BasePathEnderal + "Enderal"},
+                                                 {GameType::ENDERAL_SE, BasePathEnderal + "EnderalSE"}};
+
+  if (GameToPathMap.contains(ObjGameType)) {
+    return GameToPathMap.at(ObjGameType);
+  }
+
+  return {};
+}
+
 auto BethesdaGame::getGameDataPath() const -> filesystem::path { return GameDataPath; }
 
 auto BethesdaGame::findGamePathFromSteam() const -> filesystem::path {
   // Find the game path from the registry
   // If the game is not found, return an empty string
 
-  // Check if key doesn't exists in steam map
-  if (getSteamGameID() == 0) {
-    return {};
-  }
+  HKEY BaseHKey = (ObjGameType == GameType::ENDERAL || ObjGameType == GameType::ENDERAL_SE) ? HKEY_CURRENT_USER
+                                                                                            : HKEY_LOCAL_MACHINE;
+  const string RegPath = getGameRegistryPath();
 
-  const string RegPath =
-      R"(Software\Microsoft\Windows\CurrentVersion\Uninstall\Steam App )" + to_string(this->getSteamGameID());
+  char Data[REG_BUFFER_SIZE]{};
+  DWORD DataSize = REG_BUFFER_SIZE;
 
-  HKEY HKey = nullptr;
-
-  char Data[REG_BUFFER_SIZE]{}; // NOLINT
-  DWORD DataType = REG_SZ;
-  DWORD DataSize = sizeof(Data);
-
-  LONG Result = RegOpenKeyExA(HKEY_LOCAL_MACHINE, RegPath.c_str(), 0, KEY_READ, &HKey);
+  LONG Result = RegGetValueA(BaseHKey, RegPath.c_str(), "Installed Path", RRF_RT_REG_SZ, nullptr, Data, &DataSize);
   if (Result == ERROR_SUCCESS) {
-    // Query the value
-    Result = RegQueryValueExA(HKey, "InstallLocation", nullptr, &DataType, (LPBYTE)Data, &DataSize); // NOLINT
-    if (Result == ERROR_SUCCESS) {
-      // Ensure null-terminated string
-      Data[DataSize] = '\0'; // NOLINT
-      return string(Data);   // NOLINT
-    }
-    // Close the registry key
-    RegCloseKey(HKey);
+    return {Data};
   }
 
   return {};

@@ -68,4 +68,6 @@ private:
 
   // gets the system path for a folder (from windows.h)
   static auto getSystemPath(const GUID &FolderID) -> std::filesystem::path;
+
+  [[nodiscard]] auto getGameRegistryPath() const -> std::string;
 };
