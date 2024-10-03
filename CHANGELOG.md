@@ -3,6 +3,7 @@
 ## [0.6.0] - UNRELEASED
 
 - Added a function to classify vanilla BSAs in the config, which will ignore complex material and parallax files from them
+- Fixed retrieval of game installation directories from the registry
 
 ## [0.5.8] - 2025-09-21
 
