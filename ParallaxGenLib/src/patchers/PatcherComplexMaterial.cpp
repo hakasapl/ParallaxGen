@@ -29,7 +29,7 @@ PatcherComplexMaterial::PatcherComplexMaterial(filesystem::path NIFPath, nifly::
                                                ParallaxGenD3D *PGD3D)
     : NIFPath(std::move(NIFPath)), NIF(NIF), PGC(PGC), PGD3D(PGD3D) {}
 
-auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes,
+auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
                                          bool &EnableResult, bool &EnableDynCubemaps,
                                          wstring &MatchedPath) const -> ParallaxGenTask::PGResult {
 
@@ -44,7 +44,7 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<wstring,
 
   EnableResult = true; // Start with default true
 
-  if (shouldApplySlots(SearchPrefixes, MatchedPath, EnableDynCubemaps, NIFPath.wstring())) {
+  if (shouldApplySlots(SearchPrefixes, OldSlots, MatchedPath, EnableDynCubemaps, NIFPath.wstring())) {
     spdlog::trace(L"NIF: {} | Shape: {} | CM | Found CM map: {}", NIFPath.wstring(), ShapeBlockID, MatchedPath);
   } else {
     spdlog::trace(L"NIF: {} | Shape: {} | CM | No CM map found", NIFPath.wstring(), ShapeBlockID);
@@ -105,7 +105,7 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<wstring,
   return Result;
 }
 
-auto PatcherComplexMaterial::shouldApplySlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes,
+auto PatcherComplexMaterial::shouldApplySlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes, const array<wstring, NUM_TEXTURE_SLOTS> &OldSlots,
                                               std::wstring &MatchedPath, bool &EnableDynCubemaps,
                                               const wstring &NIFPath) -> bool {
   static const auto *CMBaseMap = &PGD->getTextureMap(NIFUtil::TextureSlots::ENVMASK);
@@ -113,7 +113,7 @@ auto PatcherComplexMaterial::shouldApplySlots(const std::array<std::wstring, NUM
   // Check if complex material file exists
   static const vector<int> SlotSearch = {1, 0}; // Diffuse first, then normal
   for (int Slot : SlotSearch) {
-    auto FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], *CMBaseMap);
+    auto FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], OldSlots[static_cast<int>(NIFUtil::TextureSlots::ENVMASK)], NIFUtil::TextureType::COMPLEXMATERIAL, *CMBaseMap);
     if (!FoundMatch.Path.empty() && FoundMatch.Type == NIFUtil::TextureType::COMPLEXMATERIAL) {
       // found complex material map
       MatchedPath = FoundMatch.Path.wstring();

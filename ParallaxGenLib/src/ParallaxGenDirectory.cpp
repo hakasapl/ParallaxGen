@@ -385,15 +385,9 @@ auto ParallaxGenDirectory::addToTextureMaps(const filesystem::path &Path, const 
   const auto &Base = NIFUtil::getTexBase(Path);
   const auto &SlotInt = static_cast<size_t>(Slot);
 
-  // Check if texture is already in map
-  if (TextureMaps[SlotInt].find(Base) != TextureMaps[SlotInt].end()) {
-    // Texture already exists
-    spdlog::warn(L"Texture base {} already exists in map in slot {}, replacing.", Base, SlotInt);
-  }
-
   // Add to texture map
   NIFUtil::PGTexture NewPGTexture = {Path, Type};
-  TextureMaps[SlotInt][Base] = NewPGTexture;
+  TextureMaps[SlotInt][Base].insert(NewPGTexture);
 }
 
 auto ParallaxGenDirectory::addMesh(const filesystem::path &Path) -> void {
@@ -404,12 +398,12 @@ auto ParallaxGenDirectory::addMesh(const filesystem::path &Path) -> void {
   Meshes.insert(Path);
 }
 
-auto ParallaxGenDirectory::getTextureMap(const NIFUtil::TextureSlots &Slot) -> map<wstring, NIFUtil::PGTexture> & {
+auto ParallaxGenDirectory::getTextureMap(const NIFUtil::TextureSlots &Slot) -> map<wstring, unordered_set<NIFUtil::PGTexture, NIFUtil::PGTextureHasher>> & {
   return TextureMaps[static_cast<size_t>(Slot)];
 }
 
 auto ParallaxGenDirectory::getTextureMapConst(const NIFUtil::TextureSlots &Slot) const
-    -> const map<wstring, NIFUtil::PGTexture> & {
+    -> const map<wstring, unordered_set<NIFUtil::PGTexture, NIFUtil::PGTextureHasher>> & {
   return TextureMaps[static_cast<size_t>(Slot)];
 }
 

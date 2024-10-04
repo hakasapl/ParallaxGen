@@ -31,7 +31,7 @@ private:
   std::unordered_set<std::filesystem::path> UnconfirmedMeshes{};
 
   // Structures to store relevant files (sometimes their contents)
-  std::array<std::map<std::wstring, NIFUtil::PGTexture>, NUM_TEXTURE_SLOTS> TextureMaps{};
+  std::array<std::map<std::wstring, std::unordered_set<NIFUtil::PGTexture, NIFUtil::PGTextureHasher>>, NUM_TEXTURE_SLOTS> TextureMaps{};
   std::unordered_set<std::filesystem::path> Meshes{};
   std::vector<std::filesystem::path> PBRJSONs{};
   std::vector<std::filesystem::path> PGJSONs{};
@@ -64,10 +64,10 @@ private:
 public:
   static auto checkGlobMatchInSet(const std::wstring &Check, const std::unordered_set<std::wstring> &List) -> bool;
 
-  [[nodiscard]] auto getTextureMap(const NIFUtil::TextureSlots &Slot) -> std::map<std::wstring, NIFUtil::PGTexture> &;
+  [[nodiscard]] auto getTextureMap(const NIFUtil::TextureSlots &Slot) -> std::map<std::wstring, std::unordered_set<NIFUtil::PGTexture, NIFUtil::PGTextureHasher>> &;
 
   [[nodiscard]] auto
-  getTextureMapConst(const NIFUtil::TextureSlots &Slot) const -> const std::map<std::wstring, NIFUtil::PGTexture> &;
+  getTextureMapConst(const NIFUtil::TextureSlots &Slot) const -> const std::map<std::wstring, std::unordered_set<NIFUtil::PGTexture, NIFUtil::PGTextureHasher>> &;
 
   [[nodiscard]] auto getMeshes() const -> const std::unordered_set<std::filesystem::path> &;
 

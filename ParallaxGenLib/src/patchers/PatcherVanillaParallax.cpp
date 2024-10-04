@@ -32,7 +32,7 @@ PatcherVanillaParallax::PatcherVanillaParallax(filesystem::path NIFPath, nifly::
   }
 }
 
-auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes,
+auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
                                          bool &EnableResult, wstring &MatchedPath) const -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
@@ -54,7 +54,7 @@ auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<wstring,
   }
 
   // Check if parallax map exists
-  if (shouldApplySlots(SearchPrefixes, MatchedPath)) {
+  if (shouldApplySlots(SearchPrefixes, OldSlots, MatchedPath)) {
     spdlog::trace(L"NIF: {} | Shape: {} | Parallax | Found parallax map: {}", NIFPath.wstring(), ShapeBlockID, MatchedPath);
   } else {
     spdlog::trace(L"NIF: {} | Shape: {} | Parallax | No parallax map found", NIFPath.wstring(), ShapeBlockID);
@@ -131,14 +131,14 @@ auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<wstring,
   return Result;
 }
 
-auto PatcherVanillaParallax::shouldApplySlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes,
+auto PatcherVanillaParallax::shouldApplySlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
                                               std::wstring &MatchedPath) -> bool {
   static const auto *HeightBaseMap = &PGD->getTextureMapConst(NIFUtil::TextureSlots::PARALLAX);
 
   // Check if vanilla parallax file exists
   static const vector<int> SlotSearch = {1, 0}; // Diffuse first, then normal
   for (int Slot : SlotSearch) {
-    auto FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], *HeightBaseMap).Path.wstring();
+    auto FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], OldSlots[static_cast<int>(NIFUtil::TextureSlots::PARALLAX)], NIFUtil::TextureType::HEIGHT, *HeightBaseMap).Path.wstring();
     if (!FoundMatch.empty()) {
       // found parallax map
       MatchedPath = FoundMatch;

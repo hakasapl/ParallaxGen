@@ -1,14 +1,16 @@
 #include "ParallaxGenD3D.hpp"
 
+#include "NIFUtil.hpp"
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenTask.hpp"
 #include "ParallaxGenUtil.hpp"
-#include "NIFUtil.hpp"
+
 
 #include <spdlog/spdlog.h>
 
-#include <DirectXTex.h>
 #include <DirectXMath.h>
+#include <DirectXTex.h>
+
 
 // windows
 #include <windows.h>
@@ -43,33 +45,36 @@ ParallaxGenD3D::ParallaxGenD3D(ParallaxGenDirectory *PGD, filesystem::path Outpu
                                const bool &UseGPU)
     : PGD(PGD), OutputDir(std::move(OutputDir)), ExePath(std::move(ExePath)), UseGPU(UseGPU) {}
 
-auto ParallaxGenD3D::findCMMaps(const std::unordered_set<std::wstring>& BSAExcludes) -> ParallaxGenTask::PGResult {
+auto ParallaxGenD3D::findCMMaps(const std::unordered_set<std::wstring> &BSAExcludes) -> ParallaxGenTask::PGResult {
   auto &EnvMasks = PGD->getTextureMap(NIFUtil::TextureSlots::ENVMASK);
 
   ParallaxGenTask::PGResult PGResult = ParallaxGenTask::PGResult::SUCCESS;
 
   // loop through maps
-  for (auto &EnvMask : EnvMasks) {
-    if (EnvMask.second.Type != NIFUtil::TextureType::ENVIRONMENTMASK) {
-      continue;
-    }
+  for (auto &EnvSlot : EnvMasks) {
+    for (const auto &EnvMask : EnvSlot.second) {
+      if (EnvMask.Type != NIFUtil::TextureType::ENVIRONMENTMASK) {
+        continue;
+      }
 
-    bool bFileInVanillaBSA = PGD->isFileInBSA(EnvMask.second.Path, BSAExcludes);
+      bool BFileInVanillaBSA = PGD->isFileInBSA(EnvMask.Path, BSAExcludes);
 
-    bool Result = false;
-    if (!bFileInVanillaBSA) {
-      ParallaxGenTask::updatePGResult(PGResult, checkIfCM(EnvMask.second.Path, Result),
-                                      ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
-    } else {
-      spdlog::trace(L"Envmask {} is contained in excluded BSA - skipping complex material check",
-                    EnvMask.second.Path.wstring());
-    }
+      bool Result = false;
+      if (!BFileInVanillaBSA) {
+        ParallaxGenTask::updatePGResult(PGResult, checkIfCM(EnvMask.Path, Result),
+                                        ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
+      } else {
+        spdlog::trace(L"Envmask {} is contained in excluded BSA - skipping complex material check",
+                      EnvMask.Path.wstring());
+      }
 
-
-    if (Result) {
-      // TODO we need to fill in alpha for non-CM stuff
-      EnvMask.second.Type = NIFUtil::TextureType::COMPLEXMATERIAL;
-      spdlog::trace(L"Found complex material env mask: {}", EnvMask.second.Path.wstring());
+      if (Result) {
+        // TODO we need to fill in alpha for non-CM stuff
+        // remove old env mask
+        EnvSlot.second.erase(EnvMask);
+        EnvSlot.second.insert({EnvMask.Path, NIFUtil::TextureType::COMPLEXMATERIAL});
+        spdlog::trace(L"Found complex material env mask: {}", EnvMask.Path.wstring());
+      }
     }
   }
 
@@ -264,8 +269,8 @@ auto ParallaxGenD3D::countAlphaValuesCPU(const DirectX::ScratchImage &Image, con
   for (size_t Y = 0; Y < InImage.GetMetadata().height; ++Y) {
     for (size_t X = 0; X < InImage.GetMetadata().width; ++X) {
       const size_t PixelIndex = (Y * RowPitch) + (X * 4); // Assuming 4 bytes per pixel (RGBA)
-      uint8_t Alpha = Pixels[PixelIndex + 3];       // NOLINT
-      if (Alpha == 255) {                           // NOLINT
+      uint8_t Alpha = Pixels[PixelIndex + 3];             // NOLINT
+      if (Alpha == 255) {                                 // NOLINT
         AlphaValues++;
       }
     }
@@ -376,12 +381,10 @@ auto ParallaxGenD3D::compileShader(const std::filesystem::path &Filename,
   if (FAILED(HR)) {
     if (PtrErrorBlob != nullptr) {
       spdlog::critical(L"Failed to compile shader {}: {}, {}", Filename.wstring(),
-                       strToWstr(getHRESULTErrorMessage(HR)),
-                       static_cast<wchar_t *>(PtrErrorBlob->GetBufferPointer()));
+                       strToWstr(getHRESULTErrorMessage(HR)), static_cast<wchar_t *>(PtrErrorBlob->GetBufferPointer()));
       PtrErrorBlob.Reset();
     } else {
-      spdlog::critical(L"Failed to compile shader {}: {}", Filename.wstring(),
-                       strToWstr(getHRESULTErrorMessage(HR)));
+      spdlog::critical(L"Failed to compile shader {}: {}", Filename.wstring(), strToWstr(getHRESULTErrorMessage(HR)));
     }
 
     exit(1);
@@ -399,8 +402,9 @@ auto ParallaxGenD3D::createComputeShader(const wstring &ShaderPath,
   compileShader(ShaderPath, CompiledShader);
 
   // Create shader
-  HRESULT HR = PtrDevice->CreateComputeShader(CompiledShader->GetBufferPointer(), CompiledShader->GetBufferSize(), // NOLINT
-                                              nullptr, ShaderDest.ReleaseAndGetAddressOf());
+  HRESULT HR =
+      PtrDevice->CreateComputeShader(CompiledShader->GetBufferPointer(), CompiledShader->GetBufferSize(), // NOLINT
+                                     nullptr, ShaderDest.ReleaseAndGetAddressOf());
   if (FAILED(HR)) {
     spdlog::debug("Failed to create compute shader: {}", getHRESULTErrorMessage(HR));
     return ParallaxGenTask::PGResult::FAILURE;
@@ -744,7 +748,7 @@ auto ParallaxGenD3D::createShaderResourceView(
   // Create SRV for texture
   D3D11_SHADER_RESOURCE_VIEW_DESC ShaderDesc = {};
   ShaderDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-  ShaderDesc.Texture2D.MipLevels = -1;  // NOLINT
+  ShaderDesc.Texture2D.MipLevels = -1; // NOLINT
 
   // Create SRV
   HR = PtrDevice->CreateShaderResourceView(Texture.Get(), &ShaderDesc, Dest.ReleaseAndGetAddressOf());
@@ -896,8 +900,8 @@ auto ParallaxGenD3D::readBack(const ComPtr<ID3D11Texture2D> &GPUResource,
   ComPtr<ID3D11Texture2D> StagingTex2D;
   PGResult = createTexture2D(StagingTex2DDesc, StagingTex2D);
   if (PGResult != ParallaxGenTask::PGResult::SUCCESS) {
-      spdlog::debug("Failed to create staging texture: {}", getHRESULTErrorMessage(HR));
-      return {};
+    spdlog::debug("Failed to create staging texture: {}", getHRESULTErrorMessage(HR));
+    return {};
   }
 
   // Copy resource to staging texture
@@ -915,15 +919,16 @@ auto ParallaxGenD3D::readBack(const ComPtr<ID3D11Texture2D> &GPUResource,
     D3D11_MAPPED_SUBRESOURCE MappedResource;
     HR = PtrContext->Map(StagingTex2D.Get(), MipLevel, D3D11_MAP_READ, 0, &MappedResource);
     if (FAILED(HR)) {
-        spdlog::debug("[GPU] Failed to map resource to CPU during read back at mip level {}: {}", MipLevel, getHRESULTErrorMessage(HR));
-        return {};
+      spdlog::debug("[GPU] Failed to map resource to CPU during read back at mip level {}: {}", MipLevel,
+                    getHRESULTErrorMessage(HR));
+      return {};
     }
 
     // Copy the data from the mapped resource to the output vector
-    auto *SrcData = reinterpret_cast<unsigned char*>(MappedResource.pData);
+    auto *SrcData = reinterpret_cast<unsigned char *>(MappedResource.pData);
     for (UINT Row = 0; Row < MipHeight; ++Row) {
-        unsigned char* RowStart = SrcData + Row * MappedResource.RowPitch;  // NOLINT
-        OutputData.insert(OutputData.end(), RowStart, RowStart + MipWidth * Channels);  // NOLINT
+      unsigned char *RowStart = SrcData + Row * MappedResource.RowPitch;             // NOLINT
+      OutputData.insert(OutputData.end(), RowStart, RowStart + MipWidth * Channels); // NOLINT
     }
 
     // Unmap the resource for this mip level
@@ -1010,8 +1015,7 @@ auto ParallaxGenD3D::getDDS(const filesystem::path &DDSPath,
   }
 
   if (FAILED(HR)) {
-    spdlog::error(L"Failed to load DDS file from {}: {}", DDSPath.wstring(),
-                  strToWstr(getHRESULTErrorMessage(HR)));
+    spdlog::error(L"Failed to load DDS file from {}: {}", DDSPath.wstring(), strToWstr(getHRESULTErrorMessage(HR)));
     return ParallaxGenTask::PGResult::FAILURE;
   }
 
@@ -1064,13 +1068,13 @@ auto ParallaxGenD3D::getDDSMetadata(const filesystem::path &DDSPath,
   return ParallaxGenTask::PGResult::SUCCESS;
 }
 
-auto ParallaxGenD3D::loadRawPixelsToScratchImage(const vector<unsigned char> &RawPixels,
-                                                                  const size_t &Width, const size_t &Height,
-                                                                  const size_t &Mips, DXGI_FORMAT Format) -> DirectX::ScratchImage{
+auto ParallaxGenD3D::loadRawPixelsToScratchImage(const vector<unsigned char> &RawPixels, const size_t &Width,
+                                                 const size_t &Height, const size_t &Mips,
+                                                 DXGI_FORMAT Format) -> DirectX::ScratchImage {
   // Initialize a ScratchImage
   DirectX::ScratchImage Image;
   const HRESULT HR = Image.Initialize2D(Format, Width, Height, 1,
-                                  Mips); // 1 array slice, 1 mipmap level
+                                        Mips); // 1 array slice, 1 mipmap level
   if (FAILED(HR)) {
     spdlog::debug("Failed to initialize ScratchImage: {}", getHRESULTErrorMessage(HR));
     return {};

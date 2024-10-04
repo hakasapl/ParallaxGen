@@ -31,11 +31,11 @@ public:
                          ParallaxGenD3D *PGD3D);
 
   // check if complex material should be enabled on shape
-  auto shouldApply(nifly::NiShape *NIFShape, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes,
+  auto shouldApply(nifly::NiShape *NIFShape, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
                    bool &EnableResult, bool &EnableDynCubemaps,
                    std::wstring &MatchedPath) const -> ParallaxGenTask::PGResult;
 
-  static auto shouldApplySlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes,
+  static auto shouldApplySlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
                         std::wstring &MatchedPath, bool &EnableDynCubemaps, const std::wstring &NIFPath) -> bool;
 
   // enables complex material on a shape in a NIF

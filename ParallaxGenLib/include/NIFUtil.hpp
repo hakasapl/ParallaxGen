@@ -59,6 +59,22 @@ auto getSlotFromTexType(const TextureType &Type) -> TextureSlots;
 struct PGTexture {
   std::filesystem::path Path;
   TextureType Type{};
+
+  // Equality operator
+  auto operator==(const PGTexture& Other) const -> bool {
+      return Path == Other.Path && Type == Other.Type;
+  }
+};
+
+struct PGTextureHasher {
+    auto operator()(const PGTexture& Texture) const -> size_t {
+        // Hash the path and the texture type, and combine them
+        std::size_t PathHash = std::hash<std::filesystem::path>()(Texture.Path);
+        std::size_t TypeHash = std::hash<int>()(static_cast<int>(Texture.Type));
+
+        // Combine the hashes using bitwise XOR and bit shifting
+        return PathHash ^ (TypeHash << 1);
+    }
 };
 
 auto getDefaultTextureType(const TextureSlots &Slot) -> TextureType;
@@ -98,9 +114,10 @@ auto setTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, const Texture
 auto setTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, const TextureSlots &Slot,
                     const std::string &TexturePath, bool &Changed) -> void;
 auto getTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, const TextureSlots &Slot) -> std::string;
+auto getTextureSlots(nifly::NifFile &NIF, nifly::NiShape *NIFShape) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;
 auto getTexBase(const std::filesystem::path &TexPath) -> std::wstring;
-auto getTexMatch(const std::wstring &Base,
-                 const std::map<std::wstring, PGTexture> &SearchMap) -> PGTexture;
+auto getTexMatch(const std::wstring &Base, const std::wstring &ExistingSlot, const TextureType &DesiredType,
+                 const std::map<std::wstring, std::unordered_set<PGTexture, PGTextureHasher>> &SearchMap) -> PGTexture;
 // Gets all the texture prefixes for a textureset. ie. _n.dds is removed etc. for each slot
 auto getSearchPrefixes(nifly::NifFile &NIF, nifly::NiShape *NIFShape)
     -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;

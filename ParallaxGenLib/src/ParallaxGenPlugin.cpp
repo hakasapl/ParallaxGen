@@ -319,7 +319,7 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
     if (AppliedShader == NIFUtil::ShapeShader::VANILLAPARALLAX) {
       ShaderLabel = "Parallax";
       wstring MatchedPath;
-      bool ShouldApply = PatcherVanillaParallax::shouldApplySlots(SearchPrefixes, MatchedPath);
+      bool ShouldApply = PatcherVanillaParallax::shouldApplySlots(SearchPrefixes, BaseSlots, MatchedPath);
 
       if (ShouldApply) {
         NewSlots = PatcherVanillaParallax::applyPatchSlots(BaseSlots, MatchedPath);
@@ -330,7 +330,7 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
       wstring MatchedPath;
       bool EnableDynCubemaps = false;
       bool ShouldApply =
-          PatcherComplexMaterial::shouldApplySlots(SearchPrefixes, MatchedPath, EnableDynCubemaps, NIFPath);
+          PatcherComplexMaterial::shouldApplySlots(SearchPrefixes, BaseSlots, MatchedPath, EnableDynCubemaps, NIFPath);
 
       if (ShouldApply) {
         NewSlots = PatcherComplexMaterial::applyPatchSlots(BaseSlots, MatchedPath, EnableDynCubemaps);

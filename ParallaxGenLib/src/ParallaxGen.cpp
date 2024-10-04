@@ -41,8 +41,15 @@ void ParallaxGen::upgradeShaders() {
   // Define task parameters
   ParallaxGenTask TaskTracker("Shader Upgrades", HeightMaps.size());
 
-  for (const auto &HeightMap : HeightMaps) {
-    TaskTracker.completeJob(convertHeightMapToComplexMaterial(HeightMap.second.Path));
+  for (const auto &HeightSlot : HeightMaps) {
+    for (const auto &HeightMap : HeightSlot.second) {
+      if (HeightMap.Type != NIFUtil::TextureType::HEIGHT) {
+        // not a height map
+        continue;
+      }
+
+      TaskTracker.completeJob(convertHeightMapToComplexMaterial(HeightMap.Path));
+    }
   }
 }
 
@@ -114,14 +121,15 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
   }
 
   static const auto *CMBaseMap = &PGD->getTextureMapConst(NIFUtil::TextureSlots::ENVMASK);
-  auto ExistingCM = NIFUtil::getTexMatch(TexBase, *CMBaseMap);
-  filesystem::path EnvMask = filesystem::path();
+  auto ExistingCM = NIFUtil::getTexMatch(TexBase, L"", NIFUtil::TextureType::COMPLEXMATERIAL, *CMBaseMap);
   if (!ExistingCM.Path.empty()) {
-    if (ExistingCM.Type == NIFUtil::TextureType::COMPLEXMATERIAL) {
-      // complex material already exists
-      return Result;
-    }
+    // Complex material already exists
+    return Result;
+  }
 
+  auto ExistingMask = NIFUtil::getTexMatch(TexBase, L"", NIFUtil::TextureType::ENVIRONMENTMASK, *CMBaseMap);
+  filesystem::path EnvMask = filesystem::path();
+  if (!ExistingMask.Path.empty()) {
     // env mask exists, but it's not a complex material
     EnvMask = ExistingCM.Path;
   }
@@ -146,7 +154,7 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
     }
 
     // add newly created file to complexMaterialMaps for later processing
-    PGD->getTextureMap(NIFUtil::TextureSlots::ENVMASK)[TexBase] = {ComplexMap, NIFUtil::TextureType::COMPLEXMATERIAL};
+    PGD->getTextureMap(NIFUtil::TextureSlots::ENVMASK)[TexBase].insert({ComplexMap, NIFUtil::TextureType::COMPLEXMATERIAL});
 
     spdlog::debug(L"Generated complex material map: {}", ComplexMap.wstring());
   } else {
@@ -370,6 +378,7 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
   }
 
   // Find search prefixes
+  auto OldSlots = NIFUtil::getTextureSlots(NIF, NIFShape);
   auto SearchPrefixes = NIFUtil::getSearchPrefixes(NIF, NIFShape);
   wstring MatchedPath;
 
@@ -403,7 +412,7 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
     bool EnableDynCubemaps = false;
     MatchedPath = L"";
     ParallaxGenTask::updatePGResult(
-        Result, PatchCM.shouldApply(NIFShape, SearchPrefixes, EnableCM, EnableDynCubemaps, MatchedPath),
+        Result, PatchCM.shouldApply(NIFShape, SearchPrefixes, OldSlots, EnableCM, EnableDynCubemaps, MatchedPath),
         ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
     if (EnableCM) {
       // Enable complex material on shape
@@ -420,7 +429,7 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
   if (!IgnoreParallax) {
     bool EnableParallax = false;
     MatchedPath = L"";
-    ParallaxGenTask::updatePGResult(Result, PatchVP.shouldApply(NIFShape, SearchPrefixes, EnableParallax, MatchedPath),
+    ParallaxGenTask::updatePGResult(Result, PatchVP.shouldApply(NIFShape, SearchPrefixes, OldSlots, EnableParallax, MatchedPath),
                                     ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
     if (EnableParallax) {
       // Enable Parallax on shape
