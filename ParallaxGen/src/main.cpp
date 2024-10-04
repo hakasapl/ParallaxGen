@@ -224,11 +224,11 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   // Load configs
   PGC.loadConfig(!Args.NoDefaultConfig);
 
-  // Map files
-  PGD.mapFiles(PGC.getNIFBlocklist(), PGC.getManualTextureMaps(), !Args.NoMapFromMeshes, !Args.NoMultithread,
-               Args.HighMem);
-
   auto VanillaBSAList = PGC.getVanillaBSAList();
+
+  // Map files
+  PGD.mapFiles(PGC.getNIFBlocklist(), PGC.getManualTextureMaps(), VanillaBSAList, !Args.NoMapFromMeshes, !Args.NoMultithread,
+               Args.HighMem);
 
   spdlog::info("Finding complex material env maps");
   PGD3D.findCMMaps(VanillaBSAList);
