@@ -1,0 +1,2 @@
+ParallaxGenLib/tests/env/* filter=lfs diff=lfs merge=lfs -text
+ParallaxGenLib/tests/env/** filter=lfs diff=lfs merge=lfs -text
