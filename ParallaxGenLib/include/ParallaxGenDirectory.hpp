@@ -47,6 +47,7 @@ public:
   auto findFiles() -> void;
   auto mapFiles(const std::unordered_set<std::wstring> &NIFBlocklist,
                 const std::unordered_map<std::filesystem::path, NIFUtil::TextureType> &ManualTextureMaps,
+                const std::unordered_set<std::wstring> &BSAExcludes,
                 const bool &MapFromMeshes = true, const bool &Multithreading = true, const bool &CacheNIFs = false) -> void;
 
 private:

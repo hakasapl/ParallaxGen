@@ -63,6 +63,7 @@ auto ParallaxGenDirectory::findFiles() -> void {
 
 auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
                                     const unordered_map<filesystem::path, NIFUtil::TextureType> &ManualTextureMaps,
+                                    const std::unordered_set<std::wstring> &BSAExcludes,
                                     const bool &MapFromMeshes, const bool &Multithreading,
                                     const bool &CacheNIFs) -> void {
   spdlog::info("Starting building texture map");
@@ -153,6 +154,11 @@ auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
       // Manual texture map found, override
       WinningType = ManualTextureMaps.at(Texture);
       WinningSlot = NIFUtil::getSlotFromTexType(WinningType);
+    }
+
+    if ((WinningSlot == NIFUtil::TextureSlots::PARALLAX) && isFileInBSA(Texture, BSAExcludes)) {
+      spdlog::trace(L"Mapping Textures | Ignored vanilla parallax texture | Texture: {}", Texture.wstring());
+      continue;
     }
 
     // Log result
