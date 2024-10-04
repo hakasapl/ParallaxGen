@@ -23,7 +23,8 @@ Checks: '-*,
          portability-*,
          readability-*,
          -readability-function-cognitive-complexity,
-         -readability-identifier-length'
+         -readability-identifier-length,
+         -readability-magic-numbers'
 FormatStyle: llvm
 HeaderFilterRegex: 'src/|include/'
 CheckOptions:
