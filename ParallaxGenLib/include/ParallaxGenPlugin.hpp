@@ -15,7 +15,7 @@ private:
   static std::mutex LibMutex;
   static void libLogMessageIfExists();
   static void libThrowExceptionIfExists();
-  static void libInitialize(const int &GameType, const std::wstring &DataPath, const std::wstring &OutputPlugin);
+  static void libInitialize(const int &GameType, const std::wstring &DataPath, const std::wstring &OutputPlugin, const std::vector<std::wstring> &LoadOrder = {});
   static void libPopulateObjs();
   static void libFinalize(const std::filesystem::path &OutputPath);
   static auto libGetMatchingTXSTObjs(const std::wstring &NIFName, const std::wstring &Name3D, const int &Index3D) -> std::vector<std::tuple<int, int>>;

@@ -1,5 +1,6 @@
 #include "ParallaxGenPlugin.hpp"
 
+#include <fstream>
 #include <mutex>
 #include <spdlog/spdlog.h>
 #include <unordered_map>
@@ -67,10 +68,20 @@ void ParallaxGenPlugin::libThrowExceptionIfExists() {
   throw runtime_error("ParallaxGenMutagenWrapper.dll: " + ParallaxGenUtil::wstrToStr(MessageOut));
 }
 
-void ParallaxGenPlugin::libInitialize(const int &GameType, const wstring &DataPath, const wstring &OutputPlugin) {
+void ParallaxGenPlugin::libInitialize(const int &GameType, const wstring &DataPath, const wstring &OutputPlugin,
+                                      const vector<wstring> &LoadOrder) {
   lock_guard<mutex> Lock(LibMutex);
 
-  Initialize(GameType, DataPath.c_str(), OutputPlugin.c_str());
+  // Use std::vector to manage the memory for LoadOrderArr
+  std::vector<const wchar_t *> LoadOrderArr;
+  if (!LoadOrder.empty()) {
+    LoadOrderArr.reserve(LoadOrder.size()); // Pre-allocate the vector size
+    for (const auto &Mod : LoadOrder) {
+      LoadOrderArr.push_back(Mod.c_str()); // Populate the vector with the c_str pointers
+    }
+  }
+
+  Initialize(GameType, DataPath.c_str(), OutputPlugin.c_str(), LoadOrderArr.data());
   libLogMessageIfExists();
   libThrowExceptionIfExists();
 }
@@ -218,12 +229,31 @@ mutex ParallaxGenPlugin::TXSTWarningMapMutex;
 unordered_map<int, NIFUtil::ShapeShader> ParallaxGenPlugin::TXSTWarningMap; // NOLINT
 
 void ParallaxGenPlugin::initialize(const BethesdaGame &Game) {
+  // Maps BethesdaGame::GameType to Mutagen game type
   static const unordered_map<BethesdaGame::GameType, int> MutagenGameTypeMap = {
       {BethesdaGame::GameType::SKYRIM, 1},     {BethesdaGame::GameType::SKYRIM_SE, 2},
       {BethesdaGame::GameType::SKYRIM_VR, 3},  {BethesdaGame::GameType::ENDERAL, 5},
       {BethesdaGame::GameType::ENDERAL_SE, 6}, {BethesdaGame::GameType::SKYRIM_GOG, 7}};
 
-  libInitialize(MutagenGameTypeMap.at(Game.getGameType()), Game.getGameDataPath().wstring(), L"ParallaxGen.esp");
+  // Create load order vector
+  vector<wstring> LoadOrder;
+  auto LoadOrderFile = Game.getLoadOrderFile();
+  // open file
+  wifstream LoadOrderStream(LoadOrderFile);
+  if (LoadOrderStream.is_open()) {
+    wstring Line;
+    while (getline(LoadOrderStream, Line)) {
+      if (Line.empty() || Line.starts_with(L"#")) {
+        // skip empty lines and comments
+        continue;
+      }
+
+      LoadOrder.push_back(Line);
+    }
+    LoadOrderStream.close();
+  }
+
+  libInitialize(MutagenGameTypeMap.at(Game.getGameType()), Game.getGameDataPath().wstring(), L"ParallaxGen.esp", LoadOrder);
 }
 
 void ParallaxGenPlugin::populateObjs() { libPopulateObjs(); }

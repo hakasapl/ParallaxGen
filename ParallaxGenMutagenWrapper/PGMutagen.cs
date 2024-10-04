@@ -43,7 +43,8 @@ public static class ExceptionHandler
   }
 }
 
-public static class MessageHandler {
+public static class MessageHandler
+{
   private static Queue<Tuple<string, int>> LogQueue = [];
 
   public static void Log(string message, int level = 0)
@@ -131,19 +132,38 @@ public class PGMutagen
   }
 
   [UnmanagedCallersOnly(EntryPoint = "Initialize", CallConvs = [typeof(CallConvCdecl)])]
-  public static void Initialize(
+  public static unsafe void Initialize(
     [DNNE.C99Type("const int")] int gameType,
     [DNNE.C99Type("const wchar_t*")] IntPtr dataPathPtr,
-    [DNNE.C99Type("const wchar_t*")] IntPtr outputPluginPtr)
+    [DNNE.C99Type("const wchar_t*")] IntPtr outputPluginPtr,
+    [DNNE.C99Type("const wchar_t**")] IntPtr* loadOrder)
   {
     try
     {
       string dataPath = Marshal.PtrToStringUni(dataPathPtr) ?? string.Empty;
       string outputPlugin = Marshal.PtrToStringUni(outputPluginPtr) ?? string.Empty;
 
-      Env = GameEnvironment.Typical.Builder<ISkyrimMod, ISkyrimModGetter>((GameRelease)gameType)
+      // check if loadorder is defined
+      if (loadOrder is not null)
+      {
+        // Load order is defined
+        List<ModKey> loadOrderList = [];
+        for (int i = 0; loadOrder[i] != IntPtr.Zero; i++)
+        {
+          loadOrderList.Add(Marshal.PtrToStringUni(loadOrder[i]) ?? string.Empty);
+        }
+
+        Env = GameEnvironment.Typical.Builder<ISkyrimMod, ISkyrimModGetter>((GameRelease)gameType)
           .WithTargetDataFolder(dataPath)
+          .WithLoadOrder(loadOrderList.ToArray())
           .Build();
+      }
+      else
+      {
+        Env = GameEnvironment.Typical.Builder<ISkyrimMod, ISkyrimModGetter>((GameRelease)gameType)
+            .WithTargetDataFolder(dataPath)
+            .Build();
+      }
 
       OutMod = new SkyrimMod(ModKey.FromFileName(outputPlugin), (SkyrimRelease)gameType);
     }
