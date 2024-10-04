@@ -292,10 +292,10 @@ public class PGMutagen
           string nifName = modelRec.File;
 
           // Otherwise this causes issues with deepcopy
-          nifName = removePrefixIfExists("\\", nifName);
+          nifName = RemovePrefixIfExists("\\", nifName);
 
           nifName = nifName.ToLower();
-          nifName = addPrefixIfNotExists("meshes\\", nifName);
+          nifName = AddPrefixIfNotExists("meshes\\", nifName);
 
           if (modelRec.AlternateTextures is null)
           {
@@ -590,35 +590,35 @@ public class PGMutagen
       // Populate the slotsArray with string pointers
       if (!txstObj.Diffuse.IsNullOrEmpty())
       {
-        slotsArray[0] = Marshal.StringToHGlobalUni(addPrefixIfNotExists("textures\\", txstObj.Diffuse).ToLower());
+        slotsArray[0] = Marshal.StringToHGlobalUni(AddPrefixIfNotExists("textures\\", txstObj.Diffuse).ToLower());
       }
       if (!txstObj.NormalOrGloss.IsNullOrEmpty())
       {
-        slotsArray[1] = Marshal.StringToHGlobalUni(addPrefixIfNotExists("textures\\", txstObj.NormalOrGloss).ToLower());
+        slotsArray[1] = Marshal.StringToHGlobalUni(AddPrefixIfNotExists("textures\\", txstObj.NormalOrGloss).ToLower());
       }
       if (!txstObj.GlowOrDetailMap.IsNullOrEmpty())
       {
-        slotsArray[2] = Marshal.StringToHGlobalUni(addPrefixIfNotExists("textures\\", txstObj.GlowOrDetailMap).ToLower());
+        slotsArray[2] = Marshal.StringToHGlobalUni(AddPrefixIfNotExists("textures\\", txstObj.GlowOrDetailMap).ToLower());
       }
       if (!txstObj.Height.IsNullOrEmpty())
       {
-        slotsArray[3] = Marshal.StringToHGlobalUni(addPrefixIfNotExists("textures\\", txstObj.Height).ToLower());
+        slotsArray[3] = Marshal.StringToHGlobalUni(AddPrefixIfNotExists("textures\\", txstObj.Height).ToLower());
       }
       if (!txstObj.Environment.IsNullOrEmpty())
       {
-        slotsArray[4] = Marshal.StringToHGlobalUni(addPrefixIfNotExists("textures\\", txstObj.Environment).ToLower());
+        slotsArray[4] = Marshal.StringToHGlobalUni(AddPrefixIfNotExists("textures\\", txstObj.Environment).ToLower());
       }
       if (!txstObj.EnvironmentMaskOrSubsurfaceTint.IsNullOrEmpty())
       {
-        slotsArray[5] = Marshal.StringToHGlobalUni(addPrefixIfNotExists("textures\\", txstObj.EnvironmentMaskOrSubsurfaceTint).ToLower());
+        slotsArray[5] = Marshal.StringToHGlobalUni(AddPrefixIfNotExists("textures\\", txstObj.EnvironmentMaskOrSubsurfaceTint).ToLower());
       }
       if (!txstObj.Multilayer.IsNullOrEmpty())
       {
-        slotsArray[6] = Marshal.StringToHGlobalUni(addPrefixIfNotExists("textures\\", txstObj.Multilayer).ToLower());
+        slotsArray[6] = Marshal.StringToHGlobalUni(AddPrefixIfNotExists("textures\\", txstObj.Multilayer).ToLower());
       }
       if (!txstObj.BacklightMaskOrSpecular.IsNullOrEmpty())
       {
-        slotsArray[7] = Marshal.StringToHGlobalUni(addPrefixIfNotExists("textures\\", txstObj.BacklightMaskOrSpecular).ToLower());
+        slotsArray[7] = Marshal.StringToHGlobalUni(AddPrefixIfNotExists("textures\\", txstObj.BacklightMaskOrSpecular).ToLower());
       }
       slotsArray[8] = IntPtr.Zero;
     }
@@ -654,42 +654,42 @@ public class PGMutagen
       string? NewDiffuse = Marshal.PtrToStringUni(slots[0]);
       if (NewDiffuse is not null)
       {
-        newTXSTObj.Diffuse = removePrefixIfExists("textures\\", NewDiffuse);
+        newTXSTObj.Diffuse = RemovePrefixIfExists("textures\\", NewDiffuse);
       }
       string? NewNormalOrGloss = Marshal.PtrToStringUni(slots[1]);
       if (NewNormalOrGloss is not null)
       {
-        newTXSTObj.NormalOrGloss = removePrefixIfExists("textures\\", NewNormalOrGloss);
+        newTXSTObj.NormalOrGloss = RemovePrefixIfExists("textures\\", NewNormalOrGloss);
       }
       string? NewGlowOrDetailMap = Marshal.PtrToStringUni(slots[2]);
       if (NewGlowOrDetailMap is not null)
       {
-        newTXSTObj.GlowOrDetailMap = removePrefixIfExists("textures\\", NewGlowOrDetailMap);
+        newTXSTObj.GlowOrDetailMap = RemovePrefixIfExists("textures\\", NewGlowOrDetailMap);
       }
       string? NewHeight = Marshal.PtrToStringUni(slots[3]);
       if (NewHeight is not null)
       {
-        newTXSTObj.Height = removePrefixIfExists("textures\\", NewHeight);
+        newTXSTObj.Height = RemovePrefixIfExists("textures\\", NewHeight);
       }
       string? NewEnvironment = Marshal.PtrToStringUni(slots[4]);
       if (NewEnvironment is not null)
       {
-        newTXSTObj.Environment = removePrefixIfExists("textures\\", NewEnvironment);
+        newTXSTObj.Environment = RemovePrefixIfExists("textures\\", NewEnvironment);
       }
       string? NewEnvironmentMaskOrSubsurfaceTint = Marshal.PtrToStringUni(slots[5]);
       if (NewEnvironmentMaskOrSubsurfaceTint is not null)
       {
-        newTXSTObj.EnvironmentMaskOrSubsurfaceTint = removePrefixIfExists("textures\\", NewEnvironmentMaskOrSubsurfaceTint);
+        newTXSTObj.EnvironmentMaskOrSubsurfaceTint = RemovePrefixIfExists("textures\\", NewEnvironmentMaskOrSubsurfaceTint);
       }
       string? NewMultilayer = Marshal.PtrToStringUni(slots[6]);
       if (NewMultilayer is not null)
       {
-        newTXSTObj.Multilayer = removePrefixIfExists("textures\\", NewMultilayer);
+        newTXSTObj.Multilayer = RemovePrefixIfExists("textures\\", NewMultilayer);
       }
       string? NewBacklightMaskOrSpecular = Marshal.PtrToStringUni(slots[7]);
       if (NewBacklightMaskOrSpecular is not null)
       {
-        newTXSTObj.BacklightMaskOrSpecular = removePrefixIfExists("textures\\", NewBacklightMaskOrSpecular);
+        newTXSTObj.BacklightMaskOrSpecular = RemovePrefixIfExists("textures\\", NewBacklightMaskOrSpecular);
       }
     }
     catch (Exception ex)
@@ -714,42 +714,42 @@ public class PGMutagen
       string? NewDiffuse = Marshal.PtrToStringUni(slots[0]);
       if (!NewDiffuse.IsNullOrEmpty())
       {
-        newTXSTObj.Diffuse = removePrefixIfExists("textures\\", NewDiffuse);
+        newTXSTObj.Diffuse = RemovePrefixIfExists("textures\\", NewDiffuse);
       }
       string? NewNormalOrGloss = Marshal.PtrToStringUni(slots[1]);
       if (!NewNormalOrGloss.IsNullOrEmpty())
       {
-        newTXSTObj.NormalOrGloss = removePrefixIfExists("textures\\", NewNormalOrGloss);
+        newTXSTObj.NormalOrGloss = RemovePrefixIfExists("textures\\", NewNormalOrGloss);
       }
       string? NewGlowOrDetailMap = Marshal.PtrToStringUni(slots[2]);
       if (!NewGlowOrDetailMap.IsNullOrEmpty())
       {
-        newTXSTObj.GlowOrDetailMap = removePrefixIfExists("textures\\", NewGlowOrDetailMap);
+        newTXSTObj.GlowOrDetailMap = RemovePrefixIfExists("textures\\", NewGlowOrDetailMap);
       }
       string? NewHeight = Marshal.PtrToStringUni(slots[3]);
       if (!NewHeight.IsNullOrEmpty())
       {
-        newTXSTObj.Height = removePrefixIfExists("textures\\", NewHeight);
+        newTXSTObj.Height = RemovePrefixIfExists("textures\\", NewHeight);
       }
       string? NewEnvironment = Marshal.PtrToStringUni(slots[4]);
       if (!NewEnvironment.IsNullOrEmpty())
       {
-        newTXSTObj.Environment = removePrefixIfExists("textures\\", NewEnvironment);
+        newTXSTObj.Environment = RemovePrefixIfExists("textures\\", NewEnvironment);
       }
       string? NewEnvironmentMaskOrSubsurfaceTint = Marshal.PtrToStringUni(slots[5]);
       if (!NewEnvironmentMaskOrSubsurfaceTint.IsNullOrEmpty())
       {
-        newTXSTObj.EnvironmentMaskOrSubsurfaceTint = removePrefixIfExists("textures\\", NewEnvironmentMaskOrSubsurfaceTint);
+        newTXSTObj.EnvironmentMaskOrSubsurfaceTint = RemovePrefixIfExists("textures\\", NewEnvironmentMaskOrSubsurfaceTint);
       }
       string? NewMultilayer = Marshal.PtrToStringUni(slots[6]);
       if (!NewMultilayer.IsNullOrEmpty())
       {
-        newTXSTObj.Multilayer = removePrefixIfExists("textures\\", NewMultilayer);
+        newTXSTObj.Multilayer = RemovePrefixIfExists("textures\\", NewMultilayer);
       }
       string? NewBacklightMaskOrSpecular = Marshal.PtrToStringUni(slots[7]);
       if (!NewBacklightMaskOrSpecular.IsNullOrEmpty())
       {
-        newTXSTObj.BacklightMaskOrSpecular = removePrefixIfExists("textures\\", NewBacklightMaskOrSpecular);
+        newTXSTObj.BacklightMaskOrSpecular = RemovePrefixIfExists("textures\\", NewBacklightMaskOrSpecular);
       }
 
       TXSTObjs.Add(newTXSTObj);
@@ -871,7 +871,7 @@ public class PGMutagen
 
   // Helpers
 
-  private static string removePrefixIfExists(string prefix, string str)
+  private static string RemovePrefixIfExists(string prefix, string str)
   {
     if (str.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
     {
@@ -880,7 +880,7 @@ public class PGMutagen
     return str;
   }
 
-  private static string addPrefixIfNotExists(string prefix, string str)
+  private static string AddPrefixIfNotExists(string prefix, string str)
   {
     if (!str.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
     {
