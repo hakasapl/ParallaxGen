@@ -70,7 +70,7 @@ struct ParallaxGenCLIArgs {
     OutStr += "NoDefaultConfig: " + to_string(static_cast<int>(NoDefaultConfig)) + "\n";
     OutStr += "IgnoreParallax: " + to_string(static_cast<int>(IgnoreParallax)) + "\n";
     OutStr += "IgnoreComplexMaterial: " + to_string(static_cast<int>(IgnoreComplexMaterial)) + "\n";
-    OutStr += "IgnoreTruePBR: " + to_string(static_cast<int>(IgnoreTruePBR));
+    OutStr += "IgnoreTruePBR: " + to_string(static_cast<int>(IgnoreTruePBR)) + "\n";
     OutStr += "DisableMLP: " + to_string(static_cast<int>(DisableMLP));
 
     return OutStr;
@@ -356,11 +356,12 @@ void addArguments(CLI::App &App, ParallaxGenCLIArgs &Args, const filesystem::pat
 void initLogger(const filesystem::path &LOGPATH, const ParallaxGenCLIArgs &Args) {
   // Create loggers
   vector<spdlog::sink_ptr> Sinks;
-  Sinks.push_back(make_shared<spdlog::sinks::stdout_color_sink_mt>());
+  auto ConsoleSink = make_shared<spdlog::sinks::stdout_color_sink_mt>();
+  Sinks.push_back(ConsoleSink);
 
   // Rotating file sink
-  Sinks.push_back(make_shared<spdlog::sinks::rotating_file_sink_mt>(LOGPATH.string(), MAX_LOG_SIZE,
-                                                                    MAX_LOG_FILES)); // TODO wide string support here
+  auto FileSink = make_shared<spdlog::sinks::rotating_file_sink_mt>(LOGPATH.string(), MAX_LOG_SIZE, MAX_LOG_FILES);
+  Sinks.push_back(FileSink); // TODO wide string support here
   auto Logger = make_shared<spdlog::logger>("ParallaxGen", Sinks.begin(), Sinks.end());
 
   // register logger parameters
@@ -370,14 +371,14 @@ void initLogger(const filesystem::path &LOGPATH, const ParallaxGenCLIArgs &Args)
   spdlog::flush_on(spdlog::level::info);
 
   // Set logging mode
-  if (Args.Verbosity == 1) {
+  if (Args.Verbosity >= 1) {
     spdlog::set_level(spdlog::level::debug);
     spdlog::flush_on(spdlog::level::debug);
     spdlog::debug("DEBUG logging enabled");
   }
 
   if (Args.Verbosity >= 2) {
-    spdlog::set_level(spdlog::level::trace);
+    FileSink->set_level(spdlog::level::trace);
     spdlog::flush_on(spdlog::level::trace);
     spdlog::trace("TRACE logging enabled");
   }
