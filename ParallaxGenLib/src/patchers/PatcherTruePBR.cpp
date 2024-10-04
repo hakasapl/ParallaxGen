@@ -543,6 +543,15 @@ auto PatcherTruePBR::applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_
     NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::BACKLIGHT)] = NewSubsurface;
   }
 
+  // "SlotX" attributes
+  for (int I = 0; I < NUM_TEXTURE_SLOTS - 1; I++) {
+    string SlotName = "slot" + to_string(I + 1);
+    if (TruePBRData.contains(SlotName)) {
+      string NewSlot = TruePBRData[SlotName].get<string>();
+      NewSlots[I] = ParallaxGenUtil::strToWstr(NewSlot);
+    }
+  }
+
   return NewSlots;
 }
 
