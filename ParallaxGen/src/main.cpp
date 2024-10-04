@@ -143,7 +143,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   BethesdaGame::GameType BGType = getGameTypeMap().at(Args.GameType);
 
   // Create relevant objects
-  auto BG = BethesdaGame(BGType, Args.GameDir, true);
+  auto BG = BethesdaGame(BGType, true, Args.GameDir);
   auto PGD = ParallaxGenDirectory(BG);
   auto PGC = ParallaxGenConfig(&PGD, ExePath);
   auto PGD3D = ParallaxGenD3D(&PGD, Args.OutputDir, ExePath, !Args.NoGPU);
