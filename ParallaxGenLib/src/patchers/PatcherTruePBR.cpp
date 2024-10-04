@@ -277,8 +277,10 @@ auto PatcherTruePBR::insertTruePBRData(const wstring &LogPrefix,
   // Get PBR path, which is the path without the matched field
   auto MatchedFieldStr =
       CurCfg.contains("match_normal") ? CurCfg["match_normal"].get<string>() : CurCfg["match_diffuse"].get<string>();
-  auto MatchedField = NIFUtil::getTexBase(MatchedFieldStr);
-  TexPath.erase(TexPath.length() - MatchedField.length(), MatchedField.length());
+  auto MatchedFieldBase = NIFUtil::getTexBase(MatchedFieldStr);
+  TexPath.erase(TexPath.length() - MatchedFieldBase.length(), MatchedFieldBase.length());
+
+  auto MatchedField = ParallaxGenUtil::strToWstr(MatchedFieldStr);
 
   // "rename" attribute
   if (CurCfg.contains("rename")) {
