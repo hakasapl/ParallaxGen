@@ -24,7 +24,7 @@ void ParallaxGenPlugin::libLogMessageIfExists() {
 
   while (Message != nullptr) {
     wstring MessageOut(Message);
-    GlobalFree(static_cast<HGLOBAL>(Message)); // Only free if memory was allocated.
+    LocalFree(static_cast<HGLOBAL>(Message)); // Only free if memory was allocated.
     Message = nullptr;
 
     // log the message
@@ -63,7 +63,7 @@ void ParallaxGenPlugin::libThrowExceptionIfExists() {
   }
 
   wstring MessageOut(Message);
-  GlobalFree(static_cast<HGLOBAL>(Message)); // Only free if memory was allocated.
+  LocalFree(static_cast<HGLOBAL>(Message)); // Only free if memory was allocated.
 
   throw runtime_error("ParallaxGenMutagenWrapper.dll: " + ParallaxGenUtil::wstrToStr(MessageOut));
 }
@@ -144,7 +144,7 @@ auto ParallaxGenPlugin::libGetTXSTSlots(const int &TXSTIndex) -> array<wstring, 
       OutputArray[I] = SlotStr;
 
       // Free the unmanaged memory allocated by Marshal.StringToHGlobalAnsi
-      GlobalFree(static_cast<HGLOBAL>(SlotsArray[I]));
+      LocalFree(static_cast<HGLOBAL>(SlotsArray[I]));
     }
   }
 
@@ -213,7 +213,7 @@ auto ParallaxGenPlugin::libGetTXSTFormID(const int &TXSTIndex) -> tuple<unsigned
   wstring PluginNameString;
   if (PluginName != nullptr) {
     PluginNameString = wstring(PluginName);
-    GlobalFree(static_cast<HGLOBAL>(PluginName)); // Only free if memory was allocated.
+    LocalFree(static_cast<HGLOBAL>(PluginName)); // Only free if memory was allocated.
   } else {
     // Handle the case where PluginName is null (e.g., log an error, throw an exception, etc.).
     PluginNameString = L"Unknown";
