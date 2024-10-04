@@ -131,7 +131,7 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
   filesystem::path EnvMask = filesystem::path();
   if (!ExistingMask.Path.empty()) {
     // env mask exists, but it's not a complex material
-    EnvMask = ExistingCM.Path;
+    EnvMask = ExistingMask.Path;
   }
 
   const filesystem::path ComplexMap = TexBase + L"_m.dds";
