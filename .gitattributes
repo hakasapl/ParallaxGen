@@ -1,2 +1,8 @@
+ParallaxGenLib/tests/env/*.esm filter=lfs diff=lfs merge=lfs -text
+ParallaxGenLib/tests/env/*.esp filter=lfs diff=lfs merge=lfs -text
+ParallaxGenLib/tests/env/*.esl filter=lfs diff=lfs merge=lfs -text
+ParallaxGenLib/tests/env/*.bsa filter=lfs diff=lfs merge=lfs -text
+ParallaxGenLib/tests/env/*.nif filter=lfs diff=lfs merge=lfs -text
+ParallaxGenLib/tests/env/*.dds filter=lfs diff=lfs merge=lfs -text
 ParallaxGenLib/tests/env/* filter=lfs diff=lfs merge=lfs -text
 ParallaxGenLib/tests/env/** filter=lfs diff=lfs merge=lfs -text
