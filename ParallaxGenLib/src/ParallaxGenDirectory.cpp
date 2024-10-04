@@ -156,10 +156,9 @@ auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
       WinningSlot = NIFUtil::getSlotFromTexType(WinningType);
     }
 
-    bool IgnoreTexture = false;
-    if (isFileInBSA(Texture, BSAExcludes) && (WinningSlot == NIFUtil::TextureSlots::PARALLAX)) {
-      spdlog::trace(L"Ignoring height map {} from Vanilla BSA", Texture.wstring());
-      IgnoreTexture = true;
+    if ((WinningSlot == NIFUtil::TextureSlots::PARALLAX) && isFileInBSA(Texture, BSAExcludes)) {
+      spdlog::trace(L"Mapping Textures | Ignored vanilla parallax texture | Texture: {}", Texture.wstring());
+      continue;
     }
 
     // Log result
@@ -167,8 +166,8 @@ auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
                   static_cast<size_t>(WinningSlot), strToWstr(NIFUtil::getStrFromTexType(WinningType)));
 
     // Add to texture map
-    if (WinningSlot != NIFUtil::TextureSlots::UNKNOWN && !IgnoreTexture) {
-      // Only add if no unknowns and not in bsa excludes
+    if (WinningSlot != NIFUtil::TextureSlots::UNKNOWN) {
+      // Only add if no unknowns
       addToTextureMaps(Texture, WinningSlot, WinningType);
     }
   }
