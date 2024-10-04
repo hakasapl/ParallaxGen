@@ -79,8 +79,9 @@ target_include_directories(ParallaxGenLib PUBLIC include)
 
 # Asset moving
 add_custom_command(TARGET ParallaxGenLib POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E rm -rf $<TARGET_FILE_DIR:ParallaxGenLib>/shaders
     COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:ParallaxGenLib>/shaders
-    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_CURRENT_SOURCE_DIR}/shaders
         $<TARGET_FILE_DIR:ParallaxGenLib>/shaders
 )
@@ -101,6 +102,7 @@ add_custom_command(TARGET ParallaxGenLib POST_BUILD
         $<TARGET_FILE_DIR:ParallaxGenLib>
 )
 
+# TODO redo install step
 install(FILES ${PGMutagenWrapperDLLs} DESTINATION . )
 install(FILES ${DNNE_OUTPUT_DIR}/ParallaxGenMutagenWrapper.runtimeconfig.json DESTINATION . )
 
@@ -117,6 +119,7 @@ endif()
 
 # Tests
 add_custom_command(TARGET ParallaxGenLib POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E rm -rf $<TARGET_FILE_DIR:ParallaxGenLib>/env
     COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:ParallaxGenLib>/env
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/env
