@@ -26,15 +26,15 @@ private:
   };
 
   // Temp Structures
-  std::unordered_map<std::filesystem::path, UnconfirmedTextureProperty> UnconfirmedTextures;
-  std::mutex UnconfirmedTexturesMutex;
-  std::unordered_set<std::filesystem::path> UnconfirmedMeshes;
+  std::unordered_map<std::filesystem::path, UnconfirmedTextureProperty> UnconfirmedTextures{};
+  std::mutex UnconfirmedTexturesMutex{};
+  std::unordered_set<std::filesystem::path> UnconfirmedMeshes{};
 
   // Structures to store relevant files (sometimes their contents)
-  std::array<std::map<std::wstring, NIFUtil::PGTexture>, NUM_TEXTURE_SLOTS> TextureMaps;
-  std::unordered_set<std::filesystem::path> Meshes;
-  std::vector<std::filesystem::path> PBRJSONs;
-  std::vector<std::filesystem::path> PGJSONs;
+  std::array<std::map<std::wstring, NIFUtil::PGTexture>, NUM_TEXTURE_SLOTS> TextureMaps{};
+  std::unordered_set<std::filesystem::path> Meshes{};
+  std::vector<std::filesystem::path> PBRJSONs{};
+  std::vector<std::filesystem::path> PGJSONs{};
 
   // Mutexes
   std::mutex TextureMapsMutex;

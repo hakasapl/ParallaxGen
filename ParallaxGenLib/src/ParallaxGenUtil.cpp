@@ -19,7 +19,7 @@ auto strToWstr(const string &Str) -> wstring {
   }
 
   // Convert string > wstring
-  int SizeNeeded = MultiByteToWideChar(CP_UTF8, 0, Str.c_str(), (int)Str.length(), nullptr, 0);
+  const int SizeNeeded = MultiByteToWideChar(CP_UTF8, 0, Str.c_str(), (int)Str.length(), nullptr, 0);
   std::wstring WStr(SizeNeeded, 0);
   MultiByteToWideChar(CP_UTF8, 0, Str.data(), (int)Str.length(), WStr.data(), SizeNeeded);
 
@@ -33,7 +33,7 @@ auto wstrToStr(const wstring &WStr) -> string {
   }
 
   // Convert wstring > string
-  int SizeNeeded = WideCharToMultiByte(CP_UTF8, 0, WStr.data(), (int)WStr.size(), nullptr, 0, nullptr, nullptr);
+  const int SizeNeeded = WideCharToMultiByte(CP_UTF8, 0, WStr.data(), (int)WStr.size(), nullptr, 0, nullptr, nullptr);
   string Str(SizeNeeded, 0);
   WideCharToMultiByte(CP_UTF8, 0, WStr.data(), (int)WStr.size(), Str.data(), SizeNeeded, nullptr, nullptr);
 

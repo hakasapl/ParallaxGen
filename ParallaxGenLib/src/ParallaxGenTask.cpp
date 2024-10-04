@@ -11,7 +11,7 @@ ParallaxGenTask::ParallaxGenTask(string TaskName, const size_t &TotalJobs, const
 
 void ParallaxGenTask::completeJob(const PGResult &Result) {
   // Use lock_guard to make this method thread-safe
-  lock_guard<mutex> Lock(NumJobsCompletedMutex);
+  const lock_guard<mutex> Lock(NumJobsCompletedMutex);
 
   // Check if NumJobsCompleted has Result for key
   if (NumJobsCompleted.find(Result) == NumJobsCompleted.end()) {
@@ -48,7 +48,7 @@ void ParallaxGenTask::printJobSummary() {
   // Print each job status Result
   string OutputLog = TaskName + " Summary: ";
   for (const auto &Pair : NumJobsCompleted) {
-    string StateStr = PGResultStr[Pair.first];
+    const string StateStr = PGResultStr[Pair.first];
     OutputLog += "[ " + StateStr + " : " + to_string(Pair.second) + " ] ";
   }
   OutputLog += "See log to see error messages, if any.";

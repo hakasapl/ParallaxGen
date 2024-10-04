@@ -5,13 +5,15 @@
 #include <filesystem>
 
 // Steam game ID definitions
-#define STEAMGAMEID_SKYRIM_SE 489830
-#define STEAMGAMEID_SKYRIM_VR 611670
-#define STEAMGAMEID_SKYRIM 72850
-#define STEAMGAMEID_ENDERAL 933480
-#define STEAMGAMEID_ENDERAL_SE 976620
+enum {
+  STEAMGAMEID_SKYRIM_SE = 489830,
+  STEAMGAMEID_SKYRIM_VR = 611670,
+  STEAMGAMEID_SKYRIM = 72850,
+  STEAMGAMEID_ENDERAL = 933480,
+  STEAMGAMEID_ENDERAL_SE = 976620
+};
 
-#define REG_BUFFER_SIZE 1024
+constexpr unsigned REG_BUFFER_SIZE = 1024;
 
 class BethesdaGame {
 public:
@@ -49,7 +51,7 @@ private:
 
 public:
   // constructor
-  BethesdaGame(enum GameType GameType, const bool &Logging = false, const std::filesystem::path &GamePath = "", const std::filesystem::path &AppDataPath = "", const std::filesystem::path &DocumentPath = "");
+  BethesdaGame(GameType GameType, const bool &Logging = false, const std::filesystem::path &GamePath = "", const std::filesystem::path &AppDataPath = "", const std::filesystem::path &DocumentPath = "");
 
   // get functions
   [[nodiscard]] auto getGameType() const -> GameType;
@@ -67,4 +69,6 @@ private:
 
   // gets the system path for a folder (from windows.h)
   static auto getSystemPath(const GUID &FolderID) -> std::filesystem::path;
+
+  [[nodiscard]] auto getGameRegistryPath() const -> std::string;
 };

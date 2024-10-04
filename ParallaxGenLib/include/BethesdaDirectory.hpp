@@ -1,18 +1,20 @@
 #pragma once
+#include "BethesdaGame.hpp"
+
+#include <bsa/tes4.hpp>
 
 #include <boost/algorithm/string.hpp>
-#include <bsa/tes4.hpp>
+
 #include <cstddef>
 #include <filesystem>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
-#include "BethesdaGame.hpp"
-
-#define ASCII_UPPER_BOUND 127
+constexpr unsigned ASCII_UPPER_BOUND = 127;
 
 class BethesdaDirectory {
 private:
@@ -200,6 +202,11 @@ public:
    * @return false When path has other than ascii chars
    */
   [[nodiscard]] static auto isPathAscii(const std::filesystem::path &Path) -> bool;
+
+  /*
+  * @brief Checks if the given file is included in any of the given BSA files
+  */
+  [[nodiscard]] auto isFileInBSA(const std::filesystem::path& File, const std::unordered_set<std::wstring>& BSAFiles) -> bool;
 
   /**
    * @brief Get the lowercase path of a path

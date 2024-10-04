@@ -1,13 +1,20 @@
 #include "ParallaxGenConfig.hpp"
 
-#include <boost/algorithm/string/case_conv.hpp>
-#include <filesystem>
-#include <nlohmann/json_fwd.hpp>
-#include <spdlog/spdlog.h>
-#include <string>
-
 #include "NIFUtil.hpp"
 #include "ParallaxGenUtil.hpp"
+
+#include <spdlog/spdlog.h>
+
+#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
+
+#include <boost/algorithm/string/case_conv.hpp>
+
+#include <exception>
+#include <filesystem>
+#include <string>
+
+#include <cstdlib>
 
 using namespace std;
 using namespace ParallaxGenUtil;
@@ -16,7 +23,7 @@ ParallaxGenConfig::ParallaxGenConfig(ParallaxGenDirectory *PGD, std::filesystem:
     : PGD(PGD), ExePath(std::move(ExePath)) {}
 
 auto ParallaxGenConfig::getConfigValidation() -> nlohmann::json {
-  static nlohmann::json PGConfigSchema = R"(
+  const static nlohmann::json PGConfigSchema = R"(
   {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "parallaxgen-cfg",
@@ -38,6 +45,12 @@ auto ParallaxGenConfig::getConfigValidation() -> nlohmann::json {
         "type": "object",
         "additionalProperties": {
           "type": "string"
+        }
+      },
+      "vanilla_bsas" : {
+        "type" : "array",
+        "items": {
+            "type": "string"
         }
       }
     }
@@ -128,6 +141,13 @@ auto ParallaxGenConfig::addConfigJSON(const nlohmann::json &J) -> void {
       ManualTextureMaps[boost::to_lower_copy(Item.key())] = NIFUtil::getTexTypeFromStr(Item.value().get<string>());
     }
   }
+
+  // "vanilla_bsas" field
+  if (J.contains("vanilla_bsas")) {
+    for (const auto &Item : J["vanilla_bsas"]) {
+      VanillaBSAList.insert(strToWstr(Item.get<string>()));
+    }
+  }
 }
 
 auto ParallaxGenConfig::parseJSON(const std::filesystem::path &JSONFile, const vector<std::byte> &Bytes, nlohmann::json &J) -> bool {
@@ -179,3 +199,5 @@ auto ParallaxGenConfig::getNIFBlocklist() const -> const unordered_set<wstring> 
 auto ParallaxGenConfig::getDynCubemapBlocklist() const -> const unordered_set<wstring> & { return DynCubemapBlocklist; }
 
 auto ParallaxGenConfig::getManualTextureMaps() const -> const unordered_map<filesystem::path, NIFUtil::TextureType> & { return ManualTextureMaps; }
+
+auto ParallaxGenConfig::getVanillaBSAList() const -> const std::unordered_set<std::wstring> & { return VanillaBSAList; }

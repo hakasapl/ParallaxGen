@@ -1,17 +1,31 @@
+#include "BethesdaGame.hpp"
+#include "ParallaxGen.hpp"
+#include "ParallaxGenConfig.hpp"
+#include "ParallaxGenD3D.hpp"
+#include "ParallaxGenDirectory.hpp"
+
 #include <CLI/CLI.hpp>
-#include <boost/algorithm/string.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/stacktrace.hpp>
-#include <chrono>
-#include <cstdlib>
-#include <filesystem>
-#include <iostream>
+
+#include <spdlog/common.h>
+#include <spdlog/logger.h>
+#include <spdlog/spdlog.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/spdlog.h>
+
+#include <boost/algorithm/string/join.hpp>
+#include <boost/filesystem/path.hpp>
+#include <boost/filesystem/operations.hpp>
+#include <boost/stacktrace/stacktrace.hpp>
+
+#include <windows.h>
+
+#include <chrono>
+#include <cstdlib>
+#include <exception>
+#include <filesystem>
+#include <iostream>
 #include <string>
 #include <unordered_map>
-#include <windows.h>
 
 #include "BethesdaGame.hpp"
 #include "ParallaxGen.hpp"
@@ -23,8 +37,8 @@
 #include "patchers/PatcherTruePBR.hpp"
 #include "patchers/PatcherVanillaParallax.hpp"
 
-#define MAX_LOG_SIZE 5242880
-#define MAX_LOG_FILES 100
+constexpr unsigned MAX_LOG_SIZE = 5242880;
+constexpr unsigned MAX_LOG_FILES = 100;
 
 using namespace std;
 
@@ -107,7 +121,7 @@ auto deployDynamicCubemapFile(ParallaxGenDirectory *PGD, const filesystem::path 
     spdlog::info("Installing default dynamic cubemap file");
 
     // Create Directory
-    filesystem::path OutputCubemapPath = OutputDir / DynCubeMapPath.parent_path();
+    const filesystem::path OutputCubemapPath = OutputDir / DynCubeMapPath.parent_path();
     filesystem::create_directories(OutputCubemapPath);
 
     boost::filesystem::path AssetPath = boost::filesystem::path(ExePath) / "assets/dynamic1pxcubemap_black_ENB.dds";
@@ -140,10 +154,10 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
                Args.OutputDir.wstring());
 
   // Create bethesda game type object
-  BethesdaGame::GameType BGType = getGameTypeMap().at(Args.GameType);
+  BethesdaGame::GameType BGType = getGameTypeMap().at(Args.GameType); // NOLINT
 
   // Create relevant objects
-  auto BG = BethesdaGame(BGType, true, Args.GameDir);
+  const auto BG = BethesdaGame(BGType, true, Args.GameDir);
   auto PGD = ParallaxGenDirectory(BG);
   auto PGC = ParallaxGenConfig(&PGD, ExePath);
   auto PGD3D = ParallaxGenD3D(&PGD, Args.OutputDir, ExePath, !Args.NoGPU);
@@ -214,9 +228,11 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   PGD.mapFiles(PGC.getNIFBlocklist(), PGC.getManualTextureMaps(), !Args.NoMapFromMeshes, !Args.NoMultithread,
                Args.HighMem);
 
-  spdlog::info("Determining texture types");
-  PGD3D.findCMMaps();
-  spdlog::info("Done determining texture types");
+  auto VanillaBSAList = PGC.getVanillaBSAList();
+
+  spdlog::info("Finding complex material env maps");
+  PGD3D.findCMMaps(VanillaBSAList);
+  spdlog::info("Done finding complex material env maps");
 
   // Load patcher static vars
   PatcherTruePBR::loadPatcherBuffers(PGD.getPBRJSONs(), &PGD);

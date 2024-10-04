@@ -49,7 +49,7 @@ private:
   };
   Microsoft::WRL::ComPtr<ID3D11ComputeShader> ShaderCountAlphaValues;
 
-  std::unordered_map<std::filesystem::path, DirectX::TexMetadata> DDSMetaDataCache;
+  std::unordered_map<std::filesystem::path, DirectX::TexMetadata> DDSMetaDataCache{};
   std::mutex DDSMetaDataMutex;
 
 public:
@@ -61,7 +61,8 @@ public:
   void initGPU();
 
   // Check methods
-  auto findCMMaps() -> ParallaxGenTask::PGResult;
+  // files found in the bsa excludes are never CM maps, used for vanilla env masks
+  auto findCMMaps(const std::unordered_set<std::wstring>& BSAExcludes) -> ParallaxGenTask::PGResult;
 
   static auto getNumChannelsByFormat(const DXGI_FORMAT &Format) -> int;
 
