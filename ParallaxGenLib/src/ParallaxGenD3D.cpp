@@ -52,6 +52,8 @@ auto ParallaxGenD3D::findCMMaps(const std::unordered_set<std::wstring> &BSAExclu
 
   // loop through maps
   for (auto &EnvSlot : EnvMasks) {
+    vector<NIFUtil::PGTexture> CMMaps;
+
     for (const auto &EnvMask : EnvSlot.second) {
       if (EnvMask.Type != NIFUtil::TextureType::ENVIRONMENTMASK) {
         continue;
@@ -71,10 +73,15 @@ auto ParallaxGenD3D::findCMMaps(const std::unordered_set<std::wstring> &BSAExclu
       if (Result) {
         // TODO we need to fill in alpha for non-CM stuff
         // remove old env mask
-        EnvSlot.second.erase(EnvMask);
-        EnvSlot.second.insert({EnvMask.Path, NIFUtil::TextureType::COMPLEXMATERIAL});
+        CMMaps.push_back(EnvMask);
         spdlog::trace(L"Found complex material env mask: {}", EnvMask.Path.wstring());
       }
+    }
+
+    // update map
+    for (const auto &CMMap : CMMaps) {
+      EnvSlot.second.erase(CMMap);
+      EnvSlot.second.insert({CMMap.Path, NIFUtil::TextureType::COMPLEXMATERIAL});
     }
   }
 
