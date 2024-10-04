@@ -73,13 +73,16 @@ void ParallaxGenPlugin::libInitialize(const int &GameType, const wstring &DataPa
   lock_guard<mutex> Lock(LibMutex);
 
   // Use std::vector to manage the memory for LoadOrderArr
-  std::vector<const wchar_t *> LoadOrderArr;
+  vector<const wchar_t *> LoadOrderArr;
   if (!LoadOrder.empty()) {
     LoadOrderArr.reserve(LoadOrder.size()); // Pre-allocate the vector size
     for (const auto &Mod : LoadOrder) {
       LoadOrderArr.push_back(Mod.c_str()); // Populate the vector with the c_str pointers
     }
   }
+
+  // Add the null terminator to the end
+  LoadOrderArr.push_back(nullptr);
 
   Initialize(GameType, DataPath.c_str(), OutputPlugin.c_str(), LoadOrderArr.data());
   libLogMessageIfExists();
