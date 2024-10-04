@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <map>
 #include <nlohmann/json.hpp>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -15,7 +16,7 @@ constexpr unsigned TEXTURE_STR_LENGTH = 9;
 
 class PatcherTruePBR {
 private:
-  ParallaxGenDirectory *PGD;
+  static ParallaxGenDirectory *PGD;
 
   std::filesystem::path NIFPath;
   nifly::NifFile *NIF;
@@ -42,7 +43,7 @@ public:
   static auto getTruePBRNormalInverse() -> std::map<std::wstring, std::vector<size_t>> &;
   static auto getTruePBRConfigFilenameFields() -> std::vector<std::string>;
 
-  PatcherTruePBR(std::filesystem::path NIFPath, nifly::NifFile *NIF, ParallaxGenDirectory *PGD);
+  PatcherTruePBR(std::filesystem::path NIFPath, nifly::NifFile *NIF);
 
   static void loadPatcherBuffers(const std::vector<std::filesystem::path> &PBRJSONs, ParallaxGenDirectory *PGD);
 
@@ -51,10 +52,14 @@ public:
                    bool &EnableResult,
                    std::map<size_t, std::tuple<nlohmann::json, std::wstring>> &TruePBRData) -> ParallaxGenTask::PGResult;
 
+  static auto shouldApplySlots(const std::wstring &LogPrefix, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes, const std::wstring &NIFPath, std::map<size_t, std::tuple<nlohmann::json, std::wstring>> &TruePBRData) -> bool;
+
   // applies truepbr config on a shape in a NIF (always applies with config, but
   // maybe PBR is disabled)
   auto applyPatch(nifly::NiShape *NIFShape, nlohmann::json &TruePBRData, const std::wstring &MatchedPath,
-                  bool &NIFModified) const -> ParallaxGenTask::PGResult;
+                  bool &NIFModified, bool &ShapeDeleted) const -> ParallaxGenTask::PGResult;
+
+  static auto applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots, const nlohmann::json &TruePBRData, const std::wstring &MatchedPath) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;
 
 private:
   // enables truepbr on a shape in a NIF (If PBR is enabled)
@@ -71,18 +76,17 @@ private:
                           std::vector<nifly::Triangle> &Tris) -> nifly::Vector2;
 
   // Checks if a json object has a key
-  static auto flag(nlohmann::json &JSON, const char *Key) -> bool;
+  static auto flag(const nlohmann::json &JSON, const char *Key) -> bool;
 
-  auto getSlotMatch(const uint32_t &ShapeBlockID,
-                    std::map<size_t, std::tuple<nlohmann::json, std::wstring>> &TruePBRData,
+  static auto getSlotMatch(const std::wstring &LogPrefix, std::map<size_t, std::tuple<nlohmann::json, std::wstring>> &TruePBRData,
                     std::wstring &PriorityJSONFile, const std::wstring &TexName,
-                    const std::map<std::wstring, std::vector<size_t>> &Lookup, const std::wstring &SlotLabel) -> void;
+                    const std::map<std::wstring, std::vector<size_t>> &Lookup, const std::wstring &SlotLabel, const std::wstring &NIFPath) -> void;
 
-  auto getPathContainsMatch(const uint32_t &ShapeBlockID,
+  static auto getPathContainsMatch(const std::wstring &LogPrefix,
                             std::map<size_t, std::tuple<nlohmann::json, std::wstring>> &TruePBRData,
-                            std::wstring &PriorityJSONFile, const std::wstring &Diffuse) -> void;
+                            std::wstring &PriorityJSONFile, const std::wstring &Diffuse, const std::wstring &NIFPath) -> void;
 
-  auto insertTruePBRData(const uint32_t &ShapeBlockID,
+  static auto insertTruePBRData(const std::wstring &LogPrefix,
                          std::map<size_t, std::tuple<nlohmann::json, std::wstring>> &TruePBRData,
-                         std::wstring &PriorityJSONFile, const std::wstring &TexName, size_t Cfg) -> void;
+                         std::wstring &PriorityJSONFile, const std::wstring &TexName, size_t Cfg, const std::wstring &NIFPath) -> void;
 };

@@ -4,13 +4,15 @@ Checks: '-*,
          bugprone-*,
          -bugprone-easily-swappable-parameters,
          cert-*,
+         -cert-err58-cpp,
          concurrency-*,
          -concurrency-mt-unsafe,
          cppcoreguidelines-*,
          -cppcoreguidelines-avoid-c-arrays,
+         -cppcoreguidelines-avoid-magic-numbers,
          -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
-         -cppcoreguidelines-pro-type-reinterpret-cast,
          -cppcoreguidelines-pro-bounds-constant-array-index,
+         -cppcoreguidelines-pro-type-reinterpret-cast,
          llvm-*,
          -llvm-header-guard,
          llvm-include-order,
@@ -24,8 +26,9 @@ Checks: '-*,
          performance-*,
          portability-*,
          readability-*,
+         -readability-function-cognitive-complexity,
          -readability-identifier-length,
-         -readability-function-cognitive-complexity'
+         -readability-magic-numbers'
 FormatStyle: llvm
 HeaderFilterRegex: 'src/|include/'
 CheckOptions:

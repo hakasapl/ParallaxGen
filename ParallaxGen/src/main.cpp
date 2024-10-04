@@ -20,13 +20,22 @@
 #include <windows.h>
 
 #include <chrono>
+#include <cstdlib>
 #include <exception>
 #include <filesystem>
 #include <iostream>
 #include <string>
 #include <unordered_map>
 
-#include <cstdlib>
+#include "BethesdaGame.hpp"
+#include "ParallaxGen.hpp"
+#include "ParallaxGenConfig.hpp"
+#include "ParallaxGenD3D.hpp"
+#include "ParallaxGenDirectory.hpp"
+#include "ParallaxGenPlugin.hpp"
+#include "patchers/PatcherComplexMaterial.hpp"
+#include "patchers/PatcherTruePBR.hpp"
+#include "patchers/PatcherVanillaParallax.hpp"
 
 constexpr unsigned MAX_LOG_SIZE = 5242880;
 constexpr unsigned MAX_LOG_FILES = 100;
@@ -46,6 +55,7 @@ struct ParallaxGenCLIArgs {
   bool UpgradeShaders = false;
   bool OptimizeMeshes = false;
   bool NoMapFromMeshes = false;
+  bool NoPlugin = false;
   bool NoZip = false;
   bool NoCleanup = false;
   bool NoDefaultConfig = false;
@@ -68,12 +78,13 @@ struct ParallaxGenCLIArgs {
     OutStr += "UpgradeShaders: " + to_string(static_cast<int>(UpgradeShaders)) + "\n";
     OutStr += "OptimizeMeshes: " + to_string(static_cast<int>(OptimizeMeshes)) + "\n";
     OutStr += "NoMapFromMeshes: " + to_string(static_cast<int>(NoMapFromMeshes)) + "\n";
+    OutStr += "NoPlugin: " + to_string(static_cast<int>(NoPlugin)) + "\n";
     OutStr += "NoZip: " + to_string(static_cast<int>(NoZip)) + "\n";
     OutStr += "NoCleanup: " + to_string(static_cast<int>(NoCleanup)) + "\n";
     OutStr += "NoDefaultConfig: " + to_string(static_cast<int>(NoDefaultConfig)) + "\n";
     OutStr += "IgnoreParallax: " + to_string(static_cast<int>(IgnoreParallax)) + "\n";
     OutStr += "IgnoreComplexMaterial: " + to_string(static_cast<int>(IgnoreComplexMaterial)) + "\n";
-    OutStr += "IgnoreTruePBR: " + to_string(static_cast<int>(IgnoreTruePBR));
+    OutStr += "IgnoreTruePBR: " + to_string(static_cast<int>(IgnoreTruePBR)) + "\n";
     OutStr += "DisableMLP: " + to_string(static_cast<int>(DisableMLP));
 
     return OutStr;
@@ -146,11 +157,11 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   BethesdaGame::GameType BGType = getGameTypeMap().at(Args.GameType); // NOLINT
 
   // Create relevant objects
-  const BethesdaGame BG = BethesdaGame(BGType, Args.GameDir, true);
-  ParallaxGenDirectory PGD = ParallaxGenDirectory(BG);
-  ParallaxGenConfig PGC = ParallaxGenConfig(&PGD, ExePath);
-  ParallaxGenD3D PGD3D = ParallaxGenD3D(&PGD, Args.OutputDir, ExePath, !Args.NoGPU);
-  ParallaxGen PG = ParallaxGen(Args.OutputDir, &PGD, &PGC, &PGD3D, Args.OptimizeMeshes, Args.IgnoreParallax,
+  const auto BG = BethesdaGame(BGType, true, Args.GameDir);
+  auto PGD = ParallaxGenDirectory(BG);
+  auto PGC = ParallaxGenConfig(&PGD, ExePath);
+  auto PGD3D = ParallaxGenD3D(&PGD, Args.OutputDir, ExePath, !Args.NoGPU);
+  auto PG = ParallaxGen(Args.OutputDir, &PGD, &PGC, &PGD3D, Args.OptimizeMeshes, Args.IgnoreParallax,
                                Args.IgnoreComplexMaterial, Args.IgnoreTruePBR);
 
   // Check if GPU needs to be initialized
@@ -197,6 +208,13 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
     exit(1);
   }
 
+  // Init PGP library
+  if (!Args.NoPlugin) {
+    spdlog::info("Initializing plugin patcher");
+    ParallaxGenPlugin::initialize(BG);
+    ParallaxGenPlugin::populateObjs();
+  }
+
   // Populate file map from data directory
   PGD.populateFileMap(!Args.NoBSA);
 
@@ -218,7 +236,8 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   // Load patcher static vars
   PatcherTruePBR::loadPatcherBuffers(PGD.getPBRJSONs(), &PGD);
-  PatcherComplexMaterial::loadStatics(PGC.getDynCubemapBlocklist(), Args.DisableMLP);
+  PatcherComplexMaterial::loadStatics(PGC.getDynCubemapBlocklist(), Args.DisableMLP, &PGD);
+  PatcherVanillaParallax::loadStatics(&PGD);
 
   // Upgrade shaders if requested
   if (Args.UpgradeShaders) {
@@ -227,13 +246,19 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   // Patch meshes if set
   if (!Args.IgnoreParallax || !Args.IgnoreComplexMaterial || !Args.IgnoreTruePBR) {
-    PG.patchMeshes(!Args.NoMultithread);
+    PG.patchMeshes(!Args.NoMultithread, !Args.NoPlugin);
   }
 
   // Release cached files, if any
   PGD.clearCache();
 
   spdlog::info("ParallaxGen has finished patching meshes.");
+
+  // Write plugin
+  if (!Args.NoPlugin) {
+    spdlog::info("Saving ParallaxGen.esp");
+    ParallaxGenPlugin::savePlugin(Args.OutputDir);
+  }
 
   // Deploy dynamic cubemap file
   deployDynamicCubemapFile(&PGD, Args.OutputDir, ExePath);
@@ -299,6 +324,7 @@ void addArguments(CLI::App &App, ParallaxGenCLIArgs &Args, const filesystem::pat
   App.add_flag("--optimize-meshes", Args.OptimizeMeshes, "Optimize meshes before saving them");
   App.add_flag("--no-map-from-meshes", Args.NoMapFromMeshes,
                "Don't map textures from meshes (faster but less accurate)");
+  App.add_flag("--no-plugin", Args.NoPlugin, "Don't create a ParallaxGen.esp plugin");
   App.add_flag("--high-mem", Args.HighMem, "Enable high memory usage (faster runtime but uses a lot more RAM)");
   App.add_flag("--no-zip", Args.NoZip, "Don't zip the output meshes (also enables --no-cleanup)");
   App.add_flag("--no-cleanup", Args.NoCleanup, "Don't delete generated meshes after zipping");
@@ -346,11 +372,12 @@ void addArguments(CLI::App &App, ParallaxGenCLIArgs &Args, const filesystem::pat
 void initLogger(const filesystem::path &LOGPATH, const ParallaxGenCLIArgs &Args) {
   // Create loggers
   vector<spdlog::sink_ptr> Sinks;
-  Sinks.push_back(make_shared<spdlog::sinks::stdout_color_sink_mt>());
+  auto ConsoleSink = make_shared<spdlog::sinks::stdout_color_sink_mt>();
+  Sinks.push_back(ConsoleSink);
 
   // Rotating file sink
-  Sinks.push_back(make_shared<spdlog::sinks::rotating_file_sink_mt>(LOGPATH.string(), MAX_LOG_SIZE,
-                                                                    MAX_LOG_FILES)); // TODO wide string support here
+  auto FileSink = make_shared<spdlog::sinks::rotating_file_sink_mt>(LOGPATH.string(), MAX_LOG_SIZE, MAX_LOG_FILES);
+  Sinks.push_back(FileSink); // TODO wide string support here
   auto Logger = make_shared<spdlog::logger>("ParallaxGen", Sinks.begin(), Sinks.end());
 
   // register logger parameters
@@ -360,14 +387,14 @@ void initLogger(const filesystem::path &LOGPATH, const ParallaxGenCLIArgs &Args)
   spdlog::flush_on(spdlog::level::info);
 
   // Set logging mode
-  if (Args.Verbosity == 1) {
+  if (Args.Verbosity >= 1) {
     spdlog::set_level(spdlog::level::debug);
     spdlog::flush_on(spdlog::level::debug);
     spdlog::debug("DEBUG logging enabled");
   }
 
   if (Args.Verbosity >= 2) {
-    spdlog::set_level(spdlog::level::trace);
+    FileSink->set_level(spdlog::level::trace);
     spdlog::flush_on(spdlog::level::trace);
     spdlog::trace("TRACE logging enabled");
   }
@@ -416,10 +443,11 @@ auto main(int ArgC, char **ArgV) -> int {
   try {
     mainRunner(Args, ExePath);
   } catch (const exception &E) {
+    auto Trace = boost::stacktrace::stacktrace();
     spdlog::critical("An unhandled exception occurred (Please provide this entire message "
                      "in your bug report).\n\nException type: {}\nMessage: {}\nStack Trace: "
                      "\n{}",
-                     typeid(E).name(), E.what(), boost::stacktrace::to_string(boost::stacktrace::stacktrace()));
+                     typeid(E).name(), E.what(), boost::stacktrace::to_string(Trace));
     cout << "Press ENTER to abort...";
     cin.get();
     abort();

@@ -6,6 +6,7 @@ set(HEADERS
     "include/ParallaxGen.hpp"
     "include/ParallaxGenConfig.hpp"
     "include/ParallaxGenD3D.hpp"
+    "include/ParallaxGenPlugin.hpp"
     "include/ParallaxGenTask.hpp"
     "include/ParallaxGenUtil.hpp"
     "include/ParallaxGenDirectory.hpp"
@@ -21,6 +22,7 @@ set(SOURCES
     "src/ParallaxGen.cpp"
     "src/ParallaxGenConfig.cpp"
     "src/ParallaxGenD3D.cpp"
+    "src/ParallaxGenPlugin.cpp"
     "src/ParallaxGenTask.cpp"
     "src/ParallaxGenUtil.cpp"
     "src/ParallaxGenDirectory.cpp"
@@ -75,6 +77,35 @@ target_link_libraries(ParallaxGenLib PUBLIC
 )
 target_include_directories(ParallaxGenLib PUBLIC include)
 
+# Asset moving
+add_custom_command(TARGET ParallaxGenLib POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E rm -rf $<TARGET_FILE_DIR:ParallaxGenLib>/shaders
+    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:ParallaxGenLib>/shaders
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/shaders
+        $<TARGET_FILE_DIR:ParallaxGenLib>/shaders
+)
+
+# DNNE setup
+set(DNNE_OUTPUT_DIR ${CMAKE_SOURCE_DIR}/ParallaxGenMutagenWrapper/bin/x64/Release/net8.0)
+include_directories(${DNNE_OUTPUT_DIR})
+target_link_libraries(ParallaxGenLib PUBLIC ${DNNE_OUTPUT_DIR}/ParallaxGenMutagenWrapperNE.lib)
+file(GLOB PGMutagenWrapperDLLs "${DNNE_OUTPUT_DIR}/*.dll")
+add_custom_command(TARGET ParallaxGenLib POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${PGMutagenWrapperDLLs}
+        $<TARGET_FILE_DIR:ParallaxGenLib>
+)
+add_custom_command(TARGET ParallaxGenLib POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${DNNE_OUTPUT_DIR}/ParallaxGenMutagenWrapper.runtimeconfig.json
+        $<TARGET_FILE_DIR:ParallaxGenLib>
+)
+
+# TODO redo install step
+install(FILES ${PGMutagenWrapperDLLs} DESTINATION . )
+install(FILES ${DNNE_OUTPUT_DIR}/ParallaxGenMutagenWrapper.runtimeconfig.json DESTINATION . )
+
 install(FILES $<TARGET_RUNTIME_DLLS:ParallaxGenLib> DESTINATION . )
 
 # manual copy DLLs not caught by TARGET_RUNTIME_DLLS TODO why do I have to do this manually?
@@ -85,3 +116,39 @@ elseif(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/lz4d.dll DESTINATION . )
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/zlibd1.dll DESTINATION . )
 endif()
+
+# Tests
+add_custom_command(TARGET ParallaxGenLib POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E rm -rf $<TARGET_FILE_DIR:ParallaxGenLib>/env
+    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:ParallaxGenLib>/env
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/env
+        $<TARGET_FILE_DIR:ParallaxGenLib>/env
+)
+
+find_package(GTest REQUIRED CONFIG)
+
+enable_testing()
+set(PARALLAXGENLIB_TEST_NAME ParallaxGenLibTests)
+
+set (TESTS
+  "tests/CommonTests.cpp"
+  "tests/ParallaxGenPluginTests.cpp"
+)
+
+add_executable(
+  ${PARALLAXGENLIB_TEST_NAME}
+  ${TESTS}
+)
+add_dependencies(${PARALLAXGENLIB_TEST_NAME} ParallaxGenLib)
+
+target_link_libraries(
+  ${PARALLAXGENLIB_TEST_NAME}
+  ParallaxGenLib
+  GTest::gtest_main
+)
+
+include(GoogleTest)
+gtest_discover_tests(${PARALLAXGENLIB_TEST_NAME}
+  WORKING_DIRECTORY $<TARGET_FILE_DIR:ParallaxGenLib>
+)

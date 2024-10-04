@@ -50,6 +50,10 @@ auto ParallaxGenD3D::findCMMaps(const std::unordered_set<std::wstring>& BSAExclu
 
   // loop through maps
   for (auto &EnvMask : EnvMasks) {
+    if (EnvMask.second.Type != NIFUtil::TextureType::ENVIRONMENTMASK) {
+      continue;
+    }
+
     bool bFileInVanillaBSA = PGD->isFileInBSA(EnvMask.second.Path, BSAExcludes);
 
     bool Result = false;

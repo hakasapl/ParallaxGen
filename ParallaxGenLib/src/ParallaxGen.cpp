@@ -2,17 +2,20 @@
 
 #include <DirectXTex.h>
 #include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio.hpp>
 #include <boost/crc.hpp>
 #include <boost/iostreams/device/array.hpp>
 #include <boost/iostreams/stream.hpp>
 #include <boost/thread.hpp>
 #include <fstream>
+#include <mutex>
 #include <spdlog/spdlog.h>
 #include <vector>
 
 #include "NIFUtil.hpp"
 #include "ParallaxGenDirectory.hpp"
+#include "ParallaxGenPlugin.hpp"
 #include "ParallaxGenTask.hpp"
 #include "ParallaxGenUtil.hpp"
 
@@ -43,7 +46,7 @@ void ParallaxGen::upgradeShaders() {
   }
 }
 
-void ParallaxGen::patchMeshes(const bool &MultiThread) {
+void ParallaxGen::patchMeshes(const bool &MultiThread, const bool &PatchPlugin) {
   auto Meshes = PGD->getMeshes();
 
   // Create task tracker
@@ -66,10 +69,10 @@ void ParallaxGen::patchMeshes(const bool &MultiThread) {
     boost::asio::thread_pool MeshPatchPool(NumThreads);
 
     for (const auto &Mesh : Meshes) {
-      boost::asio::post(MeshPatchPool, [this, &TaskTracker, &DiffJSON, Mesh] {
+      boost::asio::post(MeshPatchPool, [this, &TaskTracker, &DiffJSON, &Mesh, &PatchPlugin] {
         ParallaxGenTask::PGResult Result = ParallaxGenTask::PGResult::SUCCESS;
         try {
-          Result = processNIF(Mesh, DiffJSON);
+          Result = processNIF(Mesh, DiffJSON, PatchPlugin);
         } catch (const exception &E) {
           spdlog::error(L"Exception in thread patching NIF {}: {}", Mesh.wstring(), strToWstr(E.what()));
           Result = ParallaxGenTask::PGResult::FAILURE;
@@ -206,7 +209,7 @@ auto ParallaxGen::getOutputZipName() -> filesystem::path { return "ParallaxGen_O
 auto ParallaxGen::getDiffJSONName() -> filesystem::path { return "ParallaxGen_Diff.json"; }
 
 // shorten some enum names
-auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &DiffJSON) -> ParallaxGenTask::PGResult {
+auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &DiffJSON, const bool &PatchPlugin) -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   spdlog::trace(L"NIF: {} | Starting processing", NIFFile.wstring());
@@ -234,30 +237,46 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
   bool NIFModified = false;
 
   // Create Patcher objects
-  PatcherVanillaParallax PatchVP(NIFFile, &NIF, PGC, PGD, PGD3D);
-  PatcherComplexMaterial PatchCM(NIFFile, &NIF, PGC, PGD, PGD3D);
-  PatcherTruePBR PatchTPBR(NIFFile, &NIF, PGD);
+  // TODO make more of these static
+  PatcherVanillaParallax PatchVP(NIFFile, &NIF, PGC, PGD3D);
+  PatcherComplexMaterial PatchCM(NIFFile, &NIF, PGC, PGD3D);
+  PatcherTruePBR PatchTPBR(NIFFile, &NIF);
 
   // Patch each shape in NIF
   size_t NumShapes = 0;
+  int OldShapeIndex = 0;
+  int NewShapeIndex = 0;
   bool OneShapeSuccess = false;
   for (NiShape *NIFShape : NIF.GetShapes()) {
     NumShapes++;
 
     bool ShapeModified = false;
-    string ShaderApplied;
+    bool ShapeDeleted = false;
+    NIFUtil::ShapeShader ShaderApplied = NIFUtil::ShapeShader::NONE;
     ParallaxGenTask::updatePGResult(Result,
-                                    processShape(NIFFile, NIF, NIFShape, PatchVP, PatchCM, PatchTPBR, ShapeModified),
+                                    processShape(NIFFile, NIF, NIFShape, PatchVP, PatchCM, PatchTPBR, ShapeModified, ShapeDeleted, ShaderApplied),
                                     ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
 
     // Update NIFModified if shape was modified
     if (ShapeModified) {
       NIFModified = true;
+
+      if (PatchPlugin) {
+        // Process plugin
+        auto ShapeName = strToWstr(NIFShape->name.get());
+        ParallaxGenPlugin::processShape(ShaderApplied, NIFFile.wstring(), ShapeName, OldShapeIndex, NewShapeIndex);
+      }
     }
 
     if (Result == ParallaxGenTask::PGResult::SUCCESS) {
       OneShapeSuccess = true;
     }
+
+    if (!ShapeDeleted) {
+      NewShapeIndex++;
+    }
+
+    OldShapeIndex++;
   }
 
   if (!OneShapeSuccess && NumShapes > 0) {
@@ -308,7 +327,7 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
 
 auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, NiShape *NIFShape,
                                PatcherVanillaParallax &PatchVP, PatcherComplexMaterial &PatchCM,
-                               PatcherTruePBR &PatchTPBR, bool &ShapeModified) const -> ParallaxGenTask::PGResult {
+                               PatcherTruePBR &PatchTPBR, bool &ShapeModified, bool &ShapeDeleted, NIFUtil::ShapeShader &ShaderApplied) const -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Prep
@@ -367,7 +386,11 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
         spdlog::trace(L"NIF: {} | Shape: {} | PBR | Applying PBR Config {}", NIFPath.wstring(), ShapeBlockID,
                       TruePBRCFG.first);
         ParallaxGenTask::updatePGResult(Result, PatchTPBR.applyPatch(NIFShape, get<0>(TruePBRCFG.second),
-                                                                     get<1>(TruePBRCFG.second), ShapeModified));
+                                                                     get<1>(TruePBRCFG.second), ShapeModified, ShapeDeleted));
+      }
+
+      if (!ShapeDeleted) {
+        ShaderApplied = NIFUtil::ShapeShader::TRUEPBR;
       }
 
       return Result;
@@ -387,6 +410,8 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
       ParallaxGenTask::updatePGResult(Result,
                                       PatchCM.applyPatch(NIFShape, MatchedPath, EnableDynCubemaps, ShapeModified));
 
+      ShaderApplied = NIFUtil::ShapeShader::COMPLEXMATERIAL;
+
       return Result;
     }
   }
@@ -400,6 +425,8 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
     if (EnableParallax) {
       // Enable Parallax on shape
       ParallaxGenTask::updatePGResult(Result, PatchVP.applyPatch(NIFShape, MatchedPath, ShapeModified));
+
+      ShaderApplied = NIFUtil::ShapeShader::VANILLAPARALLAX;
 
       return Result;
     }

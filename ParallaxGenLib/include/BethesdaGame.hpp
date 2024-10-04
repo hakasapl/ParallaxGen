@@ -43,19 +43,20 @@ private:
   // stores game path and game data path (game path / data)
   std::filesystem::path GamePath;
   std::filesystem::path GameDataPath;
+  std::filesystem::path GameAppDataPath;
+  std::filesystem::path GameDocumentPath;
 
   // stores whether logging is enabled
   bool Logging;
 
 public:
   // constructor
-  BethesdaGame(GameType GameType, const std::filesystem::path &GamePath, const bool &Logging = false);
+  BethesdaGame(GameType GameType, const bool &Logging = false, const std::filesystem::path &GamePath = "", const std::filesystem::path &AppDataPath = "", const std::filesystem::path &DocumentPath = "");
 
   // get functions
   [[nodiscard]] auto getGameType() const -> GameType;
   [[nodiscard]] auto getGamePath() const -> std::filesystem::path;
   [[nodiscard]] auto getGameDataPath() const -> std::filesystem::path;
-
   [[nodiscard]] auto getGameDocumentPath() const -> std::filesystem::path;
   [[nodiscard]] auto getGameAppdataPath() const -> std::filesystem::path;
 

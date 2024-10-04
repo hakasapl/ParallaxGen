@@ -17,7 +17,7 @@
 
 using namespace std;
 
-BethesdaGame::BethesdaGame(GameType GameType, const filesystem::path &GamePath, const bool &Logging)
+BethesdaGame::BethesdaGame(GameType GameType, const bool &Logging, const filesystem::path &GamePath, const filesystem::path &AppDataPath, const filesystem::path &DocumentPath)
     : ObjGameType(GameType), Logging(Logging) {
   if (GamePath.empty()) {
     // If the game path is empty, find
@@ -60,6 +60,20 @@ BethesdaGame::BethesdaGame(GameType GameType, const filesystem::path &GamePath, 
     } else {
       throw runtime_error("Game data path does not contain Skyrim.esm");
     }
+  }
+
+  // Define appdata path
+  if (AppDataPath.empty()) {
+    GameAppDataPath = getGameAppdataPath();
+  } else {
+    GameAppDataPath = AppDataPath;
+  }
+
+  // Define document path
+  if (DocumentPath.empty()) {
+    GameDocumentPath = getGameDocumentPath();
+  } else {
+    GameDocumentPath = DocumentPath;
   }
 }
 
@@ -251,17 +265,16 @@ auto BethesdaGame::getINIPaths() const -> BethesdaGame::ININame {
   const filesystem::path GameDocsPath = getGameDocumentPath();
 
   // normal ini file
-  Output.INI = GameDocsPath / Output.INI;
-  Output.INIPrefs = GameDocsPath / Output.INIPrefs;
-  Output.INICustom = GameDocsPath / Output.INICustom;
+  Output.INI = GameDocumentPath / Output.INI;
+  Output.INIPrefs = GameDocumentPath / Output.INIPrefs;
+  Output.INICustom = GameDocumentPath / Output.INICustom;
 
   return Output;
 }
 
 auto BethesdaGame::getLoadOrderFile() const -> filesystem::path {
-  const filesystem::path GameAppdataPath = getGameAppdataPath();
-  const filesystem::path LoadOrderFile = GameAppdataPath / "loadorder.txt";
-  return LoadOrderFile;
+  static const filesystem::path GameLoadOrderFile = GameAppDataPath / "loadorder.txt";
+  return GameLoadOrderFile;
 }
 
 auto BethesdaGame::getGameDocumentPath() const -> filesystem::path {

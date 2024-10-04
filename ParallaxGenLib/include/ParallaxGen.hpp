@@ -6,6 +6,7 @@
 #include <mutex>
 #include <nlohmann/json.hpp>
 
+#include "NIFUtil.hpp"
 #include "ParallaxGenConfig.hpp"
 #include "ParallaxGenD3D.hpp"
 #include "ParallaxGenDirectory.hpp"
@@ -13,6 +14,8 @@
 #include "patchers/PatcherComplexMaterial.hpp"
 #include "patchers/PatcherTruePBR.hpp"
 #include "patchers/PatcherVanillaParallax.hpp"
+
+#define MESHES_LENGTH 7
 
 class ParallaxGen {
 private:
@@ -43,7 +46,7 @@ public:
   // upgrades textures whenever possible
   void upgradeShaders();
   // enables parallax on relevant meshes
-  void patchMeshes(const bool &MultiThread = true);
+  void patchMeshes(const bool &MultiThread = true, const bool &PatchPlugin = true);
   // zips all meshes and removes originals
   void zipMeshes() const;
   // deletes generated meshes
@@ -64,12 +67,12 @@ private:
   auto convertHeightMapToComplexMaterial(const std::filesystem::path &HeightMap) -> ParallaxGenTask::PGResult;
 
   // processes a NIF file (enable parallax if needed)
-  auto processNIF(const std::filesystem::path &NIFFile, nlohmann::json &DiffJSON) -> ParallaxGenTask::PGResult;
+  auto processNIF(const std::filesystem::path &NIFFile, nlohmann::json &DiffJSON, const bool &PatchPlugin = true) -> ParallaxGenTask::PGResult;
 
   // processes a shape within a NIF file
   auto processShape(const std::filesystem::path &NIFPath, nifly::NifFile &NIF, nifly::NiShape *NIFShape,
                     PatcherVanillaParallax &PatchVP, PatcherComplexMaterial &PatchCM, PatcherTruePBR &PatchTPBR,
-                    bool &ShapeModified) const -> ParallaxGenTask::PGResult;
+                    bool &ShapeModified, bool &ShapeDeleted, NIFUtil::ShapeShader &ShaderApplied) const -> ParallaxGenTask::PGResult;
 
   // Zip methods
   void addFileToZip(mz_zip_archive &Zip, const std::filesystem::path &FilePath,

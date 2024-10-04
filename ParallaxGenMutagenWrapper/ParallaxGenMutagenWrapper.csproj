@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateNativeExports>true</GenerateNativeExports>
+    <DnneRuntimeIdentifier>win-x64</DnneRuntimeIdentifier>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="DNNE" Version="2.0.6" />
+    <PackageReference Include="Mutagen.Bethesda" Version="0.46.1" />
+  </ItemGroup>
+</Project>

@@ -37,6 +37,12 @@ jobs:
         path: |
           build/external
 
+    - name: Build ParallaxGenMutagenWrapper
+      run: |
+        cd ParallaxGenMutagenWrapper
+        dotnet restore
+        msbuild /p:Configuration=Release
+
     - name: Configure CMake
       run: |
         New-Item -ItemType Directory -Path "build" -Force

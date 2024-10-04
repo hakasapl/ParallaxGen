@@ -3,6 +3,7 @@
     "boost-algorithm",
     "boost-asio",
     "boost-container",
+    "boost-crc",
     "boost-filesystem",
     "boost-iostreams",
     "boost-stacktrace",
@@ -31,6 +32,6 @@
       ]
     },
     "zlib",
-    "boost-crc"
+    "gtest"
   ]
 }
