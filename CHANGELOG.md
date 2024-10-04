@@ -8,6 +8,7 @@
 - -vv logging mode will only log to file now not the terminal buffer
 - Added a function to classify vanilla BSAs in the config, which will ignore complex material and parallax files from them
 - Fixed retrieval of game installation directories from the registry
+- Normal is matched before diffuse for CM and parallax now
 
 ## [0.5.8] - 2025-09-21
 

@@ -136,7 +136,7 @@ auto PatcherVanillaParallax::shouldApplySlots(const std::array<std::wstring, NUM
   static const auto *HeightBaseMap = &PGD->getTextureMapConst(NIFUtil::TextureSlots::PARALLAX);
 
   // Check if vanilla parallax file exists
-  static const vector<int> SlotSearch = {0, 1}; // Diffuse first, then normal
+  static const vector<int> SlotSearch = {1, 0}; // Diffuse first, then normal
   for (int Slot : SlotSearch) {
     auto FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], *HeightBaseMap).Path.wstring();
     if (!FoundMatch.empty()) {

@@ -111,7 +111,7 @@ auto PatcherComplexMaterial::shouldApplySlots(const std::array<std::wstring, NUM
   static const auto *CMBaseMap = &PGD->getTextureMap(NIFUtil::TextureSlots::ENVMASK);
 
   // Check if complex material file exists
-  static const vector<int> SlotSearch = {0, 1}; // Diffuse first, then normal
+  static const vector<int> SlotSearch = {1, 0}; // Diffuse first, then normal
   for (int Slot : SlotSearch) {
     auto FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], *CMBaseMap);
     if (!FoundMatch.Path.empty() && FoundMatch.Type == NIFUtil::TextureType::COMPLEXMATERIAL) {
