@@ -412,7 +412,7 @@ auto BethesdaDirectory::getBSALoadOrder() const -> vector<wstring> {
   vector<wstring> OutBSAOrder = getBSAFilesFromINIs();
 
   // get esp priority list
-  const vector<wstring> LoadOrder = getPluginLoadOrder(true);
+  const vector<wstring> LoadOrder = BG.getActivePlugins(true);
 
   // list BSA files in data directory
   const vector<wstring> AllBSAFiles = getBSAFilesInDirectory();
@@ -431,63 +431,12 @@ auto BethesdaDirectory::getBSALoadOrder() const -> vector<wstring> {
 
     for (const auto &BSA : AllBSAFiles) {
       if (!isInVector(OutBSAOrder, BSA)) {
-        spdlog::warn(L"BSA file {} not loaded by any plugin or INI.", BSA);
+        spdlog::warn(L"BSA file {} not loaded by any active plugin or INI.", BSA);
       }
     }
   }
 
   return OutBSAOrder;
-}
-
-auto BethesdaDirectory::getPluginLoadOrder(const bool &TrimExtension) const -> vector<wstring> {
-  if (Logging) {
-    spdlog::debug("Reading plugin load order from loadorder.txt.");
-  }
-
-  // initialize output vector. Stores
-  vector<wstring> OutputLO;
-
-  // set path to loadorder.txt
-  const filesystem::path LOFile = BG.getLoadOrderFile();
-
-  // open file
-  wifstream F(LOFile, 1);
-  if (!F.is_open()) {
-    if (Logging) {
-      spdlog::critical("Unable to open loadorder.txt");
-      exit(1);
-    } else {
-      throw runtime_error("Unable to open loadorder.txt");
-    }
-  }
-
-  // loop through each line of loadorder.txt
-  wstring Line;
-  while (getline(F, Line)) {
-    // Ignore lines that start with '#', which are comment lines
-    if (Line.empty() || Line[0] == '#') {
-      continue;
-    }
-
-    // Remove extension from line
-    if (TrimExtension) {
-      Line = Line.substr(0, Line.find_last_of('.'));
-    }
-
-    // Add to output list
-    OutputLO.push_back(Line);
-  }
-
-  // close file handle
-  F.close();
-
-  if (Logging) {
-    wstring LoadOrderStr = boost::algorithm::join(OutputLO, ",");
-    spdlog::debug(L"Plugin Load Order: {}", LoadOrderStr);
-  }
-
-  // return output
-  return OutputLO;
 }
 
 auto BethesdaDirectory::getPathLower(const filesystem::path &Path) -> filesystem::path {

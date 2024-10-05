@@ -182,16 +182,6 @@ public:
    */
   [[nodiscard]] auto getBSALoadOrder() const -> std::vector<std::wstring>;
 
-  /**
-   * @brief Get the plugin load order
-   *
-   * @param TrimExtension If true, trims the .esp/.esm extension from the
-   * plugin names
-   * @return std::vector<std::wstring> Names of plugins ordered by load order.
-   * First element is loaded first.
-   */
-  [[nodiscard]] auto getPluginLoadOrder(const bool &TrimExtension = false) const -> std::vector<std::wstring>;
-
   // Helpers
 
   /**

@@ -238,25 +238,7 @@ void ParallaxGenPlugin::initialize(const BethesdaGame &Game) {
       {BethesdaGame::GameType::SKYRIM_VR, 3},  {BethesdaGame::GameType::ENDERAL, 5},
       {BethesdaGame::GameType::ENDERAL_SE, 6}, {BethesdaGame::GameType::SKYRIM_GOG, 7}};
 
-  // Create load order vector
-  vector<wstring> LoadOrder;
-  auto LoadOrderFile = Game.getLoadOrderFile();
-  // open file
-  wifstream LoadOrderStream(LoadOrderFile);
-  if (LoadOrderStream.is_open()) {
-    wstring Line;
-    while (getline(LoadOrderStream, Line)) {
-      if (Line.empty() || Line.starts_with(L"#")) {
-        // skip empty lines and comments
-        continue;
-      }
-
-      LoadOrder.push_back(Line);
-    }
-    LoadOrderStream.close();
-  }
-
-  libInitialize(MutagenGameTypeMap.at(Game.getGameType()), Game.getGameDataPath().wstring(), L"ParallaxGen.esp", LoadOrder);
+  libInitialize(MutagenGameTypeMap.at(Game.getGameType()), Game.getGameDataPath().wstring(), L"ParallaxGen.esp", Game.getActivePlugins());
 }
 
 void ParallaxGenPlugin::populateObjs() { libPopulateObjs(); }

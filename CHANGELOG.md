@@ -10,6 +10,7 @@
 - Fixed retrieval of game installation directories from the registry
 - Normal is matched before diffuse for CM and parallax now
 - If multiple textures have the same prefix, a smarter choice will be made based on the existing value
+- Only active plugins will be considered when plugin patching and loading BSAs now
 
 ## [0.5.8] - 2025-09-21
 

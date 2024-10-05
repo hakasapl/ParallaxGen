@@ -62,6 +62,9 @@ public:
 
   [[nodiscard]] auto getINIPaths() const -> ININame;
   [[nodiscard]] auto getLoadOrderFile() const -> std::filesystem::path;
+  [[nodiscard]] auto getPluginsFile() const -> std::filesystem::path;
+
+  [[nodiscard]] auto getActivePlugins(const bool &TrimExtension = false) const -> std::vector<std::wstring>;
 
 private:
   // locates the steam install locatino of steam

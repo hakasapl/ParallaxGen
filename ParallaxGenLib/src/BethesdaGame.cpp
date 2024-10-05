@@ -9,9 +9,13 @@
 #include <windows.h>
 
 #include <filesystem>
+#include <fstream>
 #include <map>
 #include <stdexcept>
 #include <string>
+#include <unordered_set>
+
+#include <boost/algorithm/string/join.hpp>
 
 #include <cstdlib>
 
@@ -275,6 +279,94 @@ auto BethesdaGame::getINIPaths() const -> BethesdaGame::ININame {
 auto BethesdaGame::getLoadOrderFile() const -> filesystem::path {
   static const filesystem::path GameLoadOrderFile = GameAppDataPath / "loadorder.txt";
   return GameLoadOrderFile;
+}
+
+auto BethesdaGame::getPluginsFile() const -> filesystem::path {
+  static const filesystem::path GamePluginsFile = GameAppDataPath / "plugins.txt";
+  return GamePluginsFile;
+}
+
+auto BethesdaGame::getActivePlugins(const bool &TrimExtension) const -> vector<wstring> {
+  vector<wstring> OutputLO;
+
+  // Build set of plugins that are actually active
+  unordered_map<wstring, bool> ActivePlugins;
+
+  // Get the plugins file
+  const filesystem::path PluginsFile = getPluginsFile();
+  wifstream PluginsFileHandle(PluginsFile, 1);
+  if (!PluginsFileHandle.is_open()) {
+    if (Logging) {
+      spdlog::critical("Unable to open plugins.txt");
+      exit(1);
+    } else {
+      throw runtime_error("Unable to open plugins.txt");
+    }
+  }
+
+  // loop through each line of loadorder.txt
+  wstring Line;
+  while (getline(PluginsFileHandle, Line)) {
+    // Ignore lines that start with '#', which are comment lines
+    if (Line.empty() || Line[0] == '#') {
+      continue;
+    }
+
+    if (Line.starts_with(L"*")) {
+      // this is an active plugin
+      Line = Line.substr(1);
+      ActivePlugins[Line] = true;
+    } else {
+      // this is not an active plugin
+      ActivePlugins[Line] = false;
+    }
+  }
+
+  // close file handle
+  PluginsFileHandle.close();
+
+  // Get the loadorder file
+  const filesystem::path LoadOrderFile = getLoadOrderFile();
+  wifstream LoadOrderFileHandle(LoadOrderFile, 1);
+  if (!LoadOrderFileHandle.is_open()) {
+    if (Logging) {
+      spdlog::critical("Unable to open loadorder.txt");
+      exit(1);
+    } else {
+      throw runtime_error("Unable to open loadorder.txt");
+    }
+  }
+
+  // loop through each line of loadorder.txt
+  while (getline(LoadOrderFileHandle, Line)) {
+    // Ignore lines that start with '#', which are comment lines
+    if (Line.empty() || Line[0] == '#') {
+      continue;
+    }
+
+    if (ActivePlugins.find(Line) != ActivePlugins.end() && !ActivePlugins[Line]) {
+      // this is not an active plugin
+      continue;
+    }
+
+    // Remove extension from line
+    if (TrimExtension) {
+      Line = Line.substr(0, Line.find_last_of('.'));
+    }
+
+    // Add to output list
+    OutputLO.push_back(Line);
+  }
+
+  // close file handle
+  LoadOrderFileHandle.close();
+
+  if (Logging) {
+    wstring LoadOrderStr = boost::algorithm::join(OutputLO, L",");
+    spdlog::debug(L"Active Plugin Load Order: {}", LoadOrderStr);
+  }
+
+  return OutputLO;
 }
 
 auto BethesdaGame::getGameDocumentPath() const -> filesystem::path {
