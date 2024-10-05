@@ -2,15 +2,12 @@
   "dyncubemap_blocklist": [],
   "nif_blocklist": [
     "**/cameras/**",
-    "**/decals/**",
     "**/dyndolod/**",
     "**/lod/**",
     "**/magic/**",
     "**/markers/**",
     "**/mps/**",
-    "**/sky/**",
-    "**/water/**",
-    "calientetools/**"
+    "**/sky/**"
   ],
   "texture_maps": {},
   "vanilla_bsas": [

@@ -11,6 +11,8 @@
 - Normal is matched before diffuse for CM and parallax now
 - If multiple textures have the same prefix, a smarter choice will be made based on the existing value
 - Only active plugins will be considered when plugin patching and loading BSAs now
+- Meshes are only considered in the "meshes" folder now
+- Textures are only considered in the "textures" folder now
 
 ## [0.5.8] - 2025-09-21
 

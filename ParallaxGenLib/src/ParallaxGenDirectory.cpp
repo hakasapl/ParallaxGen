@@ -36,17 +36,17 @@ auto ParallaxGenDirectory::findFiles() -> void {
   spdlog::info("Finding Relevant Files");
   const auto &FileMap = getFileMap();
   for (const auto &[Path, File] : FileMap) {
-    if (boost::iequals(Path.extension().wstring(), L".dds")) {
+    const auto &FirstPath = Path.begin()->wstring();
+    if (boost::iequals(FirstPath, "textures") && boost::iequals(Path.extension().wstring(), L".dds")) {
       // Found a DDS
       spdlog::trace(L"Finding Files | Found DDS | {}", Path.wstring());
       UnconfirmedTextures[Path] = {};
-    } else if (boost::iequals(Path.extension().wstring(), L".nif")) {
+    } else if (boost::iequals(FirstPath, "meshes") && boost::iequals(Path.extension().wstring(), L".nif")) {
       // Found a NIF
       spdlog::trace(L"Finding Files | Found NIF | {}", Path.wstring());
       UnconfirmedMeshes.insert(Path);
     } else if (boost::iequals(Path.extension().wstring(), L".json")) {
       // Found a JSON file
-      const auto &FirstPath = Path.begin()->wstring();
       if (boost::iequals(FirstPath, L"pbrnifpatcher")) {
         // Found PBR JSON config
         spdlog::trace(L"Finding Files | Found PBR JSON | {}", Path.wstring());
