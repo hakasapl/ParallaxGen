@@ -394,7 +394,8 @@ void initLogger(const filesystem::path &LOGPATH, const ParallaxGenCLIArgs &Args)
   }
 
   if (Args.Verbosity >= 2) {
-    FileSink->set_level(spdlog::level::trace);
+    spdlog::set_level(spdlog::level::trace);
+    ConsoleSink->set_level(spdlog::level::debug);
     spdlog::flush_on(spdlog::level::trace);
     spdlog::trace("TRACE logging enabled");
   }
