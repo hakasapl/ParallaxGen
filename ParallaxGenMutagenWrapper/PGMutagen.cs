@@ -141,7 +141,9 @@ public class PGMutagen
     try
     {
       string dataPath = Marshal.PtrToStringUni(dataPathPtr) ?? string.Empty;
+      MessageHandler.Log("ParallaxGenMutagenWrapper | Initialize | Data Path: " + dataPath, 0);
       string outputPlugin = Marshal.PtrToStringUni(outputPluginPtr) ?? string.Empty;
+      MessageHandler.Log("ParallaxGenMutagenWrapper | Initialize | Output Plugin: " + dataPath, 0);
 
       // check if loadorder is defined
       if (loadOrder is not null)
@@ -249,6 +251,8 @@ public class PGMutagen
     return ModelRecs;
   }
 
+  private static HashSet<int> TXSTErrorTracker = [];
+
   [UnmanagedCallersOnly(EntryPoint = "PopulateObjs", CallConvs = [typeof(CallConvCdecl)])]
   public static void PopulateObjs()
   {
@@ -260,6 +264,7 @@ public class PGMutagen
       }
 
       TXSTObjs = [.. Env.LoadOrder.PriorityOrder.TextureSet().WinningOverrides()];
+      MessageHandler.Log("ParallaxGenMutagenWrapper | PopulateObjs | Number of TXST Records Found: " + TXSTObjs.Count, 0);
 
       TXSTRefs = [];
       foreach (var txstRefObj in EnumerateModelRecords())
@@ -273,19 +278,8 @@ public class PGMutagen
           continue;
         }
 
-        // Deep copy master record
-        try
-        {
-          ModelCopies.Add(txstRefObj.DeepCopy());
-        }
-        catch (Exception)
-        {
-          MessageHandler.Log("Failed to copy record: " + txstRefObj.FormKey.ModKey.FileName + " / " + txstRefObj.FormKey.ID.ToString("X6"), 4);
-          continue;
-        }
-
+        bool CopiedRecord = false;
         var DCIdx = ModelCopies.Count - 1;
-
         foreach (var modelRec in ModelRecs)
         {
           // find lowercase nifname
@@ -303,6 +297,21 @@ public class PGMutagen
             continue;
           }
 
+          if (!CopiedRecord)
+          {
+            // Deep copy major record
+            try
+            {
+              ModelCopies.Add(txstRefObj.DeepCopy());
+            }
+            catch (Exception)
+            {
+              MessageHandler.Log("Failed to copy record: " + GetRecordDesc(txstRefObj), 4);
+              break;
+            }
+            CopiedRecord = true;
+          }
+
           foreach (var alternateTexture in modelRec.AlternateTextures)
           {
             // Add to global
@@ -316,6 +325,18 @@ public class PGMutagen
             var key = new Tuple<string, string, int>(nifName, name3D, index3D);
 
             int newTXSTIndex = TXSTObjs.FindIndex(x => x.FormKey == newTXST.FormKey);
+            if (newTXSTIndex < 0)
+            {
+              var CurHashCode = newTXST.GetHashCode();
+              if (!TXSTErrorTracker.Contains(CurHashCode))
+              {
+                TXSTErrorTracker.Add(CurHashCode);
+                MessageHandler.Log("ParallaxGenMutagenWrapper | PopulateObjs | Referenced TXST record in " + GetRecordDesc(txstRefObj) + " / " + key.ToString() + " does not exist", 3);
+              }
+              continue;
+            }
+
+            var newTXSTObj = TXSTObjs[newTXSTIndex];
 
             if (newTXSTIndex >= 0)
             {
@@ -324,6 +345,8 @@ public class PGMutagen
                 TXSTRefs[key] = [];
               }
               TXSTRefs[key].Add(new Tuple<int, int>(newTXSTIndex, AltTexId));
+              MessageHandler.Log("ParallaxGenMutagenWrapper | PopulateObjs | Adding Alt Tex Reference: " + key.ToString() + " -> " + GetRecordDesc(newTXSTObj), 0);
+
               AltTexParents[AltTexId] = DCIdx;
             }
           }
@@ -353,145 +376,182 @@ public class PGMutagen
         if (ModifiedRecord is Mutagen.Bethesda.Skyrim.Activator)
         {
           OutMod.Activators.Add((Mutagen.Bethesda.Skyrim.Activator)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Activator: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Ammunition)
         {
           OutMod.Ammunitions.Add((Ammunition)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Ammunition: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is AnimatedObject)
         {
           OutMod.AnimatedObjects.Add((AnimatedObject)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Animated Object: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Armor)
         {
           OutMod.Armors.Add((Armor)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Armor: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is ArmorAddon)
         {
           OutMod.ArmorAddons.Add((ArmorAddon)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Armor Addon: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is ArtObject)
         {
           OutMod.ArtObjects.Add((ArtObject)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Art Object: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is BodyPartData)
         {
           OutMod.BodyParts.Add((BodyPartData)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Body Part Data: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Book)
         {
           OutMod.Books.Add((Book)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Book: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is CameraShot)
         {
           OutMod.CameraShots.Add((CameraShot)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Camera Shot: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Climate)
         {
           OutMod.Climates.Add((Climate)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Climate: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Container)
         {
           OutMod.Containers.Add((Container)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Container: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Door)
         {
           OutMod.Doors.Add((Door)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Door: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Explosion)
         {
           OutMod.Explosions.Add((Explosion)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Explosion: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Flora)
         {
           OutMod.Florae.Add((Flora)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Flora: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Furniture)
         {
           OutMod.Furniture.Add((Furniture)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Furniture: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Grass)
         {
           OutMod.Grasses.Add((Grass)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Grass: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Hazard)
         {
           OutMod.Hazards.Add((Hazard)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Hazard: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is HeadPart)
         {
           OutMod.HeadParts.Add((HeadPart)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Head Part: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is IdleMarker)
         {
           OutMod.IdleMarkers.Add((IdleMarker)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Idle Marker: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Impact)
         {
           OutMod.Impacts.Add((Impact)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Impact: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Ingestible)
         {
           OutMod.Ingestibles.Add((Ingestible)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Ingestible: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Ingredient)
         {
           OutMod.Ingredients.Add((Ingredient)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Ingredient: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Key)
         {
           OutMod.Keys.Add((Key)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Key: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is LeveledNpc)
         {
           OutMod.LeveledNpcs.Add((LeveledNpc)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Leveled NPC: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Light)
         {
           OutMod.Lights.Add((Light)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Light: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is MaterialObject)
         {
           OutMod.MaterialObjects.Add((MaterialObject)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Material Object: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is MiscItem)
         {
           OutMod.MiscItems.Add((MiscItem)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Misc Item: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is MoveableStatic)
         {
           OutMod.MoveableStatics.Add((MoveableStatic)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Moveable Static: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Projectile)
         {
           OutMod.Projectiles.Add((Projectile)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Projectile: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Scroll)
         {
           OutMod.Scrolls.Add((Scroll)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Scroll: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is SoulGem)
         {
           OutMod.SoulGems.Add((SoulGem)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Soul Gem: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Static)
         {
           OutMod.Statics.Add((Static)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Static: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is TalkingActivator)
         {
           OutMod.TalkingActivators.Add((TalkingActivator)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Talking Activator: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Tree)
         {
           OutMod.Trees.Add((Tree)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Tree: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Weapon)
         {
           OutMod.Weapons.Add((Weapon)ModifiedRecord);
+          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Weapon: " + GetRecordDesc(ModifiedRecord), 0);
         }
       }
 
+      // Write the output plugin
+      MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Writing Output Plugin", 0);
       string outputPath = Marshal.PtrToStringUni(outputPathPtr) ?? string.Empty;
       OutMod?.WriteToBinary(Path.Combine(outputPath, OutMod.ModKey.FileName),
           new BinaryWriteParameters()
@@ -564,6 +624,8 @@ public class PGMutagen
         {
           TXSTHandles[i] = txstList[i].Item1;
           AltTexHandles[i] = txstList[i].Item2;
+
+          MessageHandler.Log("ParallaxGenMutagenWrapper | GetMatchingTXSTObjs | Found Matching TXST: " + key.ToString() + " -> " + GetRecordDesc(TXSTObjs[txstList[i].Item1]), 0);
         }
       }
     }
@@ -647,6 +709,9 @@ public class PGMutagen
       }
 
       var origTXSTObj = TXSTObjs[txstIndex];
+
+      // Create a new TXST record
+      MessageHandler.Log("ParallaxGenMutagenWrapper | CreateTXSTPatch | Creating New TXST Patch: " + GetRecordDesc(origTXSTObj), 0);
       var newTXSTObj = OutMod.TextureSets.GetOrAddAsOverride(origTXSTObj);
 
       // TODO maybe there's a way to not have to have a value for every empty value? (check old slots?)
@@ -710,6 +775,8 @@ public class PGMutagen
 
       // Create a new TXST record
       var newTXSTObj = OutMod.TextureSets.AddNew();
+      MessageHandler.Log("ParallaxGenMutagenWrapper | CreateNewTXSTPatch | Creating New TXST Patch", 0);
+
       // Define slot actions for assigning texture set slots
       string? NewDiffuse = Marshal.PtrToStringUni(slots[0]);
       if (!NewDiffuse.IsNullOrEmpty())
@@ -870,6 +937,11 @@ public class PGMutagen
   }
 
   // Helpers
+
+  private static string GetRecordDesc(IMajorRecordGetter rec)
+  {
+    return rec.FormKey.ModKey.FileName + " / " + rec.FormKey.ID.ToString("X6");
+  }
 
   private static string RemovePrefixIfExists(string prefix, string str)
   {
