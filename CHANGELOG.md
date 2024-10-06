@@ -13,7 +13,6 @@
 - Only active plugins will be considered when plugin patching and loading BSAs now
 - Meshes are only considered in the "meshes" folder now
 - Textures are only considered in the "textures" folder now
-- Fixed extra "texture" being inserted into texture path for some NIFs
 
 ## [0.5.8] - 2025-09-21
 
