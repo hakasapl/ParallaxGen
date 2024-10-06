@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.6.0] - UNRELEASED
+## [0.6.0] - 2024-10-06
 
 - Added plugin patching
 - Fixed PBR rename not functions with certain suffixes
@@ -13,8 +13,9 @@
 - Only active plugins will be considered when plugin patching and loading BSAs now
 - Meshes are only considered in the "meshes" folder now
 - Textures are only considered in the "textures" folder now
+- Fixed "textures\" being added to end of slots in very rare edge cases
 
-## [0.5.8] - 2025-09-21
+## [0.5.8] - 2024-09-21
 
 - Fixed PBR bug when multilayer: false is defined
 - Fixed upgrade-shader not generating mipmaps
@@ -29,13 +30,13 @@
 - Added icon to parallaxgen.exe
 - At the end parallaxgen will now report the time it took to run the patcher
 
-## [0.5.7] - 2025-09-05
+## [0.5.7] - 2024-09-05
 
 - Fixed sorting issue that would result in some patches being missed
 - Updated nifly library to the latest commit (fixes undefined behavior with badly configured NIFs)
 - Logging is more detailed now in -vv mode for mesh patching
 
-## [0.5.6] - 2025-09-03
+## [0.5.6] - 2024-09-03
 
 - PBR multilayer: false is now processed correctly
 - More robust CLI argument validation
