@@ -282,15 +282,6 @@ public class PGMutagen
         var DCIdx = ModelCopies.Count - 1;
         foreach (var modelRec in ModelRecs)
         {
-          // find lowercase nifname
-          string nifName = modelRec.File;
-
-          // Otherwise this causes issues with deepcopy
-          nifName = RemovePrefixIfExists("\\", nifName);
-
-          nifName = nifName.ToLower();
-          nifName = AddPrefixIfNotExists("meshes\\", nifName);
-
           if (modelRec.AlternateTextures is null)
           {
             // no alternate textures
@@ -311,6 +302,15 @@ public class PGMutagen
             }
             CopiedRecord = true;
           }
+
+          // find lowercase nifname
+          string nifName = modelRec.File;
+
+          // Otherwise this causes issues with deepcopy
+          nifName = RemovePrefixIfExists("\\", nifName);
+
+          nifName = nifName.ToLower();
+          nifName = AddPrefixIfNotExists("meshes\\", nifName);
 
           foreach (var alternateTexture in modelRec.AlternateTextures)
           {
