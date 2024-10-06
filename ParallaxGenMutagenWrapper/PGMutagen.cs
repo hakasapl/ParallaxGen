@@ -331,7 +331,7 @@ public class PGMutagen
               if (!TXSTErrorTracker.Contains(CurHashCode))
               {
                 TXSTErrorTracker.Add(CurHashCode);
-                MessageHandler.Log("ParallaxGenMutagenWrapper | PopulateObjs | Referenced TXST record in " + GetRecordDesc(txstRefObj) + " / " + key.ToString() + " does not exist", 3);
+                MessageHandler.Log("Referenced TXST record in " + GetRecordDesc(txstRefObj) + " / " + key.ToString() + " does not exist", 3);
               }
               continue;
             }

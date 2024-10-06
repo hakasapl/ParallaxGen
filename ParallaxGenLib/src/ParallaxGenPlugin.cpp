@@ -1,6 +1,5 @@
 #include "ParallaxGenPlugin.hpp"
 
-#include <fstream>
 #include <mutex>
 #include <spdlog/spdlog.h>
 #include <unordered_map>
@@ -347,7 +346,7 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
 
       TXSTWarningMap[TXSTIndex] = AppliedShader;
       const auto [FormID, PluginName] = libGetTXSTFormID(TXSTIndex);
-      spdlog::warn(L"TXST record is not able to patched for {}: {} / 0x{:06X}", ParallaxGenUtil::strToWstr(ShaderLabel),
+      spdlog::warn(L"TXST record is not able to patched for {}: {} / {:06X}", ParallaxGenUtil::strToWstr(ShaderLabel),
                    PluginName, FormID);
       continue;
     }
