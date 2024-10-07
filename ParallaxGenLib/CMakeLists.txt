@@ -90,14 +90,16 @@ add_custom_command(TARGET ParallaxGenLib POST_BUILD
 add_dependencies(ParallaxGenLib ParallaxGenMutagenWrapper) 
 include_directories(${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR})
 target_link_libraries(ParallaxGenLib PUBLIC ${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR}/ParallaxGenMutagenWrapperNE.lib)
-file(GLOB PGMutagenWrapperDLLs "${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR}/*.dll")
 
+# TODO: this fails at build time since the file list is evaluated at configure time before the DLLs are there and thus empty
+file(GLOB PGMutagenWrapperDLLs "${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR}/*.dll")
 # copy mutagen wrapper DLLS to build output
 add_custom_command(TARGET ParallaxGenLib POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${PGMutagenWrapperDLLs}
         $<TARGET_FILE_DIR:ParallaxGenLib>
 )
+
 add_custom_command(TARGET ParallaxGenLib POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR}/ParallaxGenMutagenWrapper.runtimeconfig.json
@@ -105,7 +107,12 @@ add_custom_command(TARGET ParallaxGenLib POST_BUILD
 )
 
 # TODO redo install step
-install(FILES ${PGMutagenWrapperDLLs} DESTINATION . )
+
+# Install DLLs from mutagenwrapper
+install(DIRECTORY ${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR}/
+        DESTINATION . 
+        FILES_MATCHING PATTERN "*.dll")
+
 install(FILES ${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR}/ParallaxGenMutagenWrapper.runtimeconfig.json DESTINATION . )
 
 install(FILES $<TARGET_RUNTIME_DLLS:ParallaxGenLib> DESTINATION . )
