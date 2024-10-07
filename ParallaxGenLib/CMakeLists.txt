@@ -86,11 +86,13 @@ add_custom_command(TARGET ParallaxGenLib POST_BUILD
         $<TARGET_FILE_DIR:ParallaxGenLib>/shaders
 )
 
-# DNNE setup
-set(DNNE_OUTPUT_DIR ${CMAKE_SOURCE_DIR}/ParallaxGenMutagenWrapper/bin/x64/Release/net8.0)
-include_directories(${DNNE_OUTPUT_DIR})
-target_link_libraries(ParallaxGenLib PUBLIC ${DNNE_OUTPUT_DIR}/ParallaxGenMutagenWrapperNE.lib)
-file(GLOB PGMutagenWrapperDLLs "${DNNE_OUTPUT_DIR}/*.dll")
+# include and link mutagen wrapper output
+add_dependencies(ParallaxGenLib ParallaxGenMutagenWrapper) 
+include_directories(${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR})
+target_link_libraries(ParallaxGenLib PUBLIC ${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR}/ParallaxGenMutagenWrapperNE.lib)
+file(GLOB PGMutagenWrapperDLLs "${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR}/*.dll")
+
+# copy mutagen wrapper DLLS to build output
 add_custom_command(TARGET ParallaxGenLib POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${PGMutagenWrapperDLLs}
@@ -98,13 +100,13 @@ add_custom_command(TARGET ParallaxGenLib POST_BUILD
 )
 add_custom_command(TARGET ParallaxGenLib POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${DNNE_OUTPUT_DIR}/ParallaxGenMutagenWrapper.runtimeconfig.json
+        ${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR}/ParallaxGenMutagenWrapper.runtimeconfig.json
         $<TARGET_FILE_DIR:ParallaxGenLib>
 )
 
 # TODO redo install step
 install(FILES ${PGMutagenWrapperDLLs} DESTINATION . )
-install(FILES ${DNNE_OUTPUT_DIR}/ParallaxGenMutagenWrapper.runtimeconfig.json DESTINATION . )
+install(FILES ${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR}/ParallaxGenMutagenWrapper.runtimeconfig.json DESTINATION . )
 
 install(FILES $<TARGET_RUNTIME_DLLS:ParallaxGenLib> DESTINATION . )
 
