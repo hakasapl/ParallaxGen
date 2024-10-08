@@ -55,7 +55,7 @@ add_custom_target( ParallaxGenMutagenWrapper
                    WORKING_DIRECTORY ${PARALLAXGENMUTAGENWRAPPER_DIR}
 				   BYPRODUCTS ${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR}/ParallaxGenMutagenWrapperNE.lib )
 
-set_target_properties( ParallaxGenMutagenWrapper 
+set_target_properties( ParallaxGenMutagenWrapper
 					   PROPERTIES ADDITIONAL_CLEAN_FILES ${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR})
 
 # NIFLY
