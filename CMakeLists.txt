@@ -37,6 +37,27 @@ file(MAKE_DIRECTORY ${EXTRN_INSTALL_DIR})
 # Set CMAKE module path to include external install dir
 set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${EXTRN_INSTALL_DIR})
 
+
+# ParallaxGenMutagenWrapper is currently built in-source via msbuild
+set(PARALLAXGENMUTAGENWRAPPER_DIR ${CMAKE_SOURCE_DIR}/ParallaxGenMutagenWrapper)
+
+if (${CMAKE_BUILD_TYPE} STREQUAL "Release" OR ${CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo")
+	set(MSBUILD_CONFIGURATION "Release")
+elseif(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+	set(MSBUILD_CONFIGURATION "Debug")
+endif()
+
+set(PARALLAXGENMUTAGENWRAPPER_BINARY_DIR ${PARALLAXGENMUTAGENWRAPPER_DIR}/bin/x64/${MSBUILD_CONFIGURATION}/net8.0)
+
+add_custom_target( ParallaxGenMutagenWrapper
+				   msbuild -t:restore,build ParallaxGenMutagenWrapper.csproj -p:Configuration=${MSBUILD_CONFIGURATION} -p:Platform=x64
+				   COMMENT "Building ParallaxGenMutagenWrapper ${MSBUILD_CONFIGURATION},x64"
+                   WORKING_DIRECTORY ${PARALLAXGENMUTAGENWRAPPER_DIR}
+				   BYPRODUCTS ${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR}/ParallaxGenMutagenWrapperNE.lib )
+
+set_target_properties( ParallaxGenMutagenWrapper
+					   PROPERTIES ADDITIONAL_CLEAN_FILES ${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR})
+
 # NIFLY
 message(STATUS "Install NIFLY external...")
 execute_process(COMMAND ${CMAKE_COMMAND} -S ${CMAKE_SOURCE_DIR}/external/nifly -B ${EXTRN_BUILD_DIR}/nifly -DCMAKE_INSTALL_PREFIX=${EXTRN_INSTALL_DIR} -DBUILD_TESTING=OFF)

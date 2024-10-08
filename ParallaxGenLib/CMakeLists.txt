@@ -86,25 +86,19 @@ add_custom_command(TARGET ParallaxGenLib POST_BUILD
         $<TARGET_FILE_DIR:ParallaxGenLib>/shaders
 )
 
-# DNNE setup
-set(DNNE_OUTPUT_DIR ${CMAKE_SOURCE_DIR}/ParallaxGenMutagenWrapper/bin/x64/Release/net8.0)
-include_directories(${DNNE_OUTPUT_DIR})
-target_link_libraries(ParallaxGenLib PUBLIC ${DNNE_OUTPUT_DIR}/ParallaxGenMutagenWrapperNE.lib)
-file(GLOB PGMutagenWrapperDLLs "${DNNE_OUTPUT_DIR}/*.dll")
-add_custom_command(TARGET ParallaxGenLib POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${PGMutagenWrapperDLLs}
-        $<TARGET_FILE_DIR:ParallaxGenLib>
-)
-add_custom_command(TARGET ParallaxGenLib POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${DNNE_OUTPUT_DIR}/ParallaxGenMutagenWrapper.runtimeconfig.json
-        $<TARGET_FILE_DIR:ParallaxGenLib>
-)
+# include and link mutagen wrapper output
+add_dependencies(ParallaxGenLib ParallaxGenMutagenWrapper)
+include_directories(${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR})
+target_link_libraries(ParallaxGenLib PUBLIC ${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR}/ParallaxGenMutagenWrapperNE.lib)
 
 # TODO redo install step
-install(FILES ${PGMutagenWrapperDLLs} DESTINATION . )
-install(FILES ${DNNE_OUTPUT_DIR}/ParallaxGenMutagenWrapper.runtimeconfig.json DESTINATION . )
+
+# Install DLLs from mutagenwrapper
+install(DIRECTORY ${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR}/
+        DESTINATION .
+        FILES_MATCHING PATTERN "*.dll")
+
+install(FILES ${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR}/ParallaxGenMutagenWrapper.runtimeconfig.json DESTINATION . )
 
 install(FILES $<TARGET_RUNTIME_DLLS:ParallaxGenLib> DESTINATION . )
 
@@ -117,15 +111,7 @@ elseif(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/zlibd1.dll DESTINATION . )
 endif()
 
-# Tests
-add_custom_command(TARGET ParallaxGenLib POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E rm -rf $<TARGET_FILE_DIR:ParallaxGenLib>/env
-    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:ParallaxGenLib>/env
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_CURRENT_SOURCE_DIR}/tests/env
-        $<TARGET_FILE_DIR:ParallaxGenLib>/env
-)
-
+# Test
 find_package(GTest REQUIRED CONFIG)
 
 enable_testing()
@@ -141,6 +127,31 @@ add_executable(
   ${TESTS}
 )
 add_dependencies(${PARALLAXGENLIB_TEST_NAME} ParallaxGenLib)
+
+file(WRITE ${CMAKE_BINARY_DIR}/copyDLLs.cmake
+  "file(COPY \${CMAKE_ARGV3}
+        DESTINATION \${CMAKE_ARGV4}
+        FILES_MATCHING PATTERN *.dll)\n"
+)
+
+# copy mutagen wrapper DLLS to test file directory
+add_custom_command(TARGET ${PARALLAXGENLIB_TEST_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_BINARY_DIR}/copyDLLs.cmake ${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR}/ $<TARGET_FILE_DIR:${PARALLAXGENLIB_TEST_NAME}>
+)
+
+add_custom_command(TARGET ${PARALLAXGENLIB_TEST_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR}/ParallaxGenMutagenWrapper.runtimeconfig.json
+        $<TARGET_FILE_DIR:${PARALLAXGENLIB_TEST_NAME}>
+)
+
+add_custom_command(TARGET ${PARALLAXGENLIB_TEST_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E rm -rf $<TARGET_FILE_DIR:${PARALLAXGENLIB_TEST_NAME}>/env
+    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${PARALLAXGENLIB_TEST_NAME}>/env
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/env
+        $<TARGET_FILE_DIR:${PARALLAXGENLIB_TEST_NAME}>/env
+)
 
 target_link_libraries(
   ${PARALLAXGENLIB_TEST_NAME}
