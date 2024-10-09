@@ -57,16 +57,18 @@ public:
   [[nodiscard]] auto getGameType() const -> GameType;
   [[nodiscard]] auto getGamePath() const -> std::filesystem::path;
   [[nodiscard]] auto getGameDataPath() const -> std::filesystem::path;
-  [[nodiscard]] auto getGameDocumentPath() const -> std::filesystem::path;
-  [[nodiscard]] auto getGameAppdataPath() const -> std::filesystem::path;
 
   [[nodiscard]] auto getINIPaths() const -> ININame;
   [[nodiscard]] auto getLoadOrderFile() const -> std::filesystem::path;
   [[nodiscard]] auto getPluginsFile() const -> std::filesystem::path;
 
+  // Get number of active plugins including Bethesda master files
   [[nodiscard]] auto getActivePlugins(const bool &TrimExtension = false) const -> std::vector<std::wstring>;
 
 private:
+  [[nodiscard]] auto getGameDocumentSystemPath() const -> std::filesystem::path;
+  [[nodiscard]] auto getGameAppdataSystemPath() const -> std::filesystem::path;
+
   // locates the steam install locatino of steam
   [[nodiscard]] auto findGamePathFromSteam() const -> std::filesystem::path;
 
