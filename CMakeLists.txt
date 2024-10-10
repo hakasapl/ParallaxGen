@@ -64,6 +64,7 @@ execute_process(COMMAND ${CMAKE_COMMAND} -S ${CMAKE_SOURCE_DIR}/external/nifly -
 execute_process(COMMAND ${CMAKE_COMMAND} --build ${EXTRN_BUILD_DIR}/nifly --target install --config ${CMAKE_BUILD_TYPE})
 
 # Submodules
+enable_testing()
 add_subdirectory(ParallaxGen)
 add_subdirectory(ParallaxGenLib)
 

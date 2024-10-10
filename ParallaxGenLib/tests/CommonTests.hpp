@@ -21,8 +21,8 @@ namespace PGTestEnvs {
   // Define test environments
   const PGTesting::TestEnvGameParams TESTENVSkyrimSE = {
     BethesdaGame::GameType::SKYRIM_SE,
-    EXEPath / "env/skyrimse/game",
-    EXEPath / "env/skyrimse/appdata",
-    EXEPath / "env/skyrimse/documents"
+    EXEPath / "env\\skyrimse\\game",
+    EXEPath / "env\\skyrimse\\appdata",
+    EXEPath / "env\\skyrimse\\documents"
   };
 }  // namespace PGTestEnvs

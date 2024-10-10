@@ -87,7 +87,7 @@ public:
   void populateFileMap(bool IncludeBSAs = true);
 
   /**
-   * @brief Get the file map vector
+   * @brief Get the file map vector, path of the files is is all lower case
    *
    * @return std::map<std::filesystem::path, BethesdaFile>
    */
@@ -101,7 +101,7 @@ public:
   [[nodiscard]] auto getDataPath() const -> std::filesystem::path;
 
   /**
-   * @brief Get bytes from a file in the load order
+   * @brief Get bytes from a file in the load order. Throws runtime_error if file does not exist and logging is turned off
    *
    * @param RelPath path to the file relative to the data directory
    * @return std::vector<std::byte> vector of bytes of the file
@@ -124,7 +124,7 @@ public:
   [[nodiscard]] auto isLooseFile(const std::filesystem::path &RelPath) const -> bool;
 
   /**
-   * @brief Check if a file in the load order is a BSA file
+   * @brief Check if a file in the load order is a file from a BSA
    *
    * @param RelPath path to the file relative to the data directory
    * @return true if file is a BSA file
@@ -151,7 +151,7 @@ public:
   [[nodiscard]] auto isPrefix(const std::filesystem::path &RelPath) const -> bool;
 
   /**
-   * @brief Get the full path of a file in the load order
+   * @brief Get the full path of a loose file in the load order
    *
    * @param RelPath path to the file relative to the data directory
    * @return std::filesystem::path absolute path to the file
@@ -228,7 +228,7 @@ public:
                                     const std::vector<std::wstring> &Components) -> bool;
 
   /**
-   * @brief Check if any glob in list matches string
+   * @brief Check if any glob in list matches string. Globs are basic MS-DOS wildcards, a * represents any number of any character including slashes
    *
    * @param Str String to check
    * @param GlobList Globs to check

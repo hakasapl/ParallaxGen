@@ -1,13 +1,13 @@
 {
   "dyncubemap_blocklist": [],
   "nif_blocklist": [
-    "**/cameras/**",
-    "**/dyndolod/**",
-    "**/lod/**",
-    "**/magic/**",
-    "**/markers/**",
-    "**/mps/**",
-    "**/sky/**"
+    "*\\cameras\\*",
+    "*\\dyndolod\\*",
+    "*\\lod\\*",
+    "*\\magic\\*",
+    "*\\markers\\*",
+    "*\\mps\\*",
+    "*\\sky\\*"
   ],
   "texture_maps": {},
   "vanilla_bsas": [

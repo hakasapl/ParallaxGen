@@ -192,21 +192,36 @@ auto BethesdaDirectory::clearCache() -> void {
 }
 
 auto BethesdaDirectory::isLooseFile(const filesystem::path &RelPath) const -> bool {
+  if (FileMap.empty()) {
+    throw runtime_error("File map was not populated");
+  }
   const BethesdaFile File = getFileFromMap(RelPath);
   return !File.Path.empty() && File.BSAFile == nullptr;
 }
 
 auto BethesdaDirectory::isBSAFile(const filesystem::path &RelPath) const -> bool {
+  if (FileMap.empty()) {
+    throw runtime_error("File map was not populated");
+  }
+
   const BethesdaFile File = getFileFromMap(RelPath);
   return !File.Path.empty() && File.BSAFile != nullptr;
 }
 
 auto BethesdaDirectory::isFile(const filesystem::path &RelPath) const -> bool {
+  if (FileMap.empty()) {
+    throw runtime_error("File map was not populated");
+  }
+
   const BethesdaFile File = getFileFromMap(RelPath);
   return !File.Path.empty();
 }
 
 auto BethesdaDirectory::isPrefix(const filesystem::path &RelPath) const -> bool {
+  if (FileMap.empty()) {
+    throw runtime_error("File map was not populated");
+  }
+
   auto It = FileMap.lower_bound(RelPath);
   if (It == FileMap.end()) {
     return false;
@@ -225,6 +240,10 @@ auto BethesdaDirectory::getDataPath() const -> filesystem::path { return DataDir
 auto BethesdaDirectory::findFiles(const bool &Lower, const vector<wstring> &GlobListAllow,
                                   const vector<wstring> &GlobListDeny, const vector<wstring> &ArchiveListDeny,
                                   const bool &LogFindings, const bool &AllowWString) const -> vector<filesystem::path> {
+  if (FileMap.empty()) {
+    throw runtime_error("File map was not populated");
+  }
+
   // find all keys in FileMap that match pattern
   vector<filesystem::path> FoundFiles;
 
