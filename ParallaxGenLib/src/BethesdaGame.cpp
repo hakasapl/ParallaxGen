@@ -68,14 +68,14 @@ BethesdaGame::BethesdaGame(GameType GameType, const bool &Logging, const filesys
 
   // Define appdata path
   if (AppDataPath.empty()) {
-    GameAppDataPath = getGameAppdataPath();
+    GameAppDataPath = getGameAppdataSystemPath();
   } else {
     GameAppDataPath = AppDataPath;
   }
 
   // Define document path
   if (DocumentPath.empty()) {
-    GameDocumentPath = getGameDocumentPath();
+    GameDocumentPath = getGameDocumentSystemPath();
   } else {
     GameDocumentPath = DocumentPath;
   }
@@ -266,7 +266,7 @@ auto BethesdaGame::findGamePathFromSteam() const -> filesystem::path {
 
 auto BethesdaGame::getINIPaths() const -> BethesdaGame::ININame {
   BethesdaGame::ININame Output = getINILocations();
-  const filesystem::path GameDocsPath = getGameDocumentPath();
+  const filesystem::path GameDocsPath = getGameDocumentSystemPath();
 
   // normal ini file
   Output.INI = GameDocumentPath / Output.INI;
@@ -277,12 +277,12 @@ auto BethesdaGame::getINIPaths() const -> BethesdaGame::ININame {
 }
 
 auto BethesdaGame::getLoadOrderFile() const -> filesystem::path {
-  static const filesystem::path GameLoadOrderFile = GameAppDataPath / "loadorder.txt";
+  const filesystem::path GameLoadOrderFile = GameAppDataPath / "loadorder.txt";
   return GameLoadOrderFile;
 }
 
 auto BethesdaGame::getPluginsFile() const -> filesystem::path {
-  static const filesystem::path GamePluginsFile = GameAppDataPath / "plugins.txt";
+  const filesystem::path GamePluginsFile = GameAppDataPath / "plugins.txt";
   return GamePluginsFile;
 }
 
@@ -369,7 +369,7 @@ auto BethesdaGame::getActivePlugins(const bool &TrimExtension) const -> vector<w
   return OutputLO;
 }
 
-auto BethesdaGame::getGameDocumentPath() const -> filesystem::path {
+auto BethesdaGame::getGameDocumentSystemPath() const -> filesystem::path {
   filesystem::path DocPath = getSystemPath(FOLDERID_Documents);
   if (DocPath.empty()) {
     return {};
@@ -379,7 +379,7 @@ auto BethesdaGame::getGameDocumentPath() const -> filesystem::path {
   return DocPath;
 }
 
-auto BethesdaGame::getGameAppdataPath() const -> filesystem::path {
+auto BethesdaGame::getGameAppdataSystemPath() const -> filesystem::path {
   filesystem::path AppDataPath = getSystemPath(FOLDERID_LocalAppData);
   if (AppDataPath.empty()) {
     return {};

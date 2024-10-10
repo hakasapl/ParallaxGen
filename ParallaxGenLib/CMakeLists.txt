@@ -120,6 +120,8 @@ set(PARALLAXGENLIB_TEST_NAME ParallaxGenLibTests)
 set (TESTS
   "tests/CommonTests.cpp"
   "tests/ParallaxGenPluginTests.cpp"
+  "tests/BethesdaGameTests.cpp"
+  "tests/BethesdaGameTestsSkyrimSEInstalled.cpp"
 )
 
 add_executable(
