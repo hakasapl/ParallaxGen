@@ -183,7 +183,6 @@ TEST_P(BethesdaDirectoryTest, Files) {
   EXPECT_FALSE(BD->isLooseFile(Bridge01Path));
   EXPECT_FALSE(BD->isBSAFile(Bridge01Path));
 
-  // logging is set to false, so function will throw an exception
   EXPECT_THROW(BD->getFile(Bridge01Path, false), runtime_error);
   EXPECT_THROW(BD->getFile(Bridge01Path, true), runtime_error);
 

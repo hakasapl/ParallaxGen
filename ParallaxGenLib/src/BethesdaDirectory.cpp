@@ -108,9 +108,8 @@ auto BethesdaDirectory::getFile(const filesystem::path &RelPath, const bool &Cac
   if (File.Path.empty()) {
     if (Logging) {
       spdlog::error(L"File not found in file map: {}", RelPath.wstring());
-    } else {
-      throw runtime_error("File not found in file map");
     }
+    throw runtime_error("File not found in file map");
   }
 
   auto LowerRelPath = getPathLower(RelPath);
@@ -167,9 +166,8 @@ auto BethesdaDirectory::getFile(const filesystem::path &RelPath, const bool &Cac
     } else {
       if (Logging) {
         spdlog::error(L"File not found in BSA archive: {}", RelPath.wstring());
-      } else {
-        throw runtime_error("File not found in BSA archive");
       }
+      throw runtime_error("File not found in BSA archive");
     }
   }
 
