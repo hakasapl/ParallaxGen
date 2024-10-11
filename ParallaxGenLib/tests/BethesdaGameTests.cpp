@@ -54,8 +54,9 @@ TEST_P(BethesdaGameTest, TestPlugins) {
   // ccBGSSSE037-Curios.esl
   // ccBGSSSE025-AdvDSGS.esm
   //_ResourcePack.esl
+  // unofficial skyrim special edition patch.esp
 
-  EXPECT_EQ(BG->getActivePlugins().size(), 10);
+  EXPECT_EQ(BG->getActivePlugins().size(), 11);
   EXPECT_EQ(BG->getActivePlugins()[0], std::wstring{L"Skyrim.esm"});
   EXPECT_EQ(BG->getActivePlugins(true)[0], std::wstring{L"Skyrim"});
 

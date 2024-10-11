@@ -114,13 +114,13 @@ endif()
 # Test
 find_package(GTest REQUIRED CONFIG)
 
-enable_testing()
 set(PARALLAXGENLIB_TEST_NAME ParallaxGenLibTests)
 
 set (TESTS
   "tests/CommonTests.cpp"
   "tests/ParallaxGenPluginTests.cpp"
   "tests/BethesdaGameTests.cpp"
+  "tests/BethesdaDirectoryTests.cpp"
   "tests/BethesdaGameTestsSkyrimSEInstalled.cpp"
 )
 
