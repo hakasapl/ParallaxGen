@@ -42,15 +42,22 @@ private:
 
 public:
   // constructor - calls the BethesdaDirectory constructor
-  ParallaxGenDirectory(BethesdaGame BG);
+  ParallaxGenDirectory(BethesdaGame BG, const bool& logging = true);
 
-  auto findFiles() -> void;
+  // Map all files in the load order to its type. If MapFromMeshes is true, the texture type is retrieved from the mesh it is assigned to
+  //
+  // NifBlocklist nifs to ignore for populating the mesh list
+  // ManualTextureMaps overwrite for the type of a texture
+  // ParallaxBSAExcludes: parallax maps contained in any of these BSAs are not considered for the file map
+  // CacheNIFs: faster but higher memory consumption
   auto mapFiles(const std::unordered_set<std::wstring> &NIFBlocklist,
                 const std::unordered_map<std::filesystem::path, NIFUtil::TextureType> &ManualTextureMaps,
-                const std::unordered_set<std::wstring> &BSAExcludes,
+                const std::unordered_set<std::wstring> &ParallaxBSAExcludes,
                 const bool &MapFromMeshes = true, const bool &Multithreading = true, const bool &CacheNIFs = false) -> void;
 
 private:
+  auto findFiles() -> void;
+
   auto mapTexturesFromNIF(const std::filesystem::path &NIFPath, const bool &CacheNIF = false) -> ParallaxGenTask::PGResult;
 
   auto updateUnconfirmedTexturesMap(

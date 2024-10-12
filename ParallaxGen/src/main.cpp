@@ -218,9 +218,6 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   // Populate file map from data directory
   PGD.populateFileMap(!Args.NoBSA);
 
-  // Find relevant files
-  PGD.findFiles();
-
   // Load configs
   PGC.loadConfig(!Args.NoDefaultConfig);
 
