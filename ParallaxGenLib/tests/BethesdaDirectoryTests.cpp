@@ -113,14 +113,16 @@ TEST_P(BethesdaDirectoryTest, FindFiles) {
   Files = BD->findFiles(false, {L"textures\\smim\\clutter\\common\\*"});
   EXPECT_FALSE(Files.empty());
   const auto ClutterCommonTextures = std::vector<std::filesystem::path>{L"textures\\smim\\clutter\\common\\Stump_Bottom_for_Furniture.dds",
-                                                                        L"textures\\smim\\clutter\\common\\Stump_Bottom_for_Furniture_n.dds"};
+                                                                        L"textures\\smim\\clutter\\common\\Stump_Bottom_for_Furniture_n.dds",
+                                                                        L"textures\\smim\\clutter\\common\\Stump_Bottom_for_Furniture_p.dds"};
   EXPECT_TRUE(Files == ClutterCommonTextures);
 
   // find loose files, lower filenames
   Files = BD->findFiles(true, {L"textures\\smim\\clutter\\common\\*"});
   EXPECT_FALSE(Files.empty());
   const auto ClutterCommonTexturesL = std::vector<std::filesystem::path>{L"textures\\smim\\clutter\\common\\stump_bottom_for_furniture.dds",
-                                                                         L"textures\\smim\\clutter\\common\\stump_bottom_for_furniture_n.dds"};
+                                                                         L"textures\\smim\\clutter\\common\\stump_bottom_for_furniture_n.dds",
+                                                                         L"textures\\smim\\clutter\\common\\stump_bottom_for_furniture_p.dds"};
   EXPECT_TRUE(Files == ClutterCommonTexturesL);
 
   // test file exclusion

@@ -25,7 +25,7 @@
 using namespace std;
 using namespace ParallaxGenUtil;
 
-ParallaxGenDirectory::ParallaxGenDirectory(BethesdaGame BG) : BethesdaDirectory(BG, true) {}
+ParallaxGenDirectory::ParallaxGenDirectory(BethesdaGame BG, const bool &logging) : BethesdaDirectory(BG, logging) {}
 
 auto ParallaxGenDirectory::findFiles() -> void {
   // Clear existing unconfirmedtextures
@@ -35,6 +35,11 @@ auto ParallaxGenDirectory::findFiles() -> void {
   // Populate unconfirmed maps
   spdlog::info("Finding Relevant Files");
   const auto &FileMap = getFileMap();
+
+  if (FileMap.empty()) {
+    throw runtime_error("File map was not populated");
+  }
+
   for (const auto &[Path, File] : FileMap) {
     const auto &FirstPath = Path.begin()->wstring();
     if (boost::iequals(FirstPath, "textures") && boost::iequals(Path.extension().wstring(), L".dds")) {
@@ -63,10 +68,12 @@ auto ParallaxGenDirectory::findFiles() -> void {
 
 auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
                                     const unordered_map<filesystem::path, NIFUtil::TextureType> &ManualTextureMaps,
-                                    const std::unordered_set<std::wstring> &BSAExcludes,
+                                    const std::unordered_set<std::wstring> &ParallaxBSAExcludes,
                                     const bool &MapFromMeshes, const bool &Multithreading,
                                     const bool &CacheNIFs) -> void {
-  spdlog::info("Starting building texture map");
+  findFiles();
+
+    spdlog::info("Starting building texture map");
 
   // Create task tracker
   ParallaxGenTask TaskTracker("Loading NIFs", UnconfirmedMeshes.size(), MAPTEXTURE_PROGRESS_MODULO);
@@ -156,7 +163,7 @@ auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
       WinningSlot = NIFUtil::getSlotFromTexType(WinningType);
     }
 
-    if ((WinningSlot == NIFUtil::TextureSlots::PARALLAX) && isFileInBSA(Texture, BSAExcludes)) {
+    if ((WinningSlot == NIFUtil::TextureSlots::PARALLAX) && isFileInBSA(Texture, ParallaxBSAExcludes)) {
       spdlog::trace(L"Mapping Textures | Ignored vanilla parallax texture | Texture: {}", Texture.wstring());
       continue;
     }

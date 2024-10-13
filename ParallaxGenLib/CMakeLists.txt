@@ -121,6 +121,7 @@ set (TESTS
   "tests/ParallaxGenPluginTests.cpp"
   "tests/BethesdaGameTests.cpp"
   "tests/BethesdaDirectoryTests.cpp"
+  "tests/ParallaxGenDirectoryTests.cpp"
   "tests/BethesdaGameTestsSkyrimSEInstalled.cpp"
 )
 
