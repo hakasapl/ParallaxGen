@@ -411,13 +411,6 @@ auto ParallaxGenDirectory::addMesh(const filesystem::path &Path) -> void {
   Meshes.insert(Path);
 }
 
-// Get the texture map for a given texture slot in the NIF. The key is the texture path without the suffix.
-//
-// Entry example:
-// textures\\landscape\\dirtcliffs\\dirtcliffs01 -> {textures\\landscape\\dirtcliffs\\dirtcliffs01_mask.dds, textures\\landscape\\dirtcliffs\\dirtcliffs01.dds}
-//
-// Note: there can be more than one textures for one base name without the suffix, since there are more than one possible suffixes
-// for certain texture slots. Full texture paths are stored in each item of the element set.
 auto ParallaxGenDirectory::getTextureMap(const NIFUtil::TextureSlots &Slot) -> map<wstring, unordered_set<NIFUtil::PGTexture, NIFUtil::PGTextureHasher>> & {
   return TextureMaps[static_cast<size_t>(Slot)];
 }
