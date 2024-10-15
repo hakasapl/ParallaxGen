@@ -28,6 +28,7 @@
 #include <unordered_map>
 
 #include "BethesdaGame.hpp"
+#include "ModManagerDirectory.hpp"
 #include "ParallaxGen.hpp"
 #include "ParallaxGenConfig.hpp"
 #include "ParallaxGenD3D.hpp"
@@ -224,8 +225,20 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   auto VanillaBSAList = PGC.getVanillaBSAList();
 
   // Map files
-  PGD.mapFiles(PGC.getNIFBlocklist(), PGC.getManualTextureMaps(), VanillaBSAList, !Args.NoMapFromMeshes, !Args.NoMultithread,
-               Args.HighMem);
+  PGD.mapFiles(PGC.getNIFBlocklist(), PGC.getManualTextureMaps(), VanillaBSAList, !Args.NoMapFromMeshes,
+               !Args.NoMultithread, Args.HighMem);
+
+  // TODO get path as command line argument
+  // TODO test with MO2
+  ModManagerDirectory MD({"C:\\ProgramData\\vortex\\skyrimse\\mods"});
+
+  spdlog::info("Finding texture in mod staging folder");
+  MD.FindTextureFilesInDir();
+  spdlog::info("Finding textures done");
+
+  spdlog::info("Finding non matching parallax and diffuse textures");
+  std::set<std::pair<wstring, wstring>> NonMatchingMods = PGD.FindNonMatchingDiffuseParallax(MD);
+  spdlog::info("Finding done");
 
   spdlog::info("Finding complex material env maps");
   PGD3D.findCMMaps(VanillaBSAList);
@@ -250,6 +263,16 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   PGD.clearCache();
 
   spdlog::info("ParallaxGen has finished patching meshes.");
+
+  // TODO Nice to have: some kind of filtering to remove the warnings if user is certain that textures match
+  if (!NonMatchingMods.empty()) {
+    spdlog::warn(
+        "There are parallax textures from different mods than their corresponding diffuse textures. This will "
+        "cause visual problems if the textures don't match. Run with --vv to get a list of all textures in the logs.");
+    for (auto &const Pair : NonMatchingMods) {
+      spdlog::warn(L"{} ---> {}", Pair.first, Pair.second);
+    }
+  }
 
   // Write plugin
   if (!Args.NoPlugin) {

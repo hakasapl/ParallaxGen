@@ -229,7 +229,7 @@ auto BethesdaDirectory::isPrefix(const filesystem::path &RelPath) const -> bool 
          (It != FileMap.begin() && boost::istarts_with(prev(It)->first.wstring(), RelPath.wstring()));
 }
 
-auto BethesdaDirectory::getFullPath(const filesystem::path &RelPath) const -> filesystem::path {
+auto BethesdaDirectory::getLooseFileFullPath(const filesystem::path &RelPath) const -> filesystem::path {
   return DataDir / RelPath;
 }
 

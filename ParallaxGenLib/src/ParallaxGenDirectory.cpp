@@ -1,4 +1,5 @@
 #include "ParallaxGenDirectory.hpp"
+#include "ModManagerDirectory.hpp"
 
 #include <DirectXTex.h>
 #include <NifFile.hpp>
@@ -425,3 +426,71 @@ auto ParallaxGenDirectory::getMeshes() const -> const unordered_set<filesystem::
 auto ParallaxGenDirectory::getPBRJSONs() const -> const vector<filesystem::path> & { return PBRJSONs; }
 
 auto ParallaxGenDirectory::getPGJSONs() const -> const vector<filesystem::path> & { return PGJSONs; }
+
+auto ParallaxGenDirectory::FindNonMatchingDiffuseParallax(const ModManagerDirectory &MD)
+    -> std::set<std::pair<std::wstring, std::wstring>> {
+
+  const auto &FileMap = getFileMap();
+  auto const &FileMapHeight = getTextureMapConst(NIFUtil::TextureSlots::PARALLAX);
+  auto const &FileMapDiffuse = getTextureMapConst(NIFUtil::TextureSlots::DIFFUSE);
+
+  std::set<std::pair<std::wstring, std::wstring>> NonMatchingTextureMods;
+
+  for (auto const &FileMapEntry : FileMapHeight) {
+    // check if there is a diffuse map for the parallax map
+    std::filesystem::path DiffuseRelPath{};
+    if (FileMapDiffuse.find(FileMapEntry.first) != FileMapDiffuse.end()) {
+      auto const &DiffuseMapEntry = FileMapDiffuse.at(FileMapEntry.first);
+      // TODO: is it necessary to handle the rare cases where there is more than one texture in the set?
+      DiffuseRelPath = DiffuseMapEntry.begin()->Path;
+    }
+
+    // no diffuse texture assigned to a mesh -> early out
+    if (DiffuseRelPath.empty()) {
+      continue;
+    }
+
+    std::filesystem::path ParallaxRelPath = FileMapEntry.second.begin()->Path;
+
+    std::wstring NonMatchingDiffuseMod{};
+    std::wstring NonMatchingParallaxMod{};
+
+    // determine diffuse and parallax mods
+    std::filesystem::path DiffuseModPath{};
+    std::filesystem::path ParallaxModPath{};
+    std::wstring DiffuseMod{};
+    std::wstring ParallaxMod{};
+
+    if (isLooseFile(DiffuseRelPath)) {
+      std::filesystem::path DiffuseFullPath = getLooseFileFullPath(DiffuseRelPath);
+      DiffuseModPath = MD.FindModPath(DiffuseFullPath);
+      DiffuseMod = MD.GetModFromTexture(DiffuseModPath);
+    } else {
+      std::filesystem::path DiffuseBSAPath = FileMap.at(DiffuseRelPath).BSAFile->Path;
+      DiffuseMod = DiffuseBSAPath.filename().wstring();
+    }
+
+    if (isLooseFile(ParallaxRelPath)) {
+      std::filesystem::path ParallaxFullPath = getLooseFileFullPath(ParallaxRelPath);
+      ParallaxModPath = MD.FindModPath(ParallaxFullPath);
+      ParallaxMod = MD.GetModFromTexture(ParallaxModPath);
+    } else {
+      std::filesystem::path ParallaxBSAPath = FileMap.at(ParallaxRelPath).BSAFile->Path;
+      ParallaxMod = ParallaxBSAPath.filename().wstring();
+    }
+
+    if (!(DiffuseMod == ParallaxMod)) {
+      spdlog::trace(L"Potentially non matching textures found: {}:{} --- {}:{}", DiffuseMod, DiffuseRelPath.wstring(),
+                    ParallaxMod, ParallaxRelPath.wstring());
+      // both loose files
+      NonMatchingDiffuseMod = DiffuseMod;
+      NonMatchingParallaxMod = ParallaxMod;
+    }
+
+    if (!NonMatchingDiffuseMod.empty() || !NonMatchingParallaxMod.empty()) {
+      NonMatchingTextureMods.insert({NonMatchingDiffuseMod, NonMatchingParallaxMod});
+    }
+  }
+
+  return NonMatchingTextureMods;
+}

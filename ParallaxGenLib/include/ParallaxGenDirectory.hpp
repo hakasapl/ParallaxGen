@@ -16,6 +16,8 @@
 #include "NIFUtil.hpp"
 #include "ParallaxGenTask.hpp"
 
+class ModManagerDirectory;
+
 #define MAPTEXTURE_PROGRESS_MODULO 10
 
 class ParallaxGenDirectory : public BethesdaDirectory {
@@ -106,4 +108,10 @@ public:
   [[nodiscard]] auto getPBRJSONs() const -> const std::vector<std::filesystem::path> &;
 
   [[nodiscard]] auto getPGJSONs() const -> const std::vector<std::filesystem::path> &;
+
+  /// @brief Find diffuse and parallax textures from different mods
+  /// @param MD Must be initialized @see ModManagerDirectory::FindTextureFilesInDir
+  /// @return set of mods that contain non-matching textures
+  [[nodiscard]] auto FindNonMatchingDiffuseParallax(const ModManagerDirectory &MD)
+      -> std::set<std::pair<std::wstring, std::wstring>>;
 };
