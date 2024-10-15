@@ -464,7 +464,7 @@ auto ParallaxGenDirectory::FindNonMatchingDiffuseParallax(const ModManagerDirect
     if (isLooseFile(DiffuseRelPath)) {
       std::filesystem::path DiffuseFullPath = getLooseFileFullPath(DiffuseRelPath);
       DiffuseModPath = MD.FindModPath(DiffuseFullPath);
-      DiffuseMod = MD.GetModFromTexture(DiffuseModPath);
+      DiffuseMod = ModManagerDirectory::GetModFromTexture(DiffuseModPath);
     } else {
       std::filesystem::path DiffuseBSAPath = FileMap.at(DiffuseRelPath).BSAFile->Path;
       DiffuseMod = DiffuseBSAPath.filename().wstring();
@@ -473,7 +473,7 @@ auto ParallaxGenDirectory::FindNonMatchingDiffuseParallax(const ModManagerDirect
     if (isLooseFile(ParallaxRelPath)) {
       std::filesystem::path ParallaxFullPath = getLooseFileFullPath(ParallaxRelPath);
       ParallaxModPath = MD.FindModPath(ParallaxFullPath);
-      ParallaxMod = MD.GetModFromTexture(ParallaxModPath);
+      ParallaxMod = ModManagerDirectory::GetModFromTexture(ParallaxModPath);
     } else {
       std::filesystem::path ParallaxBSAPath = FileMap.at(ParallaxRelPath).BSAFile->Path;
       ParallaxMod = ParallaxBSAPath.filename().wstring();

@@ -268,9 +268,9 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   if (!NonMatchingMods.empty()) {
     spdlog::warn(
         "There are parallax textures from different mods than their corresponding diffuse textures. This will "
-        "cause visual problems if the textures don't match. Run with --vv to get a list of all textures in the logs.");
+        "cause visual problems if the textures don't match. Run with -v to get a list of all textures in the logs.");
     for (auto &const Pair : NonMatchingMods) {
-      spdlog::warn(L"{} ---> {}", Pair.first, Pair.second);
+      spdlog::warn(L"Potential texture mismatch {} ---> {}", Pair.first, Pair.second);
     }
   }
 
