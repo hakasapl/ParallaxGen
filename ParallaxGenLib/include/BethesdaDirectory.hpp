@@ -156,7 +156,7 @@ public:
    * @param RelPath path to the file relative to the data directory
    * @return std::filesystem::path absolute path to the file
    */
-  [[nodiscard]] auto getFullPath(const std::filesystem::path &RelPath) const -> std::filesystem::path;
+  [[nodiscard]] auto getLooseFileFullPath(const std::filesystem::path &RelPath) const -> std::filesystem::path;
 
   /**
    * @brief Find files in the load order
