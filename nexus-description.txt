@@ -54,7 +54,7 @@ Parallax Mapping is an effect where the geometry gets more depth without using a
 Complex parallax describes the [url=https://www.nexusmods.com/skyrimspecialedition/mods/86492]Community Shaders[/url] or [url=http://enbdev.com/download_mod_tesskyrimse.html]ENB[/url] implementation of the Bethesda vanilla parallax shader. It fixes issues with the vanilla parallax shader and also adds shadows to rendered parallax. Therefore, the terms "Parallax" and "Complex Parallax" can be used interchangeably as long as you use one of these implementations.
 
 [b][i]Texture[/i][/b][i]:[/i] Texture with the suffix _p (usually)
-[i][b]Shader setup:[/b]  [/i]Shader Type: [i]Parallax[/i], shader flag "[i]Parallax[/i]" 
+[i][b]Shader setup:[/b]  [/i]Shader Type: [i]Parallax[/i], shader flag "[i]Parallax[/i]"
 
 This tool finds height maps and sets up the shaders in your load order automatically to use them. So [b]downloading NIFs that have just these shader changes[/b] and tedious solving of conflicts [b]is not needed[/b].
 
@@ -62,10 +62,10 @@ Some examples of complex parallax mods include:
 [list]
 [*][size=2][url=https://www.nexusmods.com/skyrimspecialedition/mods/2347]Skyrim 202x[/url][/size]
 [*][size=2][url=https://www.nexusmods.com/skyrimspecialedition/mods/86821]Skyland landscapes - complex parallax[/url][/size]
-[*][size=2][url=https://www.nexusmods.com/skyrimspecialedition/mods/83847]Cathedral Landscapes - complex Parallax addon[/url]   [/size] 
+[*][size=2][url=https://www.nexusmods.com/skyrimspecialedition/mods/83847]Cathedral Landscapes - complex Parallax addon[/url][/size]
 [*][size=2][url=https://www.nexusmods.com/skyrimspecialedition/mods/39185]WIZKID Parallax Farmhouses[/url][/size]
 [*][size=2][url=https://www.nexusmods.com/skyrimspecialedition/mods/119601]HD Vanilla Landscapes[/url][/size]
-[*][size=2][url=https://www.nexusmods.com/skyrimspecialedition/mods/107256]Fantasia Landscapes[/url] (as optional file)[/size]   
+[*][size=2][url=https://www.nexusmods.com/skyrimspecialedition/mods/107256]Fantasia Landscapes[/url] (as optional file)[/size]
 [/list]
 
 [b][i]Notes[/i][/b]
@@ -87,7 +87,7 @@ Some examples of complex parallax mods include:
 [*]Works with decals
 [/list]
 
-This tool finds complex material maps and sets the shader type automatically, so [b]downloading NIFs that contain just the shader changes[/b] and solving conflicts is [b]not needed[/b]. 
+This tool finds complex material maps and sets the shader type automatically, so [b]downloading NIFs that contain just the shader changes[/b] and solving conflicts is [b]not needed[/b].
 
 If the command line option [i]--upgrade-shaders [/i]is used, which is highly recommended, all complex parallax will be upgraded to complex material with the advantages of complex material.
 
@@ -112,7 +112,7 @@ However, this only gives the benefit described in the section about Parallax. Th
 [size=4]Terrain Parallax[/size]
 
 [b][i]Texture:[/i][/b]No additional texture, height is stored in the alpha channel of the terrain diffuse texture
-[i][b]Shader setup:[/b][/i] not applicable 
+[i][b]Shader setup:[/b][/i] not applicable
 
 When using terrain parallax textures, [b]ALL[/b] terrain textures need to have a height stored in their alpha channel, otherwise there will be issues like spikes. Also, the terrain parallax textures break the blending since they are also used for static meshes and they don't have a valid alpha channel anymore. To fix this, this mod is required: [url=https://www.nexusmods.com/skyrimspecialedition/mods/88261]Terrain Parallax Blending Fix[/url]
 
