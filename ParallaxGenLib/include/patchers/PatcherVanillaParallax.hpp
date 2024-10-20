@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <string>
 
+#include "ModManagerDirectory.hpp"
 #include "NIFUtil.hpp"
 #include "ParallaxGenConfig.hpp"
 #include "ParallaxGenD3D.hpp"
@@ -14,17 +15,17 @@ class PatcherVanillaParallax {
 private:
   std::filesystem::path NIFPath;
   nifly::NifFile *NIF;
+  static ModManagerDirectory *MMD;
   static ParallaxGenDirectory *PGD;
-  ParallaxGenConfig *PGC;
-  ParallaxGenD3D *PGD3D;
+  static ParallaxGenConfig *PGC;
+  static ParallaxGenD3D *PGD3D;
 
   bool HasAttachedHavok = false;
 
 public:
-  static auto loadStatics(ParallaxGenDirectory *PGD) -> void;
+  static auto loadStatics(ParallaxGenDirectory *PGD, ParallaxGenConfig *PGC, ParallaxGenD3D *PGD3D, ModManagerDirectory *MMD) -> void;
 
-  PatcherVanillaParallax(std::filesystem::path NIFPath, nifly::NifFile *NIF,
-                         ParallaxGenConfig *PGC, ParallaxGenD3D *PGD3D);
+  PatcherVanillaParallax(std::filesystem::path NIFPath, nifly::NifFile *NIF);
 
   // check if vanilla parallax should be enabled on shape
   auto shouldApply(nifly::NiShape *NIFShape, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,

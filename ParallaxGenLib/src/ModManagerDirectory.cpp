@@ -1,64 +1,155 @@
 #include "ModManagerDirectory.hpp"
-#include "BethesdaDirectory.hpp"
+
+#include <boost/algorithm/string.hpp>
+
+#include <boost/algorithm/string/case_conv.hpp>
+#include <fstream>
+#include <regex>
+
+#include <nlohmann/json.hpp>
+
+#include <spdlog/spdlog.h>
+
 #include "ParallaxGenUtil.hpp"
 
-#include <boost/crc.hpp>
+using namespace std;
 
-#include <filesystem>
-#include <string>
-#include <unordered_set>
-#include <vector>
+ModManagerDirectory::ModManagerDirectory(const ModManagerType &MMType) : MMType(MMType) {}
 
-ModManagerDirectory::ModManagerDirectory(std::filesystem::path const &StagingDir) : StagingDir(StagingDir) {}
+void ModManagerDirectory::populateInfo(const vector<wstring> &ModOrder, const filesystem::path &RequiredFile, const filesystem::path &StagingDir) {
+  this->StagingDir = StagingDir;
+  this->RequiredFile = RequiredFile;
 
-auto ModManagerDirectory::FindTextureFilesInDir() -> void {
-  std::filesystem::recursive_directory_iterator ModIterator(StagingDir);
-  for (auto &CurItem : ModIterator) {
-    std::filesystem::path Path = CurItem.path();
-    if (std::filesystem::is_regular_file(Path) &&
-        (BethesdaDirectory::pathEqualityIgnoreCase(Path.extension(), std::filesystem::path{L".dds"}))) {
-
-      // note: do not precompute crc32 since it is very expensive
-      Textures.push_back({Path, std::filesystem::file_size(Path)});
-    }
+  // loop through mod order and populate priority map
+  for (size_t I = 0; I < ModOrder.size(); I++) {
+    ModPriorityMap[boost::to_lower_copy(ModOrder[I])] = static_cast<int>(I);
   }
 }
 
-auto ModManagerDirectory::FindModPath(std::filesystem::path const &TextureToCompare) const -> std::filesystem::path {
-  return FindModPath({TextureToCompare, std::filesystem::file_size(TextureToCompare)});
-}
-
-auto ModManagerDirectory::FindModPath(TextureEntry const &TextureToCompare) const -> std::filesystem::path {
-  for (auto const &Texture : Textures) {
-    if (BethesdaDirectory::pathEqualityIgnoreCase(Texture.Path.filename(), TextureToCompare.Path.filename()) &&
-        (Texture.FileSize == TextureToCompare.FileSize)) {
-
-      boost::crc_32_type CRCTexture;
-      boost::crc_32_type CRCTextureToCompare;
-
-      auto TextureBytes = ParallaxGenUtil::getFileBytes(Texture.Path);
-      auto TextureToCompareBytes = ParallaxGenUtil::getFileBytes(TextureToCompare.Path);
-
-      CRCTexture.process_bytes(TextureBytes.data(), TextureBytes.size());
-      CRCTextureToCompare.process_bytes(TextureToCompareBytes.data(), TextureToCompareBytes.size());
-      if (CRCTexture.checksum() == CRCTextureToCompare.checksum())
-        return Texture.Path;
-    }
-  }
-  return {};
-}
-
-auto ModManagerDirectory::GetModFromTexture(std::filesystem::path TexturePath) -> std::wstring {
-
-  std::filesystem::path ParentPath = TexturePath.parent_path();
-
-  while (!BethesdaDirectory::pathEqualityIgnoreCase(ParentPath.filename(), {L"textures"})) {
-    // no parent anymore
-    if (!ParentPath.has_relative_path())
+void ModManagerDirectory::populateModFileMap() {
+  switch (MMType) {
+    case ModManagerType::ModOrganizer2:
+      populateModFileMapMO2();
       break;
+    case ModManagerType::Vortex:
+      populateModFileMapVortex();
+      break;
+  }
+}
 
-    ParentPath = ParentPath.parent_path();
+auto ModManagerDirectory::getModFileMap() const -> const unordered_map<filesystem::path, wstring> & {
+  return ModFileMap;
+}
+
+auto ModManagerDirectory::getMod(const filesystem::path &RelPath) const -> wstring {
+  auto RelPathLower = filesystem::path(boost::to_lower_copy(RelPath.wstring()));
+  if (ModFileMap.contains(RelPathLower)) {
+    return ModFileMap.at(RelPathLower);
   }
 
-  return ParentPath.parent_path().filename().wstring();
+  return L"";
+}
+
+auto ModManagerDirectory::getModPriority(const wstring &Mod) const -> int {
+  if (!Mod.empty() && ModPriorityMap.contains(Mod)) {
+    return ModPriorityMap.at(Mod);
+  }
+
+  return -1;
+}
+
+void ModManagerDirectory::populateModFileMapVortex() {
+  // required file is vortex.deployment.json in the data folder
+  spdlog::info("Populating mods from Vortex");
+
+  if (!filesystem::exists(RequiredFile)) {
+    throw runtime_error("Vortex deployment file does not exist: " + RequiredFile.string());
+  }
+
+  ifstream VortexDepFileF(RequiredFile);
+  nlohmann::json VortexDeployment = nlohmann::json::parse(VortexDepFileF);
+  VortexDepFileF.close();
+
+  // Populate staging dir
+  StagingDir = VortexDeployment["stagingPath"].get<string>();
+
+  // Check that files field exists
+  if (!VortexDeployment.contains("files")) {
+    throw runtime_error("Vortex deployment file does not contain 'files' field: " + RequiredFile.string());
+  }
+
+  // loop through files
+  for (const auto &File : VortexDeployment["files"]) {
+    auto RelPath = filesystem::path(File["relPath"].get<string>());
+    auto ModName = ParallaxGenUtil::strToWstr(File["source"].get<string>());
+
+    // filter out modname suffix
+    const static wregex VortexSuffixRe(L"-[0-9]+-.*");  // TODO make this more accurate
+    ModName = regex_replace(ModName, VortexSuffixRe, L"");
+
+    // Update file map
+    ModFileMap[boost::to_lower_copy(RelPath.wstring())] = boost::to_lower_copy(ModName);
+  }
+}
+
+void ModManagerDirectory::populateModFileMapMO2() {
+  // required file is modlist.txt in the mods folder
+
+  spdlog::info("Populating mods from Mod Organizer 2");
+
+  if (!filesystem::exists(RequiredFile)) {
+    throw runtime_error("Mod Organizer 2 modlist.txt file does not exist: " + RequiredFile.string());
+  }
+
+  wifstream ModListFileF(RequiredFile);
+
+  // loop through modlist.txt
+  wstring Mod;
+  while (getline(ModListFileF, Mod)) {
+    if (Mod.empty()) {
+      // skip empty lines
+      continue;
+    }
+
+    if (Mod.starts_with(L"-") || Mod.starts_with(L"*")) {
+      // Skip disabled and uncontrolled mods
+      continue;
+    }
+
+    if (Mod.starts_with(L"#")) {
+      // Skip comments
+      continue;
+    }
+
+    if (Mod.ends_with(L"_separator")) {
+      // Skip separators
+      continue;
+    }
+
+    // loop through all files in mod
+    Mod.erase(0, 1);  // remove +
+    auto ModDir = StagingDir / Mod;
+    if (!filesystem::exists(ModDir)) {
+      spdlog::warn(L"Mod directory from modlist.txt does not exist: {}", ModDir.wstring());
+      continue;
+    }
+
+    for (const auto &File : filesystem::recursive_directory_iterator(ModDir, filesystem::directory_options::skip_permission_denied)) {
+      if (!filesystem::is_regular_file(File)) {
+        continue;
+      }
+
+      // check if already in map
+      if (ModFileMap.contains(filesystem::relative(File, ModDir))) {
+        continue;
+      }
+
+      // skip meta.ini file
+      if (boost::iequals(File.path().filename().wstring(), L"meta.ini")) {
+        continue;
+      }
+
+      ModFileMap[boost::to_lower_copy(filesystem::relative(File, ModDir).wstring())] = boost::to_lower_copy(Mod);
+    }
+  }
 }

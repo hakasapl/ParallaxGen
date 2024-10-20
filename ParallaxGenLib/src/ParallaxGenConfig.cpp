@@ -3,6 +3,7 @@
 #include "NIFUtil.hpp"
 #include "ParallaxGenUtil.hpp"
 
+#include <boost/algorithm/string/predicate.hpp>
 #include <spdlog/spdlog.h>
 
 #include <nlohmann/json.hpp>
@@ -51,6 +52,12 @@ auto ParallaxGenConfig::getConfigValidation() -> nlohmann::json {
         "type" : "array",
         "items": {
             "type": "string"
+        }
+      },
+      "mod_loadorder": {
+        "type": "array",
+        "items": {
+          "type": "string"
         }
       }
     }
@@ -145,7 +152,14 @@ auto ParallaxGenConfig::addConfigJSON(const nlohmann::json &J) -> void {
   // "vanilla_bsas" field
   if (J.contains("vanilla_bsas")) {
     for (const auto &Item : J["vanilla_bsas"]) {
-      VanillaBSAList.insert(strToWstr(Item.get<string>()));
+      VanillaBSAList.insert(strToWstr(boost::to_lower_copy(Item.get<string>())));
+    }
+  }
+
+  // "mod_loadorder" field
+  if (J.contains("mod_loadorder")) {
+    for (const auto &Item : J["mod_loadorder"]) {
+      ModOrder.push_back(strToWstr(boost::to_lower_copy(Item.get<string>())));
     }
   }
 }
@@ -201,3 +215,5 @@ auto ParallaxGenConfig::getDynCubemapBlocklist() const -> const unordered_set<ws
 auto ParallaxGenConfig::getManualTextureMaps() const -> const unordered_map<filesystem::path, NIFUtil::TextureType> & { return ManualTextureMaps; }
 
 auto ParallaxGenConfig::getVanillaBSAList() const -> const std::unordered_set<std::wstring> & { return VanillaBSAList; }
+
+auto ParallaxGenConfig::getModOrder() const -> const vector<wstring> & { return ModOrder; }

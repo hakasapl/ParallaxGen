@@ -1,5 +1,4 @@
 #include "ParallaxGenDirectory.hpp"
-#include "ModManagerDirectory.hpp"
 
 #include <DirectXTex.h>
 #include <NifFile.hpp>
@@ -19,6 +18,7 @@
 #include <winnt.h>
 
 #include "BethesdaDirectory.hpp"
+#include "ModManagerDirectory.hpp"
 #include "NIFUtil.hpp"
 #include "ParallaxGenTask.hpp"
 #include "ParallaxGenUtil.hpp"
@@ -26,7 +26,8 @@
 using namespace std;
 using namespace ParallaxGenUtil;
 
-ParallaxGenDirectory::ParallaxGenDirectory(BethesdaGame BG, const bool &logging) : BethesdaDirectory(BG, logging) {}
+ParallaxGenDirectory::ParallaxGenDirectory(BethesdaGame BG, filesystem::path OutputPath, ModManagerDirectory *MMD)
+    : BethesdaDirectory(BG, std::move(OutputPath), MMD, true) {}
 
 auto ParallaxGenDirectory::findFiles() -> void {
   // Clear existing unconfirmedtextures
@@ -74,7 +75,7 @@ auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
                                     const bool &CacheNIFs) -> void {
   findFiles();
 
-    spdlog::info("Starting building texture map");
+  spdlog::info("Starting building texture map");
 
   // Create task tracker
   ParallaxGenTask TaskTracker("Loading NIFs", UnconfirmedMeshes.size(), MAPTEXTURE_PROGRESS_MODULO);
@@ -412,7 +413,8 @@ auto ParallaxGenDirectory::addMesh(const filesystem::path &Path) -> void {
   Meshes.insert(Path);
 }
 
-auto ParallaxGenDirectory::getTextureMap(const NIFUtil::TextureSlots &Slot) -> map<wstring, unordered_set<NIFUtil::PGTexture, NIFUtil::PGTextureHasher>> & {
+auto ParallaxGenDirectory::getTextureMap(const NIFUtil::TextureSlots &Slot)
+    -> map<wstring, unordered_set<NIFUtil::PGTexture, NIFUtil::PGTextureHasher>> & {
   return TextureMaps[static_cast<size_t>(Slot)];
 }
 
@@ -426,71 +428,3 @@ auto ParallaxGenDirectory::getMeshes() const -> const unordered_set<filesystem::
 auto ParallaxGenDirectory::getPBRJSONs() const -> const vector<filesystem::path> & { return PBRJSONs; }
 
 auto ParallaxGenDirectory::getPGJSONs() const -> const vector<filesystem::path> & { return PGJSONs; }
-
-auto ParallaxGenDirectory::FindNonMatchingDiffuseParallax(const ModManagerDirectory &MD)
-    -> std::set<std::pair<std::wstring, std::wstring>> {
-
-  const auto &FileMap = getFileMap();
-  auto const &FileMapHeight = getTextureMapConst(NIFUtil::TextureSlots::PARALLAX);
-  auto const &FileMapDiffuse = getTextureMapConst(NIFUtil::TextureSlots::DIFFUSE);
-
-  std::set<std::pair<std::wstring, std::wstring>> NonMatchingTextureMods;
-
-  for (auto const &FileMapEntry : FileMapHeight) {
-    // check if there is a diffuse map for the parallax map
-    std::filesystem::path DiffuseRelPath{};
-    if (FileMapDiffuse.find(FileMapEntry.first) != FileMapDiffuse.end()) {
-      auto const &DiffuseMapEntry = FileMapDiffuse.at(FileMapEntry.first);
-      // TODO: is it necessary to handle the rare cases where there is more than one texture in the set?
-      DiffuseRelPath = DiffuseMapEntry.begin()->Path;
-    }
-
-    // no diffuse texture assigned to a mesh -> early out
-    if (DiffuseRelPath.empty()) {
-      continue;
-    }
-
-    std::filesystem::path ParallaxRelPath = FileMapEntry.second.begin()->Path;
-
-    std::wstring NonMatchingDiffuseMod{};
-    std::wstring NonMatchingParallaxMod{};
-
-    // determine diffuse and parallax mods
-    std::filesystem::path DiffuseModPath{};
-    std::filesystem::path ParallaxModPath{};
-    std::wstring DiffuseMod{};
-    std::wstring ParallaxMod{};
-
-    if (isLooseFile(DiffuseRelPath)) {
-      std::filesystem::path DiffuseFullPath = getLooseFileFullPath(DiffuseRelPath);
-      DiffuseModPath = MD.FindModPath(DiffuseFullPath);
-      DiffuseMod = ModManagerDirectory::GetModFromTexture(DiffuseModPath);
-    } else {
-      std::filesystem::path DiffuseBSAPath = FileMap.at(DiffuseRelPath).BSAFile->Path;
-      DiffuseMod = DiffuseBSAPath.filename().wstring();
-    }
-
-    if (isLooseFile(ParallaxRelPath)) {
-      std::filesystem::path ParallaxFullPath = getLooseFileFullPath(ParallaxRelPath);
-      ParallaxModPath = MD.FindModPath(ParallaxFullPath);
-      ParallaxMod = ModManagerDirectory::GetModFromTexture(ParallaxModPath);
-    } else {
-      std::filesystem::path ParallaxBSAPath = FileMap.at(ParallaxRelPath).BSAFile->Path;
-      ParallaxMod = ParallaxBSAPath.filename().wstring();
-    }
-
-    if (!(DiffuseMod == ParallaxMod)) {
-      spdlog::trace(L"Potentially non matching textures found: {}:{} --- {}:{}", DiffuseMod, DiffuseRelPath.wstring(),
-                    ParallaxMod, ParallaxRelPath.wstring());
-      // both loose files
-      NonMatchingDiffuseMod = DiffuseMod;
-      NonMatchingParallaxMod = ParallaxMod;
-    }
-
-    if (!NonMatchingDiffuseMod.empty() || !NonMatchingParallaxMod.empty()) {
-      NonMatchingTextureMods.insert({NonMatchingDiffuseMod, NonMatchingParallaxMod});
-    }
-  }
-
-  return NonMatchingTextureMods;
-}

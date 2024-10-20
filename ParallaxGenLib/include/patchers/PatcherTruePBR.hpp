@@ -8,7 +8,9 @@
 #include <unordered_map>
 #include <vector>
 
+#include "ModManagerDirectory.hpp"
 #include "NIFUtil.hpp"
+#include "ParallaxGenConfig.hpp"
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenTask.hpp"
 
@@ -17,6 +19,7 @@ constexpr unsigned TEXTURE_STR_LENGTH = 9;
 class PatcherTruePBR {
 private:
   static ParallaxGenDirectory *PGD;
+  static ModManagerDirectory *MMD;
 
   std::filesystem::path NIFPath;
   nifly::NifFile *NIF;
@@ -45,14 +48,14 @@ public:
 
   PatcherTruePBR(std::filesystem::path NIFPath, nifly::NifFile *NIF);
 
-  static void loadPatcherBuffers(const std::vector<std::filesystem::path> &PBRJSONs, ParallaxGenDirectory *PGD);
+  static void loadPatcherBuffers(const std::vector<std::filesystem::path> &PBRJSONs, ParallaxGenDirectory *PGD, ModManagerDirectory *MMD);
 
   // check if truepbr should be enabled on shape
   auto shouldApply(nifly::NiShape *NIFShape, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes,
                    bool &EnableResult,
-                   std::map<size_t, std::tuple<nlohmann::json, std::wstring>> &TruePBRData) -> ParallaxGenTask::PGResult;
+                   std::map<size_t, std::tuple<nlohmann::json, std::wstring>> &TruePBRData, std::wstring &PriorityJSON) -> ParallaxGenTask::PGResult;
 
-  static auto shouldApplySlots(const std::wstring &LogPrefix, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes, const std::wstring &NIFPath, std::map<size_t, std::tuple<nlohmann::json, std::wstring>> &TruePBRData) -> bool;
+  static auto shouldApplySlots(const std::wstring &LogPrefix, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes, const std::wstring &NIFPath, std::map<size_t, std::tuple<nlohmann::json, std::wstring>> &TruePBRData, std::wstring &PriorityJSON) -> bool;
 
   // applies truepbr config on a shape in a NIF (always applies with config, but
   // maybe PBR is disabled)

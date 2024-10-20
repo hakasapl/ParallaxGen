@@ -320,7 +320,8 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
     } else if (AppliedShader == NIFUtil::ShapeShader::TRUEPBR) {
       ShaderLabel = "TruePBR";
       map<size_t, tuple<nlohmann::json, wstring>> TruePBRData;
-      bool ShouldApply = PatcherTruePBR::shouldApplySlots(L"Plugin Patching | ", SearchPrefixes, NIFPath, TruePBRData);
+      wstring PriorityJSON;
+      bool ShouldApply = PatcherTruePBR::shouldApplySlots(L"Plugin Patching | ", SearchPrefixes, NIFPath, TruePBRData, PriorityJSON);
 
       if (ShouldApply) {
         auto TempSlots = BaseSlots;

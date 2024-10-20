@@ -6,6 +6,7 @@
 #include <mutex>
 #include <nlohmann/json.hpp>
 
+#include "ModManagerDirectory.hpp"
 #include "NIFUtil.hpp"
 #include "ParallaxGenConfig.hpp"
 #include "ParallaxGenD3D.hpp"
@@ -22,6 +23,7 @@ private:
   std::filesystem::path OutputDir; // ParallaxGen output directory
 
   // Dependency objects
+  ModManagerDirectory *MMD;
   ParallaxGenDirectory *PGD;
   ParallaxGenConfig *PGC;
   ParallaxGenD3D *PGD3D;
@@ -34,13 +36,18 @@ private:
   bool IgnoreCM;
   bool IgnoreTruePBR;
 
+  struct PatcherResult {
+    std::wstring MatchedPath;
+    bool ShouldApply;
+  };
+
 public:
   //
   // The following methods are called from main.cpp and are public facing
   //
 
   // constructor
-  ParallaxGen(std::filesystem::path OutputDir, ParallaxGenDirectory *PGD, ParallaxGenConfig *PGC, ParallaxGenD3D *PGD3D,
+  ParallaxGen(std::filesystem::path OutputDir, ParallaxGenDirectory *PGD, ParallaxGenConfig *PGC, ParallaxGenD3D *PGD3D, ModManagerDirectory *MMD,
               const bool &OptimizeMeshes = false, const bool &IgnoreParallax = false, const bool &IgnoreCM = false,
               const bool &IgnoreTruePBR = false);
   // upgrades textures whenever possible

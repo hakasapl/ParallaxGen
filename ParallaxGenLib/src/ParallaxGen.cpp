@@ -11,8 +11,10 @@
 #include <fstream>
 #include <mutex>
 #include <spdlog/spdlog.h>
+#include <string>
 #include <vector>
 
+#include "ModManagerDirectory.hpp"
 #include "NIFUtil.hpp"
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenPlugin.hpp"
@@ -24,9 +26,9 @@ using namespace ParallaxGenUtil;
 using namespace nifly;
 
 ParallaxGen::ParallaxGen(filesystem::path OutputDir, ParallaxGenDirectory *PGD, ParallaxGenConfig *PGC,
-                         ParallaxGenD3D *PGD3D, const bool &OptimizeMeshes, const bool &IgnoreParallax,
+                         ParallaxGenD3D *PGD3D, ModManagerDirectory *MMD, const bool &OptimizeMeshes, const bool &IgnoreParallax,
                          const bool &IgnoreCM, const bool &IgnoreTruePBR)
-    : OutputDir(std::move(OutputDir)), PGD(PGD), PGC(PGC), PGD3D(PGD3D), IgnoreParallax(IgnoreParallax),
+    : OutputDir(std::move(OutputDir)), MMD(MMD), PGD(PGD), PGC(PGC), PGD3D(PGD3D), IgnoreParallax(IgnoreParallax),
       IgnoreCM(IgnoreCM), IgnoreTruePBR(IgnoreTruePBR) {
   // constructor
 
@@ -121,17 +123,23 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
   }
 
   static const auto *CMBaseMap = &PGD->getTextureMapConst(NIFUtil::TextureSlots::ENVMASK);
-  auto ExistingCM = NIFUtil::getTexMatch(TexBase, L"", NIFUtil::TextureType::COMPLEXMATERIAL, *CMBaseMap);
-  if (!ExistingCM.Path.empty()) {
-    // Complex material already exists
-    return Result;
+  // TODO this needs to account for priority
+  auto ExistingCM = NIFUtil::getTexMatch(TexBase, NIFUtil::TextureType::COMPLEXMATERIAL, *CMBaseMap);
+  auto HeightMapMod = PGD->getMod(HeightMap);
+  for (const auto &Existing : ExistingCM) {
+    // check priority of this file
+    if (MMD->getModPriority(PGD->getMod(Existing.Path)) >= MMD->getModPriority(HeightMapMod)) {
+      // existing complex material has higher or same priority
+      return Result;
+    }
   }
 
-  auto ExistingMask = NIFUtil::getTexMatch(TexBase, L"", NIFUtil::TextureType::ENVIRONMENTMASK, *CMBaseMap);
+  auto ExistingMask = NIFUtil::getTexMatch(TexBase, NIFUtil::TextureType::ENVIRONMENTMASK, *CMBaseMap);
   filesystem::path EnvMask = filesystem::path();
-  if (!ExistingMask.Path.empty()) {
+  if (!ExistingMask.empty()) {
     // env mask exists, but it's not a complex material
-    EnvMask = ExistingMask.Path;
+    // TODO smarter decision here?
+    EnvMask = ExistingMask[0].Path;
   }
 
   const filesystem::path ComplexMap = TexBase + L"_m.dds";
@@ -155,6 +163,9 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
 
     // add newly created file to complexMaterialMaps for later processing
     PGD->getTextureMap(NIFUtil::TextureSlots::ENVMASK)[TexBase].insert({ComplexMap, NIFUtil::TextureType::COMPLEXMATERIAL});
+
+    // Update file map
+    PGD->addGeneratedFile(ComplexMap, HeightMapMod);
 
     spdlog::debug(L"Generated complex material map: {}", ComplexMap.wstring());
   } else {
@@ -246,8 +257,8 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
 
   // Create Patcher objects
   // TODO make more of these static
-  PatcherVanillaParallax PatchVP(NIFFile, &NIF, PGC, PGD3D);
-  PatcherComplexMaterial PatchCM(NIFFile, &NIF, PGC, PGD3D);
+  PatcherVanillaParallax PatchVP(NIFFile, &NIF);
+  PatcherComplexMaterial PatchCM(NIFFile, &NIF);
   PatcherTruePBR PatchTPBR(NIFFile, &NIF);
 
   // Patch each shape in NIF
@@ -380,65 +391,107 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
   // Find search prefixes
   auto OldSlots = NIFUtil::getTextureSlots(NIF, NIFShape);
   auto SearchPrefixes = NIFUtil::getSearchPrefixes(NIF, NIFShape);
-  wstring MatchedPath;
+  auto WinningShader = NIFUtil::ShapeShader::NONE;
+  int WinningModPriority = -1;
+  wstring WinningMatchedPath;
 
-  // TRUEPBR CONFIG
-  if (!IgnoreTruePBR) {
-    bool EnableTruePBR = false;
-    map<size_t, tuple<nlohmann::json, wstring>> TruePBRData;
-    ParallaxGenTask::updatePGResult(Result,
-                                    PatchTPBR.shouldApply(NIFShape, SearchPrefixes, EnableTruePBR, TruePBRData),
+  // Custom fields that are not always used
+  bool EnableDynCubemaps = false;
+  map<size_t, tuple<nlohmann::json, wstring>> TruePBRData;
+
+  // TODO don't duplciate this code so much
+  // VANILLA PARALLAX
+  if (!IgnoreParallax) {
+    bool ShouldApply = false;
+    wstring MatchedPath;
+    ParallaxGenTask::updatePGResult(Result, PatchVP.shouldApply(NIFShape, SearchPrefixes, OldSlots, ShouldApply, MatchedPath),
                                     ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
-    if (EnableTruePBR) {
-      // Enable TruePBR on shape
-      for (auto &TruePBRCFG : TruePBRData) {
-        spdlog::trace(L"NIF: {} | Shape: {} | PBR | Applying PBR Config {}", NIFPath.wstring(), ShapeBlockID,
-                      TruePBRCFG.first);
-        ParallaxGenTask::updatePGResult(Result, PatchTPBR.applyPatch(NIFShape, get<0>(TruePBRCFG.second),
-                                                                     get<1>(TruePBRCFG.second), ShapeModified, ShapeDeleted));
-      }
 
-      if (!ShapeDeleted) {
-        ShaderApplied = NIFUtil::ShapeShader::TRUEPBR;
-      }
+    if (ShouldApply) {
+      // get mod for matched path (in this case a texture)
+      auto Mod = PGD->getMod(MatchedPath);
+      auto ModPriority = MMD->getModPriority(Mod);
 
-      return Result;
+      if (ModPriority >= WinningModPriority) {
+        WinningModPriority = ModPriority;
+        WinningShader = NIFUtil::ShapeShader::VANILLAPARALLAX;
+        WinningMatchedPath = MatchedPath;
+      }
     }
   }
 
   // COMPLEX MATERIAL
   if (!IgnoreCM) {
-    bool EnableCM = false;
-    bool EnableDynCubemaps = false;
-    MatchedPath = L"";
+    bool ShouldApply = false;
+    wstring MatchedPath;
     ParallaxGenTask::updatePGResult(
-        Result, PatchCM.shouldApply(NIFShape, SearchPrefixes, OldSlots, EnableCM, EnableDynCubemaps, MatchedPath),
+        Result, PatchCM.shouldApply(NIFShape, SearchPrefixes, OldSlots, ShouldApply, EnableDynCubemaps, MatchedPath),
         ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
-    if (EnableCM) {
-      // Enable complex material on shape
-      ParallaxGenTask::updatePGResult(Result,
-                                      PatchCM.applyPatch(NIFShape, MatchedPath, EnableDynCubemaps, ShapeModified));
 
-      ShaderApplied = NIFUtil::ShapeShader::COMPLEXMATERIAL;
+    if (ShouldApply) {
+      // get mod for matched path (in this case a texture)
+      auto Mod = PGD->getMod(MatchedPath);
+      auto ModPriority = MMD->getModPriority(Mod);
 
-      return Result;
+      if (ModPriority >= WinningModPriority) {
+        WinningModPriority = ModPriority;
+        WinningShader = NIFUtil::ShapeShader::COMPLEXMATERIAL;
+        WinningMatchedPath = MatchedPath;
+      }
     }
   }
 
-  // VANILLA PARALLAX
-  if (!IgnoreParallax) {
-    bool EnableParallax = false;
-    MatchedPath = L"";
-    ParallaxGenTask::updatePGResult(Result, PatchVP.shouldApply(NIFShape, SearchPrefixes, OldSlots, EnableParallax, MatchedPath),
+  // TRUEPBR CONFIG
+  if (!IgnoreTruePBR) {
+    bool ShouldApply = false;
+    wstring MatchedPath;
+    ParallaxGenTask::updatePGResult(Result,
+                                    PatchTPBR.shouldApply(NIFShape, SearchPrefixes, ShouldApply, TruePBRData, MatchedPath),
                                     ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
-    if (EnableParallax) {
-      // Enable Parallax on shape
-      ParallaxGenTask::updatePGResult(Result, PatchVP.applyPatch(NIFShape, MatchedPath, ShapeModified));
+    if (ShouldApply) {
+      // get mod for matched path (in this case a JSON)
+      auto Mod = PGD->getMod(MatchedPath);
+      auto ModPriority = MMD->getModPriority(Mod);
 
-      ShaderApplied = NIFUtil::ShapeShader::VANILLAPARALLAX;
-
-      return Result;
+      if (ModPriority >= WinningModPriority) {
+        WinningModPriority = ModPriority;
+        WinningShader = NIFUtil::ShapeShader::TRUEPBR;
+        WinningMatchedPath = MatchedPath;
+      }
     }
+  }
+
+  // apply winning patch
+  switch (WinningShader) {
+  case NIFUtil::ShapeShader::TRUEPBR:
+    // Enable TruePBR on shape
+    for (auto &TruePBRCFG : TruePBRData) {
+      spdlog::trace(L"NIF: {} | Shape: {} | PBR | Applying PBR Config {}", NIFPath.wstring(), ShapeBlockID,
+                    TruePBRCFG.first);
+      ParallaxGenTask::updatePGResult(Result, PatchTPBR.applyPatch(NIFShape, get<0>(TruePBRCFG.second),
+                                                                    get<1>(TruePBRCFG.second), ShapeModified, ShapeDeleted));
+    }
+
+    if (!ShapeDeleted) {
+      ShaderApplied = NIFUtil::ShapeShader::TRUEPBR;
+    }
+
+    break;
+  case NIFUtil::ShapeShader::COMPLEXMATERIAL:
+    // Enable complex material on shape
+    ParallaxGenTask::updatePGResult(Result,
+                                      PatchCM.applyPatch(NIFShape, WinningMatchedPath, EnableDynCubemaps, ShapeModified));
+    ShaderApplied = NIFUtil::ShapeShader::COMPLEXMATERIAL;
+
+    break;
+  case NIFUtil::ShapeShader::VANILLAPARALLAX:
+    // Enable Parallax on shape
+    ParallaxGenTask::updatePGResult(Result, PatchVP.applyPatch(NIFShape, WinningMatchedPath, ShapeModified));
+    ShaderApplied = NIFUtil::ShapeShader::VANILLAPARALLAX;
+
+    break;
+  default:
+    break;
   }
 
   return Result;

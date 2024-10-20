@@ -48,7 +48,9 @@ struct ParallaxGenCLIArgs {
   filesystem::path GameDir;
   string GameType = "skyrimse";
   filesystem::path OutputDir;
-  filesystem::path ModStagingDir;
+  string ModManagerType = "mo2";
+  filesystem::path MO2ModDir;
+  filesystem::path MO2ModListFile;
   bool Autostart = false;
   bool NoMultithread = false;
   bool HighMem = false;
@@ -72,7 +74,9 @@ struct ParallaxGenCLIArgs {
     OutStr += "GameDir: " + GameDir.string() + "\n";
     OutStr += "GameType: " + GameType + "\n";
     OutStr += "OutputDir: " + OutputDir.string() + "\n";
-    OutStr += "ModStagingDir: " + ModStagingDir.string() + "\n";
+    OutStr += "ModManagerType: " + ModManagerType + "\n";
+    OutStr += "MO2ModDir: " + MO2ModDir.string() + "\n";
+    OutStr += "MO2ModListFile: " + MO2ModListFile.string() + "\n";
     OutStr += "Autostart: " + to_string(static_cast<int>(Autostart)) + "\n";
     OutStr += "NoMultithread: " + to_string(static_cast<int>(NoMultithread)) + "\n";
     OutStr += "HighMem: " + to_string(static_cast<int>(HighMem)) + "\n";
@@ -161,10 +165,17 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   // Create relevant objects
   const auto BG = BethesdaGame(BGType, true, Args.GameDir);
-  auto PGD = ParallaxGenDirectory(BG);
+
+  ModManagerDirectory::ModManagerType MMType = ModManagerDirectory::ModManagerType::ModOrganizer2;
+  if (Args.ModManagerType == "vortex") {
+    MMType = ModManagerDirectory::ModManagerType::Vortex;
+  }
+
+  auto MMD = ModManagerDirectory(MMType);
+  auto PGD = ParallaxGenDirectory(BG, Args.OutputDir, &MMD);
   auto PGC = ParallaxGenConfig(&PGD, ExePath);
   auto PGD3D = ParallaxGenD3D(&PGD, Args.OutputDir, ExePath, !Args.NoGPU);
-  auto PG = ParallaxGen(Args.OutputDir, &PGD, &PGC, &PGD3D, Args.OptimizeMeshes, Args.IgnoreParallax,
+  auto PG = ParallaxGen(Args.OutputDir, &PGD, &PGC, &PGD3D, &MMD, Args.OptimizeMeshes, Args.IgnoreParallax,
                                Args.IgnoreComplexMaterial, Args.IgnoreTruePBR);
 
   // Check if GPU needs to be initialized
@@ -218,11 +229,21 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
     ParallaxGenPlugin::populateObjs();
   }
 
-  // Populate file map from data directory
-  PGD.populateFileMap(!Args.NoBSA);
-
   // Load configs
   PGC.loadConfig(!Args.NoDefaultConfig);
+
+  // Populate file map from data directory
+  if (MMType == ModManagerDirectory::ModManagerType::ModOrganizer2 && !Args.MO2ModDir.empty() && !Args.MO2ModListFile.empty()) {
+    // MO2
+    MMD.populateInfo(PGC.getModOrder(), Args.MO2ModListFile, Args.MO2ModDir);
+    MMD.populateModFileMap();
+  } else if (MMType == ModManagerDirectory::ModManagerType::Vortex) {
+    // Vortex
+    MMD.populateInfo(PGC.getModOrder(), BG.getGameDataPath() / "vortex.deployment.json");
+    MMD.populateModFileMap();
+  }
+
+  PGD.populateFileMap(!Args.NoBSA);
 
   auto VanillaBSAList = PGC.getVanillaBSAList();
 
@@ -230,39 +251,15 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   PGD.mapFiles(PGC.getNIFBlocklist(), PGC.getManualTextureMaps(), VanillaBSAList, !Args.NoMapFromMeshes,
                !Args.NoMultithread, Args.HighMem);
 
-  // TODO get path as command line argument
-  // TODO test with MO2
+  // Find CM maps
   spdlog::info("Finding complex material env maps");
   PGD3D.findCMMaps(VanillaBSAList);
   spdlog::info("Done finding complex material env maps");
 
-  // Mod staging dir integration check
-  if (!Args.ModStagingDir.empty()) {
-    ModManagerDirectory MD(Args.ModStagingDir);
-
-    spdlog::info("Finding texture in mod staging folder");
-    MD.FindTextureFilesInDir();
-    spdlog::info("Finding textures done");
-
-    spdlog::info("Finding non matching parallax and diffuse textures");
-    std::set<std::pair<wstring, wstring>> NonMatchingMods = PGD.FindNonMatchingDiffuseParallax(MD);
-    spdlog::info("Finding done");
-
-    // TODO Nice to have: some kind of filtering to remove the warnings if user is certain that textures match
-    if (!NonMatchingMods.empty()) {
-      spdlog::warn(
-          "There are parallax textures from different mods than their corresponding diffuse textures. This will "
-          "cause visual problems if the textures don't match. Run with --vv to get a list of all textures in the logs.");
-      for (const auto& Pair : NonMatchingMods) {
-        spdlog::warn(L"{} ---> {}", Pair.first, Pair.second);
-      }
-    }
-  }
-
   // Load patcher static vars
-  PatcherTruePBR::loadPatcherBuffers(PGD.getPBRJSONs(), &PGD);
-  PatcherComplexMaterial::loadStatics(PGC.getDynCubemapBlocklist(), Args.DisableMLP, &PGD);
-  PatcherVanillaParallax::loadStatics(&PGD);
+  PatcherTruePBR::loadPatcherBuffers(PGD.getPBRJSONs(), &PGD, &MMD);
+  PatcherComplexMaterial::loadStatics(PGC.getDynCubemapBlocklist(), Args.DisableMLP, &PGD, &PGC, &PGD3D, &MMD);
+  PatcherVanillaParallax::loadStatics(&PGD, &PGC, &PGD3D, &MMD);
 
   // Upgrade shaders if requested
   if (Args.UpgradeShaders) {
@@ -336,7 +333,9 @@ void addArguments(CLI::App &App, ParallaxGenCLIArgs &Args, const filesystem::pat
   // Game
   App.add_option("-d,--game-dir", Args.GameDir, "Manually specify game directory");
   App.add_option("-g,--game-type", Args.GameType, "Specify game type [" + getGameTypeMapStr() + "]");
-  App.add_option("-m,--mod-staging-dir", Args.ModStagingDir, "Specify mod staging directory from MO2 or Vortex");
+  App.add_option("-m,--mod-manager", Args.ModManagerType, R"(Specify mod manager type ("mo2" or "vortex"))");
+  App.add_option("--mo2-mod-dir", Args.MO2ModDir, "MO2 ONLY: Specify MO2 mod directory");
+  App.add_option("--mo2-mod-list", Args.MO2ModListFile, "MO2 ONLY: Specify MO2 modlist.txt path");
   App.add_flag("--no-bsa", Args.NoBSA, "Don't load BSA files, only loose files");
   // App Options
   App.add_flag("--autostart", Args.Autostart, "Start generation without user input");

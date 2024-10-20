@@ -116,8 +116,8 @@ auto setTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, const Texture
 auto getTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, const TextureSlots &Slot) -> std::string;
 auto getTextureSlots(nifly::NifFile &NIF, nifly::NiShape *NIFShape) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;
 auto getTexBase(const std::filesystem::path &TexPath) -> std::wstring;
-auto getTexMatch(const std::wstring &Base, const std::wstring &ExistingSlot, const TextureType &DesiredType,
-                 const std::map<std::wstring, std::unordered_set<PGTexture, PGTextureHasher>> &SearchMap) -> PGTexture;
+auto getTexMatch(const std::wstring &Base, const TextureType &DesiredType,
+                 const std::map<std::wstring, std::unordered_set<PGTexture, PGTextureHasher>> &SearchMap) -> std::vector<PGTexture>;
 // Gets all the texture prefixes for a textureset. ie. _n.dds is removed etc. for each slot
 auto getSearchPrefixes(nifly::NifFile &NIF, nifly::NiShape *NIFShape)
     -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;

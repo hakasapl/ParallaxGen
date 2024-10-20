@@ -13,6 +13,7 @@
 #include <winnt.h>
 
 #include "BethesdaDirectory.hpp"
+#include "ModManagerDirectory.hpp"
 #include "NIFUtil.hpp"
 #include "ParallaxGenTask.hpp"
 
@@ -44,7 +45,7 @@ private:
 
 public:
   // constructor - calls the BethesdaDirectory constructor
-  ParallaxGenDirectory(BethesdaGame BG, const bool& logging = true);
+  ParallaxGenDirectory(BethesdaGame BG, std::filesystem::path OutputPath = "", ModManagerDirectory *MMD = nullptr);
 
   /// @brief Map all files in the load order to their type
   ///
@@ -84,7 +85,7 @@ public:
   /// There can be more than one textures for a name without the suffix, since there are more than one possible suffixes
   /// for certain texture slots. Full texture paths are stored in each item of the value set.
   ///
-  /// The decision between the two is handled later in the patching step. This ensures a _m doesn’t get replaced with an
+  /// The decision between the two is handled later in the patching step. This ensures a _m doesnï¿½t get replaced with an
   /// _em in the mesh for example (if both are cm) Because usually the existing thing in the slot is what is wanted if
   /// there are 2 or more possible options.
   ///

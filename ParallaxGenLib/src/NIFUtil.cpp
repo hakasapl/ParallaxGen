@@ -328,8 +328,8 @@ auto NIFUtil::getTexBase(const std::filesystem::path &Path) -> std::wstring {
   return PathStr;
 }
 
-auto NIFUtil::getTexMatch(const wstring &Base, const wstring &ExistingSlot, const TextureType &DesiredType,
-                          const map<wstring, unordered_set<PGTexture, PGTextureHasher>> &SearchMap) -> PGTexture {
+auto NIFUtil::getTexMatch(const wstring &Base, const TextureType &DesiredType,
+                          const map<wstring, unordered_set<PGTexture, PGTextureHasher>> &SearchMap) -> vector<PGTexture> {
   // Binary search on base list
   const wstring BaseLower = boost::to_lower_copy(Base);
   const auto It = SearchMap.find(BaseLower);
@@ -346,18 +346,12 @@ auto NIFUtil::getTexMatch(const wstring &Base, const wstring &ExistingSlot, cons
       return {};
     }
 
-    auto OutTex = PGTexture{};
+    vector<PGTexture> OutTex;
     for (const auto &Texture : It->second) {
       if (Texture.Type == DesiredType) {
-        OutTex = Texture;
+        OutTex.push_back(Texture);
       } else {
         continue;
-      }
-
-      if (boost::iequals(Texture.Path.wstring(), ExistingSlot)) {
-        // Prefer what is already there
-        OutTex = Texture;
-        break;
       }
     }
 
