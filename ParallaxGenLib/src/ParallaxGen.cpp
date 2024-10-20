@@ -346,7 +346,7 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
 
 auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, NiShape *NIFShape,
                                PatcherVanillaParallax &PatchVP, PatcherComplexMaterial &PatchCM,
-                               PatcherTruePBR &PatchTPBR, bool &ShapeModified, bool &ShapeDeleted, NIFUtil::ShapeShader &ShaderApplied) const -> ParallaxGenTask::PGResult {
+                               PatcherTruePBR &PatchTPBR, bool &ShapeModified, bool &ShapeDeleted, NIFUtil::ShapeShader &ShaderApplied) -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Prep
@@ -392,6 +392,7 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
   auto OldSlots = NIFUtil::getTextureSlots(NIF, NIFShape);
   auto SearchPrefixes = NIFUtil::getSearchPrefixes(NIF, NIFShape);
   auto WinningShader = NIFUtil::ShapeShader::NONE;
+  wstring WinningMod;
   int WinningModPriority = -1;
   wstring WinningMatchedPath;
 
@@ -413,6 +414,7 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
       auto ModPriority = MMD->getModPriority(Mod);
 
       if (ModPriority >= WinningModPriority) {
+        WinningMod = Mod;
         WinningModPriority = ModPriority;
         WinningShader = NIFUtil::ShapeShader::VANILLAPARALLAX;
         WinningMatchedPath = MatchedPath;
@@ -434,6 +436,7 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
       auto ModPriority = MMD->getModPriority(Mod);
 
       if (ModPriority >= WinningModPriority) {
+        WinningMod = Mod;
         WinningModPriority = ModPriority;
         WinningShader = NIFUtil::ShapeShader::COMPLEXMATERIAL;
         WinningMatchedPath = MatchedPath;
@@ -454,12 +457,17 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
       auto ModPriority = MMD->getModPriority(Mod);
 
       if (ModPriority >= WinningModPriority) {
+        WinningMod = Mod;
         WinningModPriority = ModPriority;
         WinningShader = NIFUtil::ShapeShader::TRUEPBR;
         WinningMatchedPath = MatchedPath;
       }
     }
   }
+
+  // Determine if diffuse comes from a different mod
+  findModMismatch(OldSlots[static_cast<int>(NIFUtil::TextureSlots::DIFFUSE)], WinningMod);
+  findModMismatch(OldSlots[static_cast<int>(NIFUtil::TextureSlots::NORMAL)], WinningMod);
 
   // apply winning patch
   switch (WinningShader) {
@@ -495,6 +503,20 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
   }
 
   return Result;
+}
+
+void ParallaxGen::findModMismatch(const wstring &BaseFile, const wstring &MatchedMod) {
+  auto BaseMod = PGD->getMod(BaseFile);
+  if (!BaseMod.empty() && !MatchedMod.empty() && !boost::iequals(MatchedMod, BaseMod)) {
+    // Mismatch detected
+    auto MatchPair = make_pair(BaseMod, MatchedMod);
+    // check if in map
+    if (MismatchTracker.find(MatchPair) == MismatchTracker.end()) {
+      // not in map, add to map
+      spdlog::warn(L"Some NIFs were patched from textures from different mods (in many cases this is intentional and can be ignored): {}, {}", BaseMod, MatchedMod);
+      MismatchTracker.insert(MatchPair);
+    }
+  }
 }
 
 void ParallaxGen::threadSafeJSONUpdate(const std::function<void(nlohmann::json &)> &Operation,

@@ -5,6 +5,7 @@
 #include <miniz.h>
 #include <mutex>
 #include <nlohmann/json.hpp>
+#include <unordered_set>
 
 #include "ModManagerDirectory.hpp"
 #include "NIFUtil.hpp"
@@ -40,6 +41,16 @@ private:
     std::wstring MatchedPath;
     bool ShouldApply;
   };
+
+  // store diffuse mismatch messages
+  struct PairHash {
+    auto operator()(const std::pair<std::wstring, std::wstring>& P) const -> size_t {
+        std::hash<std::wstring> HashWstr;
+        return HashWstr(P.first) ^ (HashWstr(P.second) << 1);
+    }
+  };
+
+  std::unordered_set<std::pair<std::wstring, std::wstring>, PairHash> MismatchTracker;
 
 public:
   //
@@ -79,7 +90,9 @@ private:
   // processes a shape within a NIF file
   auto processShape(const std::filesystem::path &NIFPath, nifly::NifFile &NIF, nifly::NiShape *NIFShape,
                     PatcherVanillaParallax &PatchVP, PatcherComplexMaterial &PatchCM, PatcherTruePBR &PatchTPBR,
-                    bool &ShapeModified, bool &ShapeDeleted, NIFUtil::ShapeShader &ShaderApplied) const -> ParallaxGenTask::PGResult;
+                    bool &ShapeModified, bool &ShapeDeleted, NIFUtil::ShapeShader &ShaderApplied) -> ParallaxGenTask::PGResult;
+
+  void findModMismatch(const std::wstring &BaseFile, const std::wstring &MatchedMod);
 
   // Zip methods
   void addFileToZip(mz_zip_archive &Zip, const std::filesystem::path &FilePath,
