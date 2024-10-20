@@ -7,6 +7,7 @@
 #include <unordered_set>
 #include <winnt.h>
 
+#include "ModManagerDirectory.hpp"
 #include "NIFUtil.hpp"
 #include "ParallaxGenConfig.hpp"
 #include "ParallaxGenD3D.hpp"
@@ -17,18 +18,18 @@ class PatcherComplexMaterial {
 private:
   std::filesystem::path NIFPath;
   nifly::NifFile *NIF;
+  static ModManagerDirectory *MMD;
   static ParallaxGenDirectory *PGD;
-  ParallaxGenConfig *PGC;
-  ParallaxGenD3D *PGD3D;
+  static ParallaxGenConfig *PGC;
+  static ParallaxGenD3D *PGD3D;
 
   static std::unordered_set<std::wstring> DynCubemapBlocklist; // NOLINT
   static bool DisableMLP; // NOLINT
 
 public:
-  static auto loadStatics(const std::unordered_set<std::wstring> &DynCubemapBlocklist, const bool &DisableMLP, ParallaxGenDirectory *PGD) -> void;
+  static auto loadStatics(const std::unordered_set<std::wstring> &DynCubemapBlocklist, const bool &DisableMLP, ParallaxGenDirectory *PGD, ParallaxGenConfig *PGC, ParallaxGenD3D *PGD3D, ModManagerDirectory *MMD) -> void;
 
-  PatcherComplexMaterial(std::filesystem::path NIFPath, nifly::NifFile *NIF, ParallaxGenConfig *PGC,
-                         ParallaxGenD3D *PGD3D);
+  PatcherComplexMaterial(std::filesystem::path NIFPath, nifly::NifFile *NIF);
 
   // check if complex material should be enabled on shape
   auto shouldApply(nifly::NiShape *NIFShape, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,

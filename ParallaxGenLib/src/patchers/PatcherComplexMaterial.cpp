@@ -4,8 +4,10 @@
 #include <boost/algorithm/string.hpp>
 #include <spdlog/spdlog.h>
 
+#include "ModManagerDirectory.hpp"
 #include "NIFUtil.hpp"
 #include "ParallaxGenConfig.hpp"
+#include "ParallaxGenD3D.hpp"
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenUtil.hpp"
 
@@ -15,19 +17,24 @@ using namespace ParallaxGenUtil;
 // Statics
 std::unordered_set<wstring> PatcherComplexMaterial::DynCubemapBlocklist; // NOLINT
 
+ModManagerDirectory *PatcherComplexMaterial::MMD;
 ParallaxGenDirectory *PatcherComplexMaterial::PGD;
+ParallaxGenConfig *PatcherComplexMaterial::PGC;
+ParallaxGenD3D *PatcherComplexMaterial::PGD3D;
 bool PatcherComplexMaterial::DisableMLP; // NOLINT
 
 auto PatcherComplexMaterial::loadStatics(const unordered_set<wstring> &DynCubemapBlocklist, const bool &DisableMLP,
-                                         ParallaxGenDirectory *PGD) -> void {
+                                         ParallaxGenDirectory *PGD, ParallaxGenConfig *PGC, ParallaxGenD3D *PGD3D, ModManagerDirectory *MMD) -> void {
   PatcherComplexMaterial::DynCubemapBlocklist = DynCubemapBlocklist;
   PatcherComplexMaterial::DisableMLP = DisableMLP;
   PatcherComplexMaterial::PGD = PGD;
+  PatcherComplexMaterial::PGC = PGC;
+  PatcherComplexMaterial::PGD3D = PGD3D;
+  PatcherComplexMaterial::MMD = MMD;
 }
 
-PatcherComplexMaterial::PatcherComplexMaterial(filesystem::path NIFPath, nifly::NifFile *NIF, ParallaxGenConfig *PGC,
-                                               ParallaxGenD3D *PGD3D)
-    : NIFPath(std::move(NIFPath)), NIF(NIF), PGC(PGC), PGD3D(PGD3D) {}
+PatcherComplexMaterial::PatcherComplexMaterial(filesystem::path NIFPath, nifly::NifFile *NIF)
+    : NIFPath(std::move(NIFPath)), NIF(NIF) {}
 
 auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
                                          bool &EnableResult, bool &EnableDynCubemaps,
@@ -113,11 +120,40 @@ auto PatcherComplexMaterial::shouldApplySlots(const std::array<std::wstring, NUM
   // Check if complex material file exists
   static const vector<int> SlotSearch = {1, 0}; // Diffuse first, then normal
   for (int Slot : SlotSearch) {
-    auto FoundMatch = NIFUtil::getTexMatch(SearchPrefixes[Slot], OldSlots[static_cast<int>(NIFUtil::TextureSlots::ENVMASK)], NIFUtil::TextureType::COMPLEXMATERIAL, *CMBaseMap);
-    if (!FoundMatch.Path.empty() && FoundMatch.Type == NIFUtil::TextureType::COMPLEXMATERIAL) {
-      // found complex material map
-      MatchedPath = FoundMatch.Path.wstring();
-      break;
+    const auto FoundMatches = NIFUtil::getTexMatch(SearchPrefixes[Slot], NIFUtil::TextureType::COMPLEXMATERIAL, *CMBaseMap);
+
+    // TODO don't repeat this code across patchers
+    // Check the priorities of each match
+    int MaxPriority = -1;
+    vector<NIFUtil::PGTexture> MaxPriorityMatches;
+    for (const auto &FoundMatch : FoundMatches) {
+      auto CurMod = PGD->getMod(FoundMatch.Path);
+      auto CurModPriority = MMD->getModPriority(CurMod);
+
+      if (CurModPriority > MaxPriority) {
+        MaxPriority = CurModPriority;
+        // clear vector since there is higher priority
+        MaxPriorityMatches.clear();
+      }
+
+      // Add to vector if found match
+      if (CurModPriority == MaxPriority) {
+        MaxPriorityMatches.push_back(FoundMatch);
+      }
+    }
+
+    // From within the max priority meshes, prefer ones that already exist in the slot
+    for (const auto &FoundMatch : MaxPriorityMatches) {
+      if (boost::iequals(OldSlots[static_cast<int>(NIFUtil::TextureSlots::ENVMASK)], FoundMatch.Path.wstring())) {
+        MatchedPath = FoundMatch.Path.wstring();
+        break;
+      }
+    }
+
+    // Default if nothing is preferred
+    if (MatchedPath.empty() && !MaxPriorityMatches.empty()) {
+      // If no match was found, just take the first one
+      MatchedPath = MaxPriorityMatches[0].Path.wstring();
     }
   }
 

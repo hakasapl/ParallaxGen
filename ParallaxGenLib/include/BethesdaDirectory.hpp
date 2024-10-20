@@ -1,11 +1,13 @@
 #pragma once
 #include "BethesdaGame.hpp"
+#include "ModManagerDirectory.hpp"
 
 #include <bsa/tes4.hpp>
 
 #include <boost/algorithm/string.hpp>
 
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <map>
 #include <memory>
@@ -44,12 +46,30 @@ private:
   struct BethesdaFile {
     std::filesystem::path Path;
     std::shared_ptr<BSAFile> BSAFile;
+    std::wstring Mod;
+    bool Generated;
+  };
+
+  /**
+   * @struct ModFile
+   * @brief Structure which the path and the file size for a specific mod file
+   *
+   * Path stores the path to the file, preserving case from the original path
+   * FileSize stores the size of the file in bytes
+   * CRC32 stores the CRC32 checksum of the file
+   */
+  struct ModFile {
+    std::filesystem::path Path;
+    uintmax_t FileSize;
+    unsigned int CRC32;
   };
 
   // Class member variables
   std::filesystem::path DataDir;                         /**< Stores the path to the game data directory */
+  std::filesystem::path GeneratedDir;                    /**< Stores the path to the generated directory */
   std::map<std::filesystem::path, BethesdaFile> FileMap; /** < Stores the file map for every file found in the load
                                                             order. Key is a lowercase path, value is a BethesdaFile */
+  std::vector<ModFile> ModFiles;  /** < Stores files in mod staging directory */
 
   std::unordered_map<std::filesystem::path, std::vector<std::byte>> FileCache; /** < Stores a cache of file bytes */
   std::mutex FileCacheMutex; /** < Mutex for the file cache map */
@@ -57,6 +77,9 @@ private:
   bool Logging;  /** < Bool for whether logging is enabled or not */
   BethesdaGame BG; /** < BethesdaGame which stores a BethesdaGame object
                       corresponding to this load order */
+  ModManagerDirectory *MMD; /** < ModManagerDirectory which stores a pointer to a
+                               ModManagerDirectory object corresponding to this
+                               load order */
 
   /**
    * @brief Returns a vector of strings that represent the fields in the INI
@@ -79,7 +102,7 @@ public:
    * @param BG BethesdaGame object corresponding to load order
    * @param Logging Whether to enable CLI logging
    */
-  BethesdaDirectory(BethesdaGame &BG, const bool &Logging);
+  BethesdaDirectory(BethesdaGame &BG, std::filesystem::path GeneratedPath = "", ModManagerDirectory *MMD = nullptr, const bool &Logging = false);
 
   /**
    * @brief Populate file map with all files in the load order
@@ -108,6 +131,22 @@ public:
    */
   [[nodiscard]] auto getFile(const std::filesystem::path &RelPath,
                              const bool &CacheFile = false) -> std::vector<std::byte>;
+
+  /**
+   * @brief Get the Mod that has the winning version of the file
+   *
+   * @param RelPath path to the file relative to the data directory
+   * @return std::wstring mod label
+   */
+  [[nodiscard]] auto getMod(const std::filesystem::path &RelPath) -> std::wstring;
+
+  /**
+   * @brief Create a Generated file in the file map
+   *
+   * @param RelPath path of the generated file
+   * @param Mod wstring mod label to assign
+   */
+  void addGeneratedFile(const std::filesystem::path &RelPath, const std::wstring &Mod);
 
   /**
    * @brief Clear the file cache
@@ -142,6 +181,15 @@ public:
   [[nodiscard]] auto isFile(const std::filesystem::path &RelPath) const -> bool;
 
   /**
+   * @brief Check if a file is a generated file
+   *
+   * @param RelPath path to the file relative to the data directory
+   * @return true if file is generated
+   * @return false if file is not generated
+   */
+  [[nodiscard]] auto isGenerated(const std::filesystem::path &RelPath) const -> bool;
+
+  /**
    * @brief Check if file is a directory
    *
    * @param RelPath path to the file relative to the data directory
@@ -156,7 +204,7 @@ public:
    * @param RelPath path to the file relative to the data directory
    * @return std::filesystem::path absolute path to the file
    */
-  [[nodiscard]] auto getFullPath(const std::filesystem::path &RelPath) const -> std::filesystem::path;
+  [[nodiscard]] auto getLooseFileFullPath(const std::filesystem::path &RelPath) const -> std::filesystem::path;
 
   /**
    * @brief Find files in the load order
@@ -304,7 +352,7 @@ private:
    * @param FilePath path to update or add
    * @param BSAFile BSA file or nullptr if it doesn't exist
    */
-  void updateFileMap(const std::filesystem::path &FilePath, std::shared_ptr<BSAFile> BSAFile);
+  void updateFileMap(const std::filesystem::path &FilePath, std::shared_ptr<BSAFile> BSAFile, const std::wstring &Mod = L"", const bool &Generated = false);
 
   /**
    * @brief Convert a list of wstrings to a LPCWSTRs

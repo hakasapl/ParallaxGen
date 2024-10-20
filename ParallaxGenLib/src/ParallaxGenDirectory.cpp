@@ -18,6 +18,7 @@
 #include <winnt.h>
 
 #include "BethesdaDirectory.hpp"
+#include "ModManagerDirectory.hpp"
 #include "NIFUtil.hpp"
 #include "ParallaxGenTask.hpp"
 #include "ParallaxGenUtil.hpp"
@@ -25,7 +26,8 @@
 using namespace std;
 using namespace ParallaxGenUtil;
 
-ParallaxGenDirectory::ParallaxGenDirectory(BethesdaGame BG, const bool &logging) : BethesdaDirectory(BG, logging) {}
+ParallaxGenDirectory::ParallaxGenDirectory(BethesdaGame BG, filesystem::path OutputPath, ModManagerDirectory *MMD)
+    : BethesdaDirectory(BG, std::move(OutputPath), MMD, true) {}
 
 auto ParallaxGenDirectory::findFiles() -> void {
   // Clear existing unconfirmedtextures
@@ -73,7 +75,7 @@ auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
                                     const bool &CacheNIFs) -> void {
   findFiles();
 
-    spdlog::info("Starting building texture map");
+  spdlog::info("Starting building texture map");
 
   // Create task tracker
   ParallaxGenTask TaskTracker("Loading NIFs", UnconfirmedMeshes.size(), MAPTEXTURE_PROGRESS_MODULO);
@@ -411,7 +413,8 @@ auto ParallaxGenDirectory::addMesh(const filesystem::path &Path) -> void {
   Meshes.insert(Path);
 }
 
-auto ParallaxGenDirectory::getTextureMap(const NIFUtil::TextureSlots &Slot) -> map<wstring, unordered_set<NIFUtil::PGTexture, NIFUtil::PGTextureHasher>> & {
+auto ParallaxGenDirectory::getTextureMap(const NIFUtil::TextureSlots &Slot)
+    -> map<wstring, unordered_set<NIFUtil::PGTexture, NIFUtil::PGTextureHasher>> & {
   return TextureMaps[static_cast<size_t>(Slot)];
 }
 

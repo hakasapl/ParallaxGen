@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.6.1] - UNRELEASED
+
+- Added a mod manager priority system
+
 ## [0.6.0] - 2024-10-06
 
 - Added plugin patching

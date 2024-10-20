@@ -21,7 +21,7 @@ protected:
     auto &Params = GetParam();
 
     BG = make_unique<BethesdaGame>(Params.GameType, false, Params.GamePath, Params.AppDataPath, Params.DocumentPath); // no logging
-    BD = make_unique<BethesdaDirectory>(*BG, false); // no logging
+    BD = make_unique<BethesdaDirectory>(*BG, "", nullptr, false); // no logging
   }
 
   // Tear down code for each test
@@ -40,9 +40,9 @@ TEST_P(BethesdaDirectoryTest, Initialization) {
 TEST_P(BethesdaDirectoryTest, Path) {
   EXPECT_FALSE(BD->isPathAscii({L"textures\\texture\u00a1"}));
   EXPECT_TRUE(BD->isPathAscii({L"textures\\texture~"}));
-  EXPECT_FALSE(BD->isPathAscii({L"textures\\textureí~"}));
+  EXPECT_FALSE(BD->isPathAscii({L"textures\\textureï¿½~"}));
 
-  EXPECT_FALSE(BD->isPathAscii({"textures\\textureä~"}));
+  EXPECT_FALSE(BD->isPathAscii({"textures\\textureï¿½~"}));
   EXPECT_TRUE(BD->isPathAscii({"textures\\texture~"}));
 
   EXPECT_TRUE(BD->getPathLower({L"Textures\\Texture"}) == L"textures\\texture");

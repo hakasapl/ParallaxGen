@@ -21,6 +21,7 @@ private:
   std::unordered_set<std::wstring> DynCubemapBlocklist{};
   std::unordered_map<std::filesystem::path, NIFUtil::TextureType> ManualTextureMaps{};
   std::unordered_set<std::wstring> VanillaBSAList{};
+  std::vector<std::wstring> ModOrder;
 
   // Validator
   nlohmann::json_schema::json_validator Validator;
@@ -38,6 +39,8 @@ public:
   [[nodiscard]] auto getManualTextureMaps() const -> const std::unordered_map<std::filesystem::path, NIFUtil::TextureType> &;
 
   [[nodiscard]] auto getVanillaBSAList() const -> const std::unordered_set<std::wstring> &;
+
+  [[nodiscard]] auto getModOrder() const -> const std::vector<std::wstring> &;
 
 private:
   static auto parseJSON(const std::filesystem::path &JSONFile, const std::vector<std::byte> &Bytes, nlohmann::json &J) -> bool;

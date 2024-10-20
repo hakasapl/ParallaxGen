@@ -28,6 +28,7 @@
 #include <unordered_map>
 
 #include "BethesdaGame.hpp"
+#include "ModManagerDirectory.hpp"
 #include "ParallaxGen.hpp"
 #include "ParallaxGenConfig.hpp"
 #include "ParallaxGenD3D.hpp"
@@ -47,6 +48,9 @@ struct ParallaxGenCLIArgs {
   filesystem::path GameDir;
   string GameType = "skyrimse";
   filesystem::path OutputDir;
+  string ModManagerType = "none";
+  filesystem::path MO2InstanceDir;
+  string MO2Profile = "Default";
   bool Autostart = false;
   bool NoMultithread = false;
   bool HighMem = false;
@@ -70,6 +74,9 @@ struct ParallaxGenCLIArgs {
     OutStr += "GameDir: " + GameDir.string() + "\n";
     OutStr += "GameType: " + GameType + "\n";
     OutStr += "OutputDir: " + OutputDir.string() + "\n";
+    OutStr += "ModManagerType: " + ModManagerType + "\n";
+    OutStr += "MO2InstanceDir: " + MO2InstanceDir.string() + "\n";
+    OutStr += "MO2ProfileDir: " + MO2Profile + "\n";
     OutStr += "Autostart: " + to_string(static_cast<int>(Autostart)) + "\n";
     OutStr += "NoMultithread: " + to_string(static_cast<int>(NoMultithread)) + "\n";
     OutStr += "HighMem: " + to_string(static_cast<int>(HighMem)) + "\n";
@@ -158,10 +165,19 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   // Create relevant objects
   const auto BG = BethesdaGame(BGType, true, Args.GameDir);
-  auto PGD = ParallaxGenDirectory(BG);
+
+  ModManagerDirectory::ModManagerType MMType = ModManagerDirectory::ModManagerType::None;
+  if (Args.ModManagerType == "vortex") {
+    MMType = ModManagerDirectory::ModManagerType::Vortex;
+  } else if (Args.ModManagerType == "mo2") {
+    MMType = ModManagerDirectory::ModManagerType::ModOrganizer2;
+  }
+
+  auto MMD = ModManagerDirectory(MMType);
+  auto PGD = ParallaxGenDirectory(BG, Args.OutputDir, &MMD);
   auto PGC = ParallaxGenConfig(&PGD, ExePath);
   auto PGD3D = ParallaxGenD3D(&PGD, Args.OutputDir, ExePath, !Args.NoGPU);
-  auto PG = ParallaxGen(Args.OutputDir, &PGD, &PGC, &PGD3D, Args.OptimizeMeshes, Args.IgnoreParallax,
+  auto PG = ParallaxGen(Args.OutputDir, &PGD, &PGC, &PGD3D, &MMD, Args.OptimizeMeshes, Args.IgnoreParallax,
                                Args.IgnoreComplexMaterial, Args.IgnoreTruePBR);
 
   // Check if GPU needs to be initialized
@@ -215,26 +231,39 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
     ParallaxGenPlugin::populateObjs();
   }
 
-  // Populate file map from data directory
-  PGD.populateFileMap(!Args.NoBSA);
-
   // Load configs
   PGC.loadConfig(!Args.NoDefaultConfig);
+
+  // Populate file map from data directory
+  if (MMType == ModManagerDirectory::ModManagerType::ModOrganizer2 && !Args.MO2InstanceDir.empty() && !Args.MO2Profile.empty()) {
+    // MO2
+    auto MO2StagingFolder = Args.MO2InstanceDir / "mods";
+    auto MO2ModlistTXT = Args.MO2InstanceDir / "profiles" / Args.MO2Profile / "modlist.txt";
+    MMD.populateInfo(PGC.getModOrder(), MO2ModlistTXT, MO2StagingFolder);
+    MMD.populateModFileMap();
+  } else if (MMType == ModManagerDirectory::ModManagerType::Vortex) {
+    // Vortex
+    MMD.populateInfo(PGC.getModOrder(), BG.getGameDataPath() / "vortex.deployment.json");
+    MMD.populateModFileMap();
+  }
+
+  PGD.populateFileMap(!Args.NoBSA);
 
   auto VanillaBSAList = PGC.getVanillaBSAList();
 
   // Map files
-  PGD.mapFiles(PGC.getNIFBlocklist(), PGC.getManualTextureMaps(), VanillaBSAList, !Args.NoMapFromMeshes, !Args.NoMultithread,
-               Args.HighMem);
+  PGD.mapFiles(PGC.getNIFBlocklist(), PGC.getManualTextureMaps(), VanillaBSAList, !Args.NoMapFromMeshes,
+               !Args.NoMultithread, Args.HighMem);
 
+  // Find CM maps
   spdlog::info("Finding complex material env maps");
   PGD3D.findCMMaps(VanillaBSAList);
   spdlog::info("Done finding complex material env maps");
 
   // Load patcher static vars
-  PatcherTruePBR::loadPatcherBuffers(PGD.getPBRJSONs(), &PGD);
-  PatcherComplexMaterial::loadStatics(PGC.getDynCubemapBlocklist(), Args.DisableMLP, &PGD);
-  PatcherVanillaParallax::loadStatics(&PGD);
+  PatcherTruePBR::loadPatcherBuffers(PGD.getPBRJSONs(), &PGD, &MMD);
+  PatcherComplexMaterial::loadStatics(PGC.getDynCubemapBlocklist(), Args.DisableMLP, &PGD, &PGC, &PGD3D, &MMD);
+  PatcherVanillaParallax::loadStatics(&PGD, &PGC, &PGD3D, &MMD);
 
   // Upgrade shaders if requested
   if (Args.UpgradeShaders) {
@@ -308,6 +337,9 @@ void addArguments(CLI::App &App, ParallaxGenCLIArgs &Args, const filesystem::pat
   // Game
   App.add_option("-d,--game-dir", Args.GameDir, "Manually specify game directory");
   App.add_option("-g,--game-type", Args.GameType, "Specify game type [" + getGameTypeMapStr() + "]");
+  App.add_option("-m,--mod-manager", Args.ModManagerType, R"(Specify mod manager type ("mo2" or "vortex"))");
+  App.add_option("--mo2-instance-dir", Args.MO2InstanceDir, "MO2 ONLY: Specify MO2 instance directory");
+  App.add_option("--mo2-profile", Args.MO2Profile, "MO2 ONLY: Specify MO2 profile to use if other than 'Default'");
   App.add_flag("--no-bsa", Args.NoBSA, "Don't load BSA files, only loose files");
   // App Options
   App.add_flag("--autostart", Args.Autostart, "Start generation without user input");

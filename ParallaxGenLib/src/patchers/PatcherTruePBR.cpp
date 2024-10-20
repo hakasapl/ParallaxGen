@@ -1,5 +1,7 @@
 #include "patchers/PatcherTruePBR.hpp"
+#include "ModManagerDirectory.hpp"
 #include "NIFUtil.hpp"
+#include "ParallaxGenConfig.hpp"
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenUtil.hpp"
 
@@ -48,11 +50,33 @@ auto PatcherTruePBR::getTruePBRConfigFilenameFields() -> vector<string> {
   return PGConfigFilenameFields;
 }
 
-void PatcherTruePBR::loadPatcherBuffers(const std::vector<std::filesystem::path> &PBRJSONs, ParallaxGenDirectory *PGD) {
+void PatcherTruePBR::loadPatcherBuffers(const std::vector<std::filesystem::path> &PBRJSONs, ParallaxGenDirectory *PGD, ModManagerDirectory *MMD) {
   PatcherTruePBR::PGD = PGD;
 
-  size_t ConfigOrder = 0;
+  // Get correct JSON order by mod order
+  vector<pair<int, filesystem::path>> PBRJSONPriorityVector;
   for (const auto &Config : PBRJSONs) {
+    // get mod and priority
+    auto Mod = PGD->getMod(Config);
+    auto ModPriority = MMD->getModPriority(Mod);
+
+    // Add to priority vector
+    PBRJSONPriorityVector.emplace_back(ModPriority, Config);
+  }
+
+  // Sort priority vector by priority
+  sort(PBRJSONPriorityVector.begin(), PBRJSONPriorityVector.end(), [](const auto &LHS, const auto &RHS) {
+    if (LHS.first != RHS.first) {
+        // Sort by priority (higher priority first)
+        return LHS.first > RHS.first;
+    }
+
+    // If priorities are equal, sort alphabetically by the second element (path)
+    return LHS.second < RHS.second;
+  });
+
+  size_t ConfigOrder = 0;
+  for (const auto &[Priority, Config] : PBRJSONPriorityVector) {
     // check if Config is valid
     auto ConfigFileBytes = PGD->getFile(Config);
     string ConfigFileStr(reinterpret_cast<const char *>(ConfigFileBytes.data()), ConfigFileBytes.size());
@@ -116,7 +140,7 @@ void PatcherTruePBR::loadPatcherBuffers(const std::vector<std::filesystem::path>
 
 auto PatcherTruePBR::shouldApply(nifly::NiShape *NIFShape, const array<wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes,
                                  bool &EnableResult,
-                                 map<size_t, tuple<nlohmann::json, wstring>> &TruePBRData) -> ParallaxGenTask::PGResult {
+                                 map<size_t, tuple<nlohmann::json, wstring>> &TruePBRData, wstring &PriorityJSON) -> ParallaxGenTask::PGResult {
   // Prep
   auto *NIFShader = NIF->GetShader(NIFShape);
   auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
@@ -134,7 +158,7 @@ auto PatcherTruePBR::shouldApply(nifly::NiShape *NIFShape, const array<wstring, 
 
   spdlog::trace(L"{}PBR | Starting checking", LogPrefix);
 
-  if (shouldApplySlots(LogPrefix, SearchPrefixes, NIFPath, TruePBRData)) {
+  if (shouldApplySlots(LogPrefix, SearchPrefixes, NIFPath, TruePBRData, PriorityJSON)) {
     EnableResult = true;
     spdlog::trace(L"{}PBR | {} PBR Configs matched", TruePBRData.size(), LogPrefix);
 
@@ -148,20 +172,20 @@ auto PatcherTruePBR::shouldApply(nifly::NiShape *NIFShape, const array<wstring, 
   return ParallaxGenTask::PGResult::SUCCESS;
 }
 
-auto PatcherTruePBR::shouldApplySlots(const wstring &LogPrefix, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes, const std::wstring &NIFPath, std::map<size_t, std::tuple<nlohmann::json, std::wstring>> &TruePBRData) -> bool {
+auto PatcherTruePBR::shouldApplySlots(const wstring &LogPrefix, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes, const std::wstring &NIFPath, std::map<size_t, std::tuple<nlohmann::json, std::wstring>> &TruePBRData, wstring &PriorityJSON) -> bool {
   // Stores the json filename that gets priority over this shape
-  wstring PriorityJSONFile;
+  PriorityJSON = L"";
 
   // "match_normal" attribute: Binary search for normal map
-  getSlotMatch(LogPrefix, TruePBRData, PriorityJSONFile, SearchPrefixes[1], getTruePBRNormalInverse(),
+  getSlotMatch(LogPrefix, TruePBRData, PriorityJSON, SearchPrefixes[1], getTruePBRNormalInverse(),
                L"match_normal", NIFPath);
 
   // "match_diffuse" attribute: Binary search for diffuse map
-  getSlotMatch(LogPrefix, TruePBRData, PriorityJSONFile, SearchPrefixes[0], getTruePBRDiffuseInverse(),
+  getSlotMatch(LogPrefix, TruePBRData, PriorityJSON, SearchPrefixes[0], getTruePBRDiffuseInverse(),
                L"match_diffuse", NIFPath);
 
   // "path_contains" attribute: Linear search for path_contains
-  getPathContainsMatch(LogPrefix, TruePBRData, PriorityJSONFile, SearchPrefixes[0], NIFPath);
+  getPathContainsMatch(LogPrefix, TruePBRData, PriorityJSON, SearchPrefixes[0], NIFPath);
 
   return TruePBRData.size() > 0;
 }
