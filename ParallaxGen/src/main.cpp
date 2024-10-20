@@ -48,9 +48,9 @@ struct ParallaxGenCLIArgs {
   filesystem::path GameDir;
   string GameType = "skyrimse";
   filesystem::path OutputDir;
-  string ModManagerType = "mo2";
-  filesystem::path MO2ModDir;
-  filesystem::path MO2ModListFile;
+  string ModManagerType = "none";
+  filesystem::path MO2InstanceDir;
+  string MO2Profile = "Default";
   bool Autostart = false;
   bool NoMultithread = false;
   bool HighMem = false;
@@ -75,8 +75,8 @@ struct ParallaxGenCLIArgs {
     OutStr += "GameType: " + GameType + "\n";
     OutStr += "OutputDir: " + OutputDir.string() + "\n";
     OutStr += "ModManagerType: " + ModManagerType + "\n";
-    OutStr += "MO2ModDir: " + MO2ModDir.string() + "\n";
-    OutStr += "MO2ModListFile: " + MO2ModListFile.string() + "\n";
+    OutStr += "MO2InstanceDir: " + MO2InstanceDir.string() + "\n";
+    OutStr += "MO2ProfileDir: " + MO2Profile + "\n";
     OutStr += "Autostart: " + to_string(static_cast<int>(Autostart)) + "\n";
     OutStr += "NoMultithread: " + to_string(static_cast<int>(NoMultithread)) + "\n";
     OutStr += "HighMem: " + to_string(static_cast<int>(HighMem)) + "\n";
@@ -166,9 +166,11 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   // Create relevant objects
   const auto BG = BethesdaGame(BGType, true, Args.GameDir);
 
-  ModManagerDirectory::ModManagerType MMType = ModManagerDirectory::ModManagerType::ModOrganizer2;
+  ModManagerDirectory::ModManagerType MMType = ModManagerDirectory::ModManagerType::None;
   if (Args.ModManagerType == "vortex") {
     MMType = ModManagerDirectory::ModManagerType::Vortex;
+  } else if (Args.ModManagerType == "mo2") {
+    MMType = ModManagerDirectory::ModManagerType::ModOrganizer2;
   }
 
   auto MMD = ModManagerDirectory(MMType);
@@ -233,9 +235,11 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   PGC.loadConfig(!Args.NoDefaultConfig);
 
   // Populate file map from data directory
-  if (MMType == ModManagerDirectory::ModManagerType::ModOrganizer2 && !Args.MO2ModDir.empty() && !Args.MO2ModListFile.empty()) {
+  if (MMType == ModManagerDirectory::ModManagerType::ModOrganizer2 && !Args.MO2InstanceDir.empty() && !Args.MO2Profile.empty()) {
     // MO2
-    MMD.populateInfo(PGC.getModOrder(), Args.MO2ModListFile, Args.MO2ModDir);
+    auto MO2StagingFolder = Args.MO2InstanceDir / "mods";
+    auto MO2ModlistTXT = Args.MO2InstanceDir / "profiles" / Args.MO2Profile / "modlist.txt";
+    MMD.populateInfo(PGC.getModOrder(), MO2ModlistTXT, MO2StagingFolder);
     MMD.populateModFileMap();
   } else if (MMType == ModManagerDirectory::ModManagerType::Vortex) {
     // Vortex
@@ -334,8 +338,8 @@ void addArguments(CLI::App &App, ParallaxGenCLIArgs &Args, const filesystem::pat
   App.add_option("-d,--game-dir", Args.GameDir, "Manually specify game directory");
   App.add_option("-g,--game-type", Args.GameType, "Specify game type [" + getGameTypeMapStr() + "]");
   App.add_option("-m,--mod-manager", Args.ModManagerType, R"(Specify mod manager type ("mo2" or "vortex"))");
-  App.add_option("--mo2-mod-dir", Args.MO2ModDir, "MO2 ONLY: Specify MO2 mod directory");
-  App.add_option("--mo2-mod-list", Args.MO2ModListFile, "MO2 ONLY: Specify MO2 modlist.txt path");
+  App.add_option("--mo2-instance-dir", Args.MO2InstanceDir, "MO2 ONLY: Specify MO2 instance directory");
+  App.add_option("--mo2-profile", Args.MO2Profile, "MO2 ONLY: Specify MO2 profile to use if other than 'Default'");
   App.add_flag("--no-bsa", Args.NoBSA, "Don't load BSA files, only loose files");
   // App Options
   App.add_flag("--autostart", Args.Autostart, "Start generation without user input");
