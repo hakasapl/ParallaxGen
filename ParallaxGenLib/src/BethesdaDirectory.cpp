@@ -393,7 +393,10 @@ void BethesdaDirectory::addLooseFilesToMap() {
           spdlog::trace(L"Adding loose file to map: {}", RelativePath.wstring());
         }
 
-        auto CurMod = MMD->getMod(RelativePath);
+        wstring CurMod;
+        if (MMD != nullptr) {
+          CurMod = MMD->getMod(RelativePath);
+        }
         updateFileMap(RelativePath, nullptr, CurMod);
       }
     } catch (const std::exception &E) {
@@ -454,7 +457,10 @@ void BethesdaDirectory::addBSAToFileMap(const wstring &BSAName) {
         }
 
         // add to filemap
-        auto BSAMod = MMD->getMod(BSAName);
+        wstring BSAMod;
+        if (MMD != nullptr) {
+          BSAMod = MMD->getMod(BSAName);
+        }
         updateFileMap(CurPath, BSAStructPtr, BSAMod);
       }
     } catch (const std::exception &E) {
