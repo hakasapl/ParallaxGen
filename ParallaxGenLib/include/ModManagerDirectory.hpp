@@ -9,6 +9,7 @@ class ModManagerDirectory {
 
 public:
   enum class ModManagerType {
+    None,
     ModOrganizer2,
     Vortex
   };
