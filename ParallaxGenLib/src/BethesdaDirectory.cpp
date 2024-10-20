@@ -269,7 +269,7 @@ auto BethesdaDirectory::getLooseFileFullPath(const filesystem::path &RelPath) co
   if (File.Generated) {
     return GeneratedDir / RelPath;
   }
-  
+
   return DataDir / RelPath;
 }
 

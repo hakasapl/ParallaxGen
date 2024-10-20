@@ -53,7 +53,7 @@ private:
   /**
    * @struct ModFile
    * @brief Structure which the path and the file size for a specific mod file
-   * 
+   *
    * Path stores the path to the file, preserving case from the original path
    * FileSize stores the size of the file in bytes
    * CRC32 stores the CRC32 checksum of the file
@@ -134,7 +134,7 @@ public:
 
   /**
    * @brief Get the Mod that has the winning version of the file
-   * 
+   *
    * @param RelPath path to the file relative to the data directory
    * @return std::wstring mod label
    */
@@ -142,7 +142,7 @@ public:
 
   /**
    * @brief Create a Generated file in the file map
-   * 
+   *
    * @param RelPath path of the generated file
    * @param Mod wstring mod label to assign
    */
@@ -182,7 +182,7 @@ public:
 
   /**
    * @brief Check if a file is a generated file
-   * 
+   *
    * @param RelPath path to the file relative to the data directory
    * @return true if file is generated
    * @return false if file is not generated

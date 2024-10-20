@@ -147,7 +147,7 @@ auto PatcherVanillaParallax::shouldApplySlots(const std::array<std::wstring, NUM
   static const vector<int> SlotSearch = {1, 0}; // Diffuse first, then normal
   for (int Slot : SlotSearch) {
     auto FoundMatches = NIFUtil::getTexMatch(SearchPrefixes[Slot], NIFUtil::TextureType::HEIGHT, *HeightBaseMap);
-    
+
     // TODO don't repeat this code across patchers
     // Check the priorities of each match
     int MaxPriority = -1;
