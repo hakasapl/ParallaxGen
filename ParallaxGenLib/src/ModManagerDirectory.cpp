@@ -22,6 +22,7 @@ void ModManagerDirectory::populateInfo(const vector<wstring> &ModOrder, const fi
 
   // loop through mod order and populate priority map
   for (size_t I = 0; I < ModOrder.size(); I++) {
+    spdlog::trace(L"ModManagerDirectory | Adding Mod to Priority Map : {} -> {}", ModOrder[I], I);
     ModPriorityMap[boost::to_lower_copy(ModOrder[I])] = static_cast<int>(I);
   }
 }
@@ -33,6 +34,8 @@ void ModManagerDirectory::populateModFileMap() {
       break;
     case ModManagerType::Vortex:
       populateModFileMapVortex();
+      break;
+    default:
       break;
   }
 }
@@ -84,10 +87,11 @@ void ModManagerDirectory::populateModFileMapVortex() {
     auto ModName = ParallaxGenUtil::strToWstr(File["source"].get<string>());
 
     // filter out modname suffix
-    const static wregex VortexSuffixRe(L"-[0-9]+-.*");  // TODO make this more accurate
+    const static wregex VortexSuffixRe(L"-[0-9]+-.*");
     ModName = regex_replace(ModName, VortexSuffixRe, L"");
 
     // Update file map
+    spdlog::trace(L"ModManagerDirectory | Adding Files to Map : {} -> {}", RelPath.wstring(), ModName);
     ModFileMap[boost::to_lower_copy(RelPath.wstring())] = boost::to_lower_copy(ModName);
   }
 }
@@ -149,7 +153,9 @@ void ModManagerDirectory::populateModFileMapMO2() {
         continue;
       }
 
-      ModFileMap[boost::to_lower_copy(filesystem::relative(File, ModDir).wstring())] = boost::to_lower_copy(Mod);
+      auto RelPath = filesystem::relative(File, ModDir);
+      spdlog::trace(L"ModManagerDirectory | Adding Files to Map : {} -> {}", RelPath.wstring(), Mod);
+      ModFileMap[boost::to_lower_copy(RelPath.wstring())] = boost::to_lower_copy(Mod);
     }
   }
 }
