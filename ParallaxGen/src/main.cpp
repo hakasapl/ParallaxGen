@@ -28,6 +28,7 @@
 #include <unordered_map>
 
 #include "BethesdaGame.hpp"
+#include "ModManagerDirectory.hpp"
 #include "ParallaxGen.hpp"
 #include "ParallaxGenConfig.hpp"
 #include "ParallaxGenD3D.hpp"
@@ -47,6 +48,7 @@ struct ParallaxGenCLIArgs {
   filesystem::path GameDir;
   string GameType = "skyrimse";
   filesystem::path OutputDir;
+  filesystem::path ModStagingDir;
   bool Autostart = false;
   bool NoMultithread = false;
   bool HighMem = false;
@@ -70,6 +72,7 @@ struct ParallaxGenCLIArgs {
     OutStr += "GameDir: " + GameDir.string() + "\n";
     OutStr += "GameType: " + GameType + "\n";
     OutStr += "OutputDir: " + OutputDir.string() + "\n";
+    OutStr += "ModStagingDir: " + ModStagingDir.string() + "\n";
     OutStr += "Autostart: " + to_string(static_cast<int>(Autostart)) + "\n";
     OutStr += "NoMultithread: " + to_string(static_cast<int>(NoMultithread)) + "\n";
     OutStr += "HighMem: " + to_string(static_cast<int>(HighMem)) + "\n";
@@ -224,12 +227,37 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   auto VanillaBSAList = PGC.getVanillaBSAList();
 
   // Map files
-  PGD.mapFiles(PGC.getNIFBlocklist(), PGC.getManualTextureMaps(), VanillaBSAList, !Args.NoMapFromMeshes, !Args.NoMultithread,
-               Args.HighMem);
+  PGD.mapFiles(PGC.getNIFBlocklist(), PGC.getManualTextureMaps(), VanillaBSAList, !Args.NoMapFromMeshes,
+               !Args.NoMultithread, Args.HighMem);
 
+  // TODO get path as command line argument
+  // TODO test with MO2
   spdlog::info("Finding complex material env maps");
   PGD3D.findCMMaps(VanillaBSAList);
   spdlog::info("Done finding complex material env maps");
+
+  // Mod staging dir integration check
+  if (!Args.ModStagingDir.empty()) {
+    ModManagerDirectory MD(Args.ModStagingDir);
+
+    spdlog::info("Finding texture in mod staging folder");
+    MD.FindTextureFilesInDir();
+    spdlog::info("Finding textures done");
+
+    spdlog::info("Finding non matching parallax and diffuse textures");
+    std::set<std::pair<wstring, wstring>> NonMatchingMods = PGD.FindNonMatchingDiffuseParallax(MD);
+    spdlog::info("Finding done");
+
+    // TODO Nice to have: some kind of filtering to remove the warnings if user is certain that textures match
+    if (!NonMatchingMods.empty()) {
+      spdlog::warn(
+          "There are parallax textures from different mods than their corresponding diffuse textures. This will "
+          "cause visual problems if the textures don't match. Run with --vv to get a list of all textures in the logs.");
+      for (const auto& Pair : NonMatchingMods) {
+        spdlog::warn(L"{} ---> {}", Pair.first, Pair.second);
+      }
+    }
+  }
 
   // Load patcher static vars
   PatcherTruePBR::loadPatcherBuffers(PGD.getPBRJSONs(), &PGD);
@@ -308,6 +336,7 @@ void addArguments(CLI::App &App, ParallaxGenCLIArgs &Args, const filesystem::pat
   // Game
   App.add_option("-d,--game-dir", Args.GameDir, "Manually specify game directory");
   App.add_option("-g,--game-type", Args.GameType, "Specify game type [" + getGameTypeMapStr() + "]");
+  App.add_option("-m,--mod-staging-dir", Args.ModStagingDir, "Specify mod staging directory from MO2 or Vortex");
   App.add_flag("--no-bsa", Args.NoBSA, "Don't load BSA files, only loose files");
   // App Options
   App.add_flag("--autostart", Args.Autostart, "Start generation without user input");
