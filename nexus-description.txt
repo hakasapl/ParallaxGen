@@ -141,7 +141,7 @@ One of the main goals for ParallaxGen is to allow texture artists to worry about
 [*]If you do not use Skyrim SE Steam edition, set your game type using [b]-g.[/b] For example, if you are a Skyrim VR user, add a CLI argument [b]-g skyrimvr[/b]. See the "CLI Arguments" section below for all available game types.
 [*]Run ParallaxGen.exe from either MO2 or the folder (if using Vortex) and generate meshes
 [*]A file ParallaxGen_Output/ParallaxGen_Output.zip should exist which you can import into your mod manager of choice
-[*]These meshes should win every conflict, even lighting mods. Also the DynDoLod resources should be overwritten, otherwise there would be no parallax effect on the meshes that the resources provide. ParallaxGen does not change the geometry, so the LOD models still match. The exception is DynDoLOD output. DynDoLOD output should win conflicts over ParallaxGen. 
+[*]These meshes should win every conflict, even lighting mods. Also the DynDoLod resources should be overwritten, otherwise there would be no parallax effect on the meshes that the resources provide. ParallaxGen does not change the geometry, so the LOD models still match. The exception is DynDoLOD output. DynDoLOD output should win conflicts over ParallaxGen.
 [*]If you need to re-generate meshes you'll need to delete the existing ParallaxGen_Output mod from your mod manager before rerunning ParallaxGen.exe
 [/list]
 [size=6][b][center][color=#6aa84f]CLI arguments[/color][/center][/b][/size]You can add these arguments by editing the executable in MO2/Vortex. Here's what they do:
