@@ -50,33 +50,11 @@ auto PatcherTruePBR::getTruePBRConfigFilenameFields() -> vector<string> {
   return PGConfigFilenameFields;
 }
 
-void PatcherTruePBR::loadPatcherBuffers(const std::vector<std::filesystem::path> &PBRJSONs, ParallaxGenDirectory *PGD, ModManagerDirectory *MMD) {
+void PatcherTruePBR::loadPatcherBuffers(const std::vector<std::filesystem::path> &PBRJSONs, ParallaxGenDirectory *PGD) {
   PatcherTruePBR::PGD = PGD;
 
-  // Get correct JSON order by mod order
-  vector<pair<int, filesystem::path>> PBRJSONPriorityVector;
-  for (const auto &Config : PBRJSONs) {
-    // get mod and priority
-    auto Mod = PGD->getMod(Config);
-    auto ModPriority = MMD->getModPriority(Mod);
-
-    // Add to priority vector
-    PBRJSONPriorityVector.emplace_back(ModPriority, Config);
-  }
-
-  // Sort priority vector by priority
-  sort(PBRJSONPriorityVector.begin(), PBRJSONPriorityVector.end(), [](const auto &LHS, const auto &RHS) {
-    if (LHS.first != RHS.first) {
-        // Sort by priority (higher priority first)
-        return LHS.first > RHS.first;
-    }
-
-    // If priorities are equal, sort alphabetically by the second element (path)
-    return LHS.second < RHS.second;
-  });
-
   size_t ConfigOrder = 0;
-  for (const auto &[Priority, Config] : PBRJSONPriorityVector) {
+  for (const auto &Config : PBRJSONs) {
     // check if Config is valid
     auto ConfigFileBytes = PGD->getFile(Config);
     string ConfigFileStr(reinterpret_cast<const char *>(ConfigFileBytes.data()), ConfigFileBytes.size());
@@ -140,7 +118,7 @@ void PatcherTruePBR::loadPatcherBuffers(const std::vector<std::filesystem::path>
 
 auto PatcherTruePBR::shouldApply(nifly::NiShape *NIFShape, const array<wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes,
                                  bool &EnableResult,
-                                 map<size_t, tuple<nlohmann::json, wstring>> &TruePBRData, wstring &PriorityJSON) -> ParallaxGenTask::PGResult {
+                                 vector<map<size_t, tuple<nlohmann::json, wstring>>> &TruePBRData, vector<wstring> &MatchedPaths) -> ParallaxGenTask::PGResult {
   // Prep
   auto *NIFShader = NIF->GetShader(NIFShape);
   auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
@@ -158,7 +136,7 @@ auto PatcherTruePBR::shouldApply(nifly::NiShape *NIFShape, const array<wstring, 
 
   spdlog::trace(L"{}PBR | Starting checking", LogPrefix);
 
-  if (shouldApplySlots(LogPrefix, SearchPrefixes, NIFPath, TruePBRData, PriorityJSON)) {
+  if (shouldApplySlots(LogPrefix, SearchPrefixes, NIFPath, TruePBRData, MatchedPaths)) {
     EnableResult = true;
     spdlog::trace(L"{}PBR | {} PBR Configs matched", TruePBRData.size(), LogPrefix);
 
@@ -172,26 +150,44 @@ auto PatcherTruePBR::shouldApply(nifly::NiShape *NIFShape, const array<wstring, 
   return ParallaxGenTask::PGResult::SUCCESS;
 }
 
-auto PatcherTruePBR::shouldApplySlots(const wstring &LogPrefix, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes, const std::wstring &NIFPath, std::map<size_t, std::tuple<nlohmann::json, std::wstring>> &TruePBRData, wstring &PriorityJSON) -> bool {
+auto PatcherTruePBR::shouldApplySlots(const wstring &LogPrefix, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes, const std::wstring &NIFPath, vector<std::map<size_t, std::tuple<nlohmann::json, std::wstring>>> &TruePBRData, vector<wstring> &MatchedPaths) -> bool {
   // Stores the json filename that gets priority over this shape
-  PriorityJSON = L"";
+  MatchedPaths.clear();
 
+  map<size_t, tuple<nlohmann::json, wstring>> TruePBRAllData;
   // "match_normal" attribute: Binary search for normal map
-  getSlotMatch(LogPrefix, TruePBRData, PriorityJSON, SearchPrefixes[1], getTruePBRNormalInverse(),
+  getSlotMatch(LogPrefix, TruePBRAllData, SearchPrefixes[1], getTruePBRNormalInverse(),
                L"match_normal", NIFPath);
 
   // "match_diffuse" attribute: Binary search for diffuse map
-  getSlotMatch(LogPrefix, TruePBRData, PriorityJSON, SearchPrefixes[0], getTruePBRDiffuseInverse(),
+  getSlotMatch(LogPrefix, TruePBRAllData, SearchPrefixes[0], getTruePBRDiffuseInverse(),
                L"match_diffuse", NIFPath);
 
   // "path_contains" attribute: Linear search for path_contains
-  getPathContainsMatch(LogPrefix, TruePBRData, PriorityJSON, SearchPrefixes[0], NIFPath);
+  getPathContainsMatch(LogPrefix, TruePBRAllData, SearchPrefixes[0], NIFPath);
+
+  // Split data into individual JSONs
+  // TODO better way to do this?
+  unordered_map<wstring, map<size_t, tuple<nlohmann::json, wstring>>> TruePBROutputData;
+  for (const auto &[Sequence, Data] : TruePBRAllData) {
+    // get current JSON
+    auto CurMatchedPath = ParallaxGenUtil::strToWstr(get<0>(Data)["json"].get<string>());
+
+    // Add to output
+    TruePBROutputData[CurMatchedPath].insert({Sequence, Data});
+  }
+
+  // Convert output to vectors
+  for (auto &[JSON, JSONData] : TruePBROutputData) {
+    TruePBRData.push_back(JSONData);
+    MatchedPaths.push_back(JSON);
+  }
 
   return TruePBRData.size() > 0;
 }
 
 auto PatcherTruePBR::getSlotMatch(const wstring &LogPrefix, map<size_t, tuple<nlohmann::json, wstring>> &TruePBRData,
-                                  wstring &PriorityJSONFile, const wstring &TexName,
+                                  const wstring &TexName,
                                   const map<wstring, vector<size_t>> &Lookup, const wstring &SlotLabel, const wstring &NIFPath) -> void {
   // binary search for map
   auto MapReverse = boost::to_lower_copy(TexName);
@@ -222,13 +218,13 @@ auto PatcherTruePBR::getSlotMatch(const wstring &LogPrefix, map<size_t, tuple<nl
 
   // Loop through all matches
   for (const auto &Cfg : Cfgs) {
-    insertTruePBRData(LogPrefix, TruePBRData, PriorityJSONFile, TexName, Cfg, NIFPath);
+    insertTruePBRData(LogPrefix, TruePBRData, TexName, Cfg, NIFPath);
   }
 }
 
 auto PatcherTruePBR::getPathContainsMatch(const wstring &LogPrefix,
                                           std::map<size_t, std::tuple<nlohmann::json, std::wstring>> &TruePBRData,
-                                          std::wstring &PriorityJSONFile, const std::wstring &Diffuse, const wstring &NIFPath) -> void {
+                                          const std::wstring &Diffuse, const wstring &NIFPath) -> void {
   // "patch_contains" attribute: Linear search for path_contains
   auto &Cache = getPathLookupCache();
 
@@ -247,7 +243,7 @@ auto PatcherTruePBR::getPathContainsMatch(const wstring &LogPrefix,
     PathMatch = Cache[CacheKey];
     if (PathMatch) {
       NumMatches++;
-      insertTruePBRData(LogPrefix, TruePBRData, PriorityJSONFile, Diffuse, Config.first, NIFPath);
+      insertTruePBRData(LogPrefix, TruePBRData, Diffuse, Config.first, NIFPath);
     }
   }
 
@@ -261,34 +257,13 @@ auto PatcherTruePBR::getPathContainsMatch(const wstring &LogPrefix,
 
 auto PatcherTruePBR::insertTruePBRData(const wstring &LogPrefix,
                                        std::map<size_t, std::tuple<nlohmann::json, std::wstring>> &TruePBRData,
-                                       std::wstring &PriorityJSONFile, const wstring &TexName, size_t Cfg, const wstring &NIFPath) -> void {
+                                       const wstring &TexName, size_t Cfg, const wstring &NIFPath) -> void {
   const auto CurCfg = getTruePBRConfigs()[Cfg];
-  const auto CurJSON = ParallaxGenUtil::strToWstr(CurCfg["json"].get<string>());
 
   // Check if we should skip this due to nif filter (this is expsenive, so we do it last)
   if (CurCfg.contains("nif_filter") && !boost::icontains(NIFPath, CurCfg["nif_filter"].get<string>())) {
     spdlog::trace(L"{}PBR | {} | PBR JSON Rejected: nif_filter {}", LogPrefix, Cfg, NIFPath);
     return;
-  }
-
-  // Evaluate JSON priority
-  if (PriorityJSONFile.empty()) {
-    // Define priority file
-    PriorityJSONFile = CurJSON;
-    spdlog::trace(L"{}PBR | Setting priority JSON to {}", LogPrefix, PriorityJSONFile);
-  }
-
-  if (CurJSON != PriorityJSONFile) {
-    // Only use first JSON (highest priority one)
-    if (Cfg < TruePBRData.begin()->first) {
-      // Checks if we should be replacing the priority JSON (if we found a higher priority one)
-      TruePBRData.clear();
-      PriorityJSONFile = CurJSON;
-      spdlog::trace(L"{}PBR | Setting priority JSON to {}", LogPrefix, PriorityJSONFile);
-    } else {
-      spdlog::trace(L"{}PBR | PBR JSON Rejected {}: Losing JSON Priority", LogPrefix, Cfg);
-      return;
-    }
   }
 
   // Find and check prefix value

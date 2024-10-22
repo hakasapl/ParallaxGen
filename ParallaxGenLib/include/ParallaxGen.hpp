@@ -5,6 +5,7 @@
 #include <miniz.h>
 #include <mutex>
 #include <nlohmann/json.hpp>
+#include <string>
 #include <unordered_set>
 
 #include "ModManagerDirectory.hpp"
@@ -36,6 +37,8 @@ private:
   bool IgnoreParallax;
   bool IgnoreCM;
   bool IgnoreTruePBR;
+  bool UpgradeShaders;
+  bool MMEnabled;
 
   struct PatcherResult {
     std::wstring MatchedPath;
@@ -52,6 +55,8 @@ private:
 
   std::unordered_set<std::pair<std::wstring, std::wstring>, PairHash> MismatchTracker;
 
+  std::mutex PromptMutex;
+
 public:
   //
   // The following methods are called from main.cpp and are public facing
@@ -60,9 +65,7 @@ public:
   // constructor
   ParallaxGen(std::filesystem::path OutputDir, ParallaxGenDirectory *PGD, ParallaxGenConfig *PGC, ParallaxGenD3D *PGD3D, ModManagerDirectory *MMD,
               const bool &OptimizeMeshes = false, const bool &IgnoreParallax = false, const bool &IgnoreCM = false,
-              const bool &IgnoreTruePBR = false);
-  // upgrades textures whenever possible
-  void upgradeShaders();
+              const bool &IgnoreTruePBR = false, const bool &UpgradeShaders = false, const bool &MMEnabled = false);
   // enables parallax on relevant meshes
   void patchMeshes(const bool &MultiThread = true, const bool &PatchPlugin = true);
   // zips all meshes and removes originals
@@ -82,7 +85,7 @@ private:
   void threadSafeJSONUpdate(const std::function<void(nlohmann::json &)> &Operation, nlohmann::json &DiffJSON);
 
   // upgrades a height map to complex material
-  auto convertHeightMapToComplexMaterial(const std::filesystem::path &HeightMap) -> ParallaxGenTask::PGResult;
+  auto convertHeightMapToComplexMaterial(const std::filesystem::path &HeightMap, std::wstring &NewCMMap) -> ParallaxGenTask::PGResult;
 
   // processes a NIF file (enable parallax if needed)
   auto processNIF(const std::filesystem::path &NIFFile, nlohmann::json &DiffJSON, const bool &PatchPlugin = true) -> ParallaxGenTask::PGResult;
@@ -93,6 +96,8 @@ private:
                     bool &ShapeModified, bool &ShapeDeleted, NIFUtil::ShapeShader &ShaderApplied) -> ParallaxGenTask::PGResult;
 
   void findModMismatch(const std::wstring &BaseFile, const std::wstring &MatchedMod);
+
+  auto promptForSelection(const std::unordered_map<std::wstring, std::pair<NIFUtil::ShapeShader, std::wstring>> &Mods) -> std::wstring;
 
   // Zip methods
   void addFileToZip(mz_zip_archive &Zip, const std::filesystem::path &FilePath,

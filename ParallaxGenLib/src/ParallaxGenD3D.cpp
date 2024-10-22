@@ -421,7 +421,9 @@ auto ParallaxGenD3D::createComputeShader(const wstring &ShaderPath,
 }
 
 auto ParallaxGenD3D::upgradeToComplexMaterial(const std::filesystem::path &ParallaxMap,
-                                              const std::filesystem::path &EnvMap) const -> DirectX::ScratchImage {
+                                              const std::filesystem::path &EnvMap) -> DirectX::ScratchImage {
+
+  lock_guard<mutex> Lock(UpgradeCMMutex);
 
   ParallaxGenTask::PGResult PGResult{};
 

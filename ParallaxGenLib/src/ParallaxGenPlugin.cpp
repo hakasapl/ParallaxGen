@@ -299,33 +299,33 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
     string ShaderLabel;
     if (AppliedShader == NIFUtil::ShapeShader::VANILLAPARALLAX) {
       ShaderLabel = "Parallax";
-      wstring MatchedPath;
-      bool ShouldApply = PatcherVanillaParallax::shouldApplySlots(SearchPrefixes, BaseSlots, MatchedPath);
+      vector<wstring> MatchedPaths;
+      bool ShouldApply = PatcherVanillaParallax::shouldApplySlots(SearchPrefixes, BaseSlots, MatchedPaths);
 
+      // TODO we need to prompt user to select if more than one here, but that's unlikely to happen
       if (ShouldApply) {
-        NewSlots = PatcherVanillaParallax::applyPatchSlots(BaseSlots, MatchedPath);
+        NewSlots = PatcherVanillaParallax::applyPatchSlots(BaseSlots, MatchedPaths[0]);
         PatchTXST = true;
       }
     } else if (AppliedShader == NIFUtil::ShapeShader::COMPLEXMATERIAL) {
       ShaderLabel = "Complex Material";
-      wstring MatchedPath;
-      bool EnableDynCubemaps = false;
+      vector<wstring> MatchedPaths;
       bool ShouldApply =
-          PatcherComplexMaterial::shouldApplySlots(SearchPrefixes, BaseSlots, MatchedPath, EnableDynCubemaps, NIFPath);
+          PatcherComplexMaterial::shouldApplySlots(SearchPrefixes, BaseSlots, MatchedPaths);
 
       if (ShouldApply) {
-        NewSlots = PatcherComplexMaterial::applyPatchSlots(BaseSlots, MatchedPath, EnableDynCubemaps);
+        NewSlots = PatcherComplexMaterial::applyPatchSlots(BaseSlots, MatchedPaths[0], NIFPath);
         PatchTXST = true;
       }
     } else if (AppliedShader == NIFUtil::ShapeShader::TRUEPBR) {
       ShaderLabel = "TruePBR";
-      map<size_t, tuple<nlohmann::json, wstring>> TruePBRData;
-      wstring PriorityJSON;
-      bool ShouldApply = PatcherTruePBR::shouldApplySlots(L"Plugin Patching | ", SearchPrefixes, NIFPath, TruePBRData, PriorityJSON);
+      vector<map<size_t, tuple<nlohmann::json, wstring>>> TruePBRData;
+      vector<wstring> MatchedPaths;
+      bool ShouldApply = PatcherTruePBR::shouldApplySlots(L"Plugin Patching | ", SearchPrefixes, NIFPath, TruePBRData, MatchedPaths);
 
       if (ShouldApply) {
         auto TempSlots = BaseSlots;
-        for (auto &TruePBRCFG : TruePBRData) {
+        for (auto &TruePBRCFG : TruePBRData[0]) {
           TempSlots = PatcherTruePBR::applyPatchSlots(TempSlots, get<0>(TruePBRCFG.second), get<1>(TruePBRCFG.second));
         }
 

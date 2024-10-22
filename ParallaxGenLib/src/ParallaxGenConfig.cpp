@@ -3,7 +3,10 @@
 #include "NIFUtil.hpp"
 #include "ParallaxGenUtil.hpp"
 
+#include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <mutex>
 #include <spdlog/spdlog.h>
 
 #include <nlohmann/json.hpp>
@@ -54,9 +57,9 @@ auto ParallaxGenConfig::getConfigValidation() -> nlohmann::json {
             "type": "string"
         }
       },
-      "mod_loadorder": {
-        "type": "array",
-        "items": {
+      "mod_rules": {
+        "type": "object",
+        "additionalProperties": {
           "type": "string"
         }
       }
@@ -156,10 +159,10 @@ auto ParallaxGenConfig::addConfigJSON(const nlohmann::json &J) -> void {
     }
   }
 
-  // "mod_loadorder" field
-  if (J.contains("mod_loadorder")) {
-    for (const auto &Item : J["mod_loadorder"]) {
-      ModOrder.push_back(strToWstr(boost::to_lower_copy(Item.get<string>())));
+  // "mod_rules" field
+  if (J.contains("mod_rules")) {
+    for (const auto &Item : J["mod_rules"].items()) {
+      ModsetRules[boost::to_lower_copy(strToWstr(Item.key()))] = boost::to_lower_copy(strToWstr(Item.value().get<string>()));
     }
   }
 }
@@ -216,4 +219,32 @@ auto ParallaxGenConfig::getManualTextureMaps() const -> const unordered_map<file
 
 auto ParallaxGenConfig::getVanillaBSAList() const -> const std::unordered_set<std::wstring> & { return VanillaBSAList; }
 
-auto ParallaxGenConfig::getModOrder() const -> const vector<wstring> & { return ModOrder; }
+auto ParallaxGenConfig::getModsetRule(const vector<wstring> &PossibleMods) -> wstring {
+  lock_guard<mutex> Lock(ModsetRulesMutex);
+
+  // Combine all mods into a single string
+  auto SortedPossibleMods = PossibleMods;
+  sort(SortedPossibleMods.begin(), SortedPossibleMods.end());
+  wstring ModString = boost::join(SortedPossibleMods, L",");
+  boost::to_lower(ModString);
+  // check if ModString is in ModsetRules
+  if (ModsetRules.contains(ModString)) {
+    return ModsetRules.at(ModString);
+  }
+
+  return {};
+}
+
+void ParallaxGenConfig::setModsetRule(const vector<wstring> &PossibleMods, const wstring &DecisionMod) {
+  lock_guard<mutex> Lock(ModsetRulesMutex);
+
+  // Combine all mods into a single string
+  auto SortedPossibleMods = PossibleMods;
+  sort(SortedPossibleMods.begin(), SortedPossibleMods.end());
+  wstring ModString = boost::join(SortedPossibleMods, L",");
+  boost::to_lower(ModString);
+  // Set ModsetRule
+  ModsetRules[ModString] = boost::to_lower_copy(DecisionMod);
+
+  // TODO Save userdata
+}

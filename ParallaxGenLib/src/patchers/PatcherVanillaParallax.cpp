@@ -3,7 +3,6 @@
 #include <boost/algorithm/string.hpp>
 #include <spdlog/spdlog.h>
 
-#include "ModManagerDirectory.hpp"
 #include "NIFUtil.hpp"
 #include "ParallaxGenConfig.hpp"
 #include "ParallaxGenD3D.hpp"
@@ -15,16 +14,14 @@ using namespace std;
 using namespace ParallaxGenUtil;
 
 // Statics
-ModManagerDirectory *PatcherVanillaParallax::MMD;
 ParallaxGenDirectory *PatcherVanillaParallax::PGD;
 ParallaxGenConfig *PatcherVanillaParallax::PGC;
 ParallaxGenD3D *PatcherVanillaParallax::PGD3D;
 
-auto PatcherVanillaParallax::loadStatics(ParallaxGenDirectory *PGD, ParallaxGenConfig *PGC, ParallaxGenD3D *PGD3D, ModManagerDirectory *MMD) -> void {
+auto PatcherVanillaParallax::loadStatics(ParallaxGenDirectory *PGD, ParallaxGenConfig *PGC, ParallaxGenD3D *PGD3D) -> void {
   PatcherVanillaParallax::PGD = PGD;
   PatcherVanillaParallax::PGC = PGC;
   PatcherVanillaParallax::PGD3D = PGD3D;
-  PatcherVanillaParallax::MMD = MMD;
 }
 
 PatcherVanillaParallax::PatcherVanillaParallax(filesystem::path NIFPath, nifly::NifFile *NIF)
@@ -41,7 +38,7 @@ PatcherVanillaParallax::PatcherVanillaParallax(filesystem::path NIFPath, nifly::
 }
 
 auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
-                                         bool &EnableResult, wstring &MatchedPath) const -> ParallaxGenTask::PGResult {
+                                         bool &EnableResult, vector<wstring> &MatchedPathes) const -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Prep
@@ -62,13 +59,16 @@ auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<wstring,
   }
 
   // Check if parallax map exists
-  if (shouldApplySlots(SearchPrefixes, OldSlots, MatchedPath)) {
-    spdlog::trace(L"NIF: {} | Shape: {} | Parallax | Found parallax map: {}", NIFPath.wstring(), ShapeBlockID, MatchedPath);
+  if (shouldApplySlots(SearchPrefixes, OldSlots, MatchedPathes)) {
+    for (const auto &MatchedPath : MatchedPathes) {
+      spdlog::trace(L"NIF: {} | Shape: {} | CM | Found Parallax map: {}", NIFPath.wstring(), ShapeBlockID, MatchedPath);
+    }
   } else {
-    spdlog::trace(L"NIF: {} | Shape: {} | Parallax | No parallax map found", NIFPath.wstring(), ShapeBlockID);
+    spdlog::trace(L"NIF: {} | Shape: {} | CM | No Parallax map found", NIFPath.wstring(), ShapeBlockID);
     EnableResult = false;
     return Result;
   }
+
 
   // ignore skinned meshes, these don't support Parallax
   if (NIFShape->HasSkinInstance() || NIFShape->IsSkinned()) {
@@ -112,78 +112,43 @@ auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<wstring,
     return Result;
   }
 
-  // verify that maps match each other (this is somewhat expense so it happens last)
-  string DiffuseMap;
-  NIF->GetTextureSlot(NIFShape, DiffuseMap, static_cast<unsigned int>(NIFUtil::TextureSlots::DIFFUSE));
-  if (DiffuseMap.empty() || !PGD->isFile(DiffuseMap)) {
-    // no Diffuse map
-    spdlog::trace(L"NIF: {} | Shape: {} | Parallax | Shape Rejected: Diffuse map missing: {}", NIFPath.wstring(),
-                  ShapeBlockID, strToWstr(DiffuseMap));
-    EnableResult = false;
-    return Result;
-  }
-
-  bool SameAspect = false;
-  ParallaxGenTask::updatePGResult(Result, PGD3D->checkIfAspectRatioMatches(DiffuseMap, MatchedPath, SameAspect),
-                                  ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
-  if (!SameAspect) {
-    spdlog::trace(
-        L"NIF: {} | Shape: {} | Parallax | Shape Rejected: Aspect ratio of diffuse and parallax map do not match",
-        NIFPath.wstring(), ShapeBlockID);
-    EnableResult = false;
-    return Result;
-  }
-
   // All checks passed
   spdlog::trace(L"NIF: {} | Shape: {} | Parallax | Shape Accepted", NIFPath.wstring(), ShapeBlockID);
   return Result;
 }
 
 auto PatcherVanillaParallax::shouldApplySlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
-                                              std::wstring &MatchedPath) -> bool {
+                                              vector<wstring> &MatchedPathes) -> bool {
   static const auto *HeightBaseMap = &PGD->getTextureMapConst(NIFUtil::TextureSlots::PARALLAX);
 
-  // Check if vanilla parallax file exists
+  // Check if parallax file exists
   static const vector<int> SlotSearch = {1, 0}; // Diffuse first, then normal
+  filesystem::path BaseMap;
+  vector<NIFUtil::PGTexture> FoundMatches;
   for (int Slot : SlotSearch) {
-    auto FoundMatches = NIFUtil::getTexMatch(SearchPrefixes[Slot], NIFUtil::TextureType::HEIGHT, *HeightBaseMap);
-
-    // TODO don't repeat this code across patchers
-    // Check the priorities of each match
-    int MaxPriority = -1;
-    vector<NIFUtil::PGTexture> MaxPriorityMatches;
-    for (const auto &FoundMatch : FoundMatches) {
-      auto CurMod = PGD->getMod(FoundMatch.Path);
-      auto CurModPriority = MMD->getModPriority(CurMod);
-
-      if (CurModPriority > MaxPriority) {
-        MaxPriority = CurModPriority;
-        // clear vector since there is higher priority
-        MaxPriorityMatches.clear();
-      }
-
-      // Add to vector if found match
-      if (CurModPriority == MaxPriority) {
-        MaxPriorityMatches.push_back(FoundMatch);
-      }
+    BaseMap = OldSlots[Slot];
+    if (BaseMap.empty() || !PGD->isFile(BaseMap)) {
+      continue;
     }
 
-    // From within the max priority meshes, prefer ones that already exist in the slot
-    for (const auto &FoundMatch : MaxPriorityMatches) {
-      if (boost::iequals(OldSlots[static_cast<int>(NIFUtil::TextureSlots::PARALLAX)], FoundMatch.Path.wstring())) {
-        MatchedPath = FoundMatch.Path.wstring();
-        break;
-      }
-    }
+    FoundMatches.clear();
+    FoundMatches = NIFUtil::getTexMatch(SearchPrefixes[Slot], NIFUtil::TextureType::HEIGHT, *HeightBaseMap);
 
-    // Default if nothing is preferred
-    if (MatchedPath.empty() && !MaxPriorityMatches.empty()) {
-      // If no match was found, just take the first one
-      MatchedPath = MaxPriorityMatches[0].Path.wstring();
+    if (!FoundMatches.empty()) {
+      break;
     }
   }
 
-  return !MatchedPath.empty();
+  // Check aspect ratio matches
+  for (const auto &Match : FoundMatches) {
+    bool SameAspect = false;
+    PGD3D->checkIfAspectRatioMatches(BaseMap, Match.Path, SameAspect);
+    if (SameAspect) {
+      MatchedPathes.push_back(Match.Path);
+    }
+  }
+
+  return !MatchedPathes.empty();
 }
 
 auto PatcherVanillaParallax::applyPatch(NiShape *NIFShape, const wstring &MatchedPath,

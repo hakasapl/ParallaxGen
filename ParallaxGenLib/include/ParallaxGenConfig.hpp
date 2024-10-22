@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mutex>
 #include <nlohmann/json-schema.hpp>
 #include <nlohmann/json.hpp>
 #include <unordered_map>
@@ -21,7 +22,9 @@ private:
   std::unordered_set<std::wstring> DynCubemapBlocklist{};
   std::unordered_map<std::filesystem::path, NIFUtil::TextureType> ManualTextureMaps{};
   std::unordered_set<std::wstring> VanillaBSAList{};
-  std::vector<std::wstring> ModOrder;
+
+  std::mutex ModsetRulesMutex;
+  std::unordered_map<std::wstring, std::wstring> ModsetRules{};
 
   // Validator
   nlohmann::json_schema::json_validator Validator;
@@ -29,6 +32,7 @@ private:
 public:
   ParallaxGenConfig(ParallaxGenDirectory *PGD, std::filesystem::path ExePath);
   static auto getConfigValidation() -> nlohmann::json;
+  static auto getUserConfigFile() -> std::filesystem::path;
 
   void loadConfig(const bool &LoadNative = true);
 
@@ -40,7 +44,8 @@ public:
 
   [[nodiscard]] auto getVanillaBSAList() const -> const std::unordered_set<std::wstring> &;
 
-  [[nodiscard]] auto getModOrder() const -> const std::vector<std::wstring> &;
+  [[nodiscard]] auto getModsetRule(const std::vector<std::wstring> &PossibleMods) -> std::wstring;
+  void setModsetRule(const std::vector<std::wstring> &PossibleMods, const std::wstring &DecisionMod);
 
 private:
   static auto parseJSON(const std::filesystem::path &JSONFile, const std::vector<std::byte> &Bytes, nlohmann::json &J) -> bool;

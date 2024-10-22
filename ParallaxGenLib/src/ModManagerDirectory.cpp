@@ -16,15 +16,9 @@ using namespace std;
 
 ModManagerDirectory::ModManagerDirectory(const ModManagerType &MMType) : MMType(MMType) {}
 
-void ModManagerDirectory::populateInfo(const vector<wstring> &ModOrder, const filesystem::path &RequiredFile, const filesystem::path &StagingDir) {
+void ModManagerDirectory::populateInfo(const filesystem::path &RequiredFile, const filesystem::path &StagingDir) {
   this->StagingDir = StagingDir;
   this->RequiredFile = RequiredFile;
-
-  // loop through mod order and populate priority map
-  for (size_t I = 0; I < ModOrder.size(); I++) {
-    spdlog::trace(L"ModManagerDirectory | Adding Mod to Priority Map : {} -> {}", ModOrder[I], I);
-    ModPriorityMap[boost::to_lower_copy(ModOrder[I])] = static_cast<int>(I);
-  }
 }
 
 void ModManagerDirectory::populateModFileMap() {
@@ -51,14 +45,6 @@ auto ModManagerDirectory::getMod(const filesystem::path &RelPath) const -> wstri
   }
 
   return L"";
-}
-
-auto ModManagerDirectory::getModPriority(const wstring &Mod) const -> int {
-  if (!Mod.empty() && ModPriorityMap.contains(Mod)) {
-    return ModPriorityMap.at(Mod);
-  }
-
-  return -1;
 }
 
 void ModManagerDirectory::populateModFileMapVortex() {
@@ -155,7 +141,14 @@ void ModManagerDirectory::populateModFileMapMO2() {
 
       auto RelPath = filesystem::relative(File, ModDir);
       spdlog::trace(L"ModManagerDirectory | Adding Files to Map : {} -> {}", RelPath.wstring(), Mod);
-      ModFileMap[boost::to_lower_copy(RelPath.wstring())] = boost::to_lower_copy(Mod);
+
+      filesystem::path RelPathLower = boost::to_lower_copy(RelPath.wstring());
+      // check if already in map
+      if (ModFileMap.contains(RelPathLower)) {
+        continue;
+      }
+
+      ModFileMap[RelPathLower] = boost::to_lower_copy(Mod);
     }
   }
 }

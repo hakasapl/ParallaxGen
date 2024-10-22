@@ -52,6 +52,8 @@ private:
   std::unordered_map<std::filesystem::path, DirectX::TexMetadata> DDSMetaDataCache{};
   std::mutex DDSMetaDataMutex;
 
+  std::mutex UpgradeCMMutex;
+
 public:
   // Constructor
   ParallaxGenD3D(ParallaxGenDirectory *PGD, std::filesystem::path OutputDir, std::filesystem::path ExePath,
@@ -68,7 +70,7 @@ public:
 
   // Attempt to upgrade vanilla parallax to complex material
   [[nodiscard]] auto upgradeToComplexMaterial(const std::filesystem::path &ParallaxMap,
-                                              const std::filesystem::path &EnvMap) const -> DirectX::ScratchImage;
+                                              const std::filesystem::path &EnvMap) -> DirectX::ScratchImage;
 
   // Checks if the aspect ratio of two DDS files match
   auto checkIfAspectRatioMatches(const std::filesystem::path &DDSPath1, const std::filesystem::path &DDSPath2,

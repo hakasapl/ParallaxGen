@@ -8,14 +8,16 @@
 
 #include <spdlog/common.h>
 #include <spdlog/logger.h>
-#include <spdlog/spdlog.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/spdlog.h>
+
 
 #include <boost/algorithm/string/join.hpp>
-#include <boost/filesystem/path.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
 #include <boost/stacktrace/stacktrace.hpp>
+
 
 #include <windows.h>
 
@@ -178,7 +180,8 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   auto PGC = ParallaxGenConfig(&PGD, ExePath);
   auto PGD3D = ParallaxGenD3D(&PGD, Args.OutputDir, ExePath, !Args.NoGPU);
   auto PG = ParallaxGen(Args.OutputDir, &PGD, &PGC, &PGD3D, &MMD, Args.OptimizeMeshes, Args.IgnoreParallax,
-                               Args.IgnoreComplexMaterial, Args.IgnoreTruePBR);
+                        Args.IgnoreComplexMaterial, Args.IgnoreTruePBR, Args.UpgradeShaders,
+                        MMType != ModManagerDirectory::ModManagerType::None);
 
   // Check if GPU needs to be initialized
   if (!Args.NoGPU) {
@@ -235,15 +238,16 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   PGC.loadConfig(!Args.NoDefaultConfig);
 
   // Populate file map from data directory
-  if (MMType == ModManagerDirectory::ModManagerType::ModOrganizer2 && !Args.MO2InstanceDir.empty() && !Args.MO2Profile.empty()) {
+  if (MMType == ModManagerDirectory::ModManagerType::ModOrganizer2 && !Args.MO2InstanceDir.empty() &&
+      !Args.MO2Profile.empty()) {
     // MO2
     auto MO2StagingFolder = Args.MO2InstanceDir / "mods";
     auto MO2ModlistTXT = Args.MO2InstanceDir / "profiles" / Args.MO2Profile / "modlist.txt";
-    MMD.populateInfo(PGC.getModOrder(), MO2ModlistTXT, MO2StagingFolder);
+    MMD.populateInfo(MO2ModlistTXT, MO2StagingFolder);
     MMD.populateModFileMap();
   } else if (MMType == ModManagerDirectory::ModManagerType::Vortex) {
     // Vortex
-    MMD.populateInfo(PGC.getModOrder(), BG.getGameDataPath() / "vortex.deployment.json");
+    MMD.populateInfo(BG.getGameDataPath() / "vortex.deployment.json");
     MMD.populateModFileMap();
   }
 
@@ -261,14 +265,9 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   spdlog::info("Done finding complex material env maps");
 
   // Load patcher static vars
-  PatcherTruePBR::loadPatcherBuffers(PGD.getPBRJSONs(), &PGD, &MMD);
-  PatcherComplexMaterial::loadStatics(PGC.getDynCubemapBlocklist(), Args.DisableMLP, &PGD, &PGC, &PGD3D, &MMD);
-  PatcherVanillaParallax::loadStatics(&PGD, &PGC, &PGD3D, &MMD);
-
-  // Upgrade shaders if requested
-  if (Args.UpgradeShaders) {
-    PG.upgradeShaders();
-  }
+  PatcherTruePBR::loadPatcherBuffers(PGD.getPBRJSONs(), &PGD);
+  PatcherComplexMaterial::loadStatics(PGC.getDynCubemapBlocklist(), Args.DisableMLP, &PGD, &PGC, &PGD3D);
+  PatcherVanillaParallax::loadStatics(&PGD, &PGC, &PGD3D);
 
   // Patch meshes if set
   if (!Args.IgnoreParallax || !Args.IgnoreComplexMaterial || !Args.IgnoreTruePBR) {
