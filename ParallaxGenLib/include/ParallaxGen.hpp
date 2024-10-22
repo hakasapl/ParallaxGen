@@ -57,6 +57,8 @@ private:
 
   std::mutex PromptMutex;
 
+  std::mutex UpgradeMutex;
+
 public:
   //
   // The following methods are called from main.cpp and are public facing

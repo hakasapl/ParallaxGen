@@ -94,6 +94,8 @@ void ParallaxGen::patchMeshes(const bool &MultiThread, const bool &PatchPlugin) 
 
 auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &HeightMap,
                                                     wstring &NewCMMap) -> ParallaxGenTask::PGResult {
+  lock_guard<mutex> Lock(UpgradeMutex);
+
   spdlog::trace(L"Upgrading height map: {}", HeightMap.wstring());
 
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
@@ -107,6 +109,12 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
     return Result;
   }
 
+  const filesystem::path ComplexMap = TexBase + L"_m.dds";
+  if (PGD->isGenerated(ComplexMap)) {
+    // this was already upgraded
+    return Result;
+  }
+
   static const auto *CMBaseMap = &PGD->getTextureMapConst(NIFUtil::TextureSlots::ENVMASK);
   auto ExistingMask = NIFUtil::getTexMatch(TexBase, NIFUtil::TextureType::ENVIRONMENTMASK, *CMBaseMap);
   filesystem::path EnvMask = filesystem::path();
@@ -115,8 +123,6 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
     // TODO smarter decision here?
     EnvMask = ExistingMask[0].Path;
   }
-
-  const filesystem::path ComplexMap = TexBase + L"_m.dds";
 
   // upgrade to complex material
   const DirectX::ScratchImage NewComplexMap = PGD3D->upgradeToComplexMaterial(HeightMap, EnvMask);
