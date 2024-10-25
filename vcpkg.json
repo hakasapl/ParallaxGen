@@ -16,6 +16,7 @@
       ]
     },
     "directxtk",
+    "gtest",
     "json-schema-validator",
     "miniz",
     "nlohmann-json",
@@ -32,6 +33,6 @@
       ]
     },
     "zlib",
-    "gtest"
+    "wxwidgets"
   ]
 }

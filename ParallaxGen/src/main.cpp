@@ -36,6 +36,7 @@
 #include "ParallaxGenD3D.hpp"
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenPlugin.hpp"
+#include "ParallaxGenUI.hpp"
 #include "patchers/PatcherComplexMaterial.hpp"
 #include "patchers/PatcherTruePBR.hpp"
 #include "patchers/PatcherVanillaParallax.hpp"
@@ -182,6 +183,9 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   auto PG = ParallaxGen(Args.OutputDir, &PGD, &PGC, &PGD3D, &MMD, Args.OptimizeMeshes, Args.IgnoreParallax,
                         Args.IgnoreComplexMaterial, Args.IgnoreTruePBR, Args.UpgradeShaders,
                         MMType != ModManagerDirectory::ModManagerType::None);
+
+  // Initialize UI
+  ParallaxGenUI::init();
 
   // Check if GPU needs to be initialized
   if (!Args.NoGPU) {

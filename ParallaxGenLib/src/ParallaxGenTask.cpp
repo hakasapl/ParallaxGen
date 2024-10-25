@@ -67,6 +67,12 @@ auto ParallaxGenTask::getCompletedJobs() -> size_t {
   return Sum;
 }
 
+auto ParallaxGenTask::isCompleted() -> bool {
+  const lock_guard<mutex> Lock(NumJobsCompletedMutex);
+
+  return getCompletedJobs() == TotalJobs;
+}
+
 void ParallaxGenTask::updatePGResult(PGResult &Result, const PGResult &CurrentResult, const PGResult &Threshold) {
   if (CurrentResult > Result) {
     if (CurrentResult > Threshold) {

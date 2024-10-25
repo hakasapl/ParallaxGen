@@ -21,6 +21,7 @@
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenPlugin.hpp"
 #include "ParallaxGenTask.hpp"
+#include "ParallaxGenUI.hpp"
 #include "ParallaxGenUtil.hpp"
 
 using namespace std;
@@ -75,7 +76,12 @@ void ParallaxGen::patchMeshes(const bool &MultiThread, const bool &PatchPlugin) 
       });
     }
 
-    // Wait for all threads to complete
+    // UI loop
+    while (!TaskTracker.isCompleted()) {
+      ParallaxGenUI::updateUI();
+    }
+
+    // verify that all threads complete (should be redundant)
     MeshPatchPool.join();
 
   } else {
@@ -533,11 +539,10 @@ auto ParallaxGen::promptForSelection(const unordered_map<wstring, pair<NIFUtil::
     -> wstring {
   lock_guard<mutex> Lock(PromptMutex);
 
-  cout << "Please select a mod for the following shape:" << endl;
-
   vector<wstring> ModList;
+  vector<wstring> ModListPretty;
   for (const auto &[Mod, Shader] : Mods) {
-    // add to IMGUI options
+    // add to options
     wstring ShaderStr;
     switch (Shader.first) {
     case NIFUtil::ShapeShader::VANILLAPARALLAX:
@@ -559,16 +564,13 @@ auto ParallaxGen::promptForSelection(const unordered_map<wstring, pair<NIFUtil::
     }
 
     auto SelectStr = Mod + L" (" + ShaderStr + L")";
-    cout << ModList.size() << ": " << wstrToStr(SelectStr) << endl;
-
+    ModListPretty.push_back(SelectStr);
     ModList.push_back(Mod);
   }
 
-  int Selection = -1;
-  while (Selection < 0 || Selection >= ModList.size()) {
-    cout << "Enter selection: ";
-    cin >> Selection;
-  }
+  // prompt user
+  auto Selection = ParallaxGenUI::promptForSelection("Multiple mods conflict. Select which mod should have priority.",
+                                                     ModListPretty);
 
   // return selected mod
   return ModList[Selection];
