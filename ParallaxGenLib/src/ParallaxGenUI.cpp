@@ -14,27 +14,31 @@ void ParallaxGenUI::init() {
 void ParallaxGenUI::updateUI() { wxTheApp->Yield(); }
 
 auto ParallaxGenUI::promptForSelection(const string &Message, const std::vector<std::wstring> &Options) -> size_t {
-  // Use a promise/future to block the calling thread until the selection is made on the main thread
-  promise<size_t> Promise;
-  future<size_t> Future = Promise.get_future();
+  if (wxIsMainThread()) {
+    // If we're on the main thread, directly show the dialog
+    return guiSelectionPrompt(Message, Options);
+  }
 
-  // CallAfter schedules the GUI code to run on the main thread
-  wxTheApp->CallAfter([&Promise, Message, Options]() mutable {
-    wxArrayString WxOptions;
-    for (const auto &Option : Options) {
-      WxOptions.Add(Option);
-    }
+  // If not on the main thread, use std::promise and wxTheApp->CallAfter
+  std::promise<size_t> Promise;
+  std::future<size_t> Future = Promise.get_future();
 
-    wxSingleChoiceDialog Dialog(nullptr, Message, "ParallaxGen", WxOptions);
-    if (Dialog.ShowModal() == wxID_OK) {
-      // Set the result (selected index) on the promise when selection is made
-      Promise.set_value(Dialog.GetSelection());
-    } else {
-      // Set a default value (or handle cancellation appropriately)
-      Promise.set_value(0);
-    }
-  });
+  wxTheApp->CallAfter(
+      [&Promise, Message, Options]() mutable { Promise.set_value(guiSelectionPrompt(Message, Options)); });
 
-  // Return the selected index (or default value if canceled)
-  return Future.get();
+  return Future.get(); // Wait for the result
+}
+
+auto ParallaxGenUI::guiSelectionPrompt(const string &Message, const std::vector<std::wstring> &Options) -> size_t {
+  wxArrayString WxOptions;
+  for (const auto &Option : Options) {
+    WxOptions.Add(Option);
+  }
+
+  wxSingleChoiceDialog Dialog(nullptr, Message, "ParallaxGen", WxOptions);
+  if (Dialog.ShowModal() == wxID_OK) {
+    return Dialog.GetSelection();
+  }
+
+  return 0;
 }

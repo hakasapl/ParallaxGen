@@ -221,6 +221,10 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
                              const bool &PatchPlugin) -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
+  if (boost::icontains(NIFFile.wstring(), "treepineforestbroken05.nif")) {
+    spdlog::trace(L"NIF: {} | Skipping due to known issue", NIFFile.wstring());
+  }
+
   spdlog::trace(L"NIF: {} | Starting processing", NIFFile.wstring());
 
   // Determine output path for patched NIF

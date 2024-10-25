@@ -126,7 +126,8 @@ auto PatcherTruePBR::shouldApply(nifly::NiShape *NIFShape, const array<wstring, 
 
   // Check if we already matched this texture set
   if (MatchedTextureSets.find(TextureSetBlockID) != MatchedTextureSets.end()) {
-    TruePBRData = MatchedTextureSets[TextureSetBlockID];
+    TruePBRData = MatchedTextureSets[TextureSetBlockID].first;
+    MatchedPaths = MatchedTextureSets[TextureSetBlockID].second;
     EnableResult = true;
     return ParallaxGenTask::PGResult::SUCCESS;
   }
@@ -141,7 +142,8 @@ auto PatcherTruePBR::shouldApply(nifly::NiShape *NIFShape, const array<wstring, 
     spdlog::trace(L"{}PBR | {} PBR Configs matched", TruePBRData.size(), LogPrefix);
 
     // Add to good to go set
-    MatchedTextureSets[TextureSetBlockID] = TruePBRData;
+    MatchedTextureSets[TextureSetBlockID].first = TruePBRData;
+    MatchedTextureSets[TextureSetBlockID].second = MatchedPaths;
   } else {
     EnableResult = false;
     spdlog::trace(L"{}PBR | No PBR Configs matched", LogPrefix);

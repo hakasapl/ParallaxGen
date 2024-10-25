@@ -34,7 +34,7 @@ private:
   };
 
   // Set that stores already matched texture sets
-  std::unordered_map<uint32_t, std::vector<std::map<size_t, std::tuple<nlohmann::json, std::wstring>>>>
+  std::unordered_map<uint32_t, std::pair<std::vector<std::map<size_t, std::tuple<nlohmann::json, std::wstring>>>, std::vector<std::wstring>>>
       MatchedTextureSets{};
 
 public:
