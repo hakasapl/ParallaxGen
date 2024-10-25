@@ -79,17 +79,10 @@ auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<wstring,
 
   // Check for shader type
   auto NIFShaderType = static_cast<nifly::BSLightingShaderPropertyShaderType>(NIFShader->GetShaderType());
-  if (NIFShaderType != BSLSP_DEFAULT && NIFShaderType != BSLSP_PARALLAX) {
+  if (NIFShaderType != BSLSP_DEFAULT && NIFShaderType != BSLSP_PARALLAX && NIFShaderType != BSLSP_ENVMAP) {
     // don't overwrite existing NIFShaders
     spdlog::trace(L"NIF: {} | Shape: {} | Parallax | Shape Rejected: Incorrect NIFShader type", NIFPath.wstring(),
                   ShapeBlockID);
-    EnableResult = false;
-    return Result;
-  }
-
-  // Check if TruePBR is enabled
-  if (NIFUtil::hasShaderFlag(NIFShaderBSLSP, SLSF2_UNUSED01)) {
-    spdlog::trace(L"NIF: {} | Shape: {} | Parallax | Shape Rejected: TruePBR enabled", NIFPath.wstring(), ShapeBlockID);
     EnableResult = false;
     return Result;
   }
@@ -164,6 +157,7 @@ auto PatcherVanillaParallax::applyPatch(NiShape *NIFShape, const wstring &Matche
   NIFUtil::setShaderType(NIFShader, BSLSP_PARALLAX, NIFModified);
   // Set NIFShader flags
   NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF1_ENVIRONMENT_MAPPING, NIFModified);
+  NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF2_UNUSED01, NIFModified);
   NIFUtil::setShaderFlag(NIFShaderBSLSP, SLSF1_PARALLAX, NIFModified);
   // Set vertex colors for shape
   if (!NIFShape->HasVertexColors()) {

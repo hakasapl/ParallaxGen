@@ -71,13 +71,6 @@ auto PatcherComplexMaterial::shouldApply(NiShape *NIFShape, const array<wstring,
     return Result;
   }
 
-  // Check if TruePBR is enabled
-  if (NIFUtil::hasShaderFlag(NIFShaderBSLSP, SLSF2_UNUSED01)) {
-    spdlog::trace(L"NIF: {} | Shape: {} | CM | Shape Rejected: TruePBR enabled", NIFPath.wstring(), ShapeBlockID);
-    EnableResult = false;
-    return Result;
-  }
-
   // check to make sure there are textures defined in slot 3 or 8
   if (NIFShaderType != BSLSP_MULTILAYERPARALLAX &&
       (!NIFUtil::getTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::GLOW).empty() ||
@@ -160,6 +153,7 @@ auto PatcherComplexMaterial::applyPatch(NiShape *NIFShape, const wstring &Matche
   NIFUtil::setShaderType(NIFShader, BSLSP_ENVMAP, NIFModified);
   // Set NIFShader flags
   NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF1_PARALLAX, NIFModified);
+  NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF2_UNUSED01, NIFModified);
   NIFUtil::setShaderFlag(NIFShaderBSLSP, SLSF1_ENVIRONMENT_MAPPING, NIFModified);
   // Set complex material texture
   const string NewParallax;
