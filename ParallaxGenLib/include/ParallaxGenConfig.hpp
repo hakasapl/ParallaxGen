@@ -23,8 +23,13 @@ private:
   std::unordered_map<std::filesystem::path, NIFUtil::TextureType> ManualTextureMaps{};
   std::unordered_set<std::wstring> VanillaBSAList{};
 
+  struct ConflictRule {
+    std::unordered_set<std::wstring> Mods;
+    std::wstring DecisionMod;
+  };
+
   std::mutex ModsetRulesMutex;
-  std::unordered_map<std::wstring, std::wstring> ModsetRules{};
+  std::vector<ConflictRule> ModsetRules;
 
   // Validator
   nlohmann::json_schema::json_validator Validator;
@@ -44,8 +49,8 @@ public:
 
   [[nodiscard]] auto getVanillaBSAList() const -> const std::unordered_set<std::wstring> &;
 
-  [[nodiscard]] auto getModsetRule(const std::vector<std::wstring> &PossibleMods) -> std::wstring;
-  void setModsetRule(const std::vector<std::wstring> &PossibleMods, const std::wstring &DecisionMod);
+  [[nodiscard]] auto getModsetRule(const std::unordered_set<std::wstring> &PossibleMods) -> std::wstring;
+  void setModsetRule(const std::unordered_set<std::wstring> &PossibleMods, const std::wstring &DecisionMod);
 
 private:
   static auto parseJSON(const std::filesystem::path &JSONFile, const std::vector<std::byte> &Bytes, nlohmann::json &J) -> bool;

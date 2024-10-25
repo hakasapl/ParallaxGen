@@ -458,10 +458,10 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
   wstring DecisionMod;
   if (MMEnabled) {
     // Create modset vector
-    vector<wstring> AllowedMods;
+    unordered_set<wstring> AllowedMods;
     AllowedMods.reserve(AllowedShaders.size());
     for (const auto &[Mod, Shader] : AllowedShaders) {
-      AllowedMods.push_back(Mod);
+      AllowedMods.insert(Mod);
     }
 
     // Find winner

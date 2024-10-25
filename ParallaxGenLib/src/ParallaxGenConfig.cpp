@@ -162,12 +162,20 @@ auto ParallaxGenConfig::addConfigJSON(const nlohmann::json &J) -> void {
   // "mod_rules" field
   if (J.contains("mod_rules")) {
     for (const auto &Item : J["mod_rules"].items()) {
-      ModsetRules[boost::to_lower_copy(strToWstr(Item.key()))] = boost::to_lower_copy(strToWstr(Item.value().get<string>()));
+      const auto ModSetStr = strToWstr(Item.key());
+      const auto DecisionModStr = Item.value().get<string>();
+
+      ConflictRule ModsetRule;
+      boost::split(ModsetRule.Mods, ModSetStr, boost::is_any_of(","));
+      ModsetRule.DecisionMod = strToWstr(DecisionModStr);
+
+      ModsetRules.push_back(ModsetRule);
     }
   }
 }
 
-auto ParallaxGenConfig::parseJSON(const std::filesystem::path &JSONFile, const vector<std::byte> &Bytes, nlohmann::json &J) -> bool {
+auto ParallaxGenConfig::parseJSON(const std::filesystem::path &JSONFile, const vector<std::byte> &Bytes,
+                                  nlohmann::json &J) -> bool {
   // Parse JSON
   try {
     J = nlohmann::json::parse(Bytes);
@@ -215,36 +223,45 @@ auto ParallaxGenConfig::getNIFBlocklist() const -> const unordered_set<wstring> 
 
 auto ParallaxGenConfig::getDynCubemapBlocklist() const -> const unordered_set<wstring> & { return DynCubemapBlocklist; }
 
-auto ParallaxGenConfig::getManualTextureMaps() const -> const unordered_map<filesystem::path, NIFUtil::TextureType> & { return ManualTextureMaps; }
+auto ParallaxGenConfig::getManualTextureMaps() const -> const unordered_map<filesystem::path, NIFUtil::TextureType> & {
+  return ManualTextureMaps;
+}
 
 auto ParallaxGenConfig::getVanillaBSAList() const -> const std::unordered_set<std::wstring> & { return VanillaBSAList; }
 
-auto ParallaxGenConfig::getModsetRule(const vector<wstring> &PossibleMods) -> wstring {
+auto ParallaxGenConfig::getModsetRule(const unordered_set<wstring> &PossibleMods) -> wstring {
   lock_guard<mutex> Lock(ModsetRulesMutex);
 
-  // Combine all mods into a single string
-  auto SortedPossibleMods = PossibleMods;
-  sort(SortedPossibleMods.begin(), SortedPossibleMods.end());
-  wstring ModString = boost::join(SortedPossibleMods, L",");
-  boost::to_lower(ModString);
-  // check if ModString is in ModsetRules
-  if (ModsetRules.contains(ModString)) {
-    return ModsetRules.at(ModString);
+  // loop through each ModsetRule
+  for (const auto &ModsetRule : ModsetRules) {
+    // check if decision mod is in possible mods
+    if (!PossibleMods.contains(ModsetRule.DecisionMod)) {
+      continue;
+    }
+
+    if (std::all_of(PossibleMods.begin(), PossibleMods.end(),
+                    [&](const auto &Mod) { return ModsetRule.Mods.contains(Mod); })) {
+      return ModsetRule.DecisionMod;
+    }
   }
 
   return {};
 }
 
-void ParallaxGenConfig::setModsetRule(const vector<wstring> &PossibleMods, const wstring &DecisionMod) {
+void ParallaxGenConfig::setModsetRule(const unordered_set<wstring> &PossibleMods, const wstring &DecisionMod) {
   lock_guard<mutex> Lock(ModsetRulesMutex);
 
-  // Combine all mods into a single string
-  auto SortedPossibleMods = PossibleMods;
-  sort(SortedPossibleMods.begin(), SortedPossibleMods.end());
-  wstring ModString = boost::join(SortedPossibleMods, L",");
-  boost::to_lower(ModString);
-  // Set ModsetRule
-  ModsetRules[ModString] = boost::to_lower_copy(DecisionMod);
+  ConflictRule ModsetRule;
+  ModsetRule.Mods = PossibleMods;
+  ModsetRule.DecisionMod = DecisionMod;
+
+  // check if this already exists
+  auto It = find_if(ModsetRules.begin(), ModsetRules.end(),
+                    [&](const auto &Rule) { return Rule.Mods == PossibleMods; });
+
+  if (It == ModsetRules.end()) {
+    ModsetRules.push_back(ModsetRule);
+  }
 
   // TODO Save userdata
 }
