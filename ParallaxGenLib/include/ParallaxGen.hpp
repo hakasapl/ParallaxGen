@@ -8,13 +8,11 @@
 #include <string>
 #include <unordered_set>
 
-#include "ModManagerDirectory.hpp"
 #include "NIFUtil.hpp"
 #include "ParallaxGenConfig.hpp"
 #include "ParallaxGenD3D.hpp"
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenTask.hpp"
-#include "ParallaxGenUI.hpp"
 #include "patchers/PatcherComplexMaterial.hpp"
 #include "patchers/PatcherTruePBR.hpp"
 #include "patchers/PatcherVanillaParallax.hpp"
@@ -26,7 +24,6 @@ private:
   std::filesystem::path OutputDir; // ParallaxGen output directory
 
   // Dependency objects
-  ModManagerDirectory *MMD;
   ParallaxGenDirectory *PGD;
   ParallaxGenConfig *PGC;
   ParallaxGenD3D *PGD3D;
@@ -39,7 +36,6 @@ private:
   bool IgnoreCM;
   bool IgnoreTruePBR;
   bool UpgradeShaders;
-  bool MMEnabled;
 
   struct PatcherResult {
     std::wstring MatchedPath;
@@ -54,13 +50,52 @@ private:
     }
   };
 
-  std::unordered_set<std::pair<std::wstring, std::wstring>, PairHash> MismatchTracker;
+  // Trackers for warnings
+  std::unordered_set<std::pair<std::wstring, std::wstring>, PairHash> MismatchWarnTracker;
+  std::mutex MismatchWarnTrackerMutex;
+  void mismatchWarn(const std::wstring &MatchedPath, const std::wstring &BaseTex);
 
-  // Mutex lock for TUI prompts
-  std::mutex PromptMutex;
+  std::unordered_set<std::pair<std::wstring, std::wstring>, PairHash> MeshWarnTracker;
+  std::mutex MeshWarnTrackerMutex;
+  void meshWarn(const std::wstring &MatchedPath, const std::wstring &NIFPath);
 
   // Mutex lock for shader upgrades
   std::mutex UpgradeMutex;
+
+  struct ShapeKey {
+    std::wstring NIFPath;
+    int ShapeIndex;
+
+    // Equality operator to compare two ShapeKey objects
+    auto operator==(const ShapeKey &Other) const -> bool {
+      return NIFPath == Other.NIFPath && ShapeIndex == Other.ShapeIndex;
+    }
+  };
+
+  // Define a hash function for ShapeKey
+  struct ShapeKeyHash {
+    auto operator()(const ShapeKey &Key) const -> size_t {
+      // Hash the NIFPath and ShapeIndex individually
+      std::size_t H1 = std::hash<std::wstring>{}(Key.NIFPath);
+      std::size_t H2 = std::hash<int>{}(Key.ShapeIndex);
+
+      return H1 ^ (H2 << 1); // shifting to reduce collisions
+    }
+  };
+
+  struct AllowedShader {
+    NIFUtil::ShapeShader Shader;
+    std::wstring MatchedPath;
+    std::unordered_set<NIFUtil::TextureSlots> MatchedFrom;
+  };
+  std::unordered_map<ShapeKey, std::pair<std::unordered_map<std::wstring, AllowedShader>, AllowedShader>, ShapeKeyHash>
+      AllowedShadersCache;
+  std::mutex AllowedShadersCacheMutex;
+
+  std::unordered_map<ShapeKey,
+                     std::unordered_map<std::wstring, std::map<size_t, std::tuple<nlohmann::json, std::wstring>>>, ShapeKeyHash>
+      AllowedTruePBRDataCache;
+  std::mutex AllowedTruePBRDataCacheMutex;
 
 public:
   //
@@ -69,11 +104,13 @@ public:
 
   // constructor
   ParallaxGen(std::filesystem::path OutputDir, ParallaxGenDirectory *PGD, ParallaxGenConfig *PGC, ParallaxGenD3D *PGD3D,
-              ModManagerDirectory *MMD, const bool &OptimizeMeshes = false,
-              const bool &IgnoreParallax = false, const bool &IgnoreCM = false, const bool &IgnoreTruePBR = false,
-              const bool &UpgradeShaders = false, const bool &MMEnabled = false);
+              const bool &OptimizeMeshes = false, const bool &IgnoreParallax = false, const bool &IgnoreCM = false,
+              const bool &IgnoreTruePBR = false, const bool &UpgradeShaders = false);
   // enables parallax on relevant meshes
   void patchMeshes(const bool &MultiThread = true, const bool &PatchPlugin = true);
+  // Dry run for finding potential matches (used with mod manager integration)
+  [[nodiscard]] auto findModConflicts(const bool &MultiThread = true, const bool &PatchPlugin = true)
+      -> std::unordered_map<std::wstring, std::set<NIFUtil::ShapeShader>>;
   // zips all meshes and removes originals
   void zipMeshes() const;
   // deletes generated meshes
@@ -95,19 +132,18 @@ private:
                                          std::wstring &NewCMMap) -> ParallaxGenTask::PGResult;
 
   // processes a NIF file (enable parallax if needed)
-  auto processNIF(const std::filesystem::path &NIFFile, nlohmann::json &DiffJSON,
-                  const bool &PatchPlugin = true) -> ParallaxGenTask::PGResult;
+  auto processNIF(const std::filesystem::path &NIFFile, nlohmann::json *DiffJSON, const bool &PatchPlugin = true,
+                  const bool &Dry = false,
+                  std::unordered_map<std::wstring, std::set<NIFUtil::ShapeShader>> *ConflictMods = nullptr,
+                  std::mutex *ConflictModsMutex = nullptr) -> ParallaxGenTask::PGResult;
 
   // processes a shape within a NIF file
   auto processShape(const std::filesystem::path &NIFPath, nifly::NifFile &NIF, nifly::NiShape *NIFShape,
-                    PatcherVanillaParallax &PatchVP, PatcherComplexMaterial &PatchCM, PatcherTruePBR &PatchTPBR,
-                    bool &ShapeModified, bool &ShapeDeleted,
-                    NIFUtil::ShapeShader &ShaderApplied) -> ParallaxGenTask::PGResult;
-
-  void findModMismatch(const std::wstring &BaseFile, const std::wstring &MatchedMod);
-
-  auto promptForSelection(const std::unordered_map<std::wstring, std::pair<NIFUtil::ShapeShader, std::wstring>> &Mods)
-      -> std::wstring;
+                    const int &ShapeIndex, PatcherVanillaParallax &PatchVP, PatcherComplexMaterial &PatchCM,
+                    PatcherTruePBR &PatchTPBR, bool &ShapeModified, bool &ShapeDeleted,
+                    NIFUtil::ShapeShader &ShaderApplied, const bool &Dry = false,
+                    std::unordered_map<std::wstring, std::set<NIFUtil::ShapeShader>> *ConflictMods = nullptr,
+                    std::mutex *ConflictModsMutex = nullptr) -> ParallaxGenTask::PGResult;
 
   // Zip methods
   void addFileToZip(mz_zip_archive &Zip, const std::filesystem::path &FilePath,

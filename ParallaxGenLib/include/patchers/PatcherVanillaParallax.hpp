@@ -28,14 +28,14 @@ public:
 
   // check if vanilla parallax should be enabled on shape
   auto shouldApply(nifly::NiShape *NIFShape, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
-                   bool &EnableResult, std::vector<std::wstring> &MatchedPathes) const -> ParallaxGenTask::PGResult;
+                   bool &EnableResult, std::vector<std::wstring> &MatchedPathes, std::vector<std::unordered_set<NIFUtil::TextureSlots>> &MatchedFrom) const -> ParallaxGenTask::PGResult;
 
   static auto shouldApplySlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
-                        std::vector<std::wstring> &MatchedPathes) -> bool;
+                        std::vector<std::wstring> &MatchedPathes, std::vector<std::unordered_set<NIFUtil::TextureSlots>> &MatchedFrom) -> bool;
 
   // enables parallax on a shape in a NIF
   auto applyPatch(nifly::NiShape *NIFShape, const std::wstring &MatchedPath,
-                  bool &NIFModified) -> ParallaxGenTask::PGResult;
+                  bool &NIFModified, std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots) -> ParallaxGenTask::PGResult;
 
   static auto applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots, const std::wstring &MatchedPath) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;
 };

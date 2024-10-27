@@ -1,4 +1,5 @@
 #include "BethesdaGame.hpp"
+#include "NIFUtil.hpp"
 #include "ParallaxGen.hpp"
 #include "ParallaxGenConfig.hpp"
 #include "ParallaxGenD3D.hpp"
@@ -37,6 +38,7 @@
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenPlugin.hpp"
 #include "ParallaxGenUI.hpp"
+#include "ParallaxGenUtil.hpp"
 #include "patchers/PatcherComplexMaterial.hpp"
 #include "patchers/PatcherTruePBR.hpp"
 #include "patchers/PatcherVanillaParallax.hpp"
@@ -178,11 +180,10 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   auto MMD = ModManagerDirectory(MMType);
   auto PGD = ParallaxGenDirectory(BG, Args.OutputDir, &MMD);
-  auto PGC = ParallaxGenConfig(&PGD, ExePath);
+  auto PGC = ParallaxGenConfig(ExePath);
   auto PGD3D = ParallaxGenD3D(&PGD, Args.OutputDir, ExePath, !Args.NoGPU);
-  auto PG = ParallaxGen(Args.OutputDir, &PGD, &PGC, &PGD3D, &MMD, Args.OptimizeMeshes, Args.IgnoreParallax,
-                        Args.IgnoreComplexMaterial, Args.IgnoreTruePBR, Args.UpgradeShaders,
-                        MMType != ModManagerDirectory::ModManagerType::None);
+  auto PG = ParallaxGen(Args.OutputDir, &PGD, &PGC, &PGD3D, Args.OptimizeMeshes, Args.IgnoreParallax,
+                        Args.IgnoreComplexMaterial, Args.IgnoreTruePBR, Args.UpgradeShaders);
 
   // Initialize UI
   ParallaxGenUI::init();
@@ -234,6 +235,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   // Init PGP library
   if (!Args.NoPlugin) {
     spdlog::info("Initializing plugin patcher");
+    ParallaxGenPlugin::loadStatics(&PGD, &PGC);
     ParallaxGenPlugin::initialize(BG);
     ParallaxGenPlugin::populateObjs();
   }
@@ -272,6 +274,16 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   PatcherTruePBR::loadPatcherBuffers(PGD.getPBRJSONs(), &PGD);
   PatcherComplexMaterial::loadStatics(PGC.getDynCubemapBlocklist(), Args.DisableMLP, &PGD, &PGC, &PGD3D);
   PatcherVanillaParallax::loadStatics(&PGD, &PGC, &PGD3D);
+
+  if (MMType != ModManagerDirectory::ModManagerType::None) {
+    // Find conflicts
+    const auto ModConflicts = PG.findModConflicts(!Args.NoMultithread, !Args.NoPlugin);
+    const auto ExistingOrder = PGC.getModOrder();
+
+    // Select mod order
+    auto SelectedOrder = ParallaxGenUI::selectModOrder(ModConflicts, ExistingOrder);
+    PGC.setModOrder(SelectedOrder);
+  }
 
   // Patch meshes if set
   if (!Args.IgnoreParallax || !Args.IgnoreComplexMaterial || !Args.IgnoreTruePBR) {

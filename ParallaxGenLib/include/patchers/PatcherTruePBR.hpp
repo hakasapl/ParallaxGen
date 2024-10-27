@@ -34,7 +34,7 @@ private:
   };
 
   // Set that stores already matched texture sets
-  std::unordered_map<uint32_t, std::pair<std::vector<std::map<size_t, std::tuple<nlohmann::json, std::wstring>>>, std::vector<std::wstring>>>
+  std::unordered_map<uint32_t, std::tuple<std::vector<std::map<size_t, std::tuple<nlohmann::json, std::wstring>>>, std::vector<std::wstring>, std::vector<std::unordered_set<NIFUtil::TextureSlots>>>>
       MatchedTextureSets{};
 
 public:
@@ -53,18 +53,18 @@ public:
   auto shouldApply(nifly::NiShape *NIFShape, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes,
                    bool &EnableResult,
                    std::vector<std::map<size_t, std::tuple<nlohmann::json, std::wstring>>> &TruePBRData,
-                   std::vector<std::wstring> &MatchedPaths) -> ParallaxGenTask::PGResult;
+                   std::vector<std::wstring> &MatchedPaths, std::vector<std::unordered_set<NIFUtil::TextureSlots>> &MatchedFrom) -> ParallaxGenTask::PGResult;
 
   static auto shouldApplySlots(const std::wstring &LogPrefix,
                                const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes,
                                const std::wstring &NIFPath,
                                std::vector<std::map<size_t, std::tuple<nlohmann::json, std::wstring>>> &TruePBRData,
-                               std::vector<std::wstring> &MatchedPaths) -> bool;
+                               std::vector<std::wstring> &MatchedPaths, std::vector<std::unordered_set<NIFUtil::TextureSlots>> &MatchedFrom) -> bool;
 
   // applies truepbr config on a shape in a NIF (always applies with config, but
   // maybe PBR is disabled)
   auto applyPatch(nifly::NiShape *NIFShape, nlohmann::json &TruePBRData, const std::wstring &MatchedPath,
-                  bool &NIFModified, bool &ShapeDeleted) const -> ParallaxGenTask::PGResult;
+                  bool &NIFModified, bool &ShapeDeleted, std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots) const -> ParallaxGenTask::PGResult;
 
   static auto applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
                               const nlohmann::json &TruePBRData,
@@ -74,7 +74,7 @@ private:
   // enables truepbr on a shape in a NIF (If PBR is enabled)
   auto enableTruePBROnShape(nifly::NiShape *NIFShape, nifly::NiShader *NIFShader,
                             nifly::BSLightingShaderProperty *NIFShaderBSLSP, nlohmann::json &TruePBRData,
-                            const std::wstring &MatchedPath, bool &NIFModified) const -> ParallaxGenTask::PGResult;
+                            const std::wstring &MatchedPath, bool &NIFModified, std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots) const -> ParallaxGenTask::PGResult;
 
   // TruePBR Helpers
   // Calculates 2d absolute value of a vector2

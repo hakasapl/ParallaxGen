@@ -8,10 +8,8 @@
 #include "ParallaxGenD3D.hpp"
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenTask.hpp"
-#include "ParallaxGenUtil.hpp"
 
 using namespace std;
-using namespace ParallaxGenUtil;
 
 // Statics
 ParallaxGenDirectory *PatcherVanillaParallax::PGD;
@@ -38,7 +36,7 @@ PatcherVanillaParallax::PatcherVanillaParallax(filesystem::path NIFPath, nifly::
 }
 
 auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
-                                         bool &EnableResult, vector<wstring> &MatchedPathes) const -> ParallaxGenTask::PGResult {
+                                         bool &EnableResult, vector<wstring> &MatchedPathes, std::vector<std::unordered_set<NIFUtil::TextureSlots>> &MatchedFrom) const -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Prep
@@ -59,7 +57,7 @@ auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<wstring,
   }
 
   // Check if parallax map exists
-  if (shouldApplySlots(SearchPrefixes, OldSlots, MatchedPathes)) {
+  if (shouldApplySlots(SearchPrefixes, OldSlots, MatchedPathes, MatchedFrom)) {
     for (const auto &MatchedPath : MatchedPathes) {
       spdlog::trace(L"NIF: {} | Shape: {} | CM | Found Parallax map: {}", NIFPath.wstring(), ShapeBlockID, MatchedPath);
     }
@@ -111,13 +109,14 @@ auto PatcherVanillaParallax::shouldApply(NiShape *NIFShape, const array<wstring,
 }
 
 auto PatcherVanillaParallax::shouldApplySlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
-                                              vector<wstring> &MatchedPathes) -> bool {
+                                              vector<wstring> &MatchedPathes, std::vector<std::unordered_set<NIFUtil::TextureSlots>> &MatchedFrom) -> bool {
   static const auto *HeightBaseMap = &PGD->getTextureMapConst(NIFUtil::TextureSlots::PARALLAX);
 
   // Check if parallax file exists
   static const vector<int> SlotSearch = {1, 0}; // Diffuse first, then normal
   filesystem::path BaseMap;
   vector<NIFUtil::PGTexture> FoundMatches;
+  NIFUtil::TextureSlots MatchedFromSlot = NIFUtil::TextureSlots::NORMAL;
   for (int Slot : SlotSearch) {
     BaseMap = OldSlots[Slot];
     if (BaseMap.empty() || !PGD->isFile(BaseMap)) {
@@ -128,6 +127,8 @@ auto PatcherVanillaParallax::shouldApplySlots(const std::array<std::wstring, NUM
     FoundMatches = NIFUtil::getTexMatch(SearchPrefixes[Slot], NIFUtil::TextureType::HEIGHT, *HeightBaseMap);
 
     if (!FoundMatches.empty()) {
+      // TODO should we be trying diffuse after normal too and present all options?
+      MatchedFromSlot = static_cast<NIFUtil::TextureSlots>(Slot);
       break;
     }
   }
@@ -138,6 +139,7 @@ auto PatcherVanillaParallax::shouldApplySlots(const std::array<std::wstring, NUM
     PGD3D->checkIfAspectRatioMatches(BaseMap, Match.Path, SameAspect);
     if (SameAspect) {
       MatchedPathes.push_back(Match.Path);
+      MatchedFrom.push_back({MatchedFromSlot});
     }
   }
 
@@ -145,7 +147,7 @@ auto PatcherVanillaParallax::shouldApplySlots(const std::array<std::wstring, NUM
 }
 
 auto PatcherVanillaParallax::applyPatch(NiShape *NIFShape, const wstring &MatchedPath,
-                                        bool &NIFModified) -> ParallaxGenTask::PGResult {
+                                        bool &NIFModified, std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots) -> ParallaxGenTask::PGResult {
   // enable Parallax on shape
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
@@ -169,8 +171,9 @@ auto PatcherVanillaParallax::applyPatch(NiShape *NIFShape, const wstring &Matche
     NIFShader->SetVertexColors(true);
     NIFModified = true;
   }
-  // Set Parallax heightmap texture
-  NIFUtil::setTextureSlot(NIF, NIFShape, NIFUtil::TextureSlots::PARALLAX, MatchedPath, NIFModified);
+
+  NewSlots = applyPatchSlots(NIFUtil::getTextureSlots(NIF, NIFShape), MatchedPath);
+  NIFUtil::setTextureSlots(NIF, NIFShape, NewSlots, NIFModified);
 
   return Result;
 }

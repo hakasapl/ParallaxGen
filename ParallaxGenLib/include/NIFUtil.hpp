@@ -16,6 +16,8 @@ enum class ShapeShader {
   VANILLAPARALLAX
 };
 
+auto getStrFromShader(const ShapeShader &Shader) -> std::string;
+
 enum class TextureSlots : unsigned int {
   DIFFUSE,
   NORMAL,
@@ -113,8 +115,9 @@ auto configureShaderFlag(nifly::BSShaderProperty *NIFShaderBSLSP, const nifly::S
 auto setTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, const TextureSlots &Slot, const std::wstring &TexturePath, bool &Changed) -> void;
 auto setTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, const TextureSlots &Slot,
                     const std::string &TexturePath, bool &Changed) -> void;
+auto setTextureSlots(nifly::NifFile *NIF, nifly::NiShape *NIFShape, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots, bool &Changed) -> void;
 auto getTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, const TextureSlots &Slot) -> std::string;
-auto getTextureSlots(nifly::NifFile &NIF, nifly::NiShape *NIFShape) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;
+auto getTextureSlots(nifly::NifFile *NIF, nifly::NiShape *NIFShape) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;
 auto getTexBase(const std::filesystem::path &TexPath) -> std::wstring;
 auto getTexMatch(const std::wstring &Base, const TextureType &DesiredType,
                  const std::map<std::wstring, std::unordered_set<PGTexture, PGTextureHasher>> &SearchMap) -> std::vector<PGTexture>;

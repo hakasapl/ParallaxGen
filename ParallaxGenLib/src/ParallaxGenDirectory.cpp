@@ -117,7 +117,12 @@ auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
         TaskTracker.completeJob(Result);
       });
     } else {
-      TaskTracker.completeJob(mapTexturesFromNIF(Mesh, CacheNIFs));
+      try {
+        TaskTracker.completeJob(mapTexturesFromNIF(Mesh, CacheNIFs));
+      } catch (const exception &E) {
+        spdlog::error(L"Exception loading NIF \"{}\": {}", Mesh.wstring(), strToWstr(E.what()));
+        TaskTracker.completeJob(ParallaxGenTask::PGResult::FAILURE);
+      }
     }
   }
 
