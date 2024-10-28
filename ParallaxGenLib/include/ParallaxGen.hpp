@@ -88,14 +88,8 @@ private:
     std::wstring MatchedPath;
     std::unordered_set<NIFUtil::TextureSlots> MatchedFrom;
   };
-  std::unordered_map<ShapeKey, std::pair<std::unordered_map<std::wstring, AllowedShader>, AllowedShader>, ShapeKeyHash>
-      AllowedShadersCache;
+  std::unordered_map<ShapeKey, std::vector<std::tuple<std::wstring, NIFUtil::ShapeShader, NIFUtil::PatcherMatch>>, ShapeKeyHash> AllowedShadersCache;
   std::mutex AllowedShadersCacheMutex;
-
-  std::unordered_map<ShapeKey,
-                     std::unordered_map<std::wstring, std::map<size_t, std::tuple<nlohmann::json, std::wstring>>>, ShapeKeyHash>
-      AllowedTruePBRDataCache;
-  std::mutex AllowedTruePBRDataCacheMutex;
 
 public:
   //

@@ -1,10 +1,3 @@
-#include "BethesdaGame.hpp"
-#include "NIFUtil.hpp"
-#include "ParallaxGen.hpp"
-#include "ParallaxGenConfig.hpp"
-#include "ParallaxGenD3D.hpp"
-#include "ParallaxGenDirectory.hpp"
-
 #include <CLI/CLI.hpp>
 
 #include <spdlog/common.h>
@@ -38,7 +31,6 @@
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenPlugin.hpp"
 #include "ParallaxGenUI.hpp"
-#include "ParallaxGenUtil.hpp"
 #include "patchers/PatcherComplexMaterial.hpp"
 #include "patchers/PatcherTruePBR.hpp"
 #include "patchers/PatcherVanillaParallax.hpp"
@@ -204,7 +196,8 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   }
 
   // Get current time to compare later
-  const auto StartTime = chrono::high_resolution_clock::now();
+  auto StartTime = chrono::high_resolution_clock::now();
+  long long TimeTaken = 0;
 
   // Create output directory
   try {
@@ -280,8 +273,13 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
     const auto ModConflicts = PG.findModConflicts(!Args.NoMultithread, !Args.NoPlugin);
     const auto ExistingOrder = PGC.getModOrder();
 
+    // pause timer for UI
+    TimeTaken += chrono::duration_cast<chrono::seconds>(chrono::high_resolution_clock::now() - StartTime).count();
+
     // Select mod order
     auto SelectedOrder = ParallaxGenUI::selectModOrder(ModConflicts, ExistingOrder);
+    StartTime = chrono::high_resolution_clock::now();
+
     PGC.setModOrder(SelectedOrder);
   }
 
@@ -315,9 +313,9 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   }
 
   const auto EndTime = chrono::high_resolution_clock::now();
-  const auto Duration = chrono::duration_cast<chrono::seconds>(EndTime - StartTime).count();
+  TimeTaken += chrono::duration_cast<chrono::seconds>(EndTime - StartTime).count();
 
-  spdlog::info("ParallaxGen took {} seconds to complete", Duration);
+  spdlog::info("ParallaxGen took {} seconds to complete", TimeTaken);
 }
 
 void exitBlocking() {

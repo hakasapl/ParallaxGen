@@ -402,11 +402,6 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
                                mutex *ConflictModsMutex) -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
-  if (boost::icontains(NIFPath.wstring(), L"mainroadmarket")) {
-    // skip landscape meshes
-    return Result;
-  }
-
   // Prep
   const auto ShapeBlockID = NIF.GetBlockID(NIFShape);
   spdlog::trace(L"NIF: {} | Shape: {} | Starting Processing", NIFPath.wstring(), ShapeBlockID);
@@ -446,123 +441,77 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
     return Result;
   }
 
-  // Find search prefixes
-  auto OldSlots = NIFUtil::getTextureSlots(&NIF, NIFShape);
-  auto SearchPrefixes = NIFUtil::getSearchPrefixes(NIF, NIFShape);
-
-  unordered_map<wstring, AllowedShader> AllowedShaders;
-  AllowedShader LastAllowedShader;
-  LastAllowedShader.Shader = NIFUtil::ShapeShader::NONE;
-
-  // Custom fields that are not used for every shader
-  unordered_map<wstring, map<size_t, tuple<nlohmann::json, wstring>>> AllowedTruePBRData;
-
   // Create cache key
   bool CacheExists = false;
   ParallaxGen::ShapeKey CacheKey;
   CacheKey.NIFPath = NIFPath;
   CacheKey.ShapeIndex = ShapeIndex;
 
+  // Allowed shaders from result of patchers
+  vector<tuple<wstring, NIFUtil::ShapeShader, NIFUtil::PatcherMatch>> Matches;
   {
     lock_guard<mutex> Lock(AllowedShadersCacheMutex);
 
     // Check if shape has already been processed
     if (AllowedShadersCache.find(CacheKey) != AllowedShadersCache.end()) {
       CacheExists = true;
-      AllowedShaders = AllowedShadersCache.at(CacheKey).first;
-      LastAllowedShader = AllowedShadersCache.at(CacheKey).second;
-    }
-  }
-
-  {
-    lock_guard<mutex> Lock(AllowedTruePBRDataCacheMutex);
-
-    // Check if shape has already been processed
-    if (AllowedTruePBRDataCache.find(CacheKey) != AllowedTruePBRDataCache.end()) {
-      AllowedTruePBRData = AllowedTruePBRDataCache.at(CacheKey);
+      Matches = AllowedShadersCache.at(CacheKey);
     }
   }
 
   // VANILLA PARALLAX
   if (!IgnoreParallax && !CacheExists) {
-    bool ShouldApply = false;
-    vector<wstring> MatchedPaths;
-    vector<unordered_set<NIFUtil::TextureSlots>> MatchedFrom;
-    ParallaxGenTask::updatePGResult(
-        Result, PatchVP.shouldApply(NIFShape, SearchPrefixes, OldSlots, ShouldApply, MatchedPaths, MatchedFrom),
-        ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
+    vector<NIFUtil::PatcherMatch> VPMatches;
+    PatchVP.shouldApply(*NIFShape, VPMatches);
 
-    for (size_t I = 0; I < MatchedPaths.size(); I++) {
-      auto Mod = PGD->getMod(MatchedPaths[I]);
-      AllowedShaders[Mod] = {NIFUtil::ShapeShader::VANILLAPARALLAX, MatchedPaths[I], MatchedFrom[I]};
-      LastAllowedShader = {NIFUtil::ShapeShader::VANILLAPARALLAX, MatchedPaths[I], MatchedFrom[I]};
+    for (const auto &Match : VPMatches) {
+      Matches.emplace_back(PGD->getMod(Match.MatchedPath), NIFUtil::ShapeShader::VANILLAPARALLAX, Match);
     }
   }
 
   // COMPLEX MATERIAL
   if (!IgnoreCM && !CacheExists) {
-    bool ShouldApply = false;
-    vector<wstring> MatchedPaths;
-    vector<unordered_set<NIFUtil::TextureSlots>> MatchedFrom;
-    ParallaxGenTask::updatePGResult(
-        Result, PatchCM.shouldApply(NIFShape, SearchPrefixes, OldSlots, ShouldApply, MatchedPaths, MatchedFrom),
-        ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
+    vector<NIFUtil::PatcherMatch> CMMatches;
+    PatchCM.shouldApply(*NIFShape, CMMatches);
 
-    for (size_t I = 0; I < MatchedPaths.size(); I++) {
-      auto Mod = PGD->getMod(MatchedPaths[I]);
-      AllowedShaders[Mod] = {NIFUtil::ShapeShader::COMPLEXMATERIAL, MatchedPaths[I], MatchedFrom[I]};
-      LastAllowedShader = {NIFUtil::ShapeShader::COMPLEXMATERIAL, MatchedPaths[I], MatchedFrom[I]};
+    for (const auto &Match : CMMatches) {
+      Matches.emplace_back(PGD->getMod(Match.MatchedPath), NIFUtil::ShapeShader::COMPLEXMATERIAL, Match);
     }
   }
 
   // TRUEPBR CONFIG
   if (!IgnoreTruePBR && !CacheExists) {
-    bool ShouldApply = false;
-    vector<wstring> MatchedPaths;
-    vector<unordered_set<NIFUtil::TextureSlots>> MatchedFrom;
-    vector<map<size_t, tuple<nlohmann::json, wstring>>> TruePBRData;
-    ParallaxGenTask::updatePGResult(
-        Result, PatchTPBR.shouldApply(NIFShape, SearchPrefixes, ShouldApply, TruePBRData, MatchedPaths, MatchedFrom),
-        ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
+    vector<NIFUtil::PatcherMatch> TPBRMatches;
+    PatchTPBR.shouldApply(*NIFShape, TPBRMatches);
 
-    for (size_t I = 0; I < TruePBRData.size(); I++) {
-      auto Mod = PGD->getMod(MatchedPaths[I]);
-      AllowedTruePBRData[Mod] = TruePBRData[I];
-      AllowedShaders[Mod] = {NIFUtil::ShapeShader::TRUEPBR, MatchedPaths[I], MatchedFrom[I]};
-      LastAllowedShader = {NIFUtil::ShapeShader::TRUEPBR, MatchedPaths[I], MatchedFrom[I]};
+    for (const auto &Match : TPBRMatches) {
+      Matches.emplace_back(PGD->getMod(Match.MatchedPath), NIFUtil::ShapeShader::TRUEPBR, Match);
     }
   }
 
   // Write to cache if not already present
   if (!CacheExists) {
-    {
-      lock_guard<mutex> Lock(AllowedShadersCacheMutex);
-      AllowedShadersCache[CacheKey] = {AllowedShaders, LastAllowedShader};
-    }
-
-    if (AllowedTruePBRData.size() > 0) {
-      lock_guard<mutex> Lock(AllowedTruePBRDataCacheMutex);
-      AllowedTruePBRDataCache[CacheKey] = AllowedTruePBRData;
-    }
+    lock_guard<mutex> Lock(AllowedShadersCacheMutex);
+    AllowedShadersCache[CacheKey] = Matches;
   }
 
-  if (LastAllowedShader.Shader == NIFUtil::ShapeShader::NONE) {
+  if (Matches.empty()) {
     // no shaders to apply
-    spdlog::trace(L"NIF: {} | Shape: {} | Rejecting: No shaders to apply", NIFPath.wstring(), ShapeBlockID);
+    spdlog::trace("Rejecting: No shaders to apply");
     return Result;
   }
 
   // Populate conflict mods if set
-  if (ConflictMods != nullptr && AllowedShaders.size() > 1) {
+  if (ConflictMods != nullptr && Matches.size() > 1) {
     lock_guard<mutex> Lock(*ConflictModsMutex);
 
     // add mods to conflict set
-    for (const auto &[Mod, Shader] : AllowedShaders) {
+    for (const auto &[Mod, Shader, Match] : Matches) {
       if (ConflictMods->find(Mod) == ConflictMods->end()) {
         ConflictMods->insert({Mod, set<NIFUtil::ShapeShader>()});
       }
 
-      ConflictMods->at(Mod).insert(Shader.Shader);
+      ConflictMods->at(Mod).insert(Shader);
     }
   }
 
@@ -574,12 +523,11 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
   // Find winning mod
   int MaxPriority = -1;
   NIFUtil::ShapeShader WinningShader = NIFUtil::ShapeShader::NONE;
-  wstring WinningMatchedPath;
-  unordered_set<NIFUtil::TextureSlots> WinningMatchedFrom;
+  NIFUtil::PatcherMatch WinningMatch;
   wstring DecisionMod;
 
   const auto MeshFilePriority = PGC->getModPriority(PGD->getMod(NIFPath));
-  for (const auto &[Mod, Shader] : AllowedShaders) {
+  for (const auto &[Mod, Shader, Match] : Matches) {
     auto CurPriority = PGC->getModPriority(Mod);
 
     if (CurPriority < MeshFilePriority) {
@@ -593,48 +541,38 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
     }
 
     MaxPriority = CurPriority;
-    WinningShader = Shader.Shader;
-    WinningMatchedPath = Shader.MatchedPath;
-    WinningMatchedFrom = Shader.MatchedFrom;
+    WinningShader = Shader;
+    WinningMatch = Match;
     DecisionMod = Mod;
   }
 
   // Upgrade shader if required
   if (WinningShader == NIFUtil::ShapeShader::VANILLAPARALLAX && UpgradeShaders) {
     // convert then change shader type
-    convertHeightMapToComplexMaterial(WinningMatchedPath, WinningMatchedPath);
+    convertHeightMapToComplexMaterial(WinningMatch.MatchedPath, WinningMatch.MatchedPath);
     WinningShader = NIFUtil::ShapeShader::COMPLEXMATERIAL;
   }
 
   array<wstring, NUM_TEXTURE_SLOTS> NewSlots;
   if (WinningShader == NIFUtil::ShapeShader::TRUEPBR) {
-    auto WinningTruePBRData = AllowedTruePBRData[DecisionMod];
-
-    for (auto &TruePBRCFG : WinningTruePBRData) {
-      spdlog::trace(L"NIF: {} | Shape: {} | PBR | Applying PBR Config {}", NIFPath.wstring(), ShapeBlockID,
-                    TruePBRCFG.first);
-      ParallaxGenTask::updatePGResult(Result,
-                                      PatchTPBR.applyPatch(NIFShape, get<0>(TruePBRCFG.second),
-                                                           get<1>(TruePBRCFG.second), ShapeModified, ShapeDeleted, NewSlots));
-    }
-
+    ParallaxGenTask::updatePGResult(Result, PatchTPBR.applyPatch(*NIFShape, WinningMatch, ShapeModified, ShapeDeleted, NewSlots));
     if (!ShapeDeleted) {
       ShaderApplied = NIFUtil::ShapeShader::TRUEPBR;
     }
   } else if (WinningShader == NIFUtil::ShapeShader::COMPLEXMATERIAL) {
-    ParallaxGenTask::updatePGResult(Result, PatchCM.applyPatch(NIFShape, WinningMatchedPath, ShapeModified, NewSlots));
-    ShaderApplied = NIFUtil::ShapeShader::COMPLEXMATERIAL;
+    ParallaxGenTask::updatePGResult(Result, PatchCM.applyPatch(*NIFShape, WinningMatch, ShapeModified, NewSlots));
   } else if (WinningShader == NIFUtil::ShapeShader::VANILLAPARALLAX) {
-    ParallaxGenTask::updatePGResult(Result, PatchVP.applyPatch(NIFShape, WinningMatchedPath, ShapeModified, NewSlots));
-    ShaderApplied = NIFUtil::ShapeShader::VANILLAPARALLAX;
+    ParallaxGenTask::updatePGResult(Result, PatchVP.applyPatch(*NIFShape, WinningMatch, ShapeModified, NewSlots));
   }
+
+  ShaderApplied = WinningShader;
 
   // Post warnings if any
-  for (const auto &CurMatchedFrom : WinningMatchedFrom) {
-    mismatchWarn(WinningMatchedPath, NewSlots[static_cast<int>(CurMatchedFrom)]);
+  for (const auto &CurMatchedFrom : WinningMatch.MatchedFrom) {
+    mismatchWarn(WinningMatch.MatchedPath, NewSlots[static_cast<int>(CurMatchedFrom)]);
   }
 
-  meshWarn(WinningMatchedPath, NIFPath.wstring());
+  meshWarn(WinningMatch.MatchedPath, NIFPath.wstring());
 
   return Result;
 }

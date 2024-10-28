@@ -4,7 +4,6 @@
 #include <filesystem>
 #include <string>
 
-#include "ModManagerDirectory.hpp"
 #include "NIFUtil.hpp"
 #include "ParallaxGenConfig.hpp"
 #include "ParallaxGenD3D.hpp"
@@ -27,15 +26,11 @@ public:
   PatcherVanillaParallax(std::filesystem::path NIFPath, nifly::NifFile *NIF);
 
   // check if vanilla parallax should be enabled on shape
-  auto shouldApply(nifly::NiShape *NIFShape, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
-                   bool &EnableResult, std::vector<std::wstring> &MatchedPathes, std::vector<std::unordered_set<NIFUtil::TextureSlots>> &MatchedFrom) const -> ParallaxGenTask::PGResult;
-
-  static auto shouldApplySlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &SearchPrefixes, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
-                        std::vector<std::wstring> &MatchedPathes, std::vector<std::unordered_set<NIFUtil::TextureSlots>> &MatchedFrom) -> bool;
+  auto shouldApply(nifly::NiShape &NIFShape, std::vector<NIFUtil::PatcherMatch> &Match) const -> bool;
+  static auto shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots, std::vector<NIFUtil::PatcherMatch> &Match) -> bool;
 
   // enables parallax on a shape in a NIF
-  auto applyPatch(nifly::NiShape *NIFShape, const std::wstring &MatchedPath,
+  auto applyPatch(nifly::NiShape &NIFShape, const NIFUtil::PatcherMatch &Match,
                   bool &NIFModified, std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots) -> ParallaxGenTask::PGResult;
-
-  static auto applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots, const std::wstring &MatchedPath) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;
+  static auto applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots, const NIFUtil::PatcherMatch &Match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;
 };
