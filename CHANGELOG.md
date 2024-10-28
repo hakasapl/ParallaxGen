@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.6.1] - UNRELEASED
+## [0.7.0] - UNRELEASED
 
 - Added a mod manager priority system
 
