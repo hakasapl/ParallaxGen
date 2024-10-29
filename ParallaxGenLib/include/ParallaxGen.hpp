@@ -31,9 +31,6 @@ private:
   nifly::NifSaveOptions NIFSaveOptions = {false, true};
 
   // store CLI arguments
-  bool IgnoreParallax;
-  bool IgnoreCM;
-  bool IgnoreTruePBR;
   bool UpgradeShaders;
 
   struct PatcherResult {
@@ -99,13 +96,18 @@ public:
 
   // constructor
   ParallaxGen(std::filesystem::path OutputDir, ParallaxGenDirectory *PGD, ParallaxGenConfig *PGC, ParallaxGenD3D *PGD3D,
-              const bool &OptimizeMeshes = false, const bool &IgnoreParallax = false, const bool &IgnoreCM = false,
-              const bool &IgnoreTruePBR = false, const bool &UpgradeShaders = false);
+              const bool &OptimizeMeshes = false, const bool &UpgradeShaders = false);
   // enables parallax on relevant meshes
-  void patchMeshes(const bool &MultiThread = true, const bool &PatchPlugin = true);
+  void
+  patchMeshes(const std::vector<std::function<std::unique_ptr<PatcherShader>(std::filesystem::path, nifly::NifFile *)>>
+                  &Patchers,
+              const bool &MultiThread = true, const bool &PatchPlugin = true);
   // Dry run for finding potential matches (used with mod manager integration)
-  [[nodiscard]] auto findModConflicts(const bool &MultiThread = true, const bool &PatchPlugin = true)
-      -> std::unordered_map<std::wstring, std::set<NIFUtil::ShapeShader>>;
+  [[nodiscard]] auto findModConflicts(
+      const std::vector<std::function<std::unique_ptr<PatcherShader>(std::filesystem::path, nifly::NifFile *)>>
+          &Patchers,
+      const bool &MultiThread = true,
+      const bool &PatchPlugin = true) -> std::unordered_map<std::wstring, std::set<NIFUtil::ShapeShader>>;
   // zips all meshes and removes originals
   void zipMeshes() const;
   // deletes generated meshes
@@ -127,14 +129,17 @@ private:
                                          std::wstring &NewCMMap) -> ParallaxGenTask::PGResult;
 
   // processes a NIF file (enable parallax if needed)
-  auto processNIF(const std::filesystem::path &NIFFile, nlohmann::json *DiffJSON, const bool &PatchPlugin = true,
-                  const bool &Dry = false,
-                  std::unordered_map<std::wstring, std::set<NIFUtil::ShapeShader>> *ConflictMods = nullptr,
-                  std::mutex *ConflictModsMutex = nullptr) -> ParallaxGenTask::PGResult;
+  auto
+  processNIF(const std::vector<std::function<std::unique_ptr<PatcherShader>(std::filesystem::path, nifly::NifFile *)>>
+                 &Patchers,
+             const std::filesystem::path &NIFFile, nlohmann::json *DiffJSON, const bool &PatchPlugin = true,
+             const bool &Dry = false,
+             std::unordered_map<std::wstring, std::set<NIFUtil::ShapeShader>> *ConflictMods = nullptr,
+             std::mutex *ConflictModsMutex = nullptr) -> ParallaxGenTask::PGResult;
 
   // processes a shape within a NIF file
   auto processShape(const std::filesystem::path &NIFPath, nifly::NifFile &NIF, nifly::NiShape *NIFShape,
-                    const int &ShapeIndex, const std::vector<PatcherShader *> &Patchers, bool &ShapeModified,
+                    const int &ShapeIndex, const std::vector<std::unique_ptr<PatcherShader>> &Patchers, bool &ShapeModified,
                     bool &ShapeDeleted, NIFUtil::ShapeShader &ShaderApplied, const bool &Dry = false,
                     std::unordered_map<std::wstring, std::set<NIFUtil::ShapeShader>> *ConflictMods = nullptr,
                     std::mutex *ConflictModsMutex = nullptr) -> ParallaxGenTask::PGResult;

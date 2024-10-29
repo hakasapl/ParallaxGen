@@ -9,6 +9,7 @@
 #include <boost/iostreams/stream.hpp>
 #include <boost/thread.hpp>
 #include <fstream>
+#include <memory>
 #include <mutex>
 #include <spdlog/spdlog.h>
 #include <string>
@@ -34,17 +35,17 @@ using namespace ParallaxGenUtil;
 using namespace nifly;
 
 ParallaxGen::ParallaxGen(filesystem::path OutputDir, ParallaxGenDirectory *PGD, ParallaxGenConfig *PGC,
-                         ParallaxGenD3D *PGD3D, const bool &OptimizeMeshes, const bool &IgnoreParallax,
-                         const bool &IgnoreCM, const bool &IgnoreTruePBR, const bool &UpgradeShaders)
-    : OutputDir(std::move(OutputDir)), PGD(PGD), PGC(PGC), PGD3D(PGD3D), IgnoreParallax(IgnoreParallax),
-      IgnoreCM(IgnoreCM), IgnoreTruePBR(IgnoreTruePBR), UpgradeShaders(UpgradeShaders) {
+                         ParallaxGenD3D *PGD3D, const bool &OptimizeMeshes, const bool &UpgradeShaders)
+    : OutputDir(std::move(OutputDir)), PGD(PGD), PGC(PGC), PGD3D(PGD3D), UpgradeShaders(UpgradeShaders) {
   // constructor
 
   // set optimize meshes flag
   NIFSaveOptions.optimize = OptimizeMeshes;
 }
 
-void ParallaxGen::patchMeshes(const bool &MultiThread, const bool &PatchPlugin) {
+void ParallaxGen::patchMeshes(
+    const std::vector<std::function<std::unique_ptr<PatcherShader>(std::filesystem::path, nifly::NifFile *)>> &Patchers,
+    const bool &MultiThread, const bool &PatchPlugin) {
   auto Meshes = PGD->getMeshes();
 
   // Create task tracker
@@ -67,10 +68,10 @@ void ParallaxGen::patchMeshes(const bool &MultiThread, const bool &PatchPlugin) 
     boost::asio::thread_pool MeshPatchPool(NumThreads);
 
     for (const auto &Mesh : Meshes) {
-      boost::asio::post(MeshPatchPool, [this, &TaskTracker, &DiffJSON, &Mesh, &PatchPlugin] {
+      boost::asio::post(MeshPatchPool, [this, &TaskTracker, &DiffJSON, &Mesh, &PatchPlugin, &Patchers] {
         ParallaxGenTask::PGResult Result = ParallaxGenTask::PGResult::SUCCESS;
         try {
-          Result = processNIF(Mesh, &DiffJSON, PatchPlugin);
+          Result = processNIF(Patchers, Mesh, &DiffJSON, PatchPlugin);
         } catch (const exception &E) {
           spdlog::error(L"Exception in thread patching NIF {}: {}", Mesh.wstring(), strToWstr(E.what()));
           Result = ParallaxGenTask::PGResult::FAILURE;
@@ -85,7 +86,7 @@ void ParallaxGen::patchMeshes(const bool &MultiThread, const bool &PatchPlugin) 
 
   } else {
     for (const auto &Mesh : Meshes) {
-      TaskTracker.completeJob(processNIF(Mesh, &DiffJSON));
+      TaskTracker.completeJob(processNIF(Patchers, Mesh, &DiffJSON));
     }
   }
 
@@ -97,8 +98,9 @@ void ParallaxGen::patchMeshes(const bool &MultiThread, const bool &PatchPlugin) 
   DiffJSONFile.close();
 }
 
-auto ParallaxGen::findModConflicts(const bool &MultiThread,
-                                   const bool &PatchPlugin) -> unordered_map<wstring, set<NIFUtil::ShapeShader>> {
+auto ParallaxGen::findModConflicts(
+    const std::vector<std::function<std::unique_ptr<PatcherShader>(std::filesystem::path, nifly::NifFile *)>> &Patchers,
+    const bool &MultiThread, const bool &PatchPlugin) -> unordered_map<wstring, set<NIFUtil::ShapeShader>> {
   auto Meshes = PGD->getMeshes();
 
   // Create task tracker
@@ -122,17 +124,18 @@ auto ParallaxGen::findModConflicts(const bool &MultiThread,
     boost::asio::thread_pool MeshPatchPool(NumThreads);
 
     for (const auto &Mesh : Meshes) {
-      boost::asio::post(MeshPatchPool, [this, &TaskTracker, &Mesh, &PatchPlugin, &ConflictMods, &ConflictModsMutex] {
-        ParallaxGenTask::PGResult Result = ParallaxGenTask::PGResult::SUCCESS;
-        try {
-          Result = processNIF(Mesh, nullptr, PatchPlugin, true, &ConflictMods, &ConflictModsMutex);
-        } catch (const exception &E) {
-          spdlog::error(L"Exception in thread finding mod conflicts {}: {}", Mesh.wstring(), strToWstr(E.what()));
-          Result = ParallaxGenTask::PGResult::FAILURE;
-        }
+      boost::asio::post(
+          MeshPatchPool, [this, &TaskTracker, &Mesh, &PatchPlugin, &ConflictMods, &ConflictModsMutex, &Patchers] {
+            ParallaxGenTask::PGResult Result = ParallaxGenTask::PGResult::SUCCESS;
+            try {
+              Result = processNIF(Patchers, Mesh, nullptr, PatchPlugin, true, &ConflictMods, &ConflictModsMutex);
+            } catch (const exception &E) {
+              spdlog::error(L"Exception in thread finding mod conflicts {}: {}", Mesh.wstring(), strToWstr(E.what()));
+              Result = ParallaxGenTask::PGResult::FAILURE;
+            }
 
-        TaskTracker.completeJob(Result);
-      });
+            TaskTracker.completeJob(Result);
+          });
     }
 
     // verify that all threads complete (should be redundant)
@@ -140,7 +143,7 @@ auto ParallaxGen::findModConflicts(const bool &MultiThread,
 
   } else {
     for (const auto &Mesh : Meshes) {
-      TaskTracker.completeJob(processNIF(Mesh, nullptr, true, true, &ConflictMods, &ConflictModsMutex));
+      TaskTracker.completeJob(processNIF(Patchers, Mesh, nullptr, true, true, &ConflictMods, &ConflictModsMutex));
     }
   }
 
@@ -266,9 +269,11 @@ auto ParallaxGen::getOutputZipName() -> filesystem::path { return "ParallaxGen_O
 auto ParallaxGen::getDiffJSONName() -> filesystem::path { return "ParallaxGen_Diff.json"; }
 
 // shorten some enum names
-auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json *DiffJSON, const bool &PatchPlugin,
-                             const bool &Dry, unordered_map<wstring, set<NIFUtil::ShapeShader>> *ConflictMods,
-                             mutex *ConflictModsMutex) -> ParallaxGenTask::PGResult {
+auto ParallaxGen::processNIF(
+    const std::vector<std::function<std::unique_ptr<PatcherShader>(std::filesystem::path, nifly::NifFile *)>> &Patchers,
+    const filesystem::path &NIFFile, nlohmann::json *DiffJSON, const bool &PatchPlugin, const bool &Dry,
+    unordered_map<wstring, set<NIFUtil::ShapeShader>> *ConflictMods,
+    mutex *ConflictModsMutex) -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   Logger::Prefix PrefixNIF(NIFFile.wstring());
@@ -296,12 +301,12 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json *Di
   // Stores whether the NIF has been modified throughout the patching process
   bool NIFModified = false;
 
-  // Create Patcher objects
-  PatcherVanillaParallax PatchVP(NIFFile, &NIF);
-  PatcherComplexMaterial PatchCM(NIFFile, &NIF);
-  PatcherTruePBR PatchTPBR(NIFFile, &NIF);
-  // Ordered to shader priority
-  const vector<PatcherShader *> PatcherList = {&PatchVP, &PatchCM, &PatchTPBR};
+  // Loop through factory
+  vector<unique_ptr<PatcherShader>> PatcherList;
+  for (const auto &PatcherFactory : Patchers) {
+    auto Patcher = PatcherFactory(NIFFile, &NIF);
+    PatcherList.push_back(std::move(Patcher));
+  }
 
   // Patch each shape in NIF
   size_t NumShapes = 0;
@@ -334,8 +339,8 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json *Di
         wstring ResultMatchedPath;
         unordered_set<NIFUtil::TextureSlots> ResultMatchedFrom;
         array<wstring, NUM_TEXTURE_SLOTS> NewSlots;
-        ParallaxGenPlugin::processShape(ShaderApplied, NIFFile.wstring(), ShapeName, OldShapeIndex, NewShapeIndex, PatcherList,
-                                        ResultMatchedPath, ResultMatchedFrom, NewSlots);
+        ParallaxGenPlugin::processShape(ShaderApplied, NIFFile.wstring(), ShapeName, OldShapeIndex, NewShapeIndex,
+                                        PatcherList, ResultMatchedPath, ResultMatchedFrom, NewSlots);
 
         // Post warnings if any
         for (const auto &CurMatchedFrom : ResultMatchedFrom) {
@@ -406,7 +411,7 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json *Di
 }
 
 auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, NiShape *NIFShape, const int &ShapeIndex,
-                               const vector<PatcherShader *> &Patchers, bool &ShapeModified, bool &ShapeDeleted,
+                               const vector<unique_ptr<PatcherShader>> &Patchers, bool &ShapeModified, bool &ShapeDeleted,
                                NIFUtil::ShapeShader &ShaderApplied, const bool &Dry,
                                unordered_map<wstring, set<NIFUtil::ShapeShader>> *ConflictMods,
                                mutex *ConflictModsMutex) -> ParallaxGenTask::PGResult {
@@ -470,7 +475,7 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
 
   // Loop through each shader
   if (!CacheExists) {
-    for (auto *Patcher : Patchers) {
+    for (const auto &Patcher : Patchers) {
       Logger::Prefix PrefixPatches(strToWstr(Patcher->getPatcherName()));
 
       // Check if shader should be applied
@@ -552,7 +557,7 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
 
   // loop through patchers
   array<wstring, NUM_TEXTURE_SLOTS> NewSlots;
-  for (auto *Patcher : Patchers) {
+  for (const auto &Patcher : Patchers) {
     if (Patcher->getShaderType() != WinningShader) {
       continue;
     }

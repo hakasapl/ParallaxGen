@@ -1,5 +1,6 @@
 #include <CLI/CLI.hpp>
 
+#include <NifFile.hpp>
 #include <spdlog/common.h>
 #include <spdlog/logger.h>
 #include <spdlog/sinks/rotating_file_sink.h>
@@ -31,7 +32,9 @@
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenPlugin.hpp"
 #include "ParallaxGenUI.hpp"
+#include "patchers/PatcherVanillaParallax.hpp"
 #include "patchers/PatcherComplexMaterial.hpp"
+#include "patchers/PatcherShader.hpp"
 #include "patchers/PatcherTruePBR.hpp"
 
 constexpr unsigned MAX_LOG_SIZE = 5242880;
@@ -169,12 +172,23 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
     MMType = ModManagerDirectory::ModManagerType::ModOrganizer2;
   }
 
+  // Create patcher factory
+  vector<function<unique_ptr<PatcherShader>(filesystem::path, nifly::NifFile*)>> PatcherFactories;
+  if (!Args.IgnoreParallax) {
+    PatcherFactories.emplace_back([](const filesystem::path &NIFFile, nifly::NifFile* NIF) { return make_unique<PatcherVanillaParallax>(NIFFile, NIF); });
+  }
+  if (!Args.IgnoreComplexMaterial) {
+    PatcherFactories.emplace_back([](const filesystem::path &NIFFile, nifly::NifFile* NIF) { return make_unique<PatcherComplexMaterial>(NIFFile, NIF); });
+  }
+  if (!Args.IgnoreTruePBR) {
+    PatcherFactories.emplace_back([](const filesystem::path &NIFFile, nifly::NifFile* NIF) { return make_unique<PatcherTruePBR>(NIFFile, NIF); });
+  }
+
   auto MMD = ModManagerDirectory(MMType);
   auto PGD = ParallaxGenDirectory(BG, Args.OutputDir, &MMD);
   auto PGC = ParallaxGenConfig(ExePath);
   auto PGD3D = ParallaxGenD3D(&PGD, Args.OutputDir, ExePath, !Args.NoGPU);
-  auto PG = ParallaxGen(Args.OutputDir, &PGD, &PGC, &PGD3D, Args.OptimizeMeshes, Args.IgnoreParallax,
-                        Args.IgnoreComplexMaterial, Args.IgnoreTruePBR, Args.UpgradeShaders);
+  auto PG = ParallaxGen(Args.OutputDir, &PGD, &PGC, &PGD3D, Args.OptimizeMeshes, Args.UpgradeShaders);
 
   // Initialize UI
   ParallaxGenUI::init();
@@ -270,7 +284,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   if (MMType != ModManagerDirectory::ModManagerType::None) {
     // Find conflicts
-    const auto ModConflicts = PG.findModConflicts(!Args.NoMultithread, !Args.NoPlugin);
+    const auto ModConflicts = PG.findModConflicts(PatcherFactories, !Args.NoMultithread, !Args.NoPlugin);
     const auto ExistingOrder = PGC.getModOrder();
 
     // pause timer for UI
@@ -285,7 +299,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   // Patch meshes if set
   if (!Args.IgnoreParallax || !Args.IgnoreComplexMaterial || !Args.IgnoreTruePBR) {
-    PG.patchMeshes(!Args.NoMultithread, !Args.NoPlugin);
+    PG.patchMeshes(PatcherFactories, !Args.NoMultithread, !Args.NoPlugin);
   }
 
   // Release cached files, if any
@@ -371,14 +385,14 @@ void addArguments(CLI::App &App, ParallaxGenCLIArgs &Args, const filesystem::pat
   App.add_flag("--no-zip", Args.NoZip, "Don't zip the output meshes (also enables --no-cleanup)");
   App.add_flag("--no-cleanup", Args.NoCleanup, "Don't delete generated meshes after zipping");
   // Patchers
-  App.add_flag("--upgrade-shaders", Args.UpgradeShaders, "Upgrade shaders to a better version whenever possible")
-      ->excludes(FlagNoGpu);
-  App.add_flag("--ignore-parallax", Args.IgnoreParallax, "Don't generate any parallax meshes");
+  auto *FlagIgnoreParallax = App.add_flag("--ignore-parallax", Args.IgnoreParallax, "Don't generate any parallax meshes");
   auto *FlagIgnoreCM = App.add_flag("--ignore-complex-material", Args.IgnoreComplexMaterial,
                                     "Don't generate any complex material meshes");
   App.add_flag("--ignore-truepbr", Args.IgnoreTruePBR, "Don't apply any TruePBR configs in the load order");
   App.add_flag("--disable-mlp", Args.DisableMLP, "Disable MLP (Multi-Layer Parallax) if complex material is possible")
       ->excludes(FlagIgnoreCM);
+  App.add_flag("--upgrade-shaders", Args.UpgradeShaders, "Upgrade shaders to a better version whenever possible")
+      ->excludes(FlagNoGpu)->excludes(FlagIgnoreParallax)->excludes(FlagIgnoreCM);
 
   // Multi-argument Validation
   App.callback([&Args, &ExePath]() {
