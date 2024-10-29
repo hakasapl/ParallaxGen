@@ -165,7 +165,7 @@ auto ParallaxGenUI::selectModOrder(const std::unordered_map<std::wstring, std::s
 
       vector<wstring> ShaderStrs;
       for (const auto &Shader : Conflicts.at(Mod)) {
-        ShaderStrs.push_back(ParallaxGenUtil::strToWstr(NIFUtil::getStrFromShader(Shader)));
+        ShaderStrs.insert(ShaderStrs.begin(), ParallaxGenUtil::strToWstr(NIFUtil::getStrFromShader(Shader)));
       }
 
       auto ShaderStr = boost::join(ShaderStrs, L",");
@@ -185,7 +185,7 @@ auto ParallaxGenUI::selectModOrder(const std::unordered_map<std::wstring, std::s
 
     vector<wstring> ShaderStrs;
     for (const auto &Shader : ConflictsCopy.at(Mod)) {
-      ShaderStrs.push_back(ParallaxGenUtil::strToWstr(NIFUtil::getStrFromShader(Shader)));
+      ShaderStrs.insert(ShaderStrs.begin(), ParallaxGenUtil::strToWstr(NIFUtil::getStrFromShader(Shader)));
     }
 
     auto ShaderStr = boost::join(ShaderStrs, L",");
