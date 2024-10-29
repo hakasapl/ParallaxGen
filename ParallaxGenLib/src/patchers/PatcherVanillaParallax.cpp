@@ -34,19 +34,6 @@ auto PatcherVanillaParallax::shouldApply(NiShape &NIFShape,
     return false;
   }
 
-  // Get slots
-  auto OldSlots = NIFUtil::getTextureSlots(getNIF(), &NIFShape);
-
-  // Check if parallax map exists
-  if (shouldApply(OldSlots, Matches)) {
-    for (const auto &MatchedPath : Matches) {
-      Logger::trace(L"Found Parallax map: {}", MatchedPath.MatchedPath);
-    }
-  } else {
-    Logger::trace(L"No Parallax map found");
-    return false;
-  }
-
   // ignore skinned meshes, these don't support Parallax
   if (NIFShape.HasSkinInstance() || NIFShape.IsSkinned()) {
     Logger::trace(L"Shape Rejected: Skinned mesh");
@@ -73,6 +60,18 @@ auto PatcherVanillaParallax::shouldApply(NiShape &NIFShape,
       NIFUtil::hasShaderFlag(NIFShaderBSLSP, SLSF2_RIM_LIGHTING) ||
       NIFUtil::hasShaderFlag(NIFShaderBSLSP, SLSF2_BACK_LIGHTING)) {
     Logger::trace(L"Shape Rejected: Lighting on shape");
+    return false;
+  }
+
+  // Get slots
+  auto OldSlots = NIFUtil::getTextureSlots(getNIF(), &NIFShape);
+  // Check if parallax map exists
+  if (shouldApply(OldSlots, Matches)) {
+    for (const auto &MatchedPath : Matches) {
+      Logger::trace(L"Found Parallax map: {}", MatchedPath.MatchedPath);
+    }
+  } else {
+    Logger::trace(L"No Parallax map found");
     return false;
   }
 

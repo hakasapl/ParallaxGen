@@ -250,7 +250,7 @@ void ParallaxGenPlugin::initialize(const BethesdaGame &Game) {
 void ParallaxGenPlugin::populateObjs() { libPopulateObjs(); }
 
 void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, const wstring &NIFPath,
-                                     const wstring &Name3D, const int &Index3DOld, const int &Index3DNew, const vector<PatcherShader *> &Patchers,
+                                     const wstring &Name3D, const int &Index3DOld, const int &Index3DNew, const vector<unique_ptr<PatcherShader>> &Patchers,
                                      std::wstring &ResultMatchedPath,
                                      std::unordered_set<NIFUtil::TextureSlots> &ResultMatchedFrom,
                                      std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots) {
@@ -312,7 +312,10 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
       }
 
       vector<PatcherShader::PatcherMatch> CurMatches;
-      Patcher->shouldApply(BaseSlots, CurMatches);
+      if (!Patcher->shouldApply(BaseSlots, CurMatches)) {
+        break;
+      }
+
       for (const auto &Match : CurMatches) {
         Matches.emplace_back(PGD->getMod(Match.MatchedPath), Match);
       }
