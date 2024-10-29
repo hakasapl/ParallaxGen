@@ -9,9 +9,6 @@
 #include "ParallaxGenConfig.hpp"
 #include "ParallaxGenMutagenWrapperNE.h"
 #include "ParallaxGenUtil.hpp"
-#include "Patchers/PatcherComplexMaterial.hpp"
-#include "Patchers/PatcherTruePBR.hpp"
-#include "Patchers/PatcherVanillaParallax.hpp"
 
 using namespace std;
 
@@ -253,7 +250,7 @@ void ParallaxGenPlugin::initialize(const BethesdaGame &Game) {
 void ParallaxGenPlugin::populateObjs() { libPopulateObjs(); }
 
 void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, const wstring &NIFPath,
-                                     const wstring &Name3D, const int &Index3DOld, const int &Index3DNew,
+                                     const wstring &Name3D, const int &Index3DOld, const int &Index3DNew, const vector<PatcherShader *> &Patchers,
                                      std::wstring &ResultMatchedPath,
                                      std::unordered_set<NIFUtil::TextureSlots> &ResultMatchedFrom,
                                      std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots) {
@@ -306,31 +303,26 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
 
     auto SearchPrefixes = NIFUtil::getSearchPrefixes(BaseSlots);
 
-    vector<NIFUtil::PatcherMatch> PatcherMatches;
-    vector<tuple<wstring, NIFUtil::PatcherMatch>> Matches;
 
-    string ShaderLabel;
-    if (AppliedShader == NIFUtil::ShapeShader::VANILLAPARALLAX) {
-      ShaderLabel = "Parallax";
-      PatcherVanillaParallax::shouldApply(BaseSlots, PatcherMatches);
-    } else if (AppliedShader == NIFUtil::ShapeShader::COMPLEXMATERIAL) {
-      ShaderLabel = "Complex Material";
-      PatcherComplexMaterial::shouldApply(BaseSlots, PatcherMatches);
-    } else if (AppliedShader == NIFUtil::ShapeShader::TRUEPBR) {
-      ShaderLabel = "TruePBR";
-      PatcherTruePBR::shouldApply(BaseSlots, NIFPath, PatcherMatches);
-    } else {
-      continue;
-    }
+    vector<tuple<wstring, PatcherShader::PatcherMatch>> Matches;
 
-    Matches.reserve(PatcherMatches.size());
-    for (const auto &Match : PatcherMatches) {
-      Matches.emplace_back(PGD->getMod(Match.MatchedPath), Match);
+    for (const auto &Patcher : Patchers) {
+      if (Patcher->getShaderType() != AppliedShader) {
+        continue;
+      }
+
+      vector<PatcherShader::PatcherMatch> CurMatches;
+      Patcher->shouldApply(BaseSlots, CurMatches);
+      for (const auto &Match : CurMatches) {
+        Matches.emplace_back(PGD->getMod(Match.MatchedPath), Match);
+      }
+
+      break;
     }
 
     // Find winning mod
     int MaxPriority = -1;
-    NIFUtil::PatcherMatch WinningMatch;
+    PatcherShader::PatcherMatch WinningMatch;
     wstring DecisionMod;
 
     const auto MeshFilePriority = PGC->getModPriority(PGD->getMod(NIFPath));
@@ -364,7 +356,7 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
 
       TXSTWarningMap[TXSTIndex] = AppliedShader;
       const auto [FormID, PluginName] = libGetTXSTFormID(TXSTIndex);
-      spdlog::warn(L"TXST record is not able to patched for {}: {} / {:06X}", ParallaxGenUtil::strToWstr(ShaderLabel),
+      spdlog::warn(L"TXST record is not able to patched for {}: {} / {:06X}", ParallaxGenUtil::strToWstr(NIFUtil::getStrFromShader(AppliedShader)),
                    PluginName, FormID);
       continue;
     }
@@ -373,12 +365,14 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
     ResultMatchedFrom = WinningMatch.MatchedFrom;
 
     // Get new slots
-    if (AppliedShader == NIFUtil::ShapeShader::VANILLAPARALLAX) {
-      NewSlots = PatcherVanillaParallax::applyPatchSlots(BaseSlots, WinningMatch);
-    } else if (AppliedShader == NIFUtil::ShapeShader::COMPLEXMATERIAL) {
-      NewSlots = PatcherComplexMaterial::applyPatchSlots(BaseSlots, WinningMatch, NIFPath);
-    } else if (AppliedShader == NIFUtil::ShapeShader::TRUEPBR) {
-      NewSlots = PatcherTruePBR::applyPatchSlots(BaseSlots, WinningMatch);
+    for (const auto &Patcher : Patchers) {
+      if (Patcher->getShaderType() != AppliedShader) {
+        continue;
+      }
+
+      // apply patch
+      NewSlots = Patcher->applyPatchSlots(BaseSlots, WinningMatch);
+      break;
     }
 
     // Check if oldprefix is the same as newprefix

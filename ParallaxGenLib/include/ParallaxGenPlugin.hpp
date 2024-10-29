@@ -9,6 +9,7 @@
 #include "NIFUtil.hpp"
 #include "ParallaxGenConfig.hpp"
 #include "ParallaxGenDirectory.hpp"
+#include "patchers/PatcherShader.hpp"
 
 #define LOG_POLL_INTERVAL 1000
 
@@ -51,7 +52,7 @@ public:
   static void populateObjs();
 
   static void processShape(const NIFUtil::ShapeShader &AppliedShader, const std::wstring &NIFPath,
-                           const std::wstring &Name3D, const int &Index3DOld, const int &Index3DNew, std::wstring& ResultMatchedPath, std::unordered_set<NIFUtil::TextureSlots> &ResultMatchedFrom, std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots);
+                           const std::wstring &Name3D, const int &Index3DOld, const int &Index3DNew, const std::vector<PatcherShader *> &Patchers, std::wstring& ResultMatchedPath, std::unordered_set<NIFUtil::TextureSlots> &ResultMatchedFrom, std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots);
 
   static void savePlugin(const std::filesystem::path &OutputDir);
 };

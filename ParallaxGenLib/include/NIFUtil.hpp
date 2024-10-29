@@ -72,13 +72,6 @@ struct PGTextureHasher {
   }
 };
 
-// Holds a potential match from a patcher
-struct PatcherMatch {
-  std::wstring MatchedPath;  // The path of the matched file
-  std::unordered_set<TextureSlots> MatchedFrom;  // The texture slots that the match matched with
-  std::shared_ptr<void> ExtraData;  // Any extra data the patcher might need intermally to do the patch
-};
-
 auto getDefaultTextureType(const TextureSlots &Slot) -> TextureType;
 
 auto loadNIFFromBytes(const std::vector<std::byte> &NIFBytes) -> nifly::NifFile;

@@ -5,6 +5,7 @@
 #include <miniz.h>
 #include <mutex>
 #include <nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
 #include <string>
 #include <unordered_set>
 
@@ -13,9 +14,7 @@
 #include "ParallaxGenD3D.hpp"
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenTask.hpp"
-#include "patchers/PatcherComplexMaterial.hpp"
-#include "patchers/PatcherTruePBR.hpp"
-#include "patchers/PatcherVanillaParallax.hpp"
+#include "patchers/PatcherShader.hpp"
 
 #define MESHES_LENGTH 7
 
@@ -88,7 +87,9 @@ private:
     std::wstring MatchedPath;
     std::unordered_set<NIFUtil::TextureSlots> MatchedFrom;
   };
-  std::unordered_map<ShapeKey, std::vector<std::tuple<std::wstring, NIFUtil::ShapeShader, NIFUtil::PatcherMatch>>, ShapeKeyHash> AllowedShadersCache;
+  std::unordered_map<ShapeKey, std::vector<std::tuple<std::wstring, NIFUtil::ShapeShader, PatcherShader::PatcherMatch>>,
+                     ShapeKeyHash>
+      AllowedShadersCache;
   std::mutex AllowedShadersCacheMutex;
 
 public:
@@ -133,9 +134,8 @@ private:
 
   // processes a shape within a NIF file
   auto processShape(const std::filesystem::path &NIFPath, nifly::NifFile &NIF, nifly::NiShape *NIFShape,
-                    const int &ShapeIndex, PatcherVanillaParallax &PatchVP, PatcherComplexMaterial &PatchCM,
-                    PatcherTruePBR &PatchTPBR, bool &ShapeModified, bool &ShapeDeleted,
-                    NIFUtil::ShapeShader &ShaderApplied, const bool &Dry = false,
+                    const int &ShapeIndex, const std::vector<PatcherShader *> &Patchers, bool &ShapeModified,
+                    bool &ShapeDeleted, NIFUtil::ShapeShader &ShaderApplied, const bool &Dry = false,
                     std::unordered_map<std::wstring, std::set<NIFUtil::ShapeShader>> *ConflictMods = nullptr,
                     std::mutex *ConflictModsMutex = nullptr) -> ParallaxGenTask::PGResult;
 

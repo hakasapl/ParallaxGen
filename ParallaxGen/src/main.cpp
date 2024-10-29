@@ -33,7 +33,6 @@
 #include "ParallaxGenUI.hpp"
 #include "patchers/PatcherComplexMaterial.hpp"
 #include "patchers/PatcherTruePBR.hpp"
-#include "patchers/PatcherVanillaParallax.hpp"
 
 constexpr unsigned MAX_LOG_SIZE = 5242880;
 constexpr unsigned MAX_LOG_FILES = 100;
@@ -264,9 +263,10 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   spdlog::info("Done finding complex material env maps");
 
   // Load patcher static vars
-  PatcherTruePBR::loadPatcherBuffers(PGD.getPBRJSONs(), &PGD);
-  PatcherComplexMaterial::loadStatics(PGC.getDynCubemapBlocklist(), Args.DisableMLP, &PGD, &PGC, &PGD3D);
-  PatcherVanillaParallax::loadStatics(&PGD, &PGC, &PGD3D);
+  PatcherShader::loadStatics(PGD, PGD3D);
+  PatcherTruePBR::loadStatics(PGD.getPBRJSONs());
+  PatcherComplexMaterial::loadStatics(Args.DisableMLP, PGC.getDynCubemapBlocklist());
+  //PatcherVanillaParallax::loadStatics();
 
   if (MMType != ModManagerDirectory::ModManagerType::None) {
     // Find conflicts

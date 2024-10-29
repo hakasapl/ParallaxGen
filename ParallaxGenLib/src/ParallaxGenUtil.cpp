@@ -65,4 +65,11 @@ auto getFileBytes(const filesystem::path &FilePath) -> vector<std::byte> {
   return Buffer;
 }
 
+auto getThreadID() -> string {
+  // Get the current thread ID
+    std::ostringstream OSS;
+    OSS << std::this_thread::get_id();
+    return OSS.str();
+}
+
 } // namespace ParallaxGenUtil
