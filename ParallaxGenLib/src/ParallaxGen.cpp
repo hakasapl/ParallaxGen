@@ -475,7 +475,10 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
 
       // Check if shader should be applied
       vector<PatcherShader::PatcherMatch> CurMatches;
-      Patcher->shouldApply(*NIFShape, CurMatches);
+      if (!Patcher->shouldApply(*NIFShape, CurMatches)) {
+        Logger::trace(L"Rejecting: Shader not applicable");
+        continue;
+      }
 
       for (const auto &Match : CurMatches) {
         Matches.emplace_back(PGD->getMod(Match.MatchedPath), Patcher->getShaderType(), Match);

@@ -312,7 +312,10 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
       }
 
       vector<PatcherShader::PatcherMatch> CurMatches;
-      Patcher->shouldApply(BaseSlots, CurMatches);
+      if (!Patcher->shouldApply(BaseSlots, CurMatches)) {
+        break;
+      }
+
       for (const auto &Match : CurMatches) {
         Matches.emplace_back(PGD->getMod(Match.MatchedPath), Match);
       }

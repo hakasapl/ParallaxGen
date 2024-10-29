@@ -27,18 +27,6 @@ auto PatcherComplexMaterial::shouldApply(NiShape &NIFShape, std::vector<PatcherM
 
   auto *NIFShader = getNIF()->GetShader(&NIFShape);
 
-  // Get slots
-  auto OldSlots = NIFUtil::getTextureSlots(getNIF(), &NIFShape);
-
-  if (shouldApply(OldSlots, Matches)) {
-    for (const auto &MatchedPath : Matches) {
-      Logger::trace(L"Found CM map: {}", MatchedPath.MatchedPath);
-    }
-  } else {
-    Logger::trace(L"No CM map found");
-    return false;
-  }
-
   // Get NIFShader type
   auto NIFShaderType = static_cast<nifly::BSLightingShaderPropertyShaderType>(NIFShader->GetShaderType());
   if (NIFShaderType != BSLSP_DEFAULT && NIFShaderType != BSLSP_ENVMAP && NIFShaderType != BSLSP_PARALLAX &&
@@ -53,6 +41,17 @@ auto PatcherComplexMaterial::shouldApply(NiShape &NIFShape, std::vector<PatcherM
        !NIFUtil::getTextureSlot(getNIF(), &NIFShape, NIFUtil::TextureSlots::TINT).empty() ||
        !NIFUtil::getTextureSlot(getNIF(), &NIFShape, NIFUtil::TextureSlots::BACKLIGHT).empty())) {
     Logger::trace(L"Shape Rejected: Texture defined in slots 3,7,or 8");
+    return false;
+  }
+
+  // Get slots
+  auto OldSlots = NIFUtil::getTextureSlots(getNIF(), &NIFShape);
+  if (shouldApply(OldSlots, Matches)) {
+    for (const auto &MatchedPath : Matches) {
+      Logger::trace(L"Found CM map: {}", MatchedPath.MatchedPath);
+    }
+  } else {
+    Logger::trace(L"No CM map found");
     return false;
   }
 
