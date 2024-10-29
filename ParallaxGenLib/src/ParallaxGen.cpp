@@ -530,23 +530,31 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
 
   const auto MeshFilePriority = PGC->getModPriority(PGD->getMod(NIFPath));
   for (const auto &[Mod, Shader, Match] : Matches) {
+    Logger::Prefix PrefixMod(Mod);
+    Logger::trace(L"Checking mod");
+
     auto CurPriority = PGC->getModPriority(Mod);
 
     if (CurPriority < MeshFilePriority) {
       // skip mods with lower priority than mesh file
+      Logger::trace(L"Rejecting: Mod has lower priority than mesh file");
       continue;
     }
 
     if (CurPriority < MaxPriority) {
       // skip mods with lower priority than current winner
+      Logger::trace(L"Rejecting: Mod has lower priority than current winner");
       continue;
     }
 
+    Logger::trace(L"Mod accepted");
     MaxPriority = CurPriority;
     WinningShader = Shader;
     WinningMatch = Match;
     DecisionMod = Mod;
   }
+
+  Logger::trace(L"Winning mod: {}", DecisionMod);
 
   // Upgrade shader if required
   if (WinningShader == NIFUtil::ShapeShader::VANILLAPARALLAX && UpgradeShaders) {

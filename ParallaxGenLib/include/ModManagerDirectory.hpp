@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 class ModManagerDirectory {
 
@@ -15,6 +16,8 @@ public:
 
 private:
   std::unordered_map<std::filesystem::path, std::wstring> ModFileMap;
+
+  std::unordered_set<std::wstring> AllMods;
 
   std::filesystem::path StagingDir;
   std::filesystem::path RequiredFile;

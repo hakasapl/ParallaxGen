@@ -7,12 +7,10 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
-
 #include <boost/algorithm/string/join.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/stacktrace/stacktrace.hpp>
-
 
 #include <windows.h>
 
@@ -32,10 +30,11 @@
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenPlugin.hpp"
 #include "ParallaxGenUI.hpp"
-#include "patchers/PatcherVanillaParallax.hpp"
 #include "patchers/PatcherComplexMaterial.hpp"
 #include "patchers/PatcherShader.hpp"
 #include "patchers/PatcherTruePBR.hpp"
+#include "patchers/PatcherVanillaParallax.hpp"
+
 
 constexpr unsigned MAX_LOG_SIZE = 5242880;
 constexpr unsigned MAX_LOG_FILES = 100;
@@ -173,15 +172,20 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   }
 
   // Create patcher factory
-  vector<function<unique_ptr<PatcherShader>(filesystem::path, nifly::NifFile*)>> PatcherFactories;
+  vector<function<unique_ptr<PatcherShader>(filesystem::path, nifly::NifFile *)>> PatcherFactories;
   if (!Args.IgnoreParallax) {
-    PatcherFactories.emplace_back([](const filesystem::path &NIFFile, nifly::NifFile* NIF) { return make_unique<PatcherVanillaParallax>(NIFFile, NIF); });
+    PatcherFactories.emplace_back([](const filesystem::path &NIFFile, nifly::NifFile *NIF) {
+      return make_unique<PatcherVanillaParallax>(NIFFile, NIF);
+    });
   }
   if (!Args.IgnoreComplexMaterial) {
-    PatcherFactories.emplace_back([](const filesystem::path &NIFFile, nifly::NifFile* NIF) { return make_unique<PatcherComplexMaterial>(NIFFile, NIF); });
+    PatcherFactories.emplace_back([](const filesystem::path &NIFFile, nifly::NifFile *NIF) {
+      return make_unique<PatcherComplexMaterial>(NIFFile, NIF);
+    });
   }
   if (!Args.IgnoreTruePBR) {
-    PatcherFactories.emplace_back([](const filesystem::path &NIFFile, nifly::NifFile* NIF) { return make_unique<PatcherTruePBR>(NIFFile, NIF); });
+    PatcherFactories.emplace_back(
+        [](const filesystem::path &NIFFile, nifly::NifFile *NIF) { return make_unique<PatcherTruePBR>(NIFFile, NIF); });
   }
 
   auto MMD = ModManagerDirectory(MMType);
@@ -280,7 +284,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   PatcherShader::loadStatics(PGD, PGD3D);
   PatcherTruePBR::loadStatics(PGD.getPBRJSONs());
   PatcherComplexMaterial::loadStatics(Args.DisableMLP, PGC.getDynCubemapBlocklist());
-  //PatcherVanillaParallax::loadStatics();
+  // PatcherVanillaParallax::loadStatics();
 
   if (MMType != ModManagerDirectory::ModManagerType::None) {
     // Find conflicts
@@ -385,14 +389,17 @@ void addArguments(CLI::App &App, ParallaxGenCLIArgs &Args, const filesystem::pat
   App.add_flag("--no-zip", Args.NoZip, "Don't zip the output meshes (also enables --no-cleanup)");
   App.add_flag("--no-cleanup", Args.NoCleanup, "Don't delete generated meshes after zipping");
   // Patchers
-  auto *FlagIgnoreParallax = App.add_flag("--ignore-parallax", Args.IgnoreParallax, "Don't generate any parallax meshes");
+  auto *FlagIgnoreParallax =
+      App.add_flag("--ignore-parallax", Args.IgnoreParallax, "Don't generate any parallax meshes");
   auto *FlagIgnoreCM = App.add_flag("--ignore-complex-material", Args.IgnoreComplexMaterial,
                                     "Don't generate any complex material meshes");
   App.add_flag("--ignore-truepbr", Args.IgnoreTruePBR, "Don't apply any TruePBR configs in the load order");
   App.add_flag("--disable-mlp", Args.DisableMLP, "Disable MLP (Multi-Layer Parallax) if complex material is possible")
       ->excludes(FlagIgnoreCM);
   App.add_flag("--upgrade-shaders", Args.UpgradeShaders, "Upgrade shaders to a better version whenever possible")
-      ->excludes(FlagNoGpu)->excludes(FlagIgnoreParallax)->excludes(FlagIgnoreCM);
+      ->excludes(FlagNoGpu)
+      ->excludes(FlagIgnoreParallax)
+      ->excludes(FlagIgnoreCM);
 
   // Multi-argument Validation
   App.callback([&Args, &ExePath]() {
@@ -421,6 +428,11 @@ void addArguments(CLI::App &App, ParallaxGenCLIArgs &Args, const filesystem::pat
     // If --no-zip is set, also set --no-cleanup
     if (Args.NoZip) {
       Args.NoCleanup = true;
+    }
+
+    if (Args.ModManagerType == "mo2" && Args.MO2InstanceDir.empty()) {
+      throw CLI::ValidationError("MO2 instance directory must be specified with --mo2-instance-dir when using \"mo2\" "
+                                 "mod manager type");
     }
   });
 }

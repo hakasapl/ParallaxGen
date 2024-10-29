@@ -32,6 +32,10 @@ void ModManagerDirectory::populateModFileMap() {
     default:
       break;
   }
+
+  for (const auto &Mod : AllMods) {
+    spdlog::debug(L"ModManagerDirectory Found Mod : {}", Mod);
+  }
 }
 
 auto ModManagerDirectory::getModFileMap() const -> const unordered_map<filesystem::path, wstring> & {
@@ -76,6 +80,8 @@ void ModManagerDirectory::populateModFileMapVortex() {
     const static wregex VortexSuffixRe(L"-[0-9]+-.*");
     ModName = regex_replace(ModName, VortexSuffixRe, L"");
 
+    AllMods.insert(ModName);
+
     // Update file map
     spdlog::trace(L"ModManagerDirectory | Adding Files to Map : {} -> {}", RelPath.wstring(), ModName);
     ModFileMap[boost::to_lower_copy(RelPath.wstring())] = boost::to_lower_copy(ModName);
@@ -118,6 +124,7 @@ void ModManagerDirectory::populateModFileMapMO2() {
 
     // loop through all files in mod
     Mod.erase(0, 1);  // remove +
+    AllMods.insert(Mod);
     auto ModDir = StagingDir / Mod;
     if (!filesystem::exists(ModDir)) {
       spdlog::warn(L"Mod directory from modlist.txt does not exist: {}", ModDir.wstring());
