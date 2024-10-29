@@ -2,6 +2,7 @@
 set(HEADERS
     "include/BethesdaGame.hpp"
     "include/BethesdaDirectory.hpp"
+    "include/Logger.hpp"
     "include/ModManagerDirectory.hpp"
     "include/NIFUtil.hpp"
     "include/ParallaxGen.hpp"
@@ -21,6 +22,7 @@ set(HEADERS
 set(SOURCES
     "src/BethesdaGame.cpp"
     "src/BethesdaDirectory.cpp"
+    "src/Logger.cpp"
     "src/ModManagerDirectory.cpp"
     "src/NIFUtil.cpp"
     "src/ParallaxGen.cpp"

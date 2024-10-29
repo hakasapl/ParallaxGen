@@ -2,8 +2,7 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include <spdlog/spdlog.h>
-
+#include "Logger.hpp"
 #include "NIFUtil.hpp"
 
 using namespace std;
@@ -24,14 +23,14 @@ PatcherVanillaParallax::PatcherVanillaParallax(filesystem::path NIFPath, nifly::
 auto PatcherVanillaParallax::shouldApply(NiShape &NIFShape,
                                          vector<PatcherShader::PatcherMatch> &Matches) -> bool {
   // Prep
-  spdlog::trace(L"Starting checking");
+  Logger::trace(L"Starting checking");
 
   auto *NIFShader = getNIF()->GetShader(&NIFShape);
   auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
 
   // Check if nif has attached havok (Results in crashes for vanilla Parallax)
   if (HasAttachedHavok) {
-    spdlog::trace("Shape Rejected: Attached havok animations");
+    Logger::trace(L"Shape Rejected: Attached havok animations");
     return false;
   }
 
@@ -41,16 +40,16 @@ auto PatcherVanillaParallax::shouldApply(NiShape &NIFShape,
   // Check if parallax map exists
   if (shouldApply(OldSlots, Matches)) {
     for (const auto &MatchedPath : Matches) {
-      spdlog::trace(L"Found Parallax map: {}", MatchedPath.MatchedPath);
+      Logger::trace(L"Found Parallax map: {}", MatchedPath.MatchedPath);
     }
   } else {
-    spdlog::trace("No Parallax map found");
+    Logger::trace(L"No Parallax map found");
     return false;
   }
 
   // ignore skinned meshes, these don't support Parallax
   if (NIFShape.HasSkinInstance() || NIFShape.IsSkinned()) {
-    spdlog::trace("Shape Rejected: Skinned mesh");
+    Logger::trace(L"Shape Rejected: Skinned mesh");
     return false;
   }
 
@@ -58,14 +57,14 @@ auto PatcherVanillaParallax::shouldApply(NiShape &NIFShape,
   auto NIFShaderType = static_cast<nifly::BSLightingShaderPropertyShaderType>(NIFShader->GetShaderType());
   if (NIFShaderType != BSLSP_DEFAULT && NIFShaderType != BSLSP_PARALLAX && NIFShaderType != BSLSP_ENVMAP) {
     // don't overwrite existing NIFShaders
-    spdlog::trace("Shape Rejected: Incorrect NIFShader type");
+    Logger::trace(L"Shape Rejected: Incorrect NIFShader type");
     return false;
   }
 
   // decals don't work with regular Parallax
   if (NIFUtil::hasShaderFlag(NIFShaderBSLSP, SLSF1_DECAL) ||
       NIFUtil::hasShaderFlag(NIFShaderBSLSP, SLSF1_DYNAMIC_DECAL)) {
-    spdlog::trace("Shape Rejected: Shape has decal");
+    Logger::trace(L"Shape Rejected: Shape has decal");
     return false;
   }
 
@@ -73,12 +72,12 @@ auto PatcherVanillaParallax::shouldApply(NiShape &NIFShape,
   if (NIFUtil::hasShaderFlag(NIFShaderBSLSP, SLSF2_SOFT_LIGHTING) ||
       NIFUtil::hasShaderFlag(NIFShaderBSLSP, SLSF2_RIM_LIGHTING) ||
       NIFUtil::hasShaderFlag(NIFShaderBSLSP, SLSF2_BACK_LIGHTING)) {
-    spdlog::trace("Shape Rejected: Lighting on shape");
+    Logger::trace(L"Shape Rejected: Lighting on shape");
     return false;
   }
 
   // All checks passed
-  spdlog::trace("Shape Accepted");
+  Logger::trace(L"Shape Accepted");
   return true;
 }
 

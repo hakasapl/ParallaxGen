@@ -2,8 +2,8 @@
 
 #include <Shaders.hpp>
 #include <boost/algorithm/string.hpp>
-#include <spdlog/spdlog.h>
 
+#include "Logger.hpp"
 #include "NIFUtil.hpp"
 
 using namespace std;
@@ -23,7 +23,7 @@ PatcherComplexMaterial::PatcherComplexMaterial(filesystem::path NIFPath, nifly::
 
 auto PatcherComplexMaterial::shouldApply(NiShape &NIFShape, std::vector<PatcherMatch> &Matches) -> bool {
   // Prep
-  spdlog::trace("Starting checking");
+  Logger::trace(L"Starting checking");
 
   auto *NIFShader = getNIF()->GetShader(&NIFShape);
 
@@ -32,10 +32,10 @@ auto PatcherComplexMaterial::shouldApply(NiShape &NIFShape, std::vector<PatcherM
 
   if (shouldApply(OldSlots, Matches)) {
     for (const auto &MatchedPath : Matches) {
-      spdlog::trace(L"Found CM map: {}", MatchedPath.MatchedPath);
+      Logger::trace(L"Found CM map: {}", MatchedPath.MatchedPath);
     }
   } else {
-    spdlog::trace("No CM map found");
+    Logger::trace(L"No CM map found");
     return false;
   }
 
@@ -43,7 +43,7 @@ auto PatcherComplexMaterial::shouldApply(NiShape &NIFShape, std::vector<PatcherM
   auto NIFShaderType = static_cast<nifly::BSLightingShaderPropertyShaderType>(NIFShader->GetShaderType());
   if (NIFShaderType != BSLSP_DEFAULT && NIFShaderType != BSLSP_ENVMAP && NIFShaderType != BSLSP_PARALLAX &&
       (NIFShaderType != BSLSP_MULTILAYERPARALLAX || !DisableMLP)) {
-    spdlog::trace("Shape Rejected: Incorrect NIFShader type");
+    Logger::trace(L"Shape Rejected: Incorrect NIFShader type");
     return false;
   }
 
@@ -52,11 +52,11 @@ auto PatcherComplexMaterial::shouldApply(NiShape &NIFShape, std::vector<PatcherM
       (!NIFUtil::getTextureSlot(getNIF(), &NIFShape, NIFUtil::TextureSlots::GLOW).empty() ||
        !NIFUtil::getTextureSlot(getNIF(), &NIFShape, NIFUtil::TextureSlots::TINT).empty() ||
        !NIFUtil::getTextureSlot(getNIF(), &NIFShape, NIFUtil::TextureSlots::BACKLIGHT).empty())) {
-    spdlog::trace(L"Shape Rejected: Texture defined in slots 3,7,or 8");
+    Logger::trace(L"Shape Rejected: Texture defined in slots 3,7,or 8");
     return false;
   }
 
-  spdlog::trace("Shape Accepted");
+  Logger::trace(L"Shape Accepted");
   return true;
 }
 

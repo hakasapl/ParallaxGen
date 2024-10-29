@@ -18,6 +18,7 @@
 
 #include <d3d11.h>
 
+#include "Logger.hpp"
 #include "NIFUtil.hpp"
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenPlugin.hpp"
@@ -27,7 +28,6 @@
 #include "patchers/PatcherShader.hpp"
 #include "patchers/PatcherTruePBR.hpp"
 #include "patchers/PatcherVanillaParallax.hpp"
-
 
 using namespace std;
 using namespace ParallaxGenUtil;
@@ -271,12 +271,13 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json *Di
                              mutex *ConflictModsMutex) -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
-  spdlog::trace(L"NIF: {} | Starting processing", NIFFile.wstring());
+  Logger::Prefix PrefixNIF(NIFFile.wstring());
+  Logger::trace(L"Starting processing");
 
   // Determine output path for patched NIF
   const filesystem::path OutputFile = OutputDir / NIFFile;
   if (filesystem::exists(OutputFile)) {
-    spdlog::error(L"NIF: {} | NIF Rejected: File already exists", NIFFile.wstring());
+    Logger::error(L"NIF Rejected: File already exists");
     Result = ParallaxGenTask::PGResult::FAILURE;
     return Result;
   }
@@ -287,7 +288,7 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json *Di
   try {
     NIF = NIFUtil::loadNIFFromBytes(NIFFileData);
   } catch (const exception &E) {
-    spdlog::error(L"NIF: {} | NIF Rejected: Unable to load NIF: {}", NIFFile.wstring(), strToWstr(E.what()));
+    Logger::error(L"NIF Rejected: Unable to load NIF: {}", strToWstr(E.what()));
     Result = ParallaxGenTask::PGResult::FAILURE;
     return Result;
   }
@@ -308,6 +309,12 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json *Di
   int NewShapeIndex = 0;
   bool OneShapeSuccess = false;
   for (NiShape *NIFShape : NIF.GetShapes()) {
+    // get shape name and blockid
+    const auto ShapeBlockID = NIF.GetBlockID(NIFShape);
+    const auto ShapeName = strToWstr(NIFShape->name.get());
+    const auto ShapeIDStr = to_wstring(ShapeBlockID) + L" / " + ShapeName;
+    Logger::Prefix PrefixShape(ShapeIDStr);
+
     NumShapes++;
 
     bool ShapeModified = false;
@@ -324,8 +331,6 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json *Di
 
       if (PatchPlugin) {
         // Process plugin
-        auto ShapeName = strToWstr(NIFShape->name.get());
-
         wstring ResultMatchedPath;
         unordered_set<NIFUtil::TextureSlots> ResultMatchedFrom;
         array<wstring, NUM_TEXTURE_SLOTS> NewSlots;
@@ -369,12 +374,12 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json *Di
     filesystem::create_directories(OutputFile.parent_path());
 
     if (NIF.Save(OutputFile, NIFSaveOptions) != 0) {
-      spdlog::error(L"Unable to save NIF file: {}", NIFFile.wstring());
+      Logger::error(L"Unable to save NIF file");
       Result = ParallaxGenTask::PGResult::FAILURE;
       return Result;
     }
 
-    spdlog::debug(L"NIF: {} | Saving patched NIF to output", NIFFile.wstring());
+    Logger::debug(L"Saving patched NIF to output");
 
     // Clear NIF from memory (no longer needed)
     NIF.Clear();
@@ -408,20 +413,19 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Prep
-  const auto ShapeBlockID = NIF.GetBlockID(NIFShape);
-  spdlog::trace(L"NIF: {} | Shape: {} | Starting Processing", NIFPath.wstring(), ShapeBlockID);
+  Logger::trace(L"Starting Processing");
 
   // Check for exclusions
   // only allow BSLightingShaderProperty blocks
   string NIFShapeName = NIFShape->GetBlockName();
   if (NIFShapeName != "NiTriShape" && NIFShapeName != "BSTriShape") {
-    spdlog::trace(L"NIF: {} | Shape: {} | Rejecting: Incorrect shape block type", NIFPath.wstring(), ShapeBlockID);
+    Logger::trace(L"Rejecting: Incorrect shape block type");
     return Result;
   }
 
   // get NIFShader type
   if (!NIFShape->HasShaderProperty()) {
-    spdlog::trace(L"NIF: {} | Shape: {} | Rejecting: No NIFShader property", NIFPath.wstring(), ShapeBlockID);
+    Logger::trace(L"Rejecting: No NIFShader property");
     return Result;
   }
 
@@ -429,20 +433,20 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
   NiShader *NIFShader = NIF.GetShader(NIFShape);
   if (NIFShader == nullptr) {
     // skip if no NIFShader
-    spdlog::trace(L"NIF: {} | Shape: {} | Rejecting: No NIFShader property", NIFPath.wstring(), ShapeBlockID);
+    Logger::trace(L"Rejecting: No NIFShader property");
     return Result;
   }
 
   // check that NIFShader is a BSLightingShaderProperty
   string NIFShaderName = NIFShader->GetBlockName();
   if (NIFShaderName != "BSLightingShaderProperty") {
-    spdlog::trace(L"NIF: {} | Shape: {} | Rejecting: Incorrect NIFShader block type", NIFPath.wstring(), ShapeBlockID);
+    Logger::trace(L"Rejecting: Incorrect NIFShader block type");
     return Result;
   }
 
   // check that NIFShader has a texture set
   if (!NIFShader->HasTextureSet()) {
-    spdlog::trace(L"NIF: {} | Shape: {} | Rejecting: No texture set", NIFPath.wstring(), ShapeBlockID);
+    Logger::trace(L"Rejecting: No texture set");
     return Result;
   }
 
@@ -467,6 +471,8 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
   // Loop through each shader
   if (!CacheExists) {
     for (auto *Patcher : Patchers) {
+      Logger::Prefix PrefixPatches(strToWstr(Patcher->getPatcherName()));
+
       // Check if shader should be applied
       vector<PatcherShader::PatcherMatch> CurMatches;
       Patcher->shouldApply(*NIFShape, CurMatches);
@@ -485,7 +491,7 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
 
   if (Matches.empty()) {
     // no shaders to apply
-    spdlog::trace("Rejecting: No shaders to apply");
+    Logger::trace(L"Rejecting: No shaders to apply");
     return Result;
   }
 

@@ -428,6 +428,8 @@ void initLogger(const filesystem::path &LOGPATH, const ParallaxGenCLIArgs &Args)
   spdlog::set_level(spdlog::level::info);
   spdlog::flush_on(spdlog::level::info);
 
+  spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] %v");
+
   // Set logging mode
   if (Args.Verbosity >= 1) {
     spdlog::set_level(spdlog::level::debug);

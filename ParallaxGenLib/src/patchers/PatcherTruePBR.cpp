@@ -1,14 +1,15 @@
 #include "patchers/PatcherTruePBR.hpp"
-#include "NIFUtil.hpp"
-#include "ParallaxGenUtil.hpp"
 
 #include <Shaders.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <cstddef>
 #include <memory>
-#include <spdlog/spdlog.h>
 #include <string>
+
+#include "Logger.hpp"
+#include "NIFUtil.hpp"
+#include "ParallaxGenUtil.hpp"
 
 using namespace std;
 
@@ -70,17 +71,17 @@ void PatcherTruePBR::loadStatics(const std::vector<std::filesystem::path> &PBRJS
           }
         }
 
-        spdlog::trace("TruePBR Config {} Loaded: {}", ConfigOrder, Element.dump());
+        Logger::trace(L"TruePBR Config {} Loaded: {}", ConfigOrder, ParallaxGenUtil::strToWstr(Element.dump()));
         getTruePBRConfigs()[ConfigOrder++] = Element;
       }
     } catch (nlohmann::json::parse_error &E) {
-      spdlog::error(L"Unable to parse TruePBR Config file {}: {}", Config.wstring(),
+      Logger::error(L"Unable to parse TruePBR Config file {}: {}", Config.wstring(),
                     ParallaxGenUtil::strToWstr(E.what()));
       continue;
     }
   }
 
-  spdlog::info("Found {} TruePBR entries", getTruePBRConfigs().size());
+  Logger::info(L"Found {} TruePBR entries", getTruePBRConfigs().size());
 
   // Create helper vectors
   for (const auto &Config : getTruePBRConfigs()) {
@@ -122,18 +123,18 @@ auto PatcherTruePBR::shouldApply(nifly::NiShape &NIFShape, std::vector<PatcherMa
     return Matches.size() > 0;
   }
 
-  spdlog::trace(L"Starting checking");
+  Logger::trace(L"Starting checking");
 
   // Find Old Slots
   auto OldSlots = NIFUtil::getTextureSlots(getNIF(), &NIFShape);
 
   if (shouldApply(OldSlots, Matches)) {
     // TODO restore log here
-    spdlog::trace(L"{} PBR configs matched", Matches.size());
+    Logger::trace(L"{} PBR configs matched", Matches.size());
     // Add to matched texture sets for future use
     MatchedTextureSets[TextureSetBlockID] = Matches;
   } else {
-    spdlog::trace(L"No PBR Configs matched");
+    Logger::trace(L"No PBR Configs matched");
   }
 
   return Matches.size() > 0;
@@ -205,7 +206,7 @@ auto PatcherTruePBR::getSlotMatch(map<size_t, tuple<nlohmann::json, wstring>> &T
     // Check if match is current iterator, just continue here
   } else {
     // No match found
-    spdlog::trace(L"No PBR JSON match found for \"{}\":\"{}\"", SlotLabel, TexName);
+    Logger::trace(L"No PBR JSON match found for \"{}\":\"{}\"", SlotLabel, TexName);
     return;
   }
 
@@ -218,7 +219,7 @@ auto PatcherTruePBR::getSlotMatch(map<size_t, tuple<nlohmann::json, wstring>> &T
     Cfgs.insert(It->second.begin(), It->second.end());
   }
 
-  spdlog::trace(L"Matched {} PBR JSONs for \"{}\":\"{}\"", Cfgs.size(), SlotLabel, TexName);
+  Logger::trace(L"Matched {} PBR JSONs for \"{}\":\"{}\"", Cfgs.size(), SlotLabel, TexName);
 
   // Loop through all matches
   for (const auto &Cfg : Cfgs) {
@@ -252,9 +253,9 @@ auto PatcherTruePBR::getPathContainsMatch(std::map<size_t, std::tuple<nlohmann::
 
   const wstring SlotLabel = L"path_contains";
   if (NumMatches > 0) {
-    spdlog::trace(L"Matched {} PBR JSONs for \"{}\":\"{}\"", NumMatches, SlotLabel, Diffuse);
+    Logger::trace(L"Matched {} PBR JSONs for \"{}\":\"{}\"", NumMatches, SlotLabel, Diffuse);
   } else {
-    spdlog::trace(L"No PBR JSON match found for \"{}\":\"{}\"", SlotLabel, Diffuse);
+    Logger::trace(L"No PBR JSON match found for \"{}\":\"{}\"", SlotLabel, Diffuse);
   }
 }
 
@@ -264,7 +265,7 @@ auto PatcherTruePBR::insertTruePBRData(std::map<size_t, std::tuple<nlohmann::jso
 
   // Check if we should skip this due to nif filter (this is expsenive, so we do it last)
   if (CurCfg.contains("nif_filter") && !boost::icontains(NIFPath, CurCfg["nif_filter"].get<string>())) {
-    spdlog::trace(L"Config {} PBR JSON Rejected: nif_filter {}", Cfg, NIFPath);
+    Logger::trace(L"Config {} PBR JSON Rejected: nif_filter {}", Cfg, NIFPath);
     return;
   }
 
@@ -291,14 +292,14 @@ auto PatcherTruePBR::insertTruePBRData(std::map<size_t, std::tuple<nlohmann::jso
     }
   }
 
-  spdlog::trace(L"Config {} PBR texture path created: {}", Cfg, MatchedField);
+  Logger::trace(L"Config {} PBR texture path created: {}", Cfg, MatchedField);
 
   // Check if named_field is a directory
   wstring MatchedPath = boost::to_lower_copy(TexPath + MatchedField);
   bool EnableTruePBR = (!CurCfg.contains("pbr") || CurCfg["pbr"]) && !MatchedPath.empty();
   if (!CurCfg.contains("delete") || !CurCfg["delete"].get<bool>()) {
     if (EnableTruePBR && !isPrefixOrFile(MatchedPath)) {
-      spdlog::trace(L"Config {} PBR JSON Rejected: Path {} is not a prefix", Cfg, MatchedPath);
+      Logger::trace(L"Config {} PBR JSON Rejected: Path {} is not a prefix", Cfg, MatchedPath);
       return;
     }
   }
@@ -308,7 +309,7 @@ auto PatcherTruePBR::insertTruePBRData(std::map<size_t, std::tuple<nlohmann::jso
     MatchedPath = L"";
   }
 
-  spdlog::trace(L"Config {} PBR JSON accepted", Cfg);
+  Logger::trace(L"Config {} PBR JSON accepted", Cfg);
   TruePBRData.insert({Cfg, {CurCfg, MatchedPath}});
 }
 
@@ -605,7 +606,7 @@ void PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader
 
   if (TruePBRData.contains("subsurface_foliage") && TruePBRData["subsurface_foliage"].get<bool>() &&
       TruePBRData.contains("subsurface") && TruePBRData["subsurface"].get<bool>()) {
-    spdlog::error("Error: Subsurface and foliage NIFShader chosen at once, undefined behavior!");
+    Logger::error(L"Error: Subsurface and foliage NIFShader chosen at once, undefined behavior!");
   }
 
   // "subsurface" attribute
