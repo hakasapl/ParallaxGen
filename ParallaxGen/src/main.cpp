@@ -1,21 +1,17 @@
-#include "BethesdaGame.hpp"
-#include "ParallaxGen.hpp"
-#include "ParallaxGenConfig.hpp"
-#include "ParallaxGenD3D.hpp"
-#include "ParallaxGenDirectory.hpp"
-
 #include <CLI/CLI.hpp>
 
 #include <spdlog/common.h>
 #include <spdlog/logger.h>
-#include <spdlog/spdlog.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/spdlog.h>
+
 
 #include <boost/algorithm/string/join.hpp>
-#include <boost/filesystem/path.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
 #include <boost/stacktrace/stacktrace.hpp>
+
 
 #include <windows.h>
 
@@ -28,14 +24,15 @@
 #include <unordered_map>
 
 #include "BethesdaGame.hpp"
+#include "ModManagerDirectory.hpp"
 #include "ParallaxGen.hpp"
 #include "ParallaxGenConfig.hpp"
 #include "ParallaxGenD3D.hpp"
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenPlugin.hpp"
+#include "ParallaxGenUI.hpp"
 #include "patchers/PatcherComplexMaterial.hpp"
 #include "patchers/PatcherTruePBR.hpp"
-#include "patchers/PatcherVanillaParallax.hpp"
 
 constexpr unsigned MAX_LOG_SIZE = 5242880;
 constexpr unsigned MAX_LOG_FILES = 100;
@@ -47,6 +44,9 @@ struct ParallaxGenCLIArgs {
   filesystem::path GameDir;
   string GameType = "skyrimse";
   filesystem::path OutputDir;
+  string ModManagerType = "none";
+  filesystem::path MO2InstanceDir;
+  string MO2Profile = "Default";
   bool Autostart = false;
   bool NoMultithread = false;
   bool HighMem = false;
@@ -70,6 +70,9 @@ struct ParallaxGenCLIArgs {
     OutStr += "GameDir: " + GameDir.string() + "\n";
     OutStr += "GameType: " + GameType + "\n";
     OutStr += "OutputDir: " + OutputDir.string() + "\n";
+    OutStr += "ModManagerType: " + ModManagerType + "\n";
+    OutStr += "MO2InstanceDir: " + MO2InstanceDir.string() + "\n";
+    OutStr += "MO2ProfileDir: " + MO2Profile + "\n";
     OutStr += "Autostart: " + to_string(static_cast<int>(Autostart)) + "\n";
     OutStr += "NoMultithread: " + to_string(static_cast<int>(NoMultithread)) + "\n";
     OutStr += "HighMem: " + to_string(static_cast<int>(HighMem)) + "\n";
@@ -158,11 +161,23 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   // Create relevant objects
   const auto BG = BethesdaGame(BGType, true, Args.GameDir);
-  auto PGD = ParallaxGenDirectory(BG);
-  auto PGC = ParallaxGenConfig(&PGD, ExePath);
+
+  ModManagerDirectory::ModManagerType MMType = ModManagerDirectory::ModManagerType::None;
+  if (Args.ModManagerType == "vortex") {
+    MMType = ModManagerDirectory::ModManagerType::Vortex;
+  } else if (Args.ModManagerType == "mo2") {
+    MMType = ModManagerDirectory::ModManagerType::ModOrganizer2;
+  }
+
+  auto MMD = ModManagerDirectory(MMType);
+  auto PGD = ParallaxGenDirectory(BG, Args.OutputDir, &MMD);
+  auto PGC = ParallaxGenConfig(ExePath);
   auto PGD3D = ParallaxGenD3D(&PGD, Args.OutputDir, ExePath, !Args.NoGPU);
   auto PG = ParallaxGen(Args.OutputDir, &PGD, &PGC, &PGD3D, Args.OptimizeMeshes, Args.IgnoreParallax,
-                               Args.IgnoreComplexMaterial, Args.IgnoreTruePBR);
+                        Args.IgnoreComplexMaterial, Args.IgnoreTruePBR, Args.UpgradeShaders);
+
+  // Initialize UI
+  ParallaxGenUI::init();
 
   // Check if GPU needs to be initialized
   if (!Args.NoGPU) {
@@ -180,7 +195,8 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   }
 
   // Get current time to compare later
-  const auto StartTime = chrono::high_resolution_clock::now();
+  auto StartTime = chrono::high_resolution_clock::now();
+  long long TimeTaken = 0;
 
   // Create output directory
   try {
@@ -211,34 +227,60 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   // Init PGP library
   if (!Args.NoPlugin) {
     spdlog::info("Initializing plugin patcher");
+    ParallaxGenPlugin::loadStatics(&PGD, &PGC);
     ParallaxGenPlugin::initialize(BG);
     ParallaxGenPlugin::populateObjs();
   }
 
-  // Populate file map from data directory
-  PGD.populateFileMap(!Args.NoBSA);
-
   // Load configs
   PGC.loadConfig(!Args.NoDefaultConfig);
+
+  // Populate file map from data directory
+  if (MMType == ModManagerDirectory::ModManagerType::ModOrganizer2 && !Args.MO2InstanceDir.empty() &&
+      !Args.MO2Profile.empty()) {
+    // MO2
+    auto MO2StagingFolder = Args.MO2InstanceDir / "mods";
+    auto MO2ModlistTXT = Args.MO2InstanceDir / "profiles" / Args.MO2Profile / "modlist.txt";
+    MMD.populateInfo(MO2ModlistTXT, MO2StagingFolder);
+    MMD.populateModFileMap();
+  } else if (MMType == ModManagerDirectory::ModManagerType::Vortex) {
+    // Vortex
+    MMD.populateInfo(BG.getGameDataPath() / "vortex.deployment.json");
+    MMD.populateModFileMap();
+  }
+
+  PGD.populateFileMap(!Args.NoBSA);
 
   auto VanillaBSAList = PGC.getVanillaBSAList();
 
   // Map files
-  PGD.mapFiles(PGC.getNIFBlocklist(), PGC.getManualTextureMaps(), VanillaBSAList, !Args.NoMapFromMeshes, !Args.NoMultithread,
-               Args.HighMem);
+  PGD.mapFiles(PGC.getNIFBlocklist(), PGC.getManualTextureMaps(), VanillaBSAList, !Args.NoMapFromMeshes,
+               !Args.NoMultithread, Args.HighMem);
 
+  // Find CM maps
   spdlog::info("Finding complex material env maps");
   PGD3D.findCMMaps(VanillaBSAList);
   spdlog::info("Done finding complex material env maps");
 
   // Load patcher static vars
-  PatcherTruePBR::loadPatcherBuffers(PGD.getPBRJSONs(), &PGD);
-  PatcherComplexMaterial::loadStatics(PGC.getDynCubemapBlocklist(), Args.DisableMLP, &PGD);
-  PatcherVanillaParallax::loadStatics(&PGD);
+  PatcherShader::loadStatics(PGD, PGD3D);
+  PatcherTruePBR::loadStatics(PGD.getPBRJSONs());
+  PatcherComplexMaterial::loadStatics(Args.DisableMLP, PGC.getDynCubemapBlocklist());
+  //PatcherVanillaParallax::loadStatics();
 
-  // Upgrade shaders if requested
-  if (Args.UpgradeShaders) {
-    PG.upgradeShaders();
+  if (MMType != ModManagerDirectory::ModManagerType::None) {
+    // Find conflicts
+    const auto ModConflicts = PG.findModConflicts(!Args.NoMultithread, !Args.NoPlugin);
+    const auto ExistingOrder = PGC.getModOrder();
+
+    // pause timer for UI
+    TimeTaken += chrono::duration_cast<chrono::seconds>(chrono::high_resolution_clock::now() - StartTime).count();
+
+    // Select mod order
+    auto SelectedOrder = ParallaxGenUI::selectModOrder(ModConflicts, ExistingOrder);
+    StartTime = chrono::high_resolution_clock::now();
+
+    PGC.setModOrder(SelectedOrder);
   }
 
   // Patch meshes if set
@@ -271,9 +313,9 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   }
 
   const auto EndTime = chrono::high_resolution_clock::now();
-  const auto Duration = chrono::duration_cast<chrono::seconds>(EndTime - StartTime).count();
+  TimeTaken += chrono::duration_cast<chrono::seconds>(EndTime - StartTime).count();
 
-  spdlog::info("ParallaxGen took {} seconds to complete", Duration);
+  spdlog::info("ParallaxGen took {} seconds to complete", TimeTaken);
 }
 
 void exitBlocking() {
@@ -308,6 +350,9 @@ void addArguments(CLI::App &App, ParallaxGenCLIArgs &Args, const filesystem::pat
   // Game
   App.add_option("-d,--game-dir", Args.GameDir, "Manually specify game directory");
   App.add_option("-g,--game-type", Args.GameType, "Specify game type [" + getGameTypeMapStr() + "]");
+  App.add_option("-m,--mod-manager", Args.ModManagerType, R"(Specify mod manager type ("mo2" or "vortex"))");
+  App.add_option("--mo2-instance-dir", Args.MO2InstanceDir, "MO2 ONLY: Specify MO2 instance directory");
+  App.add_option("--mo2-profile", Args.MO2Profile, "MO2 ONLY: Specify MO2 profile to use if other than 'Default'");
   App.add_flag("--no-bsa", Args.NoBSA, "Don't load BSA files, only loose files");
   // App Options
   App.add_flag("--autostart", Args.Autostart, "Start generation without user input");
@@ -382,6 +427,8 @@ void initLogger(const filesystem::path &LOGPATH, const ParallaxGenCLIArgs &Args)
   spdlog::set_default_logger(Logger);
   spdlog::set_level(spdlog::level::info);
   spdlog::flush_on(spdlog::level::info);
+
+  spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] %v");
 
   // Set logging mode
   if (Args.Verbosity >= 1) {

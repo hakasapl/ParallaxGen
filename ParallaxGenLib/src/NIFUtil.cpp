@@ -26,6 +26,20 @@
 
 using namespace std;
 
+auto NIFUtil::getStrFromShader(const ShapeShader &Shader) -> string {
+  const static unordered_map<NIFUtil::ShapeShader, string> StrFromShaderMap = {
+      {ShapeShader::NONE, "None"},
+      {ShapeShader::TRUEPBR, "PBR"},
+      {ShapeShader::COMPLEXMATERIAL, "Complex Material"},
+      {ShapeShader::VANILLAPARALLAX, "Parallax"}};
+
+  if (StrFromShaderMap.find(Shader) != StrFromShaderMap.end()) {
+    return StrFromShaderMap.at(Shader);
+  }
+
+  return StrFromShaderMap.at(ShapeShader::NONE);
+}
+
 auto NIFUtil::getDefaultTextureType(const TextureSlots &Slot) -> TextureType {
   switch (Slot) {
   case TextureSlots::DIFFUSE:
@@ -288,18 +302,25 @@ auto NIFUtil::setTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, cons
   }
 }
 
+auto NIFUtil::setTextureSlots(nifly::NifFile *NIF, nifly::NiShape *NIFShape,
+                              const std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots, bool &Changed) -> void {
+  for (uint32_t I = 0; I < NUM_TEXTURE_SLOTS; I++) {
+    setTextureSlot(NIF, NIFShape, static_cast<TextureSlots>(I), NewSlots[I], Changed);
+  }
+}
+
 auto NIFUtil::getTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, const TextureSlots &Slot) -> string {
   string Texture;
   NIF->GetTextureSlot(NIFShape, Texture, static_cast<unsigned int>(Slot));
   return Texture;
 }
 
-auto NIFUtil::getTextureSlots(nifly::NifFile &NIF, nifly::NiShape *NIFShape) -> array<wstring, NUM_TEXTURE_SLOTS> {
+auto NIFUtil::getTextureSlots(nifly::NifFile *NIF, nifly::NiShape *NIFShape) -> array<wstring, NUM_TEXTURE_SLOTS> {
   array<wstring, NUM_TEXTURE_SLOTS> OutSlots;
 
   for (uint32_t I = 0; I < NUM_TEXTURE_SLOTS; I++) {
     string Texture;
-    const uint32_t Result = NIF.GetTextureSlot(NIFShape, Texture, I);
+    const uint32_t Result = NIF->GetTextureSlot(NIFShape, Texture, I);
 
     if (Result == 0 || Texture.empty()) {
       // no texture in Slot
@@ -328,8 +349,8 @@ auto NIFUtil::getTexBase(const std::filesystem::path &Path) -> std::wstring {
   return PathStr;
 }
 
-auto NIFUtil::getTexMatch(const wstring &Base, const wstring &ExistingSlot, const TextureType &DesiredType,
-                          const map<wstring, unordered_set<PGTexture, PGTextureHasher>> &SearchMap) -> PGTexture {
+auto NIFUtil::getTexMatch(const wstring &Base, const TextureType &DesiredType,
+                          const map<wstring, unordered_set<PGTexture, PGTextureHasher>> &SearchMap) -> vector<PGTexture> {
   // Binary search on base list
   const wstring BaseLower = boost::to_lower_copy(Base);
   const auto It = SearchMap.find(BaseLower);
@@ -346,18 +367,12 @@ auto NIFUtil::getTexMatch(const wstring &Base, const wstring &ExistingSlot, cons
       return {};
     }
 
-    auto OutTex = PGTexture{};
+    vector<PGTexture> OutTex;
     for (const auto &Texture : It->second) {
       if (Texture.Type == DesiredType) {
-        OutTex = Texture;
+        OutTex.push_back(Texture);
       } else {
         continue;
-      }
-
-      if (boost::iequals(Texture.Path.wstring(), ExistingSlot)) {
-        // Prefer what is already there
-        OutTex = Texture;
-        break;
       }
     }
 

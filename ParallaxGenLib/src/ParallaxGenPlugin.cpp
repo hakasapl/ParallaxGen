@@ -6,11 +6,9 @@
 #include <winbase.h>
 
 #include "NIFUtil.hpp"
+#include "ParallaxGenConfig.hpp"
 #include "ParallaxGenMutagenWrapperNE.h"
 #include "ParallaxGenUtil.hpp"
-#include "Patchers/PatcherComplexMaterial.hpp"
-#include "Patchers/PatcherTruePBR.hpp"
-#include "Patchers/PatcherVanillaParallax.hpp"
 
 using namespace std;
 
@@ -230,6 +228,14 @@ unordered_map<int, unordered_map<NIFUtil::ShapeShader, int>> ParallaxGenPlugin::
 mutex ParallaxGenPlugin::TXSTWarningMapMutex;
 unordered_map<int, NIFUtil::ShapeShader> ParallaxGenPlugin::TXSTWarningMap; // NOLINT
 
+ParallaxGenDirectory *ParallaxGenPlugin::PGD;
+ParallaxGenConfig *ParallaxGenPlugin::PGC;
+
+void ParallaxGenPlugin::loadStatics(ParallaxGenDirectory *PGD, ParallaxGenConfig *PGC) {
+  ParallaxGenPlugin::PGD = PGD;
+  ParallaxGenPlugin::PGC = PGC;
+}
+
 void ParallaxGenPlugin::initialize(const BethesdaGame &Game) {
   // Maps BethesdaGame::GameType to Mutagen game type
   static const unordered_map<BethesdaGame::GameType, int> MutagenGameTypeMap = {
@@ -237,13 +243,17 @@ void ParallaxGenPlugin::initialize(const BethesdaGame &Game) {
       {BethesdaGame::GameType::SKYRIM_VR, 3},  {BethesdaGame::GameType::ENDERAL, 5},
       {BethesdaGame::GameType::ENDERAL_SE, 6}, {BethesdaGame::GameType::SKYRIM_GOG, 7}};
 
-  libInitialize(MutagenGameTypeMap.at(Game.getGameType()), Game.getGameDataPath().wstring(), L"ParallaxGen.esp", Game.getActivePlugins());
+  libInitialize(MutagenGameTypeMap.at(Game.getGameType()), Game.getGameDataPath().wstring(), L"ParallaxGen.esp",
+                Game.getActivePlugins());
 }
 
 void ParallaxGenPlugin::populateObjs() { libPopulateObjs(); }
 
 void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, const wstring &NIFPath,
-                                     const wstring &Name3D, const int &Index3DOld, const int &Index3DNew) {
+                                     const wstring &Name3D, const int &Index3DOld, const int &Index3DNew, const vector<PatcherShader *> &Patchers,
+                                     std::wstring &ResultMatchedPath,
+                                     std::unordered_set<NIFUtil::TextureSlots> &ResultMatchedFrom,
+                                     std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots) {
   if (AppliedShader == NIFUtil::ShapeShader::NONE) {
     spdlog::trace(L"Plugin Patching | {} | {} | {} | Skipping: No shader applied", NIFPath, Name3D, Index3DOld);
     return;
@@ -292,51 +302,51 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
     }
 
     auto SearchPrefixes = NIFUtil::getSearchPrefixes(BaseSlots);
-    array<wstring, NUM_TEXTURE_SLOTS> NewSlots;
 
-    // Attempt to patch the relevant shader
-    bool PatchTXST = false;
-    string ShaderLabel;
-    if (AppliedShader == NIFUtil::ShapeShader::VANILLAPARALLAX) {
-      ShaderLabel = "Parallax";
-      wstring MatchedPath;
-      bool ShouldApply = PatcherVanillaParallax::shouldApplySlots(SearchPrefixes, BaseSlots, MatchedPath);
 
-      if (ShouldApply) {
-        NewSlots = PatcherVanillaParallax::applyPatchSlots(BaseSlots, MatchedPath);
-        PatchTXST = true;
+    vector<tuple<wstring, PatcherShader::PatcherMatch>> Matches;
+
+    for (const auto &Patcher : Patchers) {
+      if (Patcher->getShaderType() != AppliedShader) {
+        continue;
       }
-    } else if (AppliedShader == NIFUtil::ShapeShader::COMPLEXMATERIAL) {
-      ShaderLabel = "Complex Material";
-      wstring MatchedPath;
-      bool EnableDynCubemaps = false;
-      bool ShouldApply =
-          PatcherComplexMaterial::shouldApplySlots(SearchPrefixes, BaseSlots, MatchedPath, EnableDynCubemaps, NIFPath);
 
-      if (ShouldApply) {
-        NewSlots = PatcherComplexMaterial::applyPatchSlots(BaseSlots, MatchedPath, EnableDynCubemaps);
-        PatchTXST = true;
+      vector<PatcherShader::PatcherMatch> CurMatches;
+      Patcher->shouldApply(BaseSlots, CurMatches);
+      for (const auto &Match : CurMatches) {
+        Matches.emplace_back(PGD->getMod(Match.MatchedPath), Match);
       }
-    } else if (AppliedShader == NIFUtil::ShapeShader::TRUEPBR) {
-      ShaderLabel = "TruePBR";
-      map<size_t, tuple<nlohmann::json, wstring>> TruePBRData;
-      bool ShouldApply = PatcherTruePBR::shouldApplySlots(L"Plugin Patching | ", SearchPrefixes, NIFPath, TruePBRData);
 
-      if (ShouldApply) {
-        auto TempSlots = BaseSlots;
-        for (auto &TruePBRCFG : TruePBRData) {
-          TempSlots = PatcherTruePBR::applyPatchSlots(TempSlots, get<0>(TruePBRCFG.second), get<1>(TruePBRCFG.second));
-        }
-
-        NewSlots = TempSlots;
-        PatchTXST = true;
-      }
-    } else {
-      continue;
+      break;
     }
 
-    // Check if TXST was able to be patched
-    if (!PatchTXST) {
+    // Find winning mod
+    int MaxPriority = -1;
+    PatcherShader::PatcherMatch WinningMatch;
+    wstring DecisionMod;
+
+    const auto MeshFilePriority = PGC->getModPriority(PGD->getMod(NIFPath));
+    for (const auto &[Mod, Match] : Matches) {
+      auto CurPriority = PGC->getModPriority(Mod);
+
+      if (CurPriority < MeshFilePriority) {
+        // skip mods with lower priority than mesh file
+        continue;
+      }
+
+      if (CurPriority < MaxPriority) {
+        // skip mods with lower priority than current winner
+        continue;
+      }
+
+      MaxPriority = CurPriority;
+      WinningMatch = Match;
+      DecisionMod = Mod;
+    }
+
+    if (WinningMatch.MatchedPath.empty()) {
+      // no shaders to apply
+      // TODO blank placeholders instead of warning here
       lock_guard<mutex> Lock(TXSTWarningMapMutex);
 
       if (TXSTWarningMap.find(TXSTIndex) != TXSTWarningMap.end() && TXSTWarningMap[TXSTIndex] == AppliedShader) {
@@ -346,9 +356,23 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
 
       TXSTWarningMap[TXSTIndex] = AppliedShader;
       const auto [FormID, PluginName] = libGetTXSTFormID(TXSTIndex);
-      spdlog::warn(L"TXST record is not able to patched for {}: {} / {:06X}", ParallaxGenUtil::strToWstr(ShaderLabel),
+      spdlog::warn(L"TXST record is not able to patched for {}: {} / {:06X}", ParallaxGenUtil::strToWstr(NIFUtil::getStrFromShader(AppliedShader)),
                    PluginName, FormID);
       continue;
+    }
+
+    ResultMatchedPath = WinningMatch.MatchedPath;
+    ResultMatchedFrom = WinningMatch.MatchedFrom;
+
+    // Get new slots
+    for (const auto &Patcher : Patchers) {
+      if (Patcher->getShaderType() != AppliedShader) {
+        continue;
+      }
+
+      // apply patch
+      NewSlots = Patcher->applyPatchSlots(BaseSlots, WinningMatch);
+      break;
     }
 
     // Check if oldprefix is the same as newprefix

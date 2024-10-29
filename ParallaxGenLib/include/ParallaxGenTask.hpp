@@ -32,6 +32,7 @@ public:
   void printJobStatus(bool Force = false);
   void printJobSummary();
   [[nodiscard]] auto getCompletedJobs() -> size_t;
+  [[nodiscard]] auto isCompleted() -> bool;
 
   static void updatePGResult(PGResult &Result, const PGResult &CurrentResult,
                              const PGResult &Threshold = PGResult::FAILURE);

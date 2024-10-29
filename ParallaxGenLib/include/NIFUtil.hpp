@@ -9,12 +9,10 @@
 constexpr unsigned NUM_TEXTURE_SLOTS = 9;
 
 namespace NIFUtil {
-enum class ShapeShader {
-  NONE,
-  TRUEPBR,
-  COMPLEXMATERIAL,
-  VANILLAPARALLAX
-};
+// These need to be in the order of worst shader to best shader
+enum class ShapeShader { NONE, VANILLAPARALLAX, COMPLEXMATERIAL, TRUEPBR };
+
+auto getStrFromShader(const ShapeShader &Shader) -> std::string;
 
 enum class TextureSlots : unsigned int {
   DIFFUSE,
@@ -61,20 +59,18 @@ struct PGTexture {
   TextureType Type{};
 
   // Equality operator
-  auto operator==(const PGTexture& Other) const -> bool {
-      return Path == Other.Path && Type == Other.Type;
-  }
+  auto operator==(const PGTexture &Other) const -> bool { return Path == Other.Path && Type == Other.Type; }
 };
 
 struct PGTextureHasher {
-    auto operator()(const PGTexture& Texture) const -> size_t {
-        // Hash the path and the texture type, and combine them
-        std::size_t PathHash = std::hash<std::filesystem::path>()(Texture.Path);
-        std::size_t TypeHash = std::hash<int>()(static_cast<int>(Texture.Type));
+  auto operator()(const PGTexture &Texture) const -> size_t {
+    // Hash the path and the texture type, and combine them
+    std::size_t PathHash = std::hash<std::filesystem::path>()(Texture.Path);
+    std::size_t TypeHash = std::hash<int>()(static_cast<int>(Texture.Type));
 
-        // Combine the hashes using bitwise XOR and bit shifting
-        return PathHash ^ (TypeHash << 1);
-    }
+    // Combine the hashes using bitwise XOR and bit shifting
+    return PathHash ^ (TypeHash << 1);
+  }
 };
 
 auto getDefaultTextureType(const TextureSlots &Slot) -> TextureType;
@@ -92,10 +88,8 @@ auto setShaderFloat(float &Value, const float &NewValue, bool &Changed) -> void;
 auto setShaderVec2(nifly::Vector2 &Value, const nifly::Vector2 &NewValue, bool &Changed) -> void;
 
 // Shader flag helpers
-auto hasShaderFlag(nifly::BSShaderProperty *NIFShaderBSLSP,
-                   const nifly::SkyrimShaderPropertyFlags1 &Flag) -> bool;
-auto hasShaderFlag(nifly::BSShaderProperty *NIFShaderBSLSP,
-                   const nifly::SkyrimShaderPropertyFlags2 &Flag) -> bool;
+auto hasShaderFlag(nifly::BSShaderProperty *NIFShaderBSLSP, const nifly::SkyrimShaderPropertyFlags1 &Flag) -> bool;
+auto hasShaderFlag(nifly::BSShaderProperty *NIFShaderBSLSP, const nifly::SkyrimShaderPropertyFlags2 &Flag) -> bool;
 auto setShaderFlag(nifly::BSShaderProperty *NIFShaderBSLSP, const nifly::SkyrimShaderPropertyFlags1 &Flag,
                    bool &Changed) -> void;
 auto setShaderFlag(nifly::BSShaderProperty *NIFShaderBSLSP, const nifly::SkyrimShaderPropertyFlags2 &Flag,
@@ -110,17 +104,20 @@ auto configureShaderFlag(nifly::BSShaderProperty *NIFShaderBSLSP, const nifly::S
                          const bool &Enable, bool &Changed) -> void;
 
 // Texture slot helpers
-auto setTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, const TextureSlots &Slot, const std::wstring &TexturePath, bool &Changed) -> void;
+auto setTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, const TextureSlots &Slot,
+                    const std::wstring &TexturePath, bool &Changed) -> void;
 auto setTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, const TextureSlots &Slot,
                     const std::string &TexturePath, bool &Changed) -> void;
+auto setTextureSlots(nifly::NifFile *NIF, nifly::NiShape *NIFShape,
+                     const std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots, bool &Changed) -> void;
 auto getTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, const TextureSlots &Slot) -> std::string;
-auto getTextureSlots(nifly::NifFile &NIF, nifly::NiShape *NIFShape) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;
+auto getTextureSlots(nifly::NifFile *NIF, nifly::NiShape *NIFShape) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;
 auto getTexBase(const std::filesystem::path &TexPath) -> std::wstring;
-auto getTexMatch(const std::wstring &Base, const std::wstring &ExistingSlot, const TextureType &DesiredType,
-                 const std::map<std::wstring, std::unordered_set<PGTexture, PGTextureHasher>> &SearchMap) -> PGTexture;
+auto getTexMatch(const std::wstring &Base, const TextureType &DesiredType,
+                 const std::map<std::wstring, std::unordered_set<PGTexture, PGTextureHasher>> &SearchMap)
+    -> std::vector<PGTexture>;
 // Gets all the texture prefixes for a textureset. ie. _n.dds is removed etc. for each slot
-auto getSearchPrefixes(nifly::NifFile &NIF, nifly::NiShape *NIFShape)
-    -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;
+auto getSearchPrefixes(nifly::NifFile &NIF, nifly::NiShape *NIFShape) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;
 
 auto getSearchPrefixes(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots)
     -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;

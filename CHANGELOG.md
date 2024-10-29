@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.7.0] - UNRELEASED
+
+- Added a mod manager priority system with UI
+- Complex material will set env map scale to 1.0 now
+
 ## [0.6.0] - 2024-10-06
 
 - Added plugin patching

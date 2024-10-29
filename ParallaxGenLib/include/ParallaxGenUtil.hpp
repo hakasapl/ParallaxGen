@@ -39,4 +39,6 @@ template <typename T> void addUniqueElement(std::vector<T> &Vec, const T &Elemen
   }
 }
 
+auto getThreadID() -> std::string;
+
 } // namespace ParallaxGenUtil

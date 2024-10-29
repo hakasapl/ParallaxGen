@@ -3,6 +3,10 @@
 #include "NIFUtil.hpp"
 #include "ParallaxGenUtil.hpp"
 
+#include <boost/algorithm/string/join.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <mutex>
 #include <spdlog/spdlog.h>
 
 #include <nlohmann/json.hpp>
@@ -12,6 +16,7 @@
 
 #include <exception>
 #include <filesystem>
+#include <fstream>
 #include <string>
 
 #include <cstdlib>
@@ -19,8 +24,7 @@
 using namespace std;
 using namespace ParallaxGenUtil;
 
-ParallaxGenConfig::ParallaxGenConfig(ParallaxGenDirectory *PGD, std::filesystem::path ExePath)
-    : PGD(PGD), ExePath(std::move(ExePath)) {}
+ParallaxGenConfig::ParallaxGenConfig(std::filesystem::path ExePath) : ExePath(std::move(ExePath)) {}
 
 auto ParallaxGenConfig::getConfigValidation() -> nlohmann::json {
   const static nlohmann::json PGConfigSchema = R"(
@@ -52,12 +56,24 @@ auto ParallaxGenConfig::getConfigValidation() -> nlohmann::json {
         "items": {
             "type": "string"
         }
+      },
+      "mod_order": {
+        "type" : "array",
+        "items": {
+            "type": "string"
+        }
       }
     }
   }
   )"_json;
 
   return PGConfigSchema;
+}
+
+auto ParallaxGenConfig::getUserConfigFile() const -> filesystem::path {
+  // Get user config file
+  static const filesystem::path UserConfigFile = ExePath / "cfg" / "user.json";
+  return UserConfigFile;
 }
 
 void ParallaxGenConfig::loadConfig(const bool &LoadNative) {
@@ -96,26 +112,6 @@ void ParallaxGenConfig::loadConfig(const bool &LoadNative) {
     }
   }
 
-  // loop through PGConfigPaths (in load order)
-  for (const auto &PGConfigFile : PGD->getPGJSONs()) {
-    spdlog::debug(L"Loading ParallaxGen Config: {}", PGConfigFile.wstring());
-
-    nlohmann::json J;
-    if (!parseJSON(PGConfigFile, PGD->getFile(PGConfigFile), J)) {
-      continue;
-    }
-
-    if (!validateJSON(PGConfigFile, J)) {
-      continue;
-    }
-
-    if (!J.empty()) {
-      replaceForwardSlashes(J);
-      addConfigJSON(J);
-      NumConfigs++;
-    }
-  }
-
   // Print number of configs loaded
   spdlog::info("Loaded {} ParallaxGen configs successfully", NumConfigs);
 }
@@ -145,12 +141,25 @@ auto ParallaxGenConfig::addConfigJSON(const nlohmann::json &J) -> void {
   // "vanilla_bsas" field
   if (J.contains("vanilla_bsas")) {
     for (const auto &Item : J["vanilla_bsas"]) {
-      VanillaBSAList.insert(strToWstr(Item.get<string>()));
+      VanillaBSAList.insert(strToWstr(boost::to_lower_copy(Item.get<string>())));
+    }
+  }
+
+  // "mod_order" field
+  if (J.contains("mod_order")) {
+    lock_guard<mutex> Lock(ModOrderMutex);
+
+    ModOrder.clear();
+    for (const auto &Item : J["mod_order"]) {
+      auto Mod = boost::to_lower_copy(strToWstr(Item.get<string>()));
+      ModOrder.push_back(Mod);
+      ModPriority[Mod] = static_cast<int>(ModOrder.size() - 1);
     }
   }
 }
 
-auto ParallaxGenConfig::parseJSON(const std::filesystem::path &JSONFile, const vector<std::byte> &Bytes, nlohmann::json &J) -> bool {
+auto ParallaxGenConfig::parseJSON(const std::filesystem::path &JSONFile, const vector<std::byte> &Bytes,
+                                  nlohmann::json &J) -> bool {
   // Parse JSON
   try {
     J = nlohmann::json::parse(Bytes);
@@ -198,6 +207,54 @@ auto ParallaxGenConfig::getNIFBlocklist() const -> const unordered_set<wstring> 
 
 auto ParallaxGenConfig::getDynCubemapBlocklist() const -> const unordered_set<wstring> & { return DynCubemapBlocklist; }
 
-auto ParallaxGenConfig::getManualTextureMaps() const -> const unordered_map<filesystem::path, NIFUtil::TextureType> & { return ManualTextureMaps; }
+auto ParallaxGenConfig::getManualTextureMaps() const -> const unordered_map<filesystem::path, NIFUtil::TextureType> & {
+  return ManualTextureMaps;
+}
 
 auto ParallaxGenConfig::getVanillaBSAList() const -> const std::unordered_set<std::wstring> & { return VanillaBSAList; }
+
+auto ParallaxGenConfig::getModOrder() -> vector<wstring> {
+  lock_guard<mutex> Lock(ModOrderMutex);
+  return ModOrder;
+}
+
+auto ParallaxGenConfig::getModPriority(const wstring &Mod) -> int {
+  lock_guard<mutex> Lock(ModOrderMutex);
+  if (ModPriority.contains(Mod)) {
+    return ModPriority[Mod];
+  }
+
+  return -1;
+}
+
+void ParallaxGenConfig::setModOrder(const vector<wstring> &ModOrder) {
+  lock_guard<mutex> Lock(ModOrderMutex);
+  this->ModOrder = ModOrder;
+
+  ModPriority.clear();
+  for (size_t I = 0; I < ModOrder.size(); I++) {
+    ModPriority[ModOrder[I]] = static_cast<int>(I);
+  }
+
+  saveUserConfig();
+}
+
+void ParallaxGenConfig::saveUserConfig() const {
+  // build output json
+  nlohmann::json J;
+  vector<string> ModOrderNarrowStr;
+  ModOrderNarrowStr.reserve(ModOrder.size());
+for (const auto &Mod : ModOrder) {
+    ModOrderNarrowStr.push_back(wstrToStr(Mod));
+  }
+  J["mod_order"] = ModOrderNarrowStr;
+
+  // write to file
+  try {
+    ofstream OutFile(getUserConfigFile());
+    OutFile << J.dump(2) << endl;
+    OutFile.close();
+  } catch (const exception &E) {
+    spdlog::error(L"Failed to save user config: {}", strToWstr(E.what()));
+  }
+}

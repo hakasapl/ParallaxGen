@@ -1,6 +1,7 @@
 #include "BethesdaDirectory.hpp"
 
 #include "BethesdaGame.hpp"
+#include "ModManagerDirectory.hpp"
 #include "ParallaxGenUtil.hpp"
 
 #include <bsa/tes4.hpp>
@@ -16,6 +17,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
+#include <boost/crc.hpp>
 
 #include <shlwapi.h>
 #include <winnt.h>
@@ -28,6 +30,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <regex>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -45,7 +48,7 @@
 using namespace std;
 using namespace ParallaxGenUtil;
 
-BethesdaDirectory::BethesdaDirectory(BethesdaGame &BG, const bool &Logging) : Logging(Logging), BG(BG) {
+BethesdaDirectory::BethesdaDirectory(BethesdaGame &BG, filesystem::path GeneratedPath, ModManagerDirectory *MMD, const bool &Logging) : GeneratedDir(std::move(GeneratedPath)), Logging(Logging), BG(BG), MMD(MMD) {
   // Assign instance vars
   DataDir = filesystem::path(this->BG.getGameDataPath());
 
@@ -132,7 +135,12 @@ auto BethesdaDirectory::getFile(const filesystem::path &RelPath, const bool &Cac
       spdlog::trace(L"Reading loose file from BethesdaDirectory: {}", RelPath.wstring());
     }
 
-    const filesystem::path FilePath = DataDir / RelPath;
+    filesystem::path FilePath;
+    if (File.Generated) {
+      FilePath = GeneratedDir / RelPath;
+    } else {
+      FilePath = DataDir / RelPath;
+    }
 
     OutFileBytes = getFileBytes(FilePath);
   } else {
@@ -184,6 +192,19 @@ auto BethesdaDirectory::getFile(const filesystem::path &RelPath, const bool &Cac
   return OutFileBytes;
 }
 
+auto BethesdaDirectory::getMod(const filesystem::path &RelPath) -> wstring {
+  if (FileMap.empty()) {
+    throw runtime_error("File map was not populated");
+  }
+
+  const BethesdaFile File = getFileFromMap(RelPath);
+  return File.Mod;
+}
+
+void BethesdaDirectory::addGeneratedFile(const filesystem::path &RelPath, const wstring &Mod) {
+  updateFileMap(RelPath, nullptr, Mod, true);
+}
+
 auto BethesdaDirectory::clearCache() -> void {
   const lock_guard<mutex> Lock(FileCacheMutex);
   FileCache.clear();
@@ -215,6 +236,15 @@ auto BethesdaDirectory::isFile(const filesystem::path &RelPath) const -> bool {
   return !File.Path.empty();
 }
 
+auto BethesdaDirectory::isGenerated(const filesystem::path &RelPath) const -> bool {
+  if (FileMap.empty()) {
+    throw runtime_error("File map was not populated");
+  }
+
+  const BethesdaFile File = getFileFromMap(RelPath);
+  return !File.Path.empty() && File.Generated;
+}
+
 auto BethesdaDirectory::isPrefix(const filesystem::path &RelPath) const -> bool {
   if (FileMap.empty()) {
     throw runtime_error("File map was not populated");
@@ -229,7 +259,17 @@ auto BethesdaDirectory::isPrefix(const filesystem::path &RelPath) const -> bool 
          (It != FileMap.begin() && boost::istarts_with(prev(It)->first.wstring(), RelPath.wstring()));
 }
 
-auto BethesdaDirectory::getFullPath(const filesystem::path &RelPath) const -> filesystem::path {
+auto BethesdaDirectory::getLooseFileFullPath(const filesystem::path &RelPath) const -> filesystem::path {
+  if (FileMap.empty()) {
+    throw runtime_error("File map was not populated");
+  }
+
+  const BethesdaFile File = getFileFromMap(RelPath);
+
+  if (File.Generated) {
+    return GeneratedDir / RelPath;
+  }
+
   return DataDir / RelPath;
 }
 
@@ -353,7 +393,11 @@ void BethesdaDirectory::addLooseFilesToMap() {
           spdlog::trace(L"Adding loose file to map: {}", RelativePath.wstring());
         }
 
-        updateFileMap(RelativePath, nullptr);
+        wstring CurMod;
+        if (MMD != nullptr) {
+          CurMod = MMD->getMod(RelativePath);
+        }
+        updateFileMap(RelativePath, nullptr, CurMod);
       }
     } catch (const std::exception &E) {
       if (Logging) {
@@ -413,7 +457,11 @@ void BethesdaDirectory::addBSAToFileMap(const wstring &BSAName) {
         }
 
         // add to filemap
-        updateFileMap(CurPath, BSAStructPtr);
+        wstring BSAMod;
+        if (MMD != nullptr) {
+          BSAMod = MMD->getMod(BSAName);
+        }
+        updateFileMap(CurPath, BSAStructPtr, BSAMod);
       }
     } catch (const std::exception &E) {
       if (Logging) {
@@ -612,10 +660,10 @@ auto BethesdaDirectory::getFileFromMap(const filesystem::path &FilePath) const -
 }
 
 void BethesdaDirectory::updateFileMap(const filesystem::path &FilePath,
-                                      shared_ptr<BethesdaDirectory::BSAFile> BSAFile) {
+                                      shared_ptr<BethesdaDirectory::BSAFile> BSAFile, const wstring &Mod, const bool &Generated) {
   const filesystem::path LowerPath = getPathLower(FilePath);
 
-  const BethesdaFile NewBFile = {FilePath, std::move(BSAFile)};
+  const BethesdaFile NewBFile = {FilePath, std::move(BSAFile), Mod, Generated};
 
   FileMap[LowerPath] = NewBFile;
 }

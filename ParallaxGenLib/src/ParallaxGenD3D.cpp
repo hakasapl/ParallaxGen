@@ -421,7 +421,9 @@ auto ParallaxGenD3D::createComputeShader(const wstring &ShaderPath,
 }
 
 auto ParallaxGenD3D::upgradeToComplexMaterial(const std::filesystem::path &ParallaxMap,
-                                              const std::filesystem::path &EnvMap) const -> DirectX::ScratchImage {
+                                              const std::filesystem::path &EnvMap) -> DirectX::ScratchImage {
+
+  lock_guard<mutex> Lock(UpgradeCMMutex);
 
   ParallaxGenTask::PGResult PGResult{};
 
@@ -1003,7 +1005,7 @@ auto ParallaxGenD3D::getDDS(const filesystem::path &DDSPath,
 
   if (PGD->isLooseFile(DDSPath)) {
     spdlog::trace(L"Reading DDS loose file {}", DDSPath.wstring());
-    filesystem::path FullPath = PGD->getFullPath(DDSPath);
+    filesystem::path FullPath = PGD->getLooseFileFullPath(DDSPath);
 
     // Load DDS file
     HR = DirectX::LoadFromDDSFile(FullPath.c_str(), DirectX::DDS_FLAGS_NONE, nullptr, DDS);
@@ -1045,7 +1047,7 @@ auto ParallaxGenD3D::getDDSMetadata(const filesystem::path &DDSPath,
 
   if (PGD->isLooseFile(DDSPath)) {
     spdlog::trace(L"Reading DDS loose file metadata {}", DDSPath.wstring());
-    filesystem::path FullPath = PGD->getFullPath(DDSPath);
+    filesystem::path FullPath = PGD->getLooseFileFullPath(DDSPath);
 
     // Load DDS file
     HR = DirectX::GetMetadataFromDDSFile(FullPath.c_str(), DirectX::DDS_FLAGS_NONE, DDSMeta);

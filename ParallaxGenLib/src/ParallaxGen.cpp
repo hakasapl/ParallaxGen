@@ -11,13 +11,23 @@
 #include <fstream>
 #include <mutex>
 #include <spdlog/spdlog.h>
+#include <string>
+#include <unordered_set>
+#include <utility>
 #include <vector>
 
+#include <d3d11.h>
+
+#include "Logger.hpp"
 #include "NIFUtil.hpp"
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenPlugin.hpp"
 #include "ParallaxGenTask.hpp"
 #include "ParallaxGenUtil.hpp"
+#include "patchers/PatcherComplexMaterial.hpp"
+#include "patchers/PatcherShader.hpp"
+#include "patchers/PatcherTruePBR.hpp"
+#include "patchers/PatcherVanillaParallax.hpp"
 
 using namespace std;
 using namespace ParallaxGenUtil;
@@ -25,32 +35,13 @@ using namespace nifly;
 
 ParallaxGen::ParallaxGen(filesystem::path OutputDir, ParallaxGenDirectory *PGD, ParallaxGenConfig *PGC,
                          ParallaxGenD3D *PGD3D, const bool &OptimizeMeshes, const bool &IgnoreParallax,
-                         const bool &IgnoreCM, const bool &IgnoreTruePBR)
+                         const bool &IgnoreCM, const bool &IgnoreTruePBR, const bool &UpgradeShaders)
     : OutputDir(std::move(OutputDir)), PGD(PGD), PGC(PGC), PGD3D(PGD3D), IgnoreParallax(IgnoreParallax),
-      IgnoreCM(IgnoreCM), IgnoreTruePBR(IgnoreTruePBR) {
+      IgnoreCM(IgnoreCM), IgnoreTruePBR(IgnoreTruePBR), UpgradeShaders(UpgradeShaders) {
   // constructor
 
   // set optimize meshes flag
   NIFSaveOptions.optimize = OptimizeMeshes;
-}
-
-void ParallaxGen::upgradeShaders() {
-  // Get height maps (vanilla _p.dds files)
-  const auto &HeightMaps = PGD->getTextureMapConst(NIFUtil::TextureSlots::PARALLAX);
-
-  // Define task parameters
-  ParallaxGenTask TaskTracker("Shader Upgrades", HeightMaps.size());
-
-  for (const auto &HeightSlot : HeightMaps) {
-    for (const auto &HeightMap : HeightSlot.second) {
-      if (HeightMap.Type != NIFUtil::TextureType::HEIGHT) {
-        // not a height map
-        continue;
-      }
-
-      TaskTracker.completeJob(convertHeightMapToComplexMaterial(HeightMap.Path));
-    }
-  }
 }
 
 void ParallaxGen::patchMeshes(const bool &MultiThread, const bool &PatchPlugin) {
@@ -79,7 +70,7 @@ void ParallaxGen::patchMeshes(const bool &MultiThread, const bool &PatchPlugin) 
       boost::asio::post(MeshPatchPool, [this, &TaskTracker, &DiffJSON, &Mesh, &PatchPlugin] {
         ParallaxGenTask::PGResult Result = ParallaxGenTask::PGResult::SUCCESS;
         try {
-          Result = processNIF(Mesh, DiffJSON, PatchPlugin);
+          Result = processNIF(Mesh, &DiffJSON, PatchPlugin);
         } catch (const exception &E) {
           spdlog::error(L"Exception in thread patching NIF {}: {}", Mesh.wstring(), strToWstr(E.what()));
           Result = ParallaxGenTask::PGResult::FAILURE;
@@ -89,12 +80,12 @@ void ParallaxGen::patchMeshes(const bool &MultiThread, const bool &PatchPlugin) 
       });
     }
 
-    // Wait for all threads to complete
+    // verify that all threads complete (should be redundant)
     MeshPatchPool.join();
 
   } else {
     for (const auto &Mesh : Meshes) {
-      TaskTracker.completeJob(processNIF(Mesh, DiffJSON));
+      TaskTracker.completeJob(processNIF(Mesh, &DiffJSON));
     }
   }
 
@@ -106,7 +97,60 @@ void ParallaxGen::patchMeshes(const bool &MultiThread, const bool &PatchPlugin) 
   DiffJSONFile.close();
 }
 
-auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &HeightMap) -> ParallaxGenTask::PGResult {
+auto ParallaxGen::findModConflicts(const bool &MultiThread,
+                                   const bool &PatchPlugin) -> unordered_map<wstring, set<NIFUtil::ShapeShader>> {
+  auto Meshes = PGD->getMeshes();
+
+  // Create task tracker
+  ParallaxGenTask TaskTracker("Finding Mod Conflicts", Meshes.size(), 10);
+
+  // Create thread group
+  const boost::thread_group ThreadGroup;
+
+  // Define conflicts
+  unordered_map<wstring, set<NIFUtil::ShapeShader>> ConflictMods;
+  mutex ConflictModsMutex;
+
+  // Create threads
+  if (MultiThread) {
+#ifdef _DEBUG
+    size_t NumThreads = 1;
+#else
+    const size_t NumThreads = boost::thread::hardware_concurrency();
+#endif
+
+    boost::asio::thread_pool MeshPatchPool(NumThreads);
+
+    for (const auto &Mesh : Meshes) {
+      boost::asio::post(MeshPatchPool, [this, &TaskTracker, &Mesh, &PatchPlugin, &ConflictMods, &ConflictModsMutex] {
+        ParallaxGenTask::PGResult Result = ParallaxGenTask::PGResult::SUCCESS;
+        try {
+          Result = processNIF(Mesh, nullptr, PatchPlugin, true, &ConflictMods, &ConflictModsMutex);
+        } catch (const exception &E) {
+          spdlog::error(L"Exception in thread finding mod conflicts {}: {}", Mesh.wstring(), strToWstr(E.what()));
+          Result = ParallaxGenTask::PGResult::FAILURE;
+        }
+
+        TaskTracker.completeJob(Result);
+      });
+    }
+
+    // verify that all threads complete (should be redundant)
+    MeshPatchPool.join();
+
+  } else {
+    for (const auto &Mesh : Meshes) {
+      TaskTracker.completeJob(processNIF(Mesh, nullptr, true, true, &ConflictMods, &ConflictModsMutex));
+    }
+  }
+
+  return ConflictMods;
+}
+
+auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &HeightMap,
+                                                    wstring &NewCMMap) -> ParallaxGenTask::PGResult {
+  lock_guard<mutex> Lock(UpgradeMutex);
+
   spdlog::trace(L"Upgrading height map: {}", HeightMap.wstring());
 
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
@@ -120,21 +164,20 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
     return Result;
   }
 
-  static const auto *CMBaseMap = &PGD->getTextureMapConst(NIFUtil::TextureSlots::ENVMASK);
-  auto ExistingCM = NIFUtil::getTexMatch(TexBase, L"", NIFUtil::TextureType::COMPLEXMATERIAL, *CMBaseMap);
-  if (!ExistingCM.Path.empty()) {
-    // Complex material already exists
+  const filesystem::path ComplexMap = TexBase + L"_m.dds";
+  if (PGD->isGenerated(ComplexMap)) {
+    // this was already upgraded
     return Result;
   }
 
-  auto ExistingMask = NIFUtil::getTexMatch(TexBase, L"", NIFUtil::TextureType::ENVIRONMENTMASK, *CMBaseMap);
+  static const auto *CMBaseMap = &PGD->getTextureMapConst(NIFUtil::TextureSlots::ENVMASK);
+  auto ExistingMask = NIFUtil::getTexMatch(TexBase, NIFUtil::TextureType::ENVIRONMENTMASK, *CMBaseMap);
   filesystem::path EnvMask = filesystem::path();
-  if (!ExistingMask.Path.empty()) {
+  if (!ExistingMask.empty()) {
     // env mask exists, but it's not a complex material
-    EnvMask = ExistingMask.Path;
+    // TODO smarter decision here?
+    EnvMask = ExistingMask[0].Path;
   }
-
-  const filesystem::path ComplexMap = TexBase + L"_m.dds";
 
   // upgrade to complex material
   const DirectX::ScratchImage NewComplexMap = PGD3D->upgradeToComplexMaterial(HeightMap, EnvMask);
@@ -145,7 +188,7 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
     filesystem::create_directories(OutputPath.parent_path());
 
     const HRESULT HR = DirectX::SaveToDDSFile(NewComplexMap.GetImages(), NewComplexMap.GetImageCount(),
-                                        NewComplexMap.GetMetadata(), DirectX::DDS_FLAGS_NONE, OutputPath.c_str());
+                                              NewComplexMap.GetMetadata(), DirectX::DDS_FLAGS_NONE, OutputPath.c_str());
     if (FAILED(HR)) {
       spdlog::error(L"Unable to save complex material {}: {}", OutputPath.wstring(),
                     strToWstr(ParallaxGenD3D::getHRESULTErrorMessage(HR)));
@@ -154,7 +197,13 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
     }
 
     // add newly created file to complexMaterialMaps for later processing
-    PGD->getTextureMap(NIFUtil::TextureSlots::ENVMASK)[TexBase].insert({ComplexMap, NIFUtil::TextureType::COMPLEXMATERIAL});
+    PGD->getTextureMap(NIFUtil::TextureSlots::ENVMASK)[TexBase].insert(
+        {ComplexMap, NIFUtil::TextureType::COMPLEXMATERIAL});
+
+    // Update file map
+    auto HeightMapMod = PGD->getMod(HeightMap);
+    PGD->addGeneratedFile(ComplexMap, HeightMapMod);
+    NewCMMap = ComplexMap.wstring();
 
     spdlog::debug(L"Generated complex material map: {}", ComplexMap.wstring());
   } else {
@@ -217,15 +266,18 @@ auto ParallaxGen::getOutputZipName() -> filesystem::path { return "ParallaxGen_O
 auto ParallaxGen::getDiffJSONName() -> filesystem::path { return "ParallaxGen_Diff.json"; }
 
 // shorten some enum names
-auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &DiffJSON, const bool &PatchPlugin) -> ParallaxGenTask::PGResult {
+auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json *DiffJSON, const bool &PatchPlugin,
+                             const bool &Dry, unordered_map<wstring, set<NIFUtil::ShapeShader>> *ConflictMods,
+                             mutex *ConflictModsMutex) -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
-  spdlog::trace(L"NIF: {} | Starting processing", NIFFile.wstring());
+  Logger::Prefix PrefixNIF(NIFFile.wstring());
+  Logger::trace(L"Starting processing");
 
   // Determine output path for patched NIF
   const filesystem::path OutputFile = OutputDir / NIFFile;
   if (filesystem::exists(OutputFile)) {
-    spdlog::error(L"NIF: {} | NIF Rejected: File already exists", NIFFile.wstring());
+    Logger::error(L"NIF Rejected: File already exists");
     Result = ParallaxGenTask::PGResult::FAILURE;
     return Result;
   }
@@ -235,8 +287,8 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
   NifFile NIF;
   try {
     NIF = NIFUtil::loadNIFFromBytes(NIFFileData);
-  } catch(const exception &E) {
-    spdlog::error(L"NIF: {} | NIF Rejected: Unable to load NIF: {}", NIFFile.wstring(), strToWstr(E.what()));
+  } catch (const exception &E) {
+    Logger::error(L"NIF Rejected: Unable to load NIF: {}", strToWstr(E.what()));
     Result = ParallaxGenTask::PGResult::FAILURE;
     return Result;
   }
@@ -245,10 +297,11 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
   bool NIFModified = false;
 
   // Create Patcher objects
-  // TODO make more of these static
-  PatcherVanillaParallax PatchVP(NIFFile, &NIF, PGC, PGD3D);
-  PatcherComplexMaterial PatchCM(NIFFile, &NIF, PGC, PGD3D);
+  PatcherVanillaParallax PatchVP(NIFFile, &NIF);
+  PatcherComplexMaterial PatchCM(NIFFile, &NIF);
   PatcherTruePBR PatchTPBR(NIFFile, &NIF);
+  // Ordered to shader priority
+  const vector<PatcherShader *> PatcherList = {&PatchVP, &PatchCM, &PatchTPBR};
 
   // Patch each shape in NIF
   size_t NumShapes = 0;
@@ -256,23 +309,40 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
   int NewShapeIndex = 0;
   bool OneShapeSuccess = false;
   for (NiShape *NIFShape : NIF.GetShapes()) {
+    // get shape name and blockid
+    const auto ShapeBlockID = NIF.GetBlockID(NIFShape);
+    const auto ShapeName = strToWstr(NIFShape->name.get());
+    const auto ShapeIDStr = to_wstring(ShapeBlockID) + L" / " + ShapeName;
+    Logger::Prefix PrefixShape(ShapeIDStr);
+
     NumShapes++;
 
     bool ShapeModified = false;
     bool ShapeDeleted = false;
     NIFUtil::ShapeShader ShaderApplied = NIFUtil::ShapeShader::NONE;
     ParallaxGenTask::updatePGResult(Result,
-                                    processShape(NIFFile, NIF, NIFShape, PatchVP, PatchCM, PatchTPBR, ShapeModified, ShapeDeleted, ShaderApplied),
+                                    processShape(NIFFile, NIF, NIFShape, OldShapeIndex, PatcherList, ShapeModified,
+                                                 ShapeDeleted, ShaderApplied, Dry, ConflictMods, ConflictModsMutex),
                                     ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
 
     // Update NIFModified if shape was modified
-    if (ShapeModified) {
+    if (ShapeModified && ShaderApplied != NIFUtil::ShapeShader::NONE) {
       NIFModified = true;
 
       if (PatchPlugin) {
         // Process plugin
-        auto ShapeName = strToWstr(NIFShape->name.get());
-        ParallaxGenPlugin::processShape(ShaderApplied, NIFFile.wstring(), ShapeName, OldShapeIndex, NewShapeIndex);
+        wstring ResultMatchedPath;
+        unordered_set<NIFUtil::TextureSlots> ResultMatchedFrom;
+        array<wstring, NUM_TEXTURE_SLOTS> NewSlots;
+        ParallaxGenPlugin::processShape(ShaderApplied, NIFFile.wstring(), ShapeName, OldShapeIndex, NewShapeIndex, PatcherList,
+                                        ResultMatchedPath, ResultMatchedFrom, NewSlots);
+
+        // Post warnings if any
+        for (const auto &CurMatchedFrom : ResultMatchedFrom) {
+          mismatchWarn(ResultMatchedPath, NewSlots[static_cast<int>(CurMatchedFrom)]);
+        }
+
+        meshWarn(ResultMatchedPath, NIFFile.wstring());
       }
     }
 
@@ -294,7 +364,7 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
   }
 
   // Save patched NIF if it was modified
-  if (NIFModified) {
+  if (NIFModified && !Dry) {
     // Calculate CRC32 hash before
     boost::crc_32_type CRCBeforeResult{};
     CRCBeforeResult.process_bytes(NIFFileData.data(), NIFFileData.size());
@@ -304,12 +374,12 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
     filesystem::create_directories(OutputFile.parent_path());
 
     if (NIF.Save(OutputFile, NIFSaveOptions) != 0) {
-      spdlog::error(L"Unable to save NIF file: {}", NIFFile.wstring());
+      Logger::error(L"Unable to save NIF file");
       Result = ParallaxGenTask::PGResult::FAILURE;
       return Result;
     }
 
-    spdlog::debug(L"NIF: {} | Saving patched NIF to output", NIFFile.wstring());
+    Logger::debug(L"Saving patched NIF to output");
 
     // Clear NIF from memory (no longer needed)
     NIF.Clear();
@@ -321,38 +391,41 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json &Di
     const auto CRCAfter = CRCResultAfter.checksum();
 
     // Add to diff JSON
-    auto JSONKey = wstrToStr(NIFFile.wstring());
-    threadSafeJSONUpdate(
-        [&](nlohmann::json &JSON) {
-          JSON[JSONKey]["crc32original"] = CRCBefore;
-          JSON[JSONKey]["crc32patched"] = CRCAfter;
-        },
-        DiffJSON);
+    if (DiffJSON != nullptr) {
+      auto JSONKey = wstrToStr(NIFFile.wstring());
+      threadSafeJSONUpdate(
+          [&](nlohmann::json &JSON) {
+            JSON[JSONKey]["crc32original"] = CRCBefore;
+            JSON[JSONKey]["crc32patched"] = CRCAfter;
+          },
+          *DiffJSON);
+    }
   }
 
   return Result;
 }
 
-auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, NiShape *NIFShape,
-                               PatcherVanillaParallax &PatchVP, PatcherComplexMaterial &PatchCM,
-                               PatcherTruePBR &PatchTPBR, bool &ShapeModified, bool &ShapeDeleted, NIFUtil::ShapeShader &ShaderApplied) const -> ParallaxGenTask::PGResult {
+auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, NiShape *NIFShape, const int &ShapeIndex,
+                               const vector<PatcherShader *> &Patchers, bool &ShapeModified, bool &ShapeDeleted,
+                               NIFUtil::ShapeShader &ShaderApplied, const bool &Dry,
+                               unordered_map<wstring, set<NIFUtil::ShapeShader>> *ConflictMods,
+                               mutex *ConflictModsMutex) -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Prep
-  const auto ShapeBlockID = NIF.GetBlockID(NIFShape);
-  spdlog::trace(L"NIF: {} | Shape: {} | Starting Processing", NIFPath.wstring(), ShapeBlockID);
+  Logger::trace(L"Starting Processing");
 
   // Check for exclusions
   // only allow BSLightingShaderProperty blocks
   string NIFShapeName = NIFShape->GetBlockName();
   if (NIFShapeName != "NiTriShape" && NIFShapeName != "BSTriShape") {
-    spdlog::trace(L"NIF: {} | Shape: {} | Rejecting: Incorrect shape block type", NIFPath.wstring(), ShapeBlockID);
+    Logger::trace(L"Rejecting: Incorrect shape block type");
     return Result;
   }
 
   // get NIFShader type
   if (!NIFShape->HasShaderProperty()) {
-    spdlog::trace(L"NIF: {} | Shape: {} | Rejecting: No NIFShader property", NIFPath.wstring(), ShapeBlockID);
+    Logger::trace(L"Rejecting: No NIFShader property");
     return Result;
   }
 
@@ -360,88 +433,213 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
   NiShader *NIFShader = NIF.GetShader(NIFShape);
   if (NIFShader == nullptr) {
     // skip if no NIFShader
-    spdlog::trace(L"NIF: {} | Shape: {} | Rejecting: No NIFShader property", NIFPath.wstring(), ShapeBlockID);
+    Logger::trace(L"Rejecting: No NIFShader property");
     return Result;
   }
 
   // check that NIFShader is a BSLightingShaderProperty
   string NIFShaderName = NIFShader->GetBlockName();
   if (NIFShaderName != "BSLightingShaderProperty") {
-    spdlog::trace(L"NIF: {} | Shape: {} | Rejecting: Incorrect NIFShader block type", NIFPath.wstring(), ShapeBlockID);
+    Logger::trace(L"Rejecting: Incorrect NIFShader block type");
     return Result;
   }
 
   // check that NIFShader has a texture set
   if (!NIFShader->HasTextureSet()) {
-    spdlog::trace(L"NIF: {} | Shape: {} | Rejecting: No texture set", NIFPath.wstring(), ShapeBlockID);
+    Logger::trace(L"Rejecting: No texture set");
     return Result;
   }
 
-  // Find search prefixes
-  auto OldSlots = NIFUtil::getTextureSlots(NIF, NIFShape);
-  auto SearchPrefixes = NIFUtil::getSearchPrefixes(NIF, NIFShape);
-  wstring MatchedPath;
+  // Create cache key
+  bool CacheExists = false;
+  ParallaxGen::ShapeKey CacheKey;
+  CacheKey.NIFPath = NIFPath;
+  CacheKey.ShapeIndex = ShapeIndex;
 
-  // TRUEPBR CONFIG
-  if (!IgnoreTruePBR) {
-    bool EnableTruePBR = false;
-    map<size_t, tuple<nlohmann::json, wstring>> TruePBRData;
-    ParallaxGenTask::updatePGResult(Result,
-                                    PatchTPBR.shouldApply(NIFShape, SearchPrefixes, EnableTruePBR, TruePBRData),
-                                    ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
-    if (EnableTruePBR) {
-      // Enable TruePBR on shape
-      for (auto &TruePBRCFG : TruePBRData) {
-        spdlog::trace(L"NIF: {} | Shape: {} | PBR | Applying PBR Config {}", NIFPath.wstring(), ShapeBlockID,
-                      TruePBRCFG.first);
-        ParallaxGenTask::updatePGResult(Result, PatchTPBR.applyPatch(NIFShape, get<0>(TruePBRCFG.second),
-                                                                     get<1>(TruePBRCFG.second), ShapeModified, ShapeDeleted));
+  // Allowed shaders from result of patchers
+  vector<tuple<wstring, NIFUtil::ShapeShader, PatcherShader::PatcherMatch>> Matches;
+  {
+    lock_guard<mutex> Lock(AllowedShadersCacheMutex);
+
+    // Check if shape has already been processed
+    if (AllowedShadersCache.find(CacheKey) != AllowedShadersCache.end()) {
+      CacheExists = true;
+      Matches = AllowedShadersCache.at(CacheKey);
+    }
+  }
+
+  // Loop through each shader
+  if (!CacheExists) {
+    for (auto *Patcher : Patchers) {
+      Logger::Prefix PrefixPatches(strToWstr(Patcher->getPatcherName()));
+
+      // Check if shader should be applied
+      vector<PatcherShader::PatcherMatch> CurMatches;
+      Patcher->shouldApply(*NIFShape, CurMatches);
+
+      for (const auto &Match : CurMatches) {
+        Matches.emplace_back(PGD->getMod(Match.MatchedPath), Patcher->getShaderType(), Match);
+      }
+    }
+  }
+
+  // Write to cache if not already present
+  if (!CacheExists) {
+    lock_guard<mutex> Lock(AllowedShadersCacheMutex);
+    AllowedShadersCache[CacheKey] = Matches;
+  }
+
+  if (Matches.empty()) {
+    // no shaders to apply
+    Logger::trace(L"Rejecting: No shaders to apply");
+    return Result;
+  }
+
+  // Populate conflict mods if set
+  if (ConflictMods != nullptr && Matches.size() > 1) {
+    lock_guard<mutex> Lock(*ConflictModsMutex);
+
+    // add mods to conflict set
+    for (const auto &[Mod, Shader, Match] : Matches) {
+      if (ConflictMods->find(Mod) == ConflictMods->end()) {
+        ConflictMods->insert({Mod, set<NIFUtil::ShapeShader>()});
       }
 
-      if (!ShapeDeleted) {
-        ShaderApplied = NIFUtil::ShapeShader::TRUEPBR;
-      }
-
-      return Result;
+      ConflictMods->at(Mod).insert(Shader);
     }
   }
 
-  // COMPLEX MATERIAL
-  if (!IgnoreCM) {
-    bool EnableCM = false;
-    bool EnableDynCubemaps = false;
-    MatchedPath = L"";
-    ParallaxGenTask::updatePGResult(
-        Result, PatchCM.shouldApply(NIFShape, SearchPrefixes, OldSlots, EnableCM, EnableDynCubemaps, MatchedPath),
-        ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
-    if (EnableCM) {
-      // Enable complex material on shape
-      ParallaxGenTask::updatePGResult(Result,
-                                      PatchCM.applyPatch(NIFShape, MatchedPath, EnableDynCubemaps, ShapeModified));
-
-      ShaderApplied = NIFUtil::ShapeShader::COMPLEXMATERIAL;
-
-      return Result;
-    }
+  if (Dry) {
+    // dry run, no need to apply shaders
+    return Result;
   }
 
-  // VANILLA PARALLAX
-  if (!IgnoreParallax) {
-    bool EnableParallax = false;
-    MatchedPath = L"";
-    ParallaxGenTask::updatePGResult(Result, PatchVP.shouldApply(NIFShape, SearchPrefixes, OldSlots, EnableParallax, MatchedPath),
-                                    ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
-    if (EnableParallax) {
-      // Enable Parallax on shape
-      ParallaxGenTask::updatePGResult(Result, PatchVP.applyPatch(NIFShape, MatchedPath, ShapeModified));
+  // Find winning mod
+  int MaxPriority = -1;
+  NIFUtil::ShapeShader WinningShader = NIFUtil::ShapeShader::NONE;
+  PatcherShader::PatcherMatch WinningMatch;
+  wstring DecisionMod;
 
-      ShaderApplied = NIFUtil::ShapeShader::VANILLAPARALLAX;
+  const auto MeshFilePriority = PGC->getModPriority(PGD->getMod(NIFPath));
+  for (const auto &[Mod, Shader, Match] : Matches) {
+    auto CurPriority = PGC->getModPriority(Mod);
 
-      return Result;
+    if (CurPriority < MeshFilePriority) {
+      // skip mods with lower priority than mesh file
+      continue;
     }
+
+    if (CurPriority < MaxPriority) {
+      // skip mods with lower priority than current winner
+      continue;
+    }
+
+    MaxPriority = CurPriority;
+    WinningShader = Shader;
+    WinningMatch = Match;
+    DecisionMod = Mod;
   }
+
+  // Upgrade shader if required
+  if (WinningShader == NIFUtil::ShapeShader::VANILLAPARALLAX && UpgradeShaders) {
+    // convert then change shader type
+    convertHeightMapToComplexMaterial(WinningMatch.MatchedPath, WinningMatch.MatchedPath);
+    WinningShader = NIFUtil::ShapeShader::COMPLEXMATERIAL;
+  }
+
+  // loop through patchers
+  array<wstring, NUM_TEXTURE_SLOTS> NewSlots;
+  for (auto *Patcher : Patchers) {
+    if (Patcher->getShaderType() != WinningShader) {
+      continue;
+    }
+
+    // apply patch
+    NewSlots = Patcher->applyPatch(*NIFShape, WinningMatch, ShapeModified, ShapeDeleted);
+
+    if (!ShapeDeleted) {
+      ShaderApplied = WinningShader;
+    }
+
+    break;
+  }
+
+  // Post warnings if any
+  for (const auto &CurMatchedFrom : WinningMatch.MatchedFrom) {
+    mismatchWarn(WinningMatch.MatchedPath, NewSlots[static_cast<int>(CurMatchedFrom)]);
+  }
+
+  meshWarn(WinningMatch.MatchedPath, NIFPath.wstring());
 
   return Result;
+}
+
+void ParallaxGen::mismatchWarn(const wstring &MatchedPath, const wstring &BaseTex) {
+  // construct key
+  auto MatchedPathMod = PGD->getMod(MatchedPath);
+  auto BaseTexMod = PGD->getMod(BaseTex);
+
+  if (MatchedPathMod.empty() || BaseTexMod.empty()) {
+    return;
+  }
+
+  if (MatchedPathMod == BaseTexMod) {
+    return;
+  }
+
+  auto Key = make_pair(MatchedPathMod, BaseTexMod);
+
+  // check if warning was already issued
+  {
+    const lock_guard<mutex> Lock(MismatchWarnTrackerMutex);
+    if (MismatchWarnTracker.find(Key) != MismatchWarnTracker.end()) {
+      return;
+    }
+
+    // add to tracker if not
+    MismatchWarnTracker.insert(Key);
+  }
+
+  // log warning
+  spdlog::warn(L"[Tex Mismatch] Mod \"{}\" assets were used with diffuse or normal from mod \"{}\". Please verify that "
+               L"this is intended.",
+               MatchedPathMod, BaseTexMod);
+}
+
+void ParallaxGen::meshWarn(const wstring &MatchedPath, const wstring &NIFPath) {
+  // construct key
+  auto MatchedPathMod = PGD->getMod(MatchedPath);
+  auto NIFPathMod = PGD->getMod(NIFPath);
+
+  if (MatchedPathMod.empty() || NIFPathMod.empty()) {
+    return;
+  }
+
+  if (MatchedPathMod == NIFPathMod) {
+    return;
+  }
+
+  if (PGC->getModPriority(NIFPathMod) < 0) {
+    return;
+  }
+
+  auto Key = make_pair(MatchedPathMod, NIFPathMod);
+
+  // check if warning was already issued
+  {
+    const lock_guard<mutex> Lock(MeshWarnTrackerMutex);
+    if (MeshWarnTracker.find(Key) != MeshWarnTracker.end()) {
+      return;
+    }
+
+    // add to tracker if not
+    MeshWarnTracker.insert(Key);
+  }
+
+  // log warning
+  spdlog::warn(
+      L"[Mesh Mismatch] Mod \"{}\" assets were used on meshes from mod \"{}\". Please verify that this is intended.",
+      MatchedPathMod, NIFPathMod);
 }
 
 void ParallaxGen::threadSafeJSONUpdate(const std::function<void(nlohmann::json &)> &Operation,

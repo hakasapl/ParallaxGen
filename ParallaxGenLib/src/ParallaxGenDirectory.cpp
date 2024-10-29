@@ -18,6 +18,7 @@
 #include <winnt.h>
 
 #include "BethesdaDirectory.hpp"
+#include "ModManagerDirectory.hpp"
 #include "NIFUtil.hpp"
 #include "ParallaxGenTask.hpp"
 #include "ParallaxGenUtil.hpp"
@@ -25,7 +26,8 @@
 using namespace std;
 using namespace ParallaxGenUtil;
 
-ParallaxGenDirectory::ParallaxGenDirectory(BethesdaGame BG, const bool &logging) : BethesdaDirectory(BG, logging) {}
+ParallaxGenDirectory::ParallaxGenDirectory(BethesdaGame BG, filesystem::path OutputPath, ModManagerDirectory *MMD)
+    : BethesdaDirectory(BG, std::move(OutputPath), MMD, true) {}
 
 auto ParallaxGenDirectory::findFiles() -> void {
   // Clear existing unconfirmedtextures
@@ -73,7 +75,7 @@ auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
                                     const bool &CacheNIFs) -> void {
   findFiles();
 
-    spdlog::info("Starting building texture map");
+  spdlog::info("Starting building texture map");
 
   // Create task tracker
   ParallaxGenTask TaskTracker("Loading NIFs", UnconfirmedMeshes.size(), MAPTEXTURE_PROGRESS_MODULO);
@@ -115,7 +117,12 @@ auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
         TaskTracker.completeJob(Result);
       });
     } else {
-      TaskTracker.completeJob(mapTexturesFromNIF(Mesh, CacheNIFs));
+      try {
+        TaskTracker.completeJob(mapTexturesFromNIF(Mesh, CacheNIFs));
+      } catch (const exception &E) {
+        spdlog::error(L"Exception loading NIF \"{}\": {}", Mesh.wstring(), strToWstr(E.what()));
+        TaskTracker.completeJob(ParallaxGenTask::PGResult::FAILURE);
+      }
     }
   }
 
@@ -293,7 +300,7 @@ auto ParallaxGenDirectory::mapTexturesFromNIF(const filesystem::path &NIFPath,
         continue;
       case NIFUtil::TextureSlots::PARALLAX:
         // Parallax check
-        if ((ShaderType == BSLSP_DEFAULT && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF1_PARALLAX)) ||
+        if ((ShaderType == BSLSP_PARALLAX && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF1_PARALLAX)) ||
             (ShaderType == BSLSP_DEFAULT && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF2_UNUSED01))) {
           // This is a height map
           TextureType = NIFUtil::TextureType::HEIGHT;
@@ -411,7 +418,8 @@ auto ParallaxGenDirectory::addMesh(const filesystem::path &Path) -> void {
   Meshes.insert(Path);
 }
 
-auto ParallaxGenDirectory::getTextureMap(const NIFUtil::TextureSlots &Slot) -> map<wstring, unordered_set<NIFUtil::PGTexture, NIFUtil::PGTextureHasher>> & {
+auto ParallaxGenDirectory::getTextureMap(const NIFUtil::TextureSlots &Slot)
+    -> map<wstring, unordered_set<NIFUtil::PGTexture, NIFUtil::PGTextureHasher>> & {
   return TextureMaps[static_cast<size_t>(Slot)];
 }
 
