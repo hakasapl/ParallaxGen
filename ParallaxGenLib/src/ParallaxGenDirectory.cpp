@@ -300,7 +300,7 @@ auto ParallaxGenDirectory::mapTexturesFromNIF(const filesystem::path &NIFPath,
         continue;
       case NIFUtil::TextureSlots::PARALLAX:
         // Parallax check
-        if ((ShaderType == BSLSP_DEFAULT && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF1_PARALLAX)) ||
+        if ((ShaderType == BSLSP_PARALLAX && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF1_PARALLAX)) ||
             (ShaderType == BSLSP_DEFAULT && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF2_UNUSED01))) {
           // This is a height map
           TextureType = NIFUtil::TextureType::HEIGHT;

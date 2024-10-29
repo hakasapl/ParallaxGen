@@ -120,6 +120,7 @@ auto PatcherComplexMaterial::applyPatch(NiShape &NIFShape, const PatcherMatch &M
 
   // Set NIFShader type to env map
   NIFUtil::setShaderType(NIFShader, BSLSP_ENVMAP, NIFModified);
+  NIFUtil::setShaderFloat(NIFShaderBSLSP->environmentMapScale, 1.0F, NIFModified);
   // Set NIFShader flags
   NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF1_PARALLAX, NIFModified);
   NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF2_UNUSED01, NIFModified);

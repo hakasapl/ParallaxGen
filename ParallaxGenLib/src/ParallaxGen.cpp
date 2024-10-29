@@ -619,6 +619,10 @@ void ParallaxGen::meshWarn(const wstring &MatchedPath, const wstring &NIFPath) {
     return;
   }
 
+  if (PGC->getModPriority(NIFPathMod) < 0) {
+    return;
+  }
+
   auto Key = make_pair(MatchedPathMod, NIFPathMod);
 
   // check if warning was already issued
