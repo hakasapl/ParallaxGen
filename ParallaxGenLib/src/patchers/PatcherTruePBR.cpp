@@ -199,13 +199,39 @@ auto PatcherTruePBR::getSlotMatch(map<size_t, tuple<nlohmann::json, wstring>> &T
   reverse(MapReverse.begin(), MapReverse.end());
   auto It = Lookup.lower_bound(MapReverse);
 
+  // get the first element of the reverse path
+  auto ReverseFile = MapReverse;
+  auto Pos = ReverseFile.find_first_of(L"\\");
+  if (Pos != wstring::npos) {
+    ReverseFile = ReverseFile.substr(0, Pos);
+  }
+
   // Check if match is 1 back
-  if (It != Lookup.begin() && boost::starts_with(MapReverse, prev(It)->first)) {
+  if (It != Lookup.begin() && boost::starts_with(prev(It)->first, ReverseFile)) {
     It = prev(It);
-  } else if (It != Lookup.end() && boost::starts_with(MapReverse, It->first)) {
+  } else if (It != Lookup.end() && boost::starts_with(It->first, ReverseFile)) {
     // Check if match is current iterator, just continue here
   } else {
     // No match found
+    Logger::trace(L"No PBR JSON match found for \"{}\":\"{}\"", SlotLabel, TexName);
+    return;
+  }
+
+  bool FoundMatch = false;
+  while (It != Lookup.end()) {
+    if (boost::starts_with(MapReverse, It->first)) {
+      FoundMatch = true;
+      break;
+    }
+
+    if (It != Lookup.begin() && boost::starts_with(prev(It)->first, ReverseFile)) {
+      It = prev(It);
+    } else {
+      break;
+    }
+  }
+
+  if (!FoundMatch) {
     Logger::trace(L"No PBR JSON match found for \"{}\":\"{}\"", SlotLabel, TexName);
     return;
   }
