@@ -89,7 +89,7 @@ void ModManagerDirectory::populateModFileMapVortex() {
 }
 
 void ModManagerDirectory::populateModFileMapMO2() {
-  // required file is modlist.txt in the mods folder
+  // required file is modlist.txt in the profile folder
 
   spdlog::info("Populating mods from Mod Organizer 2");
 
