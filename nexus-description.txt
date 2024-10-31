@@ -16,7 +16,7 @@
 [size=6][center][b][color=#6aa84f]Basic usage[/color][/b][/center][/size]
 [list=1]
 [*][size=3]Download the latest version from the files section and extract the zip to an empty folder - [b]do not install as a mod in your mod manager[/b] [/size]
-[*][size=3]ParallaxGen will detect the game installation folder automatically, per default for Skyrim SE steam edition. For chosing other game types see the "CLI Arguments" section[/size]
+[*][size=3]ParallaxGen will detect the game installation folder automatically, per default for Skyrim SE steam edition. For chosing other game types see the [b]CLI arguments[/b] section[/size]
 [*][size=3]Run [b][i]ParallaxGen.exe[/b][/i] to generate the patched meshes[/size]
 [*][size=3]In case you get errors or warnings and you are not sure what they mean search the forum or ask for help[/size]
 [*][size=3]Install the generated file [b][i]ParallaxGen_Output/ParallaxGen_Output.zip[/b][/i] with your mod manager, the meshes must win every conflict, the generated plugin [b][i]ParallaxGen.esp[/i][/b] must load as late as possible[/size]
@@ -29,7 +29,7 @@
 [*][size=3]If using Vortex, enable "Run in shell" and "Run detached" for the console to pop up correctly[/size]
 [*][size=3]Add the command-line argument [b][i]--upgrade-shaders[/b][/i] to upgrade all parallax shaders to complex material shadders, for details see below[/size]
 [/list]
-[size=3] See the command line options below for more advanced usage.[/size]
+[size=3] See the [b]CLI arguments[/b] section below for more advanced usage.[/size]
 
 [b][size=6][center][color=#6aa84f]Features[/color][/center][/size][/b]
 [size=4]Mesh Patching[/size]
@@ -74,6 +74,7 @@ ParallaxGen has support for JSON configuration files in your load order. These a
 [/spoiler]
 
 [color=#6aa84f][size=6][center]Notes on Shader Types[/center][/size][/color]
+[spoiler]
 Parallax Mapping is an effect where the geometry gets more depth without using additional geometry, [url=https://www.nexusmods.com/skyrimspecialedition/mods/95134]Complex Parallax Material[/url] has good demonstration pictures. For the algorithm to work, either ENB or [url=https://www.nexusmods.com/skyrimspecialedition/mods/86492]Community Shaders[/url] with [url=https://www.nexusmods.com/skyrimspecialedition/mods/95134]Complex Parallax Material[/url] is needed. Also, parallax maps, otherwise known as height maps, are needed and shaders in the meshes need to be setup correctly. In skyrim there are three types of textures that are needed for this to work:
 
 [size=4]Complex Parallax[/size]
@@ -147,7 +148,7 @@ When using terrain parallax textures, [b]ALL[/b] terrain textures need to have a
 [list]
 [*]Although ParallaxGen does not modify anything regarding the terrain itself, there is a dependency when using [url=https://www.nexusmods.com/skyrimspecialedition/mods/88261]Terrain Parallax Blending Fix[/url] which uses Texture Sets for the static meshes and does not support complex material. Since version 0.6.0, ParallaxGen is compatible and creates an ESP to add support for complex material to the blending fix mod. [b]Make sure to load the generated ESP manually after the TXST esps[/b] from the Terrain Parallax Blending Fix mod.
 [/list]
-
+[/spoiler]
 [color=#6aa84f][size=6][center][b]Load Order Considerations[/b][/center][/size][/color]
 If you install parallax/complex material textures and overwrite textures with another mod that does not contain parallax or complex material textures this will lead to visual problems, the texture will appear floating. This problem is especially likely if you install All-in-One height map additions for Skyrim and have other non-parallax texture packs.
 [b]Always make sure to have pairs of height maps/complex material maps and standard textures that match each other installed![/b]
