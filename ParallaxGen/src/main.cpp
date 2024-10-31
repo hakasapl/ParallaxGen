@@ -35,7 +35,6 @@
 #include "patchers/PatcherTruePBR.hpp"
 #include "patchers/PatcherVanillaParallax.hpp"
 
-
 constexpr unsigned MAX_LOG_SIZE = 5242880;
 constexpr unsigned MAX_LOG_FILES = 100;
 
@@ -291,14 +290,16 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
     const auto ModConflicts = PG.findModConflicts(PatcherFactories, !Args.NoMultithread, !Args.NoPlugin);
     const auto ExistingOrder = PGC.getModOrder();
 
-    // pause timer for UI
-    TimeTaken += chrono::duration_cast<chrono::seconds>(chrono::high_resolution_clock::now() - StartTime).count();
+    if (!ModConflicts.empty()) {
+      // pause timer for UI
+      TimeTaken += chrono::duration_cast<chrono::seconds>(chrono::high_resolution_clock::now() - StartTime).count();
 
-    // Select mod order
-    auto SelectedOrder = ParallaxGenUI::selectModOrder(ModConflicts, ExistingOrder);
-    StartTime = chrono::high_resolution_clock::now();
+      // Select mod order
+      auto SelectedOrder = ParallaxGenUI::selectModOrder(ModConflicts, ExistingOrder);
+      StartTime = chrono::high_resolution_clock::now();
 
-    PGC.setModOrder(SelectedOrder);
+      PGC.setModOrder(SelectedOrder);
+    }
   }
 
   // Patch meshes if set

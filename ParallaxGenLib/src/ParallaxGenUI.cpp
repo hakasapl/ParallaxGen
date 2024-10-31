@@ -8,14 +8,16 @@ using namespace std;
 
 // class ModSortDialog
 ModSortDialog::ModSortDialog(const std::vector<std::wstring> &Mods, const std::vector<std::wstring> &Shaders,
-                             const std::vector<bool> &IsNew)
+                             const std::vector<bool> &IsNew, const std::unordered_map<std::wstring, std::unordered_set<std::wstring>> &Conflicts)
     : wxDialog(nullptr, wxID_ANY, "Set Mod Priority", wxDefaultPosition, wxSize(300, 400),
-               wxDEFAULT_DIALOG_STYLE | wxSTAY_ON_TOP) {
+               wxDEFAULT_DIALOG_STYLE | wxSTAY_ON_TOP), ConflictsMap(Conflicts) {
   auto *MainSizer = new wxBoxSizer(wxVERTICAL);
   // Create the ListCtrl
   ListCtrl = new wxListCtrl(this, wxID_ANY, wxDefaultPosition, wxSize(250, 300), wxLC_REPORT | wxLC_SINGLE_SEL);
   ListCtrl->InsertColumn(0, "Mod");
   ListCtrl->InsertColumn(1, "Shader");
+
+  ListCtrl->Bind(wxEVT_LIST_ITEM_SELECTED, &ModSortDialog::onItemSelected, this);
 
   // Add items to ListCtrl and highlight specific ones
   for (size_t I = 0; I < Mods.size(); ++I) {
@@ -141,6 +143,30 @@ void ModSortDialog::swapItems(long FirstIndex, long SecondIndex) {
   }
 }
 
+void ModSortDialog::onItemSelected(wxListEvent &Event) {
+  long Index = Event.GetIndex();
+  std::wstring SelectedMod = ListCtrl->GetItemText(Index).ToStdWstring();
+  highlightConflictingItems(SelectedMod);
+}
+
+void ModSortDialog::highlightConflictingItems(const std::wstring &SelectedMod) {
+  // Clear previous highlights
+  for (long i = 0; i < ListCtrl->GetItemCount(); ++i) {
+    ListCtrl->SetItemBackgroundColour(i, *wxWHITE);
+  }
+
+  // Highlight selected item
+  auto ConflictSet = ConflictsMap.find(SelectedMod);
+  if (ConflictSet != ConflictsMap.end()) {
+    for (long i = 0; i < ListCtrl->GetItemCount(); ++i) {
+      std::wstring ItemText = ListCtrl->GetItemText(i).ToStdWstring();
+      if (ItemText == SelectedMod || ConflictSet->second.count(ItemText)) {
+        ListCtrl->SetItemBackgroundColour(i, *wxYELLOW);  // Highlight color
+      }
+    }
+  }
+}
+
 // ParallaxGenUI class
 
 void ParallaxGenUI::init() {
@@ -150,12 +176,13 @@ void ParallaxGenUI::init() {
   }
 }
 
-auto ParallaxGenUI::selectModOrder(const std::unordered_map<std::wstring, std::set<NIFUtil::ShapeShader>> &Conflicts,
+auto ParallaxGenUI::selectModOrder(const std::unordered_map<std::wstring, tuple<std::set<NIFUtil::ShapeShader>, unordered_set<wstring>>> &Conflicts,
                                    const std::vector<std::wstring> &ExistingMods) -> std::vector<std::wstring> {
   // split into vectors
   vector<wstring> ModStrs;
   vector<wstring> ShaderCombinedStrs;
   vector<bool> IsNew;
+  unordered_map<wstring, unordered_set<wstring>> ConflictTracker;
 
   // first loop through existing order to restore is
   auto ConflictsCopy = Conflicts;
@@ -164,7 +191,7 @@ auto ParallaxGenUI::selectModOrder(const std::unordered_map<std::wstring, std::s
       ModStrs.push_back(Mod);
 
       vector<wstring> ShaderStrs;
-      for (const auto &Shader : Conflicts.at(Mod)) {
+      for (const auto &Shader : get<0>(Conflicts.at(Mod))) {
         ShaderStrs.insert(ShaderStrs.begin(), ParallaxGenUtil::strToWstr(NIFUtil::getStrFromShader(Shader)));
       }
 
@@ -173,6 +200,9 @@ auto ParallaxGenUI::selectModOrder(const std::unordered_map<std::wstring, std::s
 
       // check if mod is in existing order
       IsNew.push_back(false);
+
+      // add to conflict tracker
+      ConflictTracker.insert({Mod, get<1>(ConflictsCopy.at(Mod))});
 
       // delete from conflicts
       ConflictsCopy.erase(Mod);
@@ -184,18 +214,21 @@ auto ParallaxGenUI::selectModOrder(const std::unordered_map<std::wstring, std::s
     ModStrs.insert(ModStrs.begin(), Mod);
 
     vector<wstring> ShaderStrs;
-    for (const auto &Shader : ConflictsCopy.at(Mod)) {
+    for (const auto &Shader : get<0>(ConflictsCopy.at(Mod))) {
       ShaderStrs.insert(ShaderStrs.begin(), ParallaxGenUtil::strToWstr(NIFUtil::getStrFromShader(Shader)));
     }
 
     auto ShaderStr = boost::join(ShaderStrs, L",");
     ShaderCombinedStrs.insert(ShaderCombinedStrs.begin(), ShaderStr);
 
+    // add to conflict tracker
+    ConflictTracker.insert({Mod, get<1>(ConflictsCopy.at(Mod))});
+
     // check if mod is in existing order
     IsNew.insert(IsNew.begin(), true);
   }
 
-  ModSortDialog Dialog(ModStrs, ShaderCombinedStrs, IsNew);
+  ModSortDialog Dialog(ModStrs, ShaderCombinedStrs, IsNew, ConflictTracker);
   if (Dialog.ShowModal() == wxID_OK) {
     return Dialog.getSortedItems();
   }
