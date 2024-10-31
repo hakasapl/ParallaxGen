@@ -8,9 +8,11 @@ using namespace std;
 
 // class ModSortDialog
 ModSortDialog::ModSortDialog(const std::vector<std::wstring> &Mods, const std::vector<std::wstring> &Shaders,
-                             const std::vector<bool> &IsNew, const std::unordered_map<std::wstring, std::unordered_set<std::wstring>> &Conflicts)
+                             const std::vector<bool> &IsNew,
+                             const std::unordered_map<std::wstring, std::unordered_set<std::wstring>> &Conflicts)
     : wxDialog(nullptr, wxID_ANY, "Set Mod Priority", wxDefaultPosition, wxSize(300, 400),
-               wxDEFAULT_DIALOG_STYLE | wxSTAY_ON_TOP), ConflictsMap(Conflicts) {
+               wxDEFAULT_DIALOG_STYLE | wxSTAY_ON_TOP),
+      ConflictsMap(Conflicts) {
   auto *MainSizer = new wxBoxSizer(wxVERTICAL);
   // Create the ListCtrl
   ListCtrl = new wxListCtrl(this, wxID_ANY, wxDefaultPosition, wxSize(250, 300), wxLC_REPORT | wxLC_SINGLE_SEL);
@@ -151,17 +153,17 @@ void ModSortDialog::onItemSelected(wxListEvent &Event) {
 
 void ModSortDialog::highlightConflictingItems(const std::wstring &SelectedMod) {
   // Clear previous highlights
-  for (long i = 0; i < ListCtrl->GetItemCount(); ++i) {
-    ListCtrl->SetItemBackgroundColour(i, *wxWHITE);
+  for (long I = 0; I < ListCtrl->GetItemCount(); ++I) {
+    ListCtrl->SetItemBackgroundColour(I, *wxWHITE);
   }
 
   // Highlight selected item
   auto ConflictSet = ConflictsMap.find(SelectedMod);
   if (ConflictSet != ConflictsMap.end()) {
-    for (long i = 0; i < ListCtrl->GetItemCount(); ++i) {
-      std::wstring ItemText = ListCtrl->GetItemText(i).ToStdWstring();
-      if (ItemText == SelectedMod || ConflictSet->second.count(ItemText)) {
-        ListCtrl->SetItemBackgroundColour(i, *wxYELLOW);  // Highlight color
+    for (long I = 0; I < ListCtrl->GetItemCount(); ++I) {
+      std::wstring ItemText = ListCtrl->GetItemText(I).ToStdWstring();
+      if (ItemText == SelectedMod || ConflictSet->second.contains(ItemText)) {
+        ListCtrl->SetItemBackgroundColour(I, *wxYELLOW); // Highlight color
       }
     }
   }
@@ -176,8 +178,9 @@ void ParallaxGenUI::init() {
   }
 }
 
-auto ParallaxGenUI::selectModOrder(const std::unordered_map<std::wstring, tuple<std::set<NIFUtil::ShapeShader>, unordered_set<wstring>>> &Conflicts,
-                                   const std::vector<std::wstring> &ExistingMods) -> std::vector<std::wstring> {
+auto ParallaxGenUI::selectModOrder(
+    const std::unordered_map<std::wstring, tuple<std::set<NIFUtil::ShapeShader>, unordered_set<wstring>>> &Conflicts,
+    const std::vector<std::wstring> &ExistingMods) -> std::vector<std::wstring> {
   // split into vectors
   vector<wstring> ModStrs;
   vector<wstring> ShaderCombinedStrs;
