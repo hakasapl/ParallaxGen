@@ -125,11 +125,23 @@ auto PatcherTruePBR::shouldApply(nifly::NiShape &NIFShape, std::vector<PatcherMa
 
   Logger::trace(L"Starting checking");
 
+  Matches.clear();
+
   // Find Old Slots
   auto OldSlots = NIFUtil::getTextureSlots(getNIF(), &NIFShape);
 
+  if (NIFUtil::hasShaderFlag(NIFShaderBSLSP, SLSF2_UNUSED01)) {
+    // Check if RMAOS exists
+    const auto RMAOSPath = OldSlots[static_cast<size_t>(NIFUtil::TextureSlots::ENVMASK)];
+    if (!RMAOSPath.empty() && isFile(RMAOSPath)) {
+      Logger::trace(L"This shape already has PBR");
+      PatcherMatch Match;
+      Match.MatchedPath = getNIFPath().wstring();
+      Matches.push_back(Match);
+    }
+  }
+
   if (shouldApply(OldSlots, Matches)) {
-    // TODO restore log here
     Logger::trace(L"{} PBR configs matched", Matches.size());
     // Add to matched texture sets for future use
     MatchedTextureSets[TextureSetBlockID] = Matches;
@@ -142,9 +154,6 @@ auto PatcherTruePBR::shouldApply(nifly::NiShape &NIFShape, std::vector<PatcherMa
 
 auto PatcherTruePBR::shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
                                  std::vector<PatcherMatch> &Matches) -> bool {
-  // Stores the json filename that gets priority over this shape
-  Matches.clear();
-
   // get search prefixes
   auto SearchPrefixes = NIFUtil::getSearchPrefixes(OldSlots);
 
@@ -187,6 +196,12 @@ auto PatcherTruePBR::shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOT
     Match.ExtraData = make_shared<decltype(JSONData)>(JSONData);
     Matches.push_back(Match);
   }
+
+  // Sort matches by ExtraData key minimum value (this preserves order of JSONs to be 0 having priority if mod order does not exist)
+  sort(Matches.begin(), Matches.end(), [](const PatcherMatch &A, const PatcherMatch &B) {
+    return get<0>(*(static_pointer_cast<map<size_t, tuple<nlohmann::json, wstring>>>(A.ExtraData)->begin())) >
+           get<0>(*(static_pointer_cast<map<size_t, tuple<nlohmann::json, wstring>>>(B.ExtraData)->begin()));
+  });
 
   return Matches.size() > 0;
 }
@@ -341,6 +356,11 @@ auto PatcherTruePBR::insertTruePBRData(std::map<size_t, std::tuple<nlohmann::jso
 
 auto PatcherTruePBR::applyPatch(nifly::NiShape &NIFShape, const PatcherMatch &Match, bool &NIFModified,
                                 bool &ShapeDeleted) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
+  if (Match.MatchedPath == getNIFPath().wstring()) {
+    // don't do anything if matched path is current NIF
+    return NIFUtil::getTextureSlots(getNIF(), &NIFShape);
+  }
+
   // get extra data from match
   auto ExtraData = static_pointer_cast<map<size_t, tuple<nlohmann::json, wstring>>>(Match.ExtraData);
   std::array<std::wstring, NUM_TEXTURE_SLOTS> NewSlots;
@@ -356,6 +376,11 @@ auto PatcherTruePBR::applyPatch(nifly::NiShape &NIFShape, const PatcherMatch &Ma
 
 auto PatcherTruePBR::applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
                                      const PatcherMatch &Match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
+  if (Match.MatchedPath == getNIFPath().wstring()) {
+    // don't do anything if matched path is current NIF
+    return OldSlots;
+  }
+
   auto NewSlots = OldSlots;
   auto ExtraData = static_pointer_cast<map<size_t, tuple<nlohmann::json, wstring>>>(Match.ExtraData);
   for (const auto &[Sequence, Data] : *ExtraData) {

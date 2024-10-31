@@ -111,13 +111,22 @@ auto PatcherVanillaParallax::shouldApply(const std::array<std::wstring, NUM_TEXT
   }
 
   // Check aspect ratio matches
+  PatcherMatch LastMatch; // Variable to store the match that equals OldSlots[Slot], if found
   for (const auto &Match : FoundMatches) {
     if (isSameAspectRatio(BaseMap, Match.Path)) {
-      PatcherMatch PatcherMatch;
-      PatcherMatch.MatchedPath = Match.Path;
-      PatcherMatch.MatchedFrom.insert(MatchedFromSlot);
-      Matches.push_back(PatcherMatch);
+      PatcherMatch CurMatch;
+      CurMatch.MatchedPath = Match.Path;
+      CurMatch.MatchedFrom.insert(MatchedFromSlot);
+      if (Match.Path == OldSlots[static_cast<size_t>(NIFUtil::TextureSlots::PARALLAX)]) {
+        LastMatch = CurMatch; // Save the match that equals OldSlots[Slot]
+      } else {
+        Matches.push_back(CurMatch); // Add other matches
+      }
     }
+  }
+
+  if (!LastMatch.MatchedPath.empty()) {
+    Matches.push_back(LastMatch); // Add the match that equals OldSlots[Slot]
   }
 
   return !Matches.empty();
