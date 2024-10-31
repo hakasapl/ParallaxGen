@@ -170,6 +170,7 @@ auto ParallaxGen::convertHeightMapToComplexMaterial(const filesystem::path &Heig
   const filesystem::path ComplexMap = TexBase + L"_m.dds";
   if (PGD->isGenerated(ComplexMap)) {
     // this was already upgraded
+    NewCMMap = ComplexMap.wstring();
     return Result;
   }
 
@@ -559,7 +560,9 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
   // Upgrade shader if required
   if (WinningShader == NIFUtil::ShapeShader::VANILLAPARALLAX && UpgradeShaders) {
     // convert then change shader type
-    convertHeightMapToComplexMaterial(WinningMatch.MatchedPath, WinningMatch.MatchedPath);
+    wstring NewCMMap;
+    convertHeightMapToComplexMaterial(WinningMatch.MatchedPath, NewCMMap);
+    WinningMatch.MatchedPath = NewCMMap;
     WinningShader = NIFUtil::ShapeShader::COMPLEXMATERIAL;
   }
 
