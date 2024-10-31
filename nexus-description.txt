@@ -24,7 +24,7 @@
 [/list]
 [size=6][center][b][color=#6aa84f]Advanced usage[/color][/b][/center][/size]
 [list]
-[*][size=3]In case you have a non-standard skyrim installation directory, you can manually specifiy the skyrim directory with the [b][i]-d[/b][i] command line argument[/size]
+[*][size=3]In case you have a non-standard skyrim installation directory, you can manually specifiy the skyrim directory with the [b][i]-d[/b][/i] command line argument[/size]
 [*][size=3]Add [b][i]ParallaxGen.exe[/b][/i] as an executable to your mod manager and start it from there[/size]
 [*][size=3]If using Vortex, enable "Run in shell" and "Run detached" for the console to pop up correctly[/size]
 [*][size=3]Add the command-line argument [b][i]--upgrade-shaders[/b][/i] to upgrade all parallax shaders to complex material shadders, for details see below[/size]
