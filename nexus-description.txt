@@ -11,6 +11,7 @@
 [*][size=3]you installed a mod that contains parallax or complex material textures but does not contain parallax/complex material meshes, note that this is the recommended way to provide textures[/size]
 [*][size=3]you created your own parallax textures[/size]
 [*][size=3]you do have parallax/complex material meshes, but they are overridden by another mod that does not have parallax/complex material enabled[/size]
+[*][size=3]you do have both complex material as well as parallax textures[/size]
 [/list]
 [size=6][center][b][color=#6aa84f]Basic usage[/color][/b][/center][/size]
 [list=1]
@@ -23,6 +24,7 @@
 [/list]
 [size=6][center][b][color=#6aa84f]Advanced usage[/color][/b][/center][/size]
 [list]
+[*][size=3]In case you have a non-standard skyrim installation directory, you can manually specifiy the skyrim directory with the [b][i]-d[/b][i] command line argument[/size]
 [*][size=3]Add [b][i]ParallaxGen.exe[/b][/i] as an executable to your mod manager and start it from there[/size]
 [*][size=3]If using Vortex, enable "Run in shell" and "Run detached" for the console to pop up correctly[/size]
 [*][size=3]Add the command-line argument [b][i]--upgrade-shaders[/b][/i] to upgrade all parallax shaders to complex material shadders, for details see below[/size]
@@ -147,7 +149,7 @@ When using terrain parallax textures, [b]ALL[/b] terrain textures need to have a
 [/list]
 
 [color=#6aa84f][size=6][center][b]Load Order Considerations[/b][/center][/size][/color]
-If you install parallax/complex material textures and overwrite textures with another mod that does not contain parallax or complex material textures this will lead to visual problems, the texture will appear floating. This problem is especially likely if you install All-in-One height map additions for Skyrim and have other non-parallax texture packs. 
+If you install parallax/complex material textures and overwrite textures with another mod that does not contain parallax or complex material textures this will lead to visual problems, the texture will appear floating. This problem is especially likely if you install All-in-One height map additions for Skyrim and have other non-parallax texture packs.
 [b]Always make sure to have pairs of height maps/complex material maps and standard textures that match each other installed![/b]
 
 [color=#6aa84f][size=6][center][b]A Note to Mod Authors[/b][/center][/size][/color]
