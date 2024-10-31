@@ -50,23 +50,23 @@ Complex parallax has a lot of limitations that I didn't like, so I implemented s
 
 [size=4]Customizing ParallaxGen[/size]
 
-ParallaxGen has support for JSON configuration files in your load order. These are either designed to be shipped alongside a mod, or for a user to create in their own load order to customize ParallaxGen. JSON files are automatically merged internally so you can have as many as you want in your load order. You can name your json file anything you want and put it in the "parallaxgen" folder (<Skyrim Data Folder>/parallaxgen). The following spoiler shows the configuration file that ParallaxGen uses by default (this is loaded outside of your load order and is shipped alongside ParallaxGen). Everything is glob compliant so you can use wildcards (as shown in the default configuration), which should allow for lots of flexibility.
+ParallaxGen has support for JSON configuration files in your load order. These are either designed to be shipped alongside a mod, or for a user to create in their own load order to customize ParallaxGen. JSON files are automatically merged internally so you can have as many as you want in your load order. You can name your json file anything you want and put it in the "parallaxgen" folder (<Skyrim Data Folder>/parallaxgen). The following spoiler shows the configuration file that ParallaxGen uses by default (this is loaded outside of your load order and is shipped alongside ParallaxGen). You can use windows wildcards (as shown in the default configuration), which should allow for lots of flexibility.
 
 [spoiler]
 [code]
 {
   "dyncubemap_blocklist": [],
   "nif_blocklist": [
-    "**/cameras/**",
-    "**/decals/**",
-    "**/dyndolod/**",
-    "**/lod/**",
-    "**/magic/**",
-    "**/markers/**",
-    "**/mps/**",
-    "**/sky/**",
-    "**/water/**",
-    "calientetools/**"
+    "*\\cameras\\*",
+    "*\\decals\\*",
+    "*\\dyndolod\\*",
+    "*\\lod\\*",
+    "*\\magic\\*",
+    "*\\markers\\*",
+    "*\\mps\\*",
+    "*\\sky\\*",
+    "*\\water\\*",
+    "calientetools\\*"
   ],
   "texture_maps": {}
 }
