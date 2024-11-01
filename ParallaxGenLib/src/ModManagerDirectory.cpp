@@ -84,7 +84,7 @@ void ModManagerDirectory::populateModFileMapVortex() {
 
     // Update file map
     spdlog::trace(L"ModManagerDirectory | Adding Files to Map : {} -> {}", RelPath.wstring(), ModName);
-    ModFileMap[boost::to_lower_copy(RelPath.wstring())] = boost::to_lower_copy(ModName);
+    ModFileMap[boost::to_lower_copy(RelPath.wstring())] = ModName;
   }
 }
 
@@ -97,11 +97,12 @@ void ModManagerDirectory::populateModFileMapMO2() {
     throw runtime_error("Mod Organizer 2 modlist.txt file does not exist: " + RequiredFile.string());
   }
 
-  wifstream ModListFileF(RequiredFile);
+  ifstream ModListFileF(RequiredFile);
 
   // loop through modlist.txt
-  wstring Mod;
-  while (getline(ModListFileF, Mod)) {
+  string ModStr;
+  while (getline(ModListFileF, ModStr)) {
+    wstring Mod = ParallaxGenUtil::strToWstr(ModStr);
     if (Mod.empty()) {
       // skip empty lines
       continue;
@@ -155,7 +156,7 @@ void ModManagerDirectory::populateModFileMapMO2() {
         continue;
       }
 
-      ModFileMap[RelPathLower] = boost::to_lower_copy(Mod);
+      ModFileMap[RelPathLower] = Mod;
     }
   }
 }
