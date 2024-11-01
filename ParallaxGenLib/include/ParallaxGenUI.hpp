@@ -19,7 +19,13 @@
 class ModSortDialog : public wxDialog {
 private:
   wxListCtrl *ListCtrl;
+  wxTimer ScrollTimer; // Timer for continuous scrolling
+  int ListCtrlHeaderHeight = 0;
+
   std::unordered_map<std::wstring, std::unordered_set<std::wstring>> ConflictsMap;
+
+  // Stores the original color of things
+  std::unordered_map<std::wstring, wxColour> OriginalBackgroundColors;
 
   // Index of item being dragged
   int DraggedIndex = -1;
@@ -47,6 +53,8 @@ private:
   void onMouseMotion(wxMouseEvent &Event);
   void onMouseLeftUp(wxMouseEvent &Event);
   void onColumnClick(wxListEvent &Event);
+  void onTimer(wxTimerEvent &Event);
+  auto getHeaderHeight() -> int;
   auto calculateColumnWidth(int ColIndex) -> int;
   void highlightConflictingItems(const std::wstring &SelectedMod);
   void drawDropIndicator(int TargetIndex);
