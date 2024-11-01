@@ -1,6 +1,8 @@
 #include "ParallaxGenUI.hpp"
 
 #include <boost/algorithm/string/join.hpp>
+#include <list>
+#include <wx/gdicmn.h>
 
 #include "ParallaxGenUtil.hpp"
 
@@ -13,13 +15,17 @@ ModSortDialog::ModSortDialog(const std::vector<std::wstring> &Mods, const std::v
     : wxDialog(nullptr, wxID_ANY, "Set Mod Priority", wxDefaultPosition, wxSize(300, 400),
                wxDEFAULT_DIALOG_STYLE | wxSTAY_ON_TOP),
       ConflictsMap(Conflicts) {
+  SortAscending = true;
+
   auto *MainSizer = new wxBoxSizer(wxVERTICAL);
   // Create the ListCtrl
   ListCtrl = new wxListCtrl(this, wxID_ANY, wxDefaultPosition, wxSize(250, 300), wxLC_REPORT);
   ListCtrl->InsertColumn(0, "Mod");
   ListCtrl->InsertColumn(1, "Shader");
+  ListCtrl->InsertColumn(2, "Priority");
 
   ListCtrl->Bind(wxEVT_LIST_ITEM_SELECTED, &ModSortDialog::onItemSelected, this);
+  ListCtrl->Bind(wxEVT_LIST_COL_CLICK, &ModSortDialog::onColumnClick, this);
 
   ListCtrl->Bind(wxEVT_LEFT_DOWN, &ModSortDialog::onMouseLeftDown, this);
   ListCtrl->Bind(wxEVT_MOTION, &ModSortDialog::onMouseMotion, this);
@@ -29,6 +35,7 @@ ModSortDialog::ModSortDialog(const std::vector<std::wstring> &Mods, const std::v
   for (size_t I = 0; I < Mods.size(); ++I) {
     long Index = ListCtrl->InsertItem(static_cast<long>(I), Mods[I]);
     ListCtrl->SetItem(Index, 1, Shaders[I]);
+    ListCtrl->SetItem(Index, 2, std::to_string(I));
     if (IsNew[I]) {
       ListCtrl->SetItemBackgroundColour(Index, *wxGREEN); // Highlight color
     }
@@ -37,8 +44,9 @@ ModSortDialog::ModSortDialog(const std::vector<std::wstring> &Mods, const std::v
   // Calculate minimum width for each column
   int Col1Width = calculateColumnWidth(0);
   int Col2Width = calculateColumnWidth(1);
+  int Col3Width = calculateColumnWidth(2);
   int ScrollBarWidth = wxSystemSettings::GetMetric(wxSYS_VSCROLL_X);
-  int TotalWidth = Col1Width + Col2Width + 40 + ScrollBarWidth; // Extra padding
+  int TotalWidth = Col1Width + Col2Width + Col3Width + 40 + ScrollBarWidth; // Extra padding
 
   // Add wrapped message at the top
   static const std::wstring Message = L"The following mods have been detected as potential conflicts. Please set the "
@@ -51,6 +59,7 @@ ModSortDialog::ModSortDialog(const std::vector<std::wstring> &Mods, const std::v
   // Set column widths
   ListCtrl->SetColumnWidth(0, Col1Width);
   ListCtrl->SetColumnWidth(1, Col2Width);
+  ListCtrl->SetColumnWidth(2, Col3Width);
 
   // Adjust dialog width to match the total width of columns and padding
   SetSizeHints(TotalWidth, 600); // Adjust minimum width and height
@@ -58,96 +67,14 @@ ModSortDialog::ModSortDialog(const std::vector<std::wstring> &Mods, const std::v
 
   MainSizer->Add(ListCtrl, 1, wxEXPAND | wxALL, 10);
 
-  // Add Up/Down buttons for reordering
-  auto *ButtonSizer = new wxBoxSizer(wxHORIZONTAL);
-  auto *UpButton = new wxButton(this, wxID_ANY, "Move Up (Lower Priority)");
-  auto *DownButton = new wxButton(this, wxID_ANY, "Move Down (Higher Priority)");
-  ButtonSizer->Add(UpButton, 0, wxALL, 5);
-  ButtonSizer->Add(DownButton, 0, wxALL, 5);
-  MainSizer->Add(ButtonSizer, 0, wxALIGN_CENTER_HORIZONTAL);
-
   // Add OK button
   auto *OkButton = new wxButton(this, wxID_OK, "OK");
   MainSizer->Add(OkButton, 0, wxALIGN_CENTER_HORIZONTAL | wxALL, 10);
 
   SetSizer(MainSizer);
-
-  // Event bindings
-  UpButton->Bind(wxEVT_BUTTON, &ModSortDialog::onMoveUp, this);
-  DownButton->Bind(wxEVT_BUTTON, &ModSortDialog::onMoveDown, this);
 }
 
-auto ModSortDialog::getSortedItems() const -> std::vector<std::wstring> {
-  std::vector<std::wstring> SortedItems;
-  for (long I = 0; I < ListCtrl->GetItemCount(); ++I) {
-    SortedItems.push_back(ListCtrl->GetItemText(I).ToStdWstring());
-  }
-  return SortedItems;
-}
-
-auto ModSortDialog::calculateColumnWidth(int ColIndex) -> int {
-  int MaxWidth = 0;
-  wxClientDC DC(ListCtrl);
-  DC.SetFont(ListCtrl->GetFont());
-
-  for (int I = 0; I < ListCtrl->GetItemCount(); ++I) {
-    wxString ItemText = ListCtrl->GetItemText(I, ColIndex);
-    int Width = 0;
-    int Height = 0;
-    DC.GetTextExtent(ItemText, &Width, &Height);
-    if (Width > MaxWidth) {
-      MaxWidth = Width;
-    }
-  }
-  return MaxWidth + 20; // Add some padding
-}
-
-void ModSortDialog::onMoveUp(wxCommandEvent &Event) { // NOLINT
-  int Selection = ListCtrl->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
-  if (Selection > 0) {
-    swapItems(Selection, Selection - 1);
-    ListCtrl->SetItemState(Selection - 1, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
-
-    // Ensure the moved item is visible
-    ListCtrl->EnsureVisible(Selection - 1);
-  }
-}
-
-void ModSortDialog::onMoveDown(wxCommandEvent &Event) { // NOLINT
-  int Selection = ListCtrl->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
-  if (Selection != wxNOT_FOUND && Selection < ListCtrl->GetItemCount() - 1) {
-    swapItems(Selection, Selection + 1);
-    ListCtrl->SetItemState(Selection + 1, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
-
-    // Ensure the moved item is visible
-    ListCtrl->EnsureVisible(Selection + 1);
-  }
-}
-
-void ModSortDialog::swapItems(long FirstIndex, long SecondIndex) {
-  // Swap text for both columns
-  wxString FirstTextCol1 = ListCtrl->GetItemText(FirstIndex, 0);
-  wxString FirstTextCol2 = ListCtrl->GetItemText(FirstIndex, 1);
-  wxString SecondTextCol1 = ListCtrl->GetItemText(SecondIndex, 0);
-  wxString SecondTextCol2 = ListCtrl->GetItemText(SecondIndex, 1);
-
-  ListCtrl->SetItem(FirstIndex, 0, SecondTextCol1);
-  ListCtrl->SetItem(FirstIndex, 1, SecondTextCol2);
-  ListCtrl->SetItem(SecondIndex, 0, FirstTextCol1);
-  ListCtrl->SetItem(SecondIndex, 1, FirstTextCol2);
-
-  // Swap background colors to maintain highlights
-  wxColour FirstColor = ListCtrl->GetItemBackgroundColour(FirstIndex);
-  wxColour SecondColor = ListCtrl->GetItemBackgroundColour(SecondIndex);
-
-  ListCtrl->SetItemBackgroundColour(FirstIndex, SecondColor);
-  ListCtrl->SetItemBackgroundColour(SecondIndex, FirstColor);
-
-  // Clear background color of the original position if needed
-  if (FirstColor != SecondColor) {
-    ListCtrl->SetItemBackgroundColour(FirstIndex, *wxWHITE);
-  }
-}
+// EVENT HANDLERS
 
 void ModSortDialog::onItemSelected(wxListEvent &Event) {
   long Index = Event.GetIndex();
@@ -172,27 +99,36 @@ void ModSortDialog::highlightConflictingItems(const std::wstring &SelectedMod) {
     }
   }
 }
-void ModSortDialog::onMouseLeftDown(wxMouseEvent &Event) {
-  // Reset indices to start a new drag operation
-  TargetLineIndex = -1;
-  DraggedIndex = -1;
 
+void ModSortDialog::onMouseLeftDown(wxMouseEvent &Event) {
   int Flags = 0;
   long ItemIndex = ListCtrl->HitTest(Event.GetPosition(), Flags);
 
-  if (ItemIndex != wxNOT_FOUND && ListCtrl->GetItemState(ItemIndex, wxLIST_STATE_SELECTED) & wxLIST_STATE_SELECTED) {
+  if (ItemIndex != wxNOT_FOUND) {
+    // Select the item if it's not already selected
+    if ((ListCtrl->GetItemState(ItemIndex, wxLIST_STATE_SELECTED) & wxLIST_STATE_SELECTED) == 0) {
+      ListCtrl->SetItemState(ItemIndex, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
+    }
+
     // Capture the indices of all selected items for dragging
     DraggedIndices.clear();
     long SelectedItem = -1;
-    while ((SelectedItem = ListCtrl->GetNextItem(SelectedItem, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED)) != wxNOT_FOUND) {
+    while ((SelectedItem = ListCtrl->GetNextItem(SelectedItem, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED)) !=
+           wxNOT_FOUND) {
       DraggedIndices.push_back(SelectedItem);
     }
+
+    // Set the initial drag index
+    DraggedIndex = ItemIndex;
   }
+
   Event.Skip();
 }
 
 void ModSortDialog::onMouseLeftUp(wxMouseEvent &Event) {
   if (!DraggedIndices.empty() && TargetLineIndex != -1) {
+    Overlay.Reset(); // Clear the overlay when the drag operation is complete
+
     // Sort indices to maintain the order during removal
     std::sort(DraggedIndices.begin(), DraggedIndices.end());
 
@@ -223,6 +159,9 @@ void ModSortDialog::onMouseLeftUp(wxMouseEvent &Event) {
       InsertPos++;
     }
 
+    // reset priority values
+    resetIndices();
+
     // Reset indices to prepare for the next drag
     DraggedIndices.clear();
     DraggedIndex = -1;
@@ -236,11 +175,133 @@ void ModSortDialog::onMouseMotion(wxMouseEvent &Event) {
     int Flags = 0;
     auto DropTargetIndex = ListCtrl->HitTest(Event.GetPosition(), Flags);
 
+    if (DropTargetIndex == wxNOT_FOUND && TargetLineIndex != -1) {
+      DropTargetIndex = TargetLineIndex;
+    }
+
     if (DropTargetIndex != wxNOT_FOUND) {
+      wxRect ItemRect;
+      ListCtrl->GetItemRect(DropTargetIndex, ItemRect);
+
+      // Check if the mouse is in the top or bottom half of the item
+      const int MidPointY = ItemRect.GetTop() + (ItemRect.GetHeight() / 2);
+      const auto CurPosition = Event.GetPosition().y;
+      bool TargetingTopHalf = CurPosition > MidPointY;
+
+      if (TargetingTopHalf) {
+        DropTargetIndex++;
+      }
+
+      // Draw the line only if the target index has changed
+      drawDropIndicator(DropTargetIndex);
       TargetLineIndex = DropTargetIndex;
+    } else {
+      // Clear overlay if not hovering over a valid item
+      Overlay.Reset();
+      TargetLineIndex = -1;
     }
   }
   Event.Skip();
+}
+
+// HELPERS
+
+void ModSortDialog::drawDropIndicator(int TargetIndex) {
+  wxClientDC DC(ListCtrl);
+  wxDCOverlay DCOverlay(Overlay, &DC);
+  DCOverlay.Clear(); // Clear the existing overlay to avoid double lines
+
+  if (TargetIndex != -1) {
+    wxRect ItemRect;
+    if (ListCtrl->GetItemRect(TargetIndex, ItemRect)) {
+      int LineY = ItemRect.GetTop();
+
+      // Draw a line to indicate the drop position
+      DC.SetPen(wxPen(*wxBLACK, 2)); // Red line with a width of 2 pixels
+      DC.DrawLine(ItemRect.GetLeft(), LineY, ItemRect.GetRight(), LineY);
+    }
+  }
+}
+
+void ModSortDialog::resetIndices() {
+  // loop through each item in list and set col 3
+  for (long I = 0; I < ListCtrl->GetItemCount(); ++I) {
+    if (SortAscending) {
+      ListCtrl->SetItem(I, 2, std::to_string(I));
+    } else {
+      ListCtrl->SetItem(I, 2, std::to_string(ListCtrl->GetItemCount() - I - 1));
+    }
+  }
+}
+
+void ModSortDialog::onColumnClick(wxListEvent &Event) {
+  int Column = Event.GetColumn();
+
+  // Toggle sort order if the same column is clicked, otherwise reset to ascending
+  if (Column == 2) {
+    // Only sort priority col
+    SortAscending = !SortAscending;
+
+    // Reverse the order of every item
+    reverseListOrder();
+  }
+
+  Event.Skip();
+}
+
+void ModSortDialog::reverseListOrder() {
+  // Store all items in a vector
+  std::vector<std::vector<wxString>> Items;
+  for (long I = 0; I < ListCtrl->GetItemCount(); ++I) {
+    std::vector<wxString> Row;
+    Row.reserve(ListCtrl->GetColumnCount());
+    for (int Col = 0; Col < ListCtrl->GetColumnCount(); ++Col) {
+      Row.push_back(ListCtrl->GetItemText(I, Col));
+    }
+    Items.push_back(Row);
+  }
+
+  // Clear the ListCtrl
+  ListCtrl->DeleteAllItems();
+
+  // Insert items back in reverse order
+  for (auto It = Items.rbegin(); It != Items.rend(); ++It) {
+    long NewIndex = ListCtrl->InsertItem(ListCtrl->GetItemCount(), (*It)[0]);
+    for (int Col = 1; Col < ListCtrl->GetColumnCount(); ++Col) {
+      ListCtrl->SetItem(NewIndex, Col, (*It)[Col]);
+    }
+  }
+}
+
+auto ModSortDialog::calculateColumnWidth(int ColIndex) -> int {
+  int MaxWidth = 0;
+  wxClientDC DC(ListCtrl);
+  DC.SetFont(ListCtrl->GetFont());
+
+  for (int I = 0; I < ListCtrl->GetItemCount(); ++I) {
+    wxString ItemText = ListCtrl->GetItemText(I, ColIndex);
+    int Width = 0;
+    int Height = 0;
+    DC.GetTextExtent(ItemText, &Width, &Height);
+    if (Width > MaxWidth) {
+      MaxWidth = Width;
+    }
+  }
+  return MaxWidth + 20; // Add some padding
+}
+
+auto ModSortDialog::getSortedItems() const -> std::vector<std::wstring> {
+  std::vector<std::wstring> SortedItems;
+  for (long I = 0; I < ListCtrl->GetItemCount(); ++I) {
+    SortedItems.push_back(ListCtrl->GetItemText(I).ToStdWstring());
+  }
+
+  if (!SortAscending) {
+    // reverse items if descending
+    std::reverse(SortedItems.begin(), SortedItems.end());
+  }
+
+  return SortedItems;
 }
 
 // ParallaxGenUI class
