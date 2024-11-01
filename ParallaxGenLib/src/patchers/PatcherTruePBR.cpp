@@ -341,7 +341,7 @@ auto PatcherTruePBR::insertTruePBRData(std::map<size_t, std::tuple<nlohmann::jso
   if (!CurCfg.contains("delete") || !CurCfg["delete"].get<bool>()) {
     if (EnableTruePBR && !isPrefixOrFile(MatchedPath)) {
       Logger::trace(L"Config {} PBR JSON Rejected: Path {} is not a prefix", Cfg, MatchedPath);
-      //return;
+      return;
     }
   }
 
