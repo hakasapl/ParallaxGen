@@ -71,7 +71,7 @@ ModSortDialog::ModSortDialog(const std::vector<std::wstring> &Mods, const std::v
 
   // Adjust dialog width to match the total width of columns and padding
   SetSizeHints(TotalWidth, 0); // Adjust minimum width and height
-  SetSize(TotalWidth, 400);    // Set dialog size
+  SetSize(TotalWidth, 600);    // Set dialog size
 
   MainSizer->Add(ListCtrl, 1, wxEXPAND | wxALL, 10);
 

@@ -211,17 +211,6 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
     cin.get();
   }
 
-  // DEBUG
-  vector<wstring> ModStrs = { L"mod1", L"mod2", L"mod3", L"mod4", L"mod5", L"mod6", L"mod7", L"mod8", L"mod9", L"mod10" };
-  vector<wstring> ShaderCombinedStrs = { L"shader1,shader2", L"shader3", L"shader4", L"shader5", L"shader6", L"shader7", L"shader8", L"shader9", L"shader10", L"shader11" };
-  vector<bool> IsNew = {  true, false, false, true, false, false, true, false, false, true };
-  unordered_map<wstring, unordered_set<wstring>> ConflictTracker = { { L"mod1", { L"shader1", L"shader2" } }, { L"mod2", { L"shader3" } }, { L"mod3", { L"shader4" } }, { L"mod4", { L"shader5" } }, { L"mod5", { L"shader6" } }, { L"mod6", { L"shader7" } }, { L"mod7", { L"shader8" } }, { L"mod8", { L"shader9" } }, { L"mod9", { L"shader10" } }, { L"mod10", { L"shader11" } } };
-  ModSortDialog Dialog(ModStrs, ShaderCombinedStrs, IsNew, ConflictTracker);
-  if (Dialog.ShowModal() == wxID_OK) {
-    exit(0);
-  }
-  // END DEBUG
-
   // Get current time to compare later
   auto StartTime = chrono::high_resolution_clock::now();
   long long TimeTaken = 0;
