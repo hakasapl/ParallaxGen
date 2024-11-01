@@ -8,6 +8,7 @@
 #include <wx/listctrl.h>
 #include <wx/sizer.h>
 #include <wx/wx.h>
+#include <wx/overlay.h>
 
 #include <string>
 #include <vector>
@@ -18,6 +19,12 @@ class ModSortDialog : public wxDialog {
 private:
   wxListCtrl *ListCtrl;
   std::unordered_map<std::wstring, std::unordered_set<std::wstring>> ConflictsMap;
+
+  int DraggedIndex = -1;
+  int TargetLineIndex = -1;  // Index where the line is drawn
+
+  wxOverlay Overlay;
+  std::vector<long> DraggedIndices;  // Vector to store indices of dragged items
 
 public:
   ModSortDialog(const std::vector<std::wstring> &Mods, const std::vector<std::wstring> &Shaders,
@@ -31,6 +38,9 @@ private:
   void swapItems(long FirstIndex, long SecondIndex);
   void onItemSelected(wxListEvent &Event);
   void highlightConflictingItems(const std::wstring &SelectedMod);
+  void onMouseLeftDown(wxMouseEvent &Event);
+  void onMouseMotion(wxMouseEvent &Event);
+  void onMouseLeftUp(wxMouseEvent &Event);
 };
 
 class ParallaxGenUI {
