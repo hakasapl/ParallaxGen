@@ -13,7 +13,7 @@ ModSortDialog::ModSortDialog(const std::vector<std::wstring> &Mods, const std::v
                              const std::vector<bool> &IsNew,
                              const std::unordered_map<std::wstring, std::unordered_set<std::wstring>> &Conflicts)
     : wxDialog(nullptr, wxID_ANY, "Set Mod Priority", wxDefaultPosition, wxSize(300, 400),
-               wxDEFAULT_DIALOG_STYLE | wxSTAY_ON_TOP),
+               wxDEFAULT_DIALOG_STYLE | wxSTAY_ON_TOP | wxRESIZE_BORDER),
       ScrollTimer(this), ConflictsMap(Conflicts), SortAscending(true) {
   Bind(wxEVT_TIMER, &ModSortDialog::onTimer, this, ScrollTimer.GetId());
 
@@ -67,10 +67,10 @@ ModSortDialog::ModSortDialog(const std::vector<std::wstring> &Mods, const std::v
   MessageText->SetMinSize(wxSize(TotalWidth - 40, MessageText->GetBestSize().y));
 
   // Add the static text to the main sizer
-  MainSizer->Add(MessageText, 0, wxEXPAND | wxALL, 10);
+  MainSizer->Add(MessageText, 0, wxALL, 10);
 
   // Adjust dialog width to match the total width of columns and padding
-  SetSizeHints(TotalWidth, 0); // Adjust minimum width and height
+  SetSizeHints(TotalWidth, 400, TotalWidth, wxDefaultCoord); // Adjust minimum width and height
   SetSize(TotalWidth, 600);    // Set dialog size
 
   MainSizer->Add(ListCtrl, 1, wxEXPAND | wxALL, 10);
@@ -137,8 +137,6 @@ void ModSortDialog::onMouseLeftDown(wxMouseEvent &Event) {
     // Set the initial drag index
     DraggedIndex = ItemIndex;
   }
-
-  ScrollTimer.Start(250);
   Event.Skip();
 }
 
@@ -195,6 +193,11 @@ void ModSortDialog::onMouseLeftUp(wxMouseEvent &Event) {
 
 void ModSortDialog::onMouseMotion(wxMouseEvent &Event) {
   if (!DraggedIndices.empty() && Event.LeftIsDown()) {
+    // Start the timer to handle scrolling
+    if (!ScrollTimer.IsRunning()) {
+      ScrollTimer.Start(250); // Start the timer with a 50ms interval
+    }
+
     int Flags = 0;
     auto DropTargetIndex = ListCtrl->HitTest(Event.GetPosition(), Flags);
 
@@ -414,19 +417,23 @@ auto ParallaxGenUI::selectModOrder(
     }
   } else {
     vector<wstring> NewMods;
-    for (const auto &[Mod, Value] : Conflicts) {
+    // Add existing mod order
+    for (const auto &Mod : ExistingMods) {
       // check if existing mods contain the mod
-      if (std::find(ExistingMods.begin(), ExistingMods.end(), Mod) == ExistingMods.end()) {
+      if (Conflicts.find(Mod) != Conflicts.end()) {
         // add to final mod order
         FinalModOrder.push_back(Mod);
-      } else {
-        // add to new mods
-        NewMods.push_back(Mod);
       }
     }
 
-    // add newmods to finalmodorder
-    FinalModOrder.insert(FinalModOrder.begin(), NewMods.begin(), NewMods.end());
+    // Add new load mods
+    for (const auto &[Mod, Data] : Conflicts) {
+      // check if mod is in existing order
+      if (find(ExistingMods.begin(), ExistingMods.end(), Mod) == ExistingMods.end()) {
+        // add to new mods
+        FinalModOrder.insert(FinalModOrder.begin(), Mod);
+      }
+    }
   }
 
   // split into vectors
@@ -449,7 +456,7 @@ auto ParallaxGenUI::selectModOrder(
     ShaderCombinedStrs.push_back(ShaderStr);
 
     // check if mod is in existing order
-    IsNew.push_back(false);
+    IsNew.push_back(find(ExistingMods.begin(), ExistingMods.end(), Mod) == ExistingMods.end());
 
     // add to conflict tracker
     ConflictTracker.insert({Mod, get<1>(Conflicts.at(Mod))});

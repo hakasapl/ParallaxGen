@@ -511,7 +511,7 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
   }
 
   // Populate conflict mods if set
-  if (ConflictMods != nullptr && Matches.size() > 1) {
+  if (ConflictMods != nullptr && ModSet.size() > 1) {
     lock_guard<mutex> Lock(*ConflictModsMutex);
 
     // add mods to conflict set

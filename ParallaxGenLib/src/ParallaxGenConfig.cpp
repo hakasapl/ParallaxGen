@@ -151,7 +151,7 @@ auto ParallaxGenConfig::addConfigJSON(const nlohmann::json &J) -> void {
 
     ModOrder.clear();
     for (const auto &Item : J["mod_order"]) {
-      auto Mod = boost::to_lower_copy(strToWstr(Item.get<string>()));
+      auto Mod = strToWstr(Item.get<string>());
       ModOrder.push_back(Mod);
       ModPriority[Mod] = static_cast<int>(ModOrder.size() - 1);
     }
