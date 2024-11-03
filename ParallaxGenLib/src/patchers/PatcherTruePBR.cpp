@@ -130,6 +130,14 @@ auto PatcherTruePBR::shouldApply(nifly::NiShape &NIFShape, std::vector<PatcherMa
   // Find Old Slots
   auto OldSlots = NIFUtil::getTextureSlots(getNIF(), &NIFShape);
 
+  if (shouldApply(OldSlots, Matches)) {
+    Logger::trace(L"{} PBR configs matched", Matches.size());
+    // Add to matched texture sets for future use
+    MatchedTextureSets[TextureSetBlockID] = Matches;
+  } else {
+    Logger::trace(L"No PBR Configs matched");
+  }
+
   if (NIFUtil::hasShaderFlag(NIFShaderBSLSP, SLSF2_UNUSED01)) {
     // Check if RMAOS exists
     const auto RMAOSPath = OldSlots[static_cast<size_t>(NIFUtil::TextureSlots::ENVMASK)];
@@ -137,16 +145,8 @@ auto PatcherTruePBR::shouldApply(nifly::NiShape &NIFShape, std::vector<PatcherMa
       Logger::trace(L"This shape already has PBR");
       PatcherMatch Match;
       Match.MatchedPath = getNIFPath().wstring();
-      Matches.push_back(Match);
+      Matches.insert(Matches.begin(), Match);
     }
-  }
-
-  if (shouldApply(OldSlots, Matches)) {
-    Logger::trace(L"{} PBR configs matched", Matches.size());
-    // Add to matched texture sets for future use
-    MatchedTextureSets[TextureSetBlockID] = Matches;
-  } else {
-    Logger::trace(L"No PBR Configs matched");
   }
 
   return Matches.size() > 0;

@@ -107,7 +107,7 @@ public:
       const std::vector<std::function<std::unique_ptr<PatcherShader>(std::filesystem::path, nifly::NifFile *)>>
           &Patchers,
       const bool &MultiThread = true,
-      const bool &PatchPlugin = true) -> std::unordered_map<std::wstring, std::set<NIFUtil::ShapeShader>>;
+      const bool &PatchPlugin = true) -> std::unordered_map<std::wstring, std::tuple<std::set<NIFUtil::ShapeShader>, std::unordered_set<std::wstring>>>;
   // zips all meshes and removes originals
   void zipMeshes() const;
   // deletes generated meshes
@@ -134,14 +134,14 @@ private:
                  &Patchers,
              const std::filesystem::path &NIFFile, nlohmann::json *DiffJSON, const bool &PatchPlugin = true,
              const bool &Dry = false,
-             std::unordered_map<std::wstring, std::set<NIFUtil::ShapeShader>> *ConflictMods = nullptr,
+             std::unordered_map<std::wstring, std::tuple<std::set<NIFUtil::ShapeShader>, std::unordered_set<std::wstring>>> *ConflictMods = nullptr,
              std::mutex *ConflictModsMutex = nullptr) -> ParallaxGenTask::PGResult;
 
   // processes a shape within a NIF file
   auto processShape(const std::filesystem::path &NIFPath, nifly::NifFile &NIF, nifly::NiShape *NIFShape,
                     const int &ShapeIndex, const std::vector<std::unique_ptr<PatcherShader>> &Patchers, bool &ShapeModified,
                     bool &ShapeDeleted, NIFUtil::ShapeShader &ShaderApplied, const bool &Dry = false,
-                    std::unordered_map<std::wstring, std::set<NIFUtil::ShapeShader>> *ConflictMods = nullptr,
+                    std::unordered_map<std::wstring, std::tuple<std::set<NIFUtil::ShapeShader>, std::unordered_set<std::wstring>>> *ConflictMods = nullptr,
                     std::mutex *ConflictModsMutex = nullptr) -> ParallaxGenTask::PGResult;
 
   // Zip methods
