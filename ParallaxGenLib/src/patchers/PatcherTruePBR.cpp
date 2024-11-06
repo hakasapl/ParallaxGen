@@ -392,6 +392,20 @@ auto PatcherTruePBR::applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_
   return NewSlots;
 }
 
+auto PatcherTruePBR::applyNeutral(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots)
+    -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
+
+  array<wstring, NUM_TEXTURE_SLOTS> NewSlots = Slots;
+
+  // potentially existing height map can be used
+  NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::GLOW)] = L"";
+  NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::ENVMASK)] = L"textures\\parallaxgen\\neutral_rmaos.dds";
+  NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::TINT)] = L"";
+  NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::BACKLIGHT)] = L"";
+
+  return NewSlots;
+}
+
 void PatcherTruePBR::applyOnePatch(NiShape *NIFShape, nlohmann::json &TruePBRData, const std::wstring &MatchedPath,
                                    bool &NIFModified, bool &ShapeDeleted,
                                    std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots) const {

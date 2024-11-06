@@ -24,4 +24,7 @@ public:
                   bool &ShapeDeleted) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
   auto applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
                        const PatcherMatch &Match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
+
+  auto applyNeutral(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots)
+      -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
 };
