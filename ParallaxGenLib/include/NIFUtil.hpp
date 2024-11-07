@@ -47,7 +47,7 @@ enum class TextureType {
   RMAOS,
   SUBSURFACETINT,
   INNERLAYER,
-  COATNORMAL,
+  COATNORMALROUGHNESS,
   BACKLIGHT,
   SPECULAR,
   SUBSURFACEPBR,
@@ -227,10 +227,10 @@ auto getTexMatch(const std::wstring &Base, const TextureType &DesiredType,
     -> std::vector<PGTexture>;
 
 /// @brief Gets all the texture prefixes for a textureset from a nif shape, ie. _n.dds is removed etc. for each slot
-/// @param NIF the nif
+/// @param[in] NIF the nif
 /// @param NIFShape the shape
 /// @return array of texture names without suffixes
-auto getSearchPrefixes(nifly::NifFile &NIF, nifly::NiShape *NIFShape) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;
+auto getSearchPrefixes(nifly::NifFile const& NIF, nifly::NiShape *NIFShape) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;
 
 /// @brief Gets all the texture prefixes for a texture set. ie. _n.dds is removed etc. for each slot
 /// @param[in] OldSlots 

@@ -334,7 +334,7 @@ auto ParallaxGenDirectory::mapTexturesFromNIF(const filesystem::path &NIFPath,
         if (ShaderType == BSLSP_MULTILAYERPARALLAX && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF2_MULTI_LAYER_PARALLAX)) {
           if (NIFUtil::hasShaderFlag(ShaderBSSP, SLSF2_UNUSED01)) {
             // 2 layer PBR
-            TextureType = NIFUtil::TextureType::COATNORMAL;
+            TextureType = NIFUtil::TextureType::COATNORMALROUGHNESS;
           } else {
             // normal multilayer
             TextureType = NIFUtil::TextureType::INNERLAYER;

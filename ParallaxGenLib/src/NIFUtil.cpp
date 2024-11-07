@@ -67,7 +67,7 @@ auto NIFUtil::getTexSuffixMap() -> map<wstring, tuple<NIFUtil::TextureSlots, NIF
   static const map<wstring, tuple<NIFUtil::TextureSlots, NIFUtil::TextureType>> TextureSuffixMap = {
       {L"_bl", {NIFUtil::TextureSlots::BACKLIGHT, NIFUtil::TextureType::BACKLIGHT}},
       {L"_b", {NIFUtil::TextureSlots::BACKLIGHT, NIFUtil::TextureType::BACKLIGHT}},
-      {L"_cnr", {NIFUtil::TextureSlots::MULTILAYER, NIFUtil::TextureType::COATNORMAL}},
+      {L"_cnr", {NIFUtil::TextureSlots::MULTILAYER, NIFUtil::TextureType::COATNORMALROUGHNESS}},
       {L"_s", {NIFUtil::TextureSlots::MULTILAYER, NIFUtil::TextureType::SUBSURFACETINT}},
       {L"_i", {NIFUtil::TextureSlots::MULTILAYER, NIFUtil::TextureType::INNERLAYER}},
       {L"_rmaos", {NIFUtil::TextureSlots::ENVMASK, NIFUtil::TextureType::RMAOS}},
@@ -100,7 +100,7 @@ auto NIFUtil::getStrFromTexType(const TextureType &Type) -> string {
                                                              {TextureType::RMAOS, "rmaos"},
                                                              {TextureType::SUBSURFACETINT, "subsurface tint"},
                                                              {TextureType::INNERLAYER, "inner layer"},
-                                                             {TextureType::COATNORMAL, "coat normal"},
+                                                             {TextureType::COATNORMALROUGHNESS, "coat normal roughness"},
                                                              {TextureType::BACKLIGHT, "backlight"},
                                                              {TextureType::SPECULAR, "specular"},
                                                              {TextureType::SUBSURFACEPBR, "subsurface pbr"},
@@ -127,7 +127,7 @@ auto NIFUtil::getTexTypeFromStr(const string &Type) -> TextureType {
                                                              {"rmaos", TextureType::RMAOS},
                                                              {"subsurface tint", TextureType::SUBSURFACETINT},
                                                              {"inner layer", TextureType::INNERLAYER},
-                                                             {"coat normal", TextureType::COATNORMAL},
+                                                             {"coat normal roughness", TextureType::COATNORMALROUGHNESS},
                                                              {"backlight", TextureType::BACKLIGHT},
                                                              {"specular", TextureType::SPECULAR},
                                                              {"subsurface pbr", TextureType::SUBSURFACEPBR},
@@ -149,7 +149,7 @@ auto NIFUtil::getSlotFromTexType(const TextureType &Type) -> TextureSlots {
       {TextureType::HEIGHT, TextureSlots::PARALLAX},         {TextureType::CUBEMAP, TextureSlots::CUBEMAP},
       {TextureType::ENVIRONMENTMASK, TextureSlots::ENVMASK}, {TextureType::COMPLEXMATERIAL, TextureSlots::ENVMASK},
       {TextureType::RMAOS, TextureSlots::ENVMASK},           {TextureType::SUBSURFACETINT, TextureSlots::MULTILAYER},
-      {TextureType::INNERLAYER, TextureSlots::MULTILAYER},   {TextureType::COATNORMAL, TextureSlots::MULTILAYER},
+      {TextureType::INNERLAYER, TextureSlots::MULTILAYER},   {TextureType::COATNORMALROUGHNESS, TextureSlots::MULTILAYER},
       {TextureType::BACKLIGHT, TextureSlots::BACKLIGHT},     {TextureType::SPECULAR, TextureSlots::BACKLIGHT},
       {TextureType::SUBSURFACEPBR, TextureSlots::BACKLIGHT}, {TextureType::UNKNOWN, TextureSlots::UNKNOWN}};
 
@@ -320,8 +320,11 @@ auto NIFUtil::setTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, cons
 
 auto NIFUtil::setTextureSlots(nifly::NifFile *NIF, nifly::NiShape *NIFShape,
                               const std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots, bool &Changed) -> void {
+  Changed = false;
   for (uint32_t I = 0; I < NUM_TEXTURE_SLOTS; I++) {
-    setTextureSlot(NIF, NIFShape, static_cast<TextureSlots>(I), NewSlots[I], Changed);
+    bool SlotChanged;
+    setTextureSlot(NIF, NIFShape, static_cast<TextureSlots>(I), NewSlots[I], SlotChanged);
+    Changed |= SlotChanged;
   }
 }
 
@@ -398,7 +401,7 @@ auto NIFUtil::getTexMatch(const wstring &Base, const TextureType &DesiredType,
   return {};
 }
 
-auto NIFUtil::getSearchPrefixes(NifFile &NIF, nifly::NiShape *NIFShape) -> array<wstring, NUM_TEXTURE_SLOTS> {
+auto NIFUtil::getSearchPrefixes(NifFile const& NIF, nifly::NiShape *NIFShape) -> array<wstring, NUM_TEXTURE_SLOTS> {
   array<wstring, NUM_TEXTURE_SLOTS> OutPrefixes;
 
   // Loop through each texture Slot
