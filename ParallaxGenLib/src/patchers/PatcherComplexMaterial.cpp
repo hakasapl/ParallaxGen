@@ -38,7 +38,7 @@ auto PatcherComplexMaterial::shouldApply(NiShape &NIFShape, std::vector<PatcherM
   // check to make sure there are textures defined in slot 3 or 8
   if (NIFShaderType != BSLSP_MULTILAYERPARALLAX &&
       (!NIFUtil::getTextureSlot(getNIF(), &NIFShape, NIFUtil::TextureSlots::GLOW).empty() ||
-       !NIFUtil::getTextureSlot(getNIF(), &NIFShape, NIFUtil::TextureSlots::TINT).empty() ||
+       !NIFUtil::getTextureSlot(getNIF(), &NIFShape, NIFUtil::TextureSlots::MULTILAYER).empty() ||
        !NIFUtil::getTextureSlot(getNIF(), &NIFShape, NIFUtil::TextureSlots::BACKLIGHT).empty())) {
     Logger::trace(L"Shape Rejected: Texture defined in slots 3,7,or 8");
     return false;
@@ -120,7 +120,7 @@ auto PatcherComplexMaterial::applyPatch(NiShape &NIFShape, const PatcherMatch &M
   // Remove texture slots if disabling MLP
   if (DisableMLP && NIFShaderBSLSP->GetShaderType() == BSLSP_MULTILAYERPARALLAX) {
     NIFUtil::setTextureSlot(getNIF(), &NIFShape, NIFUtil::TextureSlots::GLOW, "", NIFModified);
-    NIFUtil::setTextureSlot(getNIF(), &NIFShape, NIFUtil::TextureSlots::TINT, "", NIFModified);
+    NIFUtil::setTextureSlot(getNIF(), &NIFShape, NIFUtil::TextureSlots::MULTILAYER, "", NIFModified);
     NIFUtil::setTextureSlot(getNIF(), &NIFShape, NIFUtil::TextureSlots::BACKLIGHT, "", NIFModified);
 
     NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF2_MULTI_LAYER_PARALLAX, NIFModified);

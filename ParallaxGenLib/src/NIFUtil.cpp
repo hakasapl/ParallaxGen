@@ -54,8 +54,8 @@ auto NIFUtil::getDefaultTextureType(const TextureSlots &Slot) -> TextureType {
     return TextureType::CUBEMAP;
   case TextureSlots::ENVMASK:
     return TextureType::ENVIRONMENTMASK;
-  case TextureSlots::TINT:
-    return TextureType::TINT;
+  case TextureSlots::MULTILAYER:
+    return TextureType::SUBSURFACETINT;
   case TextureSlots::BACKLIGHT:
     return TextureType::BACKLIGHT;
   default:
@@ -67,16 +67,16 @@ auto NIFUtil::getTexSuffixMap() -> map<wstring, tuple<NIFUtil::TextureSlots, NIF
   static const map<wstring, tuple<NIFUtil::TextureSlots, NIFUtil::TextureType>> TextureSuffixMap = {
       {L"_bl", {NIFUtil::TextureSlots::BACKLIGHT, NIFUtil::TextureType::BACKLIGHT}},
       {L"_b", {NIFUtil::TextureSlots::BACKLIGHT, NIFUtil::TextureType::BACKLIGHT}},
-      {L"_cnr", {NIFUtil::TextureSlots::TINT, NIFUtil::TextureType::COATNORMAL}},
-      {L"_s", {NIFUtil::TextureSlots::TINT, NIFUtil::TextureType::SUBSURFACE}}, // TODO verify this
-      {L"_i", {NIFUtil::TextureSlots::TINT, NIFUtil::TextureType::INNERLAYER}},
+      {L"_cnr", {NIFUtil::TextureSlots::MULTILAYER, NIFUtil::TextureType::COATNORMAL}},
+      {L"_s", {NIFUtil::TextureSlots::MULTILAYER, NIFUtil::TextureType::SUBSURFACETINT}},
+      {L"_i", {NIFUtil::TextureSlots::MULTILAYER, NIFUtil::TextureType::INNERLAYER}},
       {L"_rmaos", {NIFUtil::TextureSlots::ENVMASK, NIFUtil::TextureType::RMAOS}},
       {L"_envmask", {NIFUtil::TextureSlots::ENVMASK, NIFUtil::TextureType::ENVIRONMENTMASK}},
       {L"_em", {NIFUtil::TextureSlots::ENVMASK, NIFUtil::TextureType::ENVIRONMENTMASK}},
       {L"_m", {NIFUtil::TextureSlots::ENVMASK, NIFUtil::TextureType::ENVIRONMENTMASK}},
       {L"_e", {NIFUtil::TextureSlots::CUBEMAP, NIFUtil::TextureType::CUBEMAP}},
       {L"_p", {NIFUtil::TextureSlots::PARALLAX, NIFUtil::TextureType::HEIGHT}},
-      {L"_sk", {NIFUtil::TextureSlots::GLOW, NIFUtil::TextureType::EMISSIVE}}, // TODO this aint right
+      {L"_sk", {NIFUtil::TextureSlots::GLOW, NIFUtil::TextureType::SKINTINT}},
       {L"_g", {NIFUtil::TextureSlots::GLOW, NIFUtil::TextureType::EMISSIVE}},
       {L"_msn", {NIFUtil::TextureSlots::NORMAL, NIFUtil::TextureType::NORMAL}},
       {L"_n", {NIFUtil::TextureSlots::NORMAL, NIFUtil::TextureType::NORMAL}},
@@ -92,13 +92,13 @@ auto NIFUtil::getStrFromTexType(const TextureType &Type) -> string {
                                                              {TextureType::MODELSPACENORMAL, "model space normal"},
                                                              {TextureType::EMISSIVE, "emissive"},
                                                              {TextureType::SKINTINT, "skin tint"},
-                                                             {TextureType::SUBSURFACE, "subsurface"},
+                                                             {TextureType::SUBSURFACECOLOR, "subsurface color"},
                                                              {TextureType::HEIGHT, "height"},
                                                              {TextureType::CUBEMAP, "cubemap"},
                                                              {TextureType::ENVIRONMENTMASK, "environment mask"},
                                                              {TextureType::COMPLEXMATERIAL, "complex material"},
                                                              {TextureType::RMAOS, "rmaos"},
-                                                             {TextureType::TINT, "tint"},
+                                                             {TextureType::SUBSURFACETINT, "subsurface tint"},
                                                              {TextureType::INNERLAYER, "inner layer"},
                                                              {TextureType::COATNORMAL, "coat normal"},
                                                              {TextureType::BACKLIGHT, "backlight"},
@@ -119,13 +119,13 @@ auto NIFUtil::getTexTypeFromStr(const string &Type) -> TextureType {
                                                              {"model space normal", TextureType::MODELSPACENORMAL},
                                                              {"emissive", TextureType::EMISSIVE},
                                                              {"skin tint", TextureType::SKINTINT},
-                                                             {"subsurface", TextureType::SUBSURFACE},
+                                                             {"subsurface color", TextureType::SUBSURFACECOLOR},
                                                              {"height", TextureType::HEIGHT},
                                                              {"cubemap", TextureType::CUBEMAP},
                                                              {"environment mask", TextureType::ENVIRONMENTMASK},
                                                              {"complex material", TextureType::COMPLEXMATERIAL},
                                                              {"rmaos", TextureType::RMAOS},
-                                                             {"tint", TextureType::TINT},
+                                                             {"subsurface tint", TextureType::SUBSURFACETINT},
                                                              {"inner layer", TextureType::INNERLAYER},
                                                              {"coat normal", TextureType::COATNORMAL},
                                                              {"backlight", TextureType::BACKLIGHT},
@@ -145,11 +145,11 @@ auto NIFUtil::getSlotFromTexType(const TextureType &Type) -> TextureSlots {
   static unordered_map<TextureType, TextureSlots> TexTypeToSlotMap = {
       {TextureType::DIFFUSE, TextureSlots::DIFFUSE},         {TextureType::NORMAL, TextureSlots::NORMAL},
       {TextureType::MODELSPACENORMAL, TextureSlots::NORMAL}, {TextureType::EMISSIVE, TextureSlots::GLOW},
-      {TextureType::SKINTINT, TextureSlots::GLOW},           {TextureType::SUBSURFACE, TextureSlots::GLOW},
+      {TextureType::SKINTINT, TextureSlots::GLOW},           {TextureType::SUBSURFACECOLOR, TextureSlots::GLOW},
       {TextureType::HEIGHT, TextureSlots::PARALLAX},         {TextureType::CUBEMAP, TextureSlots::CUBEMAP},
       {TextureType::ENVIRONMENTMASK, TextureSlots::ENVMASK}, {TextureType::COMPLEXMATERIAL, TextureSlots::ENVMASK},
-      {TextureType::RMAOS, TextureSlots::ENVMASK},           {TextureType::TINT, TextureSlots::TINT},
-      {TextureType::INNERLAYER, TextureSlots::TINT},         {TextureType::COATNORMAL, TextureSlots::TINT},
+      {TextureType::RMAOS, TextureSlots::ENVMASK},           {TextureType::SUBSURFACETINT, TextureSlots::MULTILAYER},
+      {TextureType::INNERLAYER, TextureSlots::MULTILAYER},   {TextureType::COATNORMAL, TextureSlots::MULTILAYER},
       {TextureType::BACKLIGHT, TextureSlots::BACKLIGHT},     {TextureType::SPECULAR, TextureSlots::BACKLIGHT},
       {TextureType::SUBSURFACEPBR, TextureSlots::BACKLIGHT}, {TextureType::UNKNOWN, TextureSlots::UNKNOWN}};
 

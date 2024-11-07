@@ -400,7 +400,7 @@ auto PatcherTruePBR::applyNeutral(const std::array<std::wstring, NUM_TEXTURE_SLO
   // potentially existing height map can be used
   NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::GLOW)] = L"";
   NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::ENVMASK)] = L"textures\\parallaxgen\\neutral_rmaos.dds";
-  NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::TINT)] = L"";
+  NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::MULTILAYER)] = L"";
   NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::BACKLIGHT)] = L"";
 
   return NewSlots;
@@ -620,7 +620,7 @@ auto PatcherTruePBR::applyOnePatchSlots(const std::array<std::wstring, NUM_TEXTU
       NewCNR = MatchedPath + L"_cnr.dds";
     }
 
-    NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::TINT)] = NewCNR;
+    NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::MULTILAYER)] = NewCNR;
   }
 
   // "lock_subsurface" attribute

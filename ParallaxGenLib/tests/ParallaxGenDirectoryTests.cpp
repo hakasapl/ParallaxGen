@@ -109,7 +109,7 @@ TEST_P(ParallaxGenDirectoryTest, MapFiles) {
       // BACKLIGHT is not checked since it does not have a rule for naming and thus false positives are found
       for (auto TexSlot : {NIFUtil::TextureSlots::DIFFUSE, NIFUtil::TextureSlots::NORMAL, NIFUtil::TextureSlots::GLOW,
                            NIFUtil::TextureSlots::PARALLAX, NIFUtil::TextureSlots::CUBEMAP,
-                           NIFUtil::TextureSlots::ENVMASK, NIFUtil::TextureSlots::TINT}) {
+                           NIFUtil::TextureSlots::ENVMASK, NIFUtil::TextureSlots::MULTILAYER}) {
         string TexFile;
         Nif.GetTextureSlot(Shape, TexFile, static_cast<uint32_t>(TexSlot));
         if (TexFile.empty())
@@ -120,7 +120,7 @@ TEST_P(ParallaxGenDirectoryTest, MapFiles) {
         const std::map<NIFUtil::TextureSlots, std::set<string>> suffixMap{
             {NIFUtil::TextureSlots::NORMAL, {"_n"}},       {NIFUtil::TextureSlots::GLOW, {"_g", "_sk"}},
             {NIFUtil::TextureSlots::PARALLAX, {"_p"}},     {NIFUtil::TextureSlots::CUBEMAP, {"_e"}},
-            {NIFUtil::TextureSlots::ENVMASK, {"m", "em"}}, {NIFUtil::TextureSlots::TINT, {"_i"}}};
+            {NIFUtil::TextureSlots::ENVMASK, {"m", "em"}}, {NIFUtil::TextureSlots::MULTILAYER, {"_i"}}};
 
         string stem = std::filesystem::path{TexFile}.stem().string();
 
@@ -187,7 +187,7 @@ TEST_P(ParallaxGenDirectoryTest, MapFiles) {
   EXPECT_FALSE(PGD->getTextureMapConst(NIFUtil::TextureSlots::NORMAL).empty());
   EXPECT_FALSE(PGD->getTextureMapConst(NIFUtil::TextureSlots::BACKLIGHT).empty());
   EXPECT_FALSE(PGD->getTextureMapConst(NIFUtil::TextureSlots::ENVMASK).empty());
-  EXPECT_FALSE(PGD->getTextureMapConst(NIFUtil::TextureSlots::TINT).empty());
+  EXPECT_FALSE(PGD->getTextureMapConst(NIFUtil::TextureSlots::MULTILAYER).empty());
 
   // no parallax textures from BSAs are included due to exclusion list
   auto &TextureMapParallax = PGD->getTextureMapConst(NIFUtil::TextureSlots::PARALLAX);
