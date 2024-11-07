@@ -38,23 +38,6 @@ private:
     bool ShouldApply;
   };
 
-  // store diffuse mismatch messages
-  struct PairHash {
-    auto operator()(const std::pair<std::wstring, std::wstring> &P) const -> size_t {
-      std::hash<std::wstring> HashWstr;
-      return HashWstr(P.first) ^ (HashWstr(P.second) << 1);
-    }
-  };
-
-  // Trackers for warnings
-  std::unordered_set<std::pair<std::wstring, std::wstring>, PairHash> MismatchWarnTracker;
-  std::mutex MismatchWarnTrackerMutex;
-  void mismatchWarn(const std::wstring &MatchedPath, const std::wstring &BaseTex);
-
-  std::unordered_set<std::pair<std::wstring, std::wstring>, PairHash> MeshWarnTracker;
-  std::mutex MeshWarnTrackerMutex;
-  void meshWarn(const std::wstring &MatchedPath, const std::wstring &NIFPath);
-
   // Mutex lock for shader upgrades
   std::mutex UpgradeMutex;
 

@@ -25,6 +25,7 @@
 #include "ParallaxGenPlugin.hpp"
 #include "ParallaxGenTask.hpp"
 #include "ParallaxGenUtil.hpp"
+#include "ParallaxGenWarnings.hpp"
 #include "patchers/PatcherComplexMaterial.hpp"
 #include "patchers/PatcherShader.hpp"
 #include "patchers/PatcherTruePBR.hpp"
@@ -337,18 +338,9 @@ auto ParallaxGen::processNIF(
 
       if (PatchPlugin) {
         // Process plugin
-        wstring ResultMatchedPath;
-        unordered_set<NIFUtil::TextureSlots> ResultMatchedFrom;
         array<wstring, NUM_TEXTURE_SLOTS> NewSlots;
         ParallaxGenPlugin::processShape(ShaderApplied, NIFFile.wstring(), ShapeName, OldShapeIndex, NewShapeIndex,
-                                        PatcherList, ResultMatchedPath, ResultMatchedFrom, NewSlots);
-
-        // Post warnings if any
-        for (const auto &CurMatchedFrom : ResultMatchedFrom) {
-          mismatchWarn(ResultMatchedPath, NewSlots[static_cast<int>(CurMatchedFrom)]);
-        }
-
-        meshWarn(ResultMatchedPath, NIFFile.wstring());
+                                        PatcherList, NewSlots);
       }
     }
 
@@ -592,80 +584,12 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
 
   // Post warnings if any
   for (const auto &CurMatchedFrom : WinningMatch.MatchedFrom) {
-    mismatchWarn(WinningMatch.MatchedPath, NewSlots[static_cast<int>(CurMatchedFrom)]);
+    ParallaxGenWarnings::mismatchWarn(WinningMatch.MatchedPath, NewSlots[static_cast<int>(CurMatchedFrom)]);
   }
 
-  meshWarn(WinningMatch.MatchedPath, NIFPath.wstring());
+  ParallaxGenWarnings::meshWarn(WinningMatch.MatchedPath, NIFPath.wstring());
 
   return Result;
-}
-
-void ParallaxGen::mismatchWarn(const wstring &MatchedPath, const wstring &BaseTex) {
-  // construct key
-  auto MatchedPathMod = PGD->getMod(MatchedPath);
-  auto BaseTexMod = PGD->getMod(BaseTex);
-
-  if (MatchedPathMod.empty() || BaseTexMod.empty()) {
-    return;
-  }
-
-  if (MatchedPathMod == BaseTexMod) {
-    return;
-  }
-
-  auto Key = make_pair(MatchedPathMod, BaseTexMod);
-
-  // check if warning was already issued
-  {
-    const lock_guard<mutex> Lock(MismatchWarnTrackerMutex);
-    if (MismatchWarnTracker.find(Key) != MismatchWarnTracker.end()) {
-      return;
-    }
-
-    // add to tracker if not
-    MismatchWarnTracker.insert(Key);
-  }
-
-  // log warning
-  spdlog::warn(L"[Tex Mismatch] Mod \"{}\" assets were used with diffuse or normal from mod \"{}\". Please verify that "
-               L"this is intended.",
-               MatchedPathMod, BaseTexMod);
-}
-
-void ParallaxGen::meshWarn(const wstring &MatchedPath, const wstring &NIFPath) {
-  // construct key
-  auto MatchedPathMod = PGD->getMod(MatchedPath);
-  auto NIFPathMod = PGD->getMod(NIFPath);
-
-  if (MatchedPathMod.empty() || NIFPathMod.empty()) {
-    return;
-  }
-
-  if (MatchedPathMod == NIFPathMod) {
-    return;
-  }
-
-  if (PGC->getModPriority(NIFPathMod) < 0) {
-    return;
-  }
-
-  auto Key = make_pair(MatchedPathMod, NIFPathMod);
-
-  // check if warning was already issued
-  {
-    const lock_guard<mutex> Lock(MeshWarnTrackerMutex);
-    if (MeshWarnTracker.find(Key) != MeshWarnTracker.end()) {
-      return;
-    }
-
-    // add to tracker if not
-    MeshWarnTracker.insert(Key);
-  }
-
-  // log warning
-  spdlog::warn(
-      L"[Mesh Mismatch] Mod \"{}\" assets were used on meshes from mod \"{}\". Please verify that this is intended.",
-      MatchedPathMod, NIFPathMod);
 }
 
 void ParallaxGen::threadSafeJSONUpdate(const std::function<void(nlohmann::json &)> &Operation,
