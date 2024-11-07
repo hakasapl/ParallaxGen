@@ -55,14 +55,33 @@ public:
   [[nodiscard]] static auto getSlotLookupMap(const NIFUtil::TextureSlots &Slot)
       -> const std::map<std::wstring, std::unordered_set<NIFUtil::PGTexture, NIFUtil::PGTextureHasher>> &;
 
-  // Methods that determine whether the patcher should apply to a shape
+  /// @brief  Methods that determine whether the patcher should apply to a shape
+  /// @param[in] NIFShape shape to check
+  /// @param Matches found matches
+  /// @return if any match was found
   virtual auto shouldApply(nifly::NiShape &NIFShape, std::vector<PatcherMatch> &Matches) -> bool = 0;
+
+  /// @brief determine if the patcher should be applied to the shape
+  /// @param[in] OldSlots array of texture slot textures
+  /// @param[out] Matches vector of matches for the given textures
+  /// @return if any match was found
   virtual auto shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
                            std::vector<PatcherMatch> &Matches) -> bool = 0;
 
   // Methods that apply the patch to a shape
   virtual auto applyPatch(nifly::NiShape &NIFShape, const PatcherMatch &Match, bool &NIFModified,
                           bool &ShapeDeleted) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> = 0;
+
+  /// @brief apply the matched texture to the texture slots
+  /// @param[in] OldSlots array of the slot textures
+  /// @param[in] Match matching texture
+  /// @return new array containing the applied matched texture
   virtual auto applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
                                const PatcherMatch &Match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> = 0;
+
+  /// @brief apply neutral textures according to the that don't change the appearance
+  /// @param[in] OldSlots array of the slot textures
+  /// @return new array containing the applied textures
+  virtual auto applyNeutral(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots)
+      -> std::array<std::wstring, NUM_TEXTURE_SLOTS> = 0;
 };

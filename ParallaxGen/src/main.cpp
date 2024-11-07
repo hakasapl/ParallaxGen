@@ -117,7 +117,7 @@ auto getGameTypeMapStr() -> string {
   return GameTypeStr;
 }
 
-auto deployDynamicCubemapFile(ParallaxGenDirectory *PGD, const filesystem::path &OutputDir,
+auto deployAssets(ParallaxGenDirectory *PGD, const filesystem::path &OutputDir,
                               const filesystem::path &ExePath) -> void {
   // Install default cubemap file if needed
   static const filesystem::path DynCubeMapPath = "textures/cubemaps/dynamic1pxcubemap_black.dds";
@@ -133,6 +133,20 @@ auto deployDynamicCubemapFile(ParallaxGenDirectory *PGD, const filesystem::path 
 
     // Move File
     boost::filesystem::copy_file(AssetPath, OutputPath, boost::filesystem::copy_options::overwrite_existing);
+  }
+
+  spdlog::info("Installing neutral textures");
+
+  const filesystem::path OutputAssetsPath = OutputDir / "textures\\parallaxgen";
+  filesystem::create_directories(OutputAssetsPath);
+
+  std::vector<filesystem::path> assets = {"neutral_m.dds", "neutral_p.dds", "neutral_rmaos.dds"};
+
+  for (auto const &a : assets) {
+    filesystem::path AssetPath = ExePath / "assets" / a;
+    filesystem::path OutputPath = OutputAssetsPath / a;
+
+    filesystem::copy_file(AssetPath, OutputPath, filesystem::copy_options::overwrite_existing);
   }
 }
 
@@ -318,8 +332,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
     ParallaxGenPlugin::savePlugin(Args.OutputDir);
   }
 
-  // Deploy dynamic cubemap file
-  deployDynamicCubemapFile(&PGD, Args.OutputDir, ExePath);
+  deployAssets(&PGD, Args.OutputDir, ExePath);
 
   // archive
   if (!Args.NoZip) {

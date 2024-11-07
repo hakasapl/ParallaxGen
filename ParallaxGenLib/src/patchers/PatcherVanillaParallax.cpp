@@ -170,3 +170,13 @@ auto PatcherVanillaParallax::applyPatchSlots(const std::array<std::wstring, NUM_
 
   return NewSlots;
 }
+
+auto PatcherVanillaParallax::applyNeutral(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots)
+    -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
+
+  array<wstring, NUM_TEXTURE_SLOTS> NewSlots = Slots;
+
+  NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::PARALLAX)] = L"textures\\parallaxgen\\neutral_p.dds";
+
+  return NewSlots;
+}

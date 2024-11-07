@@ -10,6 +10,8 @@
 #include "ParallaxGenMutagenWrapperNE.h"
 #include "ParallaxGenUtil.hpp"
 
+#include <format>
+
 using namespace std;
 
 mutex ParallaxGenPlugin::LibMutex;
@@ -301,9 +303,7 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
       }
     }
 
-    auto SearchPrefixes = NIFUtil::getSearchPrefixes(BaseSlots);
-
-
+    // create a list of mods and the corresponding matches
     vector<tuple<wstring, PatcherShader::PatcherMatch>> Matches;
 
     for (const auto &Patcher : Patchers) {
@@ -347,35 +347,38 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
       DecisionMod = Mod;
     }
 
-    if (WinningMatch.MatchedPath.empty()) {
-      // no shaders to apply
-      // TODO blank placeholders instead of warning here
-      lock_guard<mutex> Lock(TXSTWarningMapMutex);
-
-      if (TXSTWarningMap.find(TXSTIndex) != TXSTWarningMap.end() && TXSTWarningMap[TXSTIndex] == AppliedShader) {
-        // Warning already issued
-        continue;
-      }
-
-      TXSTWarningMap[TXSTIndex] = AppliedShader;
-      const auto [FormID, PluginName] = libGetTXSTFormID(TXSTIndex);
-      spdlog::warn(L"TXST record is not able to patched for {}: {} / {:06X}", ParallaxGenUtil::strToWstr(NIFUtil::getStrFromShader(AppliedShader)),
-                   PluginName, FormID);
-      continue;
-    }
-
     ResultMatchedPath = WinningMatch.MatchedPath;
     ResultMatchedFrom = WinningMatch.MatchedFrom;
 
-    // Get new slots
-    for (const auto &Patcher : Patchers) {
-      if (Patcher->getShaderType() != AppliedShader) {
-        continue;
-      }
+    auto PatcherIt = std::find_if(Patchers.begin(), Patchers.end(),
+                                [&AppliedShader](auto &P) { return (P->getShaderType() == AppliedShader); });
 
-      // apply patch
-      NewSlots = Patcher->applyPatchSlots(BaseSlots, WinningMatch);
-      break;
+    auto Patcher = (PatcherIt != Patchers.end()) ? (*PatcherIt).get() : nullptr;
+
+    if (Patcher != nullptr) {
+      if (WinningMatch.MatchedPath.empty()) {
+        // no shaders to apply
+        lock_guard<mutex> Lock(TXSTWarningMapMutex);
+
+        if (TXSTWarningMap.find(TXSTIndex) != TXSTWarningMap.end() && TXSTWarningMap[TXSTIndex] == AppliedShader) {
+          // Warning already issued
+        } else {
+          TXSTWarningMap[TXSTIndex] = AppliedShader;
+          const auto [FormID, PluginName] = libGetTXSTFormID(TXSTIndex);
+
+          // todo: implement ESL flagged
+          const bool bESLFlagged = false;
+          const wstring FormIDStr =
+              (!bESLFlagged) ? format(L"{}/{:06X}", PluginName, FormID) : format(L"{0}/{1:03X}", PluginName, FormID);
+          spdlog::warn(L"Did not find required {} textures for {}, TXST {} - setting neutral textures",
+                       ParallaxGenUtil::strToWstr(NIFUtil::getStrFromShader(AppliedShader)),
+                       BaseSlots[static_cast<int>(NIFUtil::TextureSlots::DIFFUSE)], FormIDStr);
+        }
+
+        NewSlots = Patcher->applyNeutral(BaseSlots);
+      } else {
+        NewSlots = Patcher->applyPatchSlots(BaseSlots, WinningMatch);
+      }
     }
 
     // Check if oldprefix is the same as newprefix

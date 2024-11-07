@@ -53,6 +53,9 @@ public:
   auto applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
                        const PatcherMatch &Match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
 
+  auto applyNeutral(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots)
+      -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
+
 private:
   void applyOnePatch(nifly::NiShape *NIFShape, nlohmann::json &TruePBRData, const std::wstring &MatchedPath,
                      bool &NIFModified, bool &ShapeDeleted,
