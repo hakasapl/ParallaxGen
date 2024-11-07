@@ -204,6 +204,8 @@ auto NIFUtil::setShaderType(nifly::NiShader *NIFShader, const nifly::BSLightingS
   if (NIFShader->GetShaderType() != Type) {
     NIFShader->SetShaderType(Type);
     Changed = true;
+  } else {
+    Changed = false;
   }
 }
 
@@ -211,6 +213,8 @@ auto NIFUtil::setShaderFloat(float &Value, const float &NewValue, bool &Changed)
   if (Value != NewValue) {
     Value = NewValue;
     Changed = true;
+  } else {
+    Changed = false;
   }
 }
 
@@ -218,6 +222,8 @@ auto NIFUtil::setShaderVec2(nifly::Vector2 &Value, const nifly::Vector2 &NewValu
   if (Value != NewValue) {
     Value = NewValue;
     Changed = true;
+  } else {
+    Changed = false;
   }
 }
 
@@ -237,6 +243,8 @@ auto NIFUtil::setShaderFlag(nifly::BSShaderProperty *NIFShaderBSLSP, const nifly
   if (!hasShaderFlag(NIFShaderBSLSP, Flag)) {
     NIFShaderBSLSP->shaderFlags1 |= Flag;
     Changed = true;
+  } else {
+    Changed = false;
   }
 }
 
@@ -245,6 +253,8 @@ auto NIFUtil::setShaderFlag(nifly::BSShaderProperty *NIFShaderBSLSP, const nifly
   if (!hasShaderFlag(NIFShaderBSLSP, Flag)) {
     NIFShaderBSLSP->shaderFlags2 |= Flag;
     Changed = true;
+  } else {
+    Changed = false;
   }
 }
 
@@ -253,6 +263,8 @@ auto NIFUtil::clearShaderFlag(nifly::BSShaderProperty *NIFShaderBSLSP, const nif
   if (hasShaderFlag(NIFShaderBSLSP, Flag)) {
     NIFShaderBSLSP->shaderFlags1 &= ~Flag;
     Changed = true;
+  } else {
+    Changed = false;
   }
 }
 
@@ -261,6 +273,8 @@ auto NIFUtil::clearShaderFlag(nifly::BSShaderProperty *NIFShaderBSLSP, const nif
   if (hasShaderFlag(NIFShaderBSLSP, Flag)) {
     NIFShaderBSLSP->shaderFlags2 &= ~Flag;
     Changed = true;
+  } else {
+    Changed = false;
   }
 }
 
@@ -299,6 +313,8 @@ auto NIFUtil::setTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, cons
     auto NewTex = TexturePath;
     NIF->SetTextureSlot(NIFShape, NewTex, static_cast<unsigned int>(Slot));
     Changed = true;
+  } else {
+    Changed = false;
   }
 }
 
