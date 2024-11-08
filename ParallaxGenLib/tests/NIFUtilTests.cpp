@@ -28,13 +28,13 @@ TEST(NIFUtilTests, ShaderTests) {
     EXPECT_FALSE(Changed);
 }
 
-TEST(NIFUtilTests, NIFTests)
-{
+TEST(NIFUtilTests, NIFTests) {
   EXPECT_THROW(NIFUtil::loadNIFFromBytes({}), std::runtime_error);
 
   // read NIF
   nifly::NifFile NIF;
-  const std::filesystem::path MeshPath = PGTestEnvs::TESTENVSkyrimSE.GamePath / "data\\meshes\\architecture\\whiterun\\wrclutter\\wrruglarge01.nif";
+  const std::filesystem::path MeshPath =
+      PGTestEnvs::TESTENVSkyrimSE.GamePath / "data\\meshes\\architecture\\whiterun\\wrclutter\\wrruglarge01.nif";
 
   std::ifstream MeshFileStream(MeshPath, std::ios_base::binary);
   ASSERT_TRUE(MeshFileStream.is_open());
@@ -51,8 +51,8 @@ TEST(NIFUtilTests, NIFTests)
   EXPECT_TRUE(Shapes.size() == 2);
 
   // getTextureSlot
-  EXPECT_TRUE(
-      boost::iequals(NIFUtil::getTextureSlot(&NIF, Shapes[0], NIFUtil::TextureSlots::DIFFUSE), "textures\\architecture\\whiterun\\wrcarpet01.dds"));
+  EXPECT_TRUE(boost::iequals(NIFUtil::getTextureSlot(&NIF, Shapes[0], NIFUtil::TextureSlots::DIFFUSE),
+                             "textures\\architecture\\whiterun\\wrcarpet01.dds"));
 
   EXPECT_TRUE(boost::iequals(NIFUtil::getTextureSlot(&NIF, Shapes[0], NIFUtil::TextureSlots::NORMAL),
                              "textures\\architecture\\whiterun\\wrcarpet01_n.dds"));
@@ -71,7 +71,7 @@ TEST(NIFUtilTests, NIFTests)
   auto TextureSlots = NIFUtil::getTextureSlots(&NIF, Shapes[0]);
 
   EXPECT_TRUE(boost::iequals(TextureSlots[static_cast<unsigned int>(NIFUtil::TextureSlots::DIFFUSE)],
-              "textures\\architecture\\whiterun\\wrcarpet01.dds"));
+                             "textures\\architecture\\whiterun\\wrcarpet01.dds"));
   EXPECT_TRUE(boost::iequals(TextureSlots[static_cast<unsigned int>(NIFUtil::TextureSlots::NORMAL)],
                              "textures\\architecture\\whiterun\\wrcarpet01_n.dds"));
   EXPECT_TRUE(TextureSlots[static_cast<unsigned int>(NIFUtil::TextureSlots::GLOW)].empty());
@@ -103,6 +103,63 @@ TEST(NIFUtilTests, NIFTests)
   EXPECT_TRUE(boost::iequals(SearchPrefixes[static_cast<unsigned int>(NIFUtil::TextureSlots::NORMAL)],
                              "textures\\architecture\\whiterun\\wrcarpet01"));
   EXPECT_TRUE(SearchPrefixes[static_cast<unsigned int>(NIFUtil::TextureSlots::GLOW)].empty());
+
+  // shader flags
+  auto Shader = dynamic_cast<nifly::BSShaderProperty *> (NIF.GetShader(Shapes[0]));
+
+  EXPECT_TRUE(NIFUtil::hasShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags1::SLSF1_CAST_SHADOWS));
+  NIFUtil::setShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags1::SLSF1_CAST_SHADOWS, Changed);
+  EXPECT_FALSE(Changed);
+
+  NIFUtil::setShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags1::SLSF1_PARALLAX, Changed);
+  EXPECT_TRUE(Changed);
+  EXPECT_TRUE(NIFUtil::hasShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags1::SLSF1_PARALLAX));
+
+  NIFUtil::configureShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags1::SLSF1_CAST_SHADOWS, false, Changed);
+  EXPECT_TRUE(Changed);
+  EXPECT_FALSE(NIFUtil::hasShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags1::SLSF1_CAST_SHADOWS));
+  NIFUtil::configureShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags1::SLSF1_CAST_SHADOWS, false, Changed);
+  EXPECT_FALSE(Changed);
+  NIFUtil::configureShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags1::SLSF1_CAST_SHADOWS, true, Changed);
+  EXPECT_TRUE(Changed);
+  EXPECT_TRUE(NIFUtil::hasShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags1::SLSF1_CAST_SHADOWS));
+  NIFUtil::clearShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags1::SLSF1_CAST_SHADOWS,Changed);
+  EXPECT_TRUE(Changed);
+  EXPECT_FALSE(NIFUtil::hasShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags1::SLSF1_CAST_SHADOWS));
+  NIFUtil::setShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags1::SLSF1_CAST_SHADOWS, Changed);
+  EXPECT_TRUE(Changed);
+  EXPECT_TRUE(NIFUtil::hasShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags1::SLSF1_CAST_SHADOWS));
+
+  // flags2
+  EXPECT_TRUE(NIFUtil::hasShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags2::SLSF2_ZBUFFER_WRITE));
+  NIFUtil::setShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags2::SLSF2_ZBUFFER_WRITE, Changed);
+  EXPECT_FALSE(Changed);
+
+  NIFUtil::setShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags2::SLSF2_MULTI_LAYER_PARALLAX, Changed);
+  EXPECT_TRUE(Changed);
+  EXPECT_TRUE(NIFUtil::hasShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags2::SLSF2_MULTI_LAYER_PARALLAX));
+
+  NIFUtil::configureShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags2::SLSF2_ZBUFFER_WRITE, false, Changed);
+  EXPECT_TRUE(Changed);
+  EXPECT_FALSE(NIFUtil::hasShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags2::SLSF2_ZBUFFER_WRITE));
+  NIFUtil::configureShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags2::SLSF2_ZBUFFER_WRITE, false, Changed);
+  EXPECT_FALSE(Changed);
+  NIFUtil::configureShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags2::SLSF2_ZBUFFER_WRITE, true, Changed);
+  EXPECT_TRUE(Changed);
+  EXPECT_TRUE(NIFUtil::hasShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags2::SLSF2_ZBUFFER_WRITE));
+  NIFUtil::clearShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags2::SLSF2_ZBUFFER_WRITE, Changed);
+  EXPECT_TRUE(Changed);
+  EXPECT_FALSE(NIFUtil::hasShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags2::SLSF2_ZBUFFER_WRITE));
+  NIFUtil::setShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags2::SLSF2_ZBUFFER_WRITE, Changed);
+  EXPECT_TRUE(Changed);
+  EXPECT_TRUE(NIFUtil::hasShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags2::SLSF2_ZBUFFER_WRITE));
+
+  // shader type
+  NIFUtil::setShaderType(Shader, nifly::BSLightingShaderPropertyShaderType::BSLSP_DEFAULT, Changed);
+  EXPECT_FALSE(Changed);
+  NIFUtil::setShaderType(Shader, nifly::BSLightingShaderPropertyShaderType::BSLSP_PARALLAX, Changed);
+  EXPECT_TRUE(Changed);
+  EXPECT_TRUE(Shader->GetShaderType() == nifly::BSLightingShaderPropertyShaderType::BSLSP_PARALLAX);
 }
 
 TEST(NIFUtilTests, TextureTests) {
@@ -145,8 +202,80 @@ TEST(NIFUtilTests, TextureTests) {
   EXPECT_TRUE(NIFUtil::getDefaultsFromSuffix({"textures/diffuse.dds"}) ==
               std::make_tuple(NIFUtil::TextureSlots::UNKNOWN, NIFUtil::TextureType::UNKNOWN));
 
-  // TODO: getSlotFromTexType
-  // TODO: getDefaultTextureType
-  // TODO: getTexBase
-  // TODO:: getSearchPrefixes
+  EXPECT_TRUE(NIFUtil::getSlotFromTexType(NIFUtil::TextureType::DIFFUSE) == NIFUtil::TextureSlots::DIFFUSE);
+
+  EXPECT_TRUE(NIFUtil::getSlotFromTexType(NIFUtil::TextureType::NORMAL) == NIFUtil::TextureSlots::NORMAL);
+  EXPECT_TRUE(NIFUtil::getSlotFromTexType(NIFUtil::TextureType::MODELSPACENORMAL) == NIFUtil::TextureSlots::NORMAL);
+
+  EXPECT_TRUE(NIFUtil::getSlotFromTexType(NIFUtil::TextureType::EMISSIVE) == NIFUtil::TextureSlots::GLOW);
+  EXPECT_TRUE(NIFUtil::getSlotFromTexType(NIFUtil::TextureType::SKINTINT) == NIFUtil::TextureSlots::GLOW);
+  EXPECT_TRUE(NIFUtil::getSlotFromTexType(NIFUtil::TextureType::SUBSURFACECOLOR) == NIFUtil::TextureSlots::GLOW);
+
+  EXPECT_TRUE(NIFUtil::getSlotFromTexType(NIFUtil::TextureType::HEIGHT) == NIFUtil::TextureSlots::PARALLAX);
+
+  EXPECT_TRUE(NIFUtil::getSlotFromTexType(NIFUtil::TextureType::CUBEMAP) == NIFUtil::TextureSlots::CUBEMAP);
+
+  EXPECT_TRUE(NIFUtil::getSlotFromTexType(NIFUtil::TextureType::ENVIRONMENTMASK) == NIFUtil::TextureSlots::ENVMASK);
+  EXPECT_TRUE(NIFUtil::getSlotFromTexType(NIFUtil::TextureType::COMPLEXMATERIAL) == NIFUtil::TextureSlots::ENVMASK);
+  EXPECT_TRUE(NIFUtil::getSlotFromTexType(NIFUtil::TextureType::RMAOS) == NIFUtil::TextureSlots::ENVMASK);
+
+  EXPECT_TRUE(NIFUtil::getSlotFromTexType(NIFUtil::TextureType::SUBSURFACETINT) == NIFUtil::TextureSlots::MULTILAYER);
+  EXPECT_TRUE(NIFUtil::getSlotFromTexType(NIFUtil::TextureType::INNERLAYER) == NIFUtil::TextureSlots::MULTILAYER);
+  EXPECT_TRUE(NIFUtil::getSlotFromTexType(NIFUtil::TextureType::COATNORMALROUGHNESS) ==
+              NIFUtil::TextureSlots::MULTILAYER);
+
+  EXPECT_TRUE(NIFUtil::getSlotFromTexType(NIFUtil::TextureType::BACKLIGHT) == NIFUtil::TextureSlots::BACKLIGHT);
+  EXPECT_TRUE(NIFUtil::getSlotFromTexType(NIFUtil::TextureType::SPECULAR) == NIFUtil::TextureSlots::BACKLIGHT);
+  EXPECT_TRUE(NIFUtil::getSlotFromTexType(NIFUtil::TextureType::SUBSURFACEPBR) == NIFUtil::TextureSlots::BACKLIGHT);
+
+  EXPECT_TRUE(NIFUtil::getDefaultTextureType(NIFUtil::TextureSlots::DIFFUSE) == NIFUtil::TextureType::DIFFUSE);
+  EXPECT_TRUE(NIFUtil::getDefaultTextureType(NIFUtil::TextureSlots::NORMAL) == NIFUtil::TextureType::NORMAL);
+  EXPECT_TRUE(NIFUtil::getDefaultTextureType(NIFUtil::TextureSlots::GLOW) == NIFUtil::TextureType::EMISSIVE);
+  EXPECT_TRUE(NIFUtil::getDefaultTextureType(NIFUtil::TextureSlots::PARALLAX) == NIFUtil::TextureType::HEIGHT);
+  EXPECT_TRUE(NIFUtil::getDefaultTextureType(NIFUtil::TextureSlots::CUBEMAP) == NIFUtil::TextureType::CUBEMAP);
+  EXPECT_TRUE(NIFUtil::getDefaultTextureType(NIFUtil::TextureSlots::ENVMASK) == NIFUtil::TextureType::ENVIRONMENTMASK);
+  EXPECT_TRUE(NIFUtil::getDefaultTextureType(NIFUtil::TextureSlots::MULTILAYER) ==
+              NIFUtil::TextureType::SUBSURFACETINT);
+  EXPECT_TRUE(NIFUtil::getDefaultTextureType(NIFUtil::TextureSlots::BACKLIGHT) == NIFUtil::TextureType::BACKLIGHT);
+
+  // getSearchPrefixes
+  std::array<std::wstring, NUM_TEXTURE_SLOTS> Slots{};
+  Slots[0] = L"textures\\architecture\\whiterun\\wrcarpet01.dds";
+  Slots[1] = L"textures\\architecture\\whiterun\\wrcarpet01_n.dds";
+
+  auto SearchPrefixes = NIFUtil::getSearchPrefixes(Slots);
+
+  EXPECT_TRUE(boost::iequals(SearchPrefixes[static_cast<unsigned int>(NIFUtil::TextureSlots::DIFFUSE)],
+                             "textures\\architecture\\whiterun\\wrcarpet01"));
+  EXPECT_TRUE(boost::iequals(SearchPrefixes[static_cast<unsigned int>(NIFUtil::TextureSlots::NORMAL)],
+                             "textures\\architecture\\whiterun\\wrcarpet01"));
+  EXPECT_TRUE(SearchPrefixes[static_cast<unsigned int>(NIFUtil::TextureSlots::GLOW)].empty());
+
+  // getTexBase
+  EXPECT_TRUE(boost::iequals(NIFUtil::getTexBase("textures\\diffuse.dds"), "textures\\diffuse"));
+  EXPECT_TRUE(boost::iequals(NIFUtil::getTexBase("textures\\normal_n.dds"), "textures\\normal"));
+  EXPECT_TRUE(boost::iequals(NIFUtil::getTexBase("textures\\height_p.dds"), "textures\\height"));
+  EXPECT_TRUE(boost::iequals(NIFUtil::getTexBase("textures\\envmask_em.dds"), "textures\\envmask"));
+
+
+  std::map<std::wstring, std::unordered_set<NIFUtil::PGTexture, NIFUtil::PGTextureHasher>> EnvMaskSearchMap{
+      {L"textures\\envmask0",
+       {{L"textures\\envmask0_m.dds", NIFUtil::TextureType::ENVIRONMENTMASK},
+        {L"textures\\complexmaterial0_m.dds", NIFUtil::TextureType::COMPLEXMATERIAL},
+        {L"textures\\rmaos0_rmaos.dds", NIFUtil::TextureType::RMAOS}}},
+      {L"textures\\envmask1",
+       {{L"textures\\envmask1_m.dds", NIFUtil::TextureType::ENVIRONMENTMASK},
+        {L"textures\\complexmaterial1_m.dds", NIFUtil::TextureType::COMPLEXMATERIAL}}}};
+
+  auto TexMatch = NIFUtil::getTexMatch(L"textures\\envmask0", NIFUtil::TextureType::COMPLEXMATERIAL, EnvMaskSearchMap);
+
+  ASSERT_TRUE(TexMatch.size() == 1);
+  EXPECT_TRUE(TexMatch[0].Path == L"textures\\complexmaterial0_m.dds");
+  EXPECT_TRUE(TexMatch[0].Type == NIFUtil::TextureType::COMPLEXMATERIAL);
+
+  TexMatch = NIFUtil::getTexMatch(L"textures\\envmask1", NIFUtil::TextureType::ENVIRONMENTMASK, EnvMaskSearchMap);
+
+  ASSERT_TRUE(TexMatch.size() == 1);
+  EXPECT_TRUE(TexMatch[0].Path == L"textures\\envmask1_m.dds");
+  EXPECT_TRUE(TexMatch[0].Type == NIFUtil::TextureType::ENVIRONMENTMASK);
 }

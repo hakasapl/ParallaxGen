@@ -210,7 +210,7 @@ auto NIFUtil::setShaderType(nifly::NiShader *NIFShader, const nifly::BSLightingS
 }
 
 auto NIFUtil::setShaderFloat(float &Value, const float &NewValue, bool &Changed) -> void {
-  if (Value != NewValue) {
+  if (fabs(Value - NewValue) > 10e-05f) {
     Value = NewValue;
     Changed = true;
   } else {

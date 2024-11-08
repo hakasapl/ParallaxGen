@@ -222,6 +222,11 @@ auto getTextureSlots(nifly::NifFile *NIF, nifly::NiShape *NIFShape) -> std::arra
 /// @return base path
 auto getTexBase(const std::filesystem::path &TexPath) -> std::wstring;
 
+/// @brief get the matching textures for a given base path
+/// @param[in] Base base texture name
+/// @param[in] DesiredType the type to find
+/// @param[in] SearchMap base names without suffix mapped to a set of potential textures. strings and paths must all be lowercase
+/// @return vector of textures
 auto getTexMatch(const std::wstring &Base, const TextureType &DesiredType,
                  const std::map<std::wstring, std::unordered_set<PGTexture, PGTextureHasher>> &SearchMap)
     -> std::vector<PGTexture>;
