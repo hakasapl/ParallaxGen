@@ -53,7 +53,7 @@ void ParallaxGenWarnings::mismatchWarn(const wstring &MatchedPath, const wstring
 
     MismatchWarnDebugTracker.insert(KeyDebug);
 
-    spdlog::debug(L"[Tex Mismatch] Matched path {} from mod {} does not come from the same diffuse or normal {} from mod {}",
+    spdlog::debug(L"[Potential Texture Mismatch] Matched path {} from mod {} does not come from the same diffuse or normal {} from mod {}",
                   MatchedPath, MatchedPathMod, BaseTex, BaseTexMod);
   }
 
@@ -69,7 +69,7 @@ void ParallaxGenWarnings::mismatchWarn(const wstring &MatchedPath, const wstring
   }
 
   // log warning
-  spdlog::warn(L"[Tex Mismatch] Mod \"{}\" assets were used with diffuse or normal from mod \"{}\". Please verify that "
+  spdlog::warn(L"[Potential Texture Mismatch] Mod \"{}\" assets were used with diffuse or normal from mod \"{}\". Please verify that "
                L"this is intended.",
                MatchedPathMod, BaseTexMod);
 }
@@ -103,7 +103,7 @@ void ParallaxGenWarnings::meshWarn(const wstring &MatchedPath, const wstring &NI
 
     MeshWarnDebugTracker.insert(KeyDebug);
 
-    spdlog::debug(L"[Mesh Mismatch] Matched path {} from mod {} were used on mesh {} from mod {}", MatchedPath, MatchedPathMod, NIFPath,
+    spdlog::debug(L"[Potential Mesh Mismatch] Matched path {} from mod {} were used on mesh {} from mod {}", MatchedPath, MatchedPathMod, NIFPath,
                   NIFPathMod);
   }
 
@@ -120,6 +120,6 @@ void ParallaxGenWarnings::meshWarn(const wstring &MatchedPath, const wstring &NI
 
   // log warning
   spdlog::warn(
-      L"[Mesh Mismatch] Mod \"{}\" assets were used on meshes from mod \"{}\". Please verify that this is intended.",
+      L"[Potential Mesh Mismatch] Mod \"{}\" assets were used on meshes from mod \"{}\". Please verify that this is intended.",
       MatchedPathMod, NIFPathMod);
 }
