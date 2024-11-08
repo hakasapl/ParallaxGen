@@ -82,7 +82,7 @@ struct PGTextureHasher {
 };
 
 /// @brief get the texture type that is assigned per default to a texture slot
-/// @param[in] Slot 
+/// @param[in] Slot
 /// @return texture type
 auto getDefaultTextureType(const TextureSlots &Slot) -> TextureType;
 
@@ -117,7 +117,7 @@ auto setShaderFloat(float &Value, const float &NewValue, bool &Changed) -> void;
 /// @param Value the value to change
 /// @param[in] NewValue the new value
 /// @param[out] Changed if the value was actually changed
-/// @return 
+/// @return
 auto setShaderVec2(nifly::Vector2 &Value, const nifly::Vector2 &NewValue, bool &Changed) -> void;
 
 /// @brief check if a given flag is set for a shader
@@ -238,7 +238,7 @@ auto getTexMatch(const std::wstring &Base, const TextureType &DesiredType,
 auto getSearchPrefixes(nifly::NifFile const& NIF, nifly::NiShape *NIFShape) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;
 
 /// @brief Gets all the texture prefixes for a texture set. ie. _n.dds is removed etc. for each slot
-/// @param[in] OldSlots 
+/// @param[in] OldSlots
 /// @return array of texture names without suffixes
 auto getSearchPrefixes(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots)
     -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;

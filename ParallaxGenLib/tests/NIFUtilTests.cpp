@@ -257,7 +257,7 @@ TEST(NIFUtilTests, TextureTests) {
   EXPECT_TRUE(boost::iequals(NIFUtil::getTexBase("textures\\height_p.dds"), "textures\\height"));
   EXPECT_TRUE(boost::iequals(NIFUtil::getTexBase("textures\\envmask_em.dds"), "textures\\envmask"));
 
-
+  // getTexMatch
   std::map<std::wstring, std::unordered_set<NIFUtil::PGTexture, NIFUtil::PGTextureHasher>> EnvMaskSearchMap{
       {L"textures\\envmask0",
        {{L"textures\\envmask0_m.dds", NIFUtil::TextureType::ENVIRONMENTMASK},
