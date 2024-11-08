@@ -30,6 +30,7 @@
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenPlugin.hpp"
 #include "ParallaxGenUI.hpp"
+#include "ParallaxGenWarnings.hpp"
 #include "patchers/PatcherComplexMaterial.hpp"
 #include "patchers/PatcherShader.hpp"
 #include "patchers/PatcherTruePBR.hpp"
@@ -209,6 +210,9 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   // Initialize UI
   ParallaxGenUI::init();
+
+  // Init Warnings
+  ParallaxGenWarnings::init(&PGD, &PGC);
 
   // Check if GPU needs to be initialized
   if (!Args.NoGPU) {
