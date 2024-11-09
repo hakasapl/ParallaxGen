@@ -6,7 +6,7 @@ using namespace std;
 
 // statics
 ParallaxGenDirectory *ParallaxGenWarnings::PGD = nullptr;
-ParallaxGenConfig *ParallaxGenWarnings::PGC = nullptr;
+const std::unordered_map<std::wstring, int> *ParallaxGenWarnings::ModPriority = nullptr;
 
 unordered_set<pair<wstring, wstring>, ParallaxGenWarnings::PairHash> ParallaxGenWarnings::MismatchWarnTracker;
 mutex ParallaxGenWarnings::MismatchWarnTrackerMutex;
@@ -18,9 +18,9 @@ mutex ParallaxGenWarnings::MeshWarnTrackerMutex;
 unordered_set<pair<wstring, wstring>, ParallaxGenWarnings::PairHash> ParallaxGenWarnings::MeshWarnDebugTracker;
 mutex ParallaxGenWarnings::MeshWarnDebugTrackerMutex;
 
-void ParallaxGenWarnings::init(ParallaxGenDirectory *PGD, ParallaxGenConfig *PGC) {
+void ParallaxGenWarnings::init(ParallaxGenDirectory *PGD, const unordered_map<wstring, int> *ModPriority) {
   ParallaxGenWarnings::PGD = PGD;
-  ParallaxGenWarnings::PGC = PGC;
+  ParallaxGenWarnings::ModPriority = ModPriority;
 
   MismatchWarnTracker.clear();
   MismatchWarnDebugTracker.clear();
@@ -87,7 +87,12 @@ void ParallaxGenWarnings::meshWarn(const wstring &MatchedPath, const wstring &NI
     return;
   }
 
-  if (PGC->getModPriority(NIFPathMod) < 0) {
+  int Priority = 0;
+  if (ModPriority != nullptr && ModPriority->find(NIFPathMod) != ModPriority->end()) {
+    Priority = ModPriority->at(NIFPathMod);
+  }
+
+  if (Priority < 0) {
     return;
   }
 

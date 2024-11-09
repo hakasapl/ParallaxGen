@@ -162,9 +162,6 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   auto PG = ParallaxGen(Params.Output.Dir, &PGD, &PGD3D, Params.PostPatcher.OptimizeMeshes,
                         Params.ShaderTransforms.ParallaxToCM);
 
-  // Init Warnings
-  ParallaxGenWarnings::init(&PGD, &PGC);
-
   // Check if GPU needs to be initialized
   if (Params.Processing.GPUAcceleration) {
     PGD3D.initGPU();
@@ -265,6 +262,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   // Patch meshes if set
   auto ModPriorityMap = PGC.getModPriorityMap();
+  ParallaxGenWarnings::init(&PGD, &ModPriorityMap);
   if (Params.ShaderPatcher.Parallax || Params.ShaderPatcher.ComplexMaterial || Params.ShaderPatcher.TruePBR) {
     PG.patchMeshes(PatcherFactories, &ModPriorityMap, Params.Processing.Multithread, Params.Processing.PluginPatching);
   }
