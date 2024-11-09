@@ -8,6 +8,7 @@
 #include "NIFUtil.hpp"
 #include "ParallaxGenMutagenWrapperNE.h"
 #include "ParallaxGenUtil.hpp"
+#include "ParallaxGenWarnings.hpp"
 
 #include <format>
 
@@ -249,9 +250,7 @@ void ParallaxGenPlugin::populateObjs() { libPopulateObjs(); }
 void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, const wstring &NIFPath,
                                      const wstring &Name3D, const int &Index3DOld, const int &Index3DNew,
                                      const vector<unique_ptr<PatcherShader>> &Patchers,
-                                     const unordered_map<wstring, int> *ModPriority, std::wstring &ResultMatchedPath,
-                                     std::unordered_set<NIFUtil::TextureSlots> &ResultMatchedFrom,
-                                     std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots) {
+                                     const unordered_map<wstring, int> *ModPriority, std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots) {
   if (AppliedShader == NIFUtil::ShapeShader::NONE) {
     spdlog::trace(L"Plugin Patching | {} | {} | {} | Skipping: No shader applied", NIFPath, Name3D, Index3DOld);
     return;
@@ -350,8 +349,12 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
       DecisionMod = Mod;
     }
 
-    ResultMatchedPath = WinningMatch.MatchedPath;
-    ResultMatchedFrom = WinningMatch.MatchedFrom;
+    // Post warnings if any
+    for (const auto &CurMatchedFrom : WinningMatch.MatchedFrom) {
+      ParallaxGenWarnings::mismatchWarn(WinningMatch.MatchedPath, NewSlots[static_cast<int>(CurMatchedFrom)]);
+    }
+
+    ParallaxGenWarnings::meshWarn(WinningMatch.MatchedPath, NIFPath);
 
     auto PatcherIt = std::find_if(Patchers.begin(), Patchers.end(),
                                   [&AppliedShader](auto &P) { return (P->getShaderType() == AppliedShader); });

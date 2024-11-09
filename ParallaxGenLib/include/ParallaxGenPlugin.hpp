@@ -84,14 +84,11 @@ public:
   /// @param[in] Index3DOld zero-based index of the shape in the nif before patching the shapes
   /// @param[in] Index3DNew zero-based index of the shape in the nif after patching the shapes in the nif
   /// @param[in] Patchers patchers for the given nif
-  /// @param[out] ResultMatchedPath path of the texture that was found and assigned to the texture set
-  /// @param[out] ResultMatchedFrom texture slots where the result texture was matched from
   /// @param[out] NewSlots textures that were assigned to the texture set slots
   static void processShape(const NIFUtil::ShapeShader &AppliedShader, const std::wstring &NIFPath,
                            const std::wstring &Name3D, const int &Index3DOld, const int &Index3DNew,
                            const std::vector<std::unique_ptr<PatcherShader>> &Patchers,
-                           const std::unordered_map<std::wstring, int> *ModPriority, std::wstring &ResultMatchedPath,
-                           std::unordered_set<NIFUtil::TextureSlots> &ResultMatchedFrom,
+                           const std::unordered_map<std::wstring, int> *ModPriority,
                            std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots);
 
   static void savePlugin(const std::filesystem::path &OutputDir);
