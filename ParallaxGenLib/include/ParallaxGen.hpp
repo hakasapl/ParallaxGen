@@ -93,10 +93,8 @@ public:
       const bool &PatchPlugin = true) -> std::unordered_map<std::wstring, std::tuple<std::set<NIFUtil::ShapeShader>, std::unordered_set<std::wstring>>>;
   // zips all meshes and removes originals
   void zipMeshes() const;
-  // deletes generated meshes
-  void deleteMeshes() const;
   // deletes entire output folder
-  void deleteOutputDir() const;
+  void deleteOutputDir(const bool &PreOutput = true) const;
   // get output zip name
   [[nodiscard]] static auto getOutputZipName() -> std::filesystem::path;
   // get diff json name

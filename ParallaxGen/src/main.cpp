@@ -345,7 +345,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   // cleanup
   if (!Args.NoCleanup) {
-    PG.deleteMeshes();
+    PG.deleteOutputDir(false);
   }
 
   const auto EndTime = chrono::high_resolution_clock::now();
