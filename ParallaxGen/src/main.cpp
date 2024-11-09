@@ -29,11 +29,12 @@
 #include "ParallaxGenD3D.hpp"
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenPlugin.hpp"
-#include "ParallaxGenUI.hpp"
 #include "patchers/PatcherComplexMaterial.hpp"
 #include "patchers/PatcherShader.hpp"
 #include "patchers/PatcherTruePBR.hpp"
 #include "patchers/PatcherVanillaParallax.hpp"
+
+#include "ParallaxGenUI.hpp"
 
 constexpr unsigned MAX_LOG_SIZE = 5242880;
 constexpr unsigned MAX_LOG_FILES = 100;
@@ -42,57 +43,7 @@ using namespace std;
 
 struct ParallaxGenCLIArgs {
   int Verbosity = 0;
-  filesystem::path GameDir;
-  string GameType = "skyrimse";
-  filesystem::path OutputDir;
-  string ModManagerType = "none";
-  filesystem::path MO2InstanceDir;
-  string MO2Profile = "Default";
   bool Autostart = false;
-  bool NoMultithread = false;
-  bool HighMem = false;
-  bool NoGPU = false;
-  bool NoBSA = false;
-  bool UpgradeShaders = false;
-  bool OptimizeMeshes = false;
-  bool NoMapFromMeshes = false;
-  bool NoPlugin = false;
-  bool NoZip = false;
-  bool NoCleanup = false;
-  bool NoDefaultConfig = false;
-  bool IgnoreParallax = false;
-  bool IgnoreComplexMaterial = false;
-  bool IgnoreTruePBR = false;
-  bool DisableMLP = false;
-
-  [[nodiscard]] auto getString() const -> string {
-    string OutStr;
-    OutStr += "Verbosity: " + to_string(Verbosity) + "\n";
-    OutStr += "GameDir: " + GameDir.string() + "\n";
-    OutStr += "GameType: " + GameType + "\n";
-    OutStr += "OutputDir: " + OutputDir.string() + "\n";
-    OutStr += "ModManagerType: " + ModManagerType + "\n";
-    OutStr += "MO2InstanceDir: " + MO2InstanceDir.string() + "\n";
-    OutStr += "MO2ProfileDir: " + MO2Profile + "\n";
-    OutStr += "Autostart: " + to_string(static_cast<int>(Autostart)) + "\n";
-    OutStr += "NoMultithread: " + to_string(static_cast<int>(NoMultithread)) + "\n";
-    OutStr += "HighMem: " + to_string(static_cast<int>(HighMem)) + "\n";
-    OutStr += "NoGPU: " + to_string(static_cast<int>(NoGPU)) + "\n";
-    OutStr += "NoBSA: " + to_string(static_cast<int>(NoBSA)) + "\n";
-    OutStr += "UpgradeShaders: " + to_string(static_cast<int>(UpgradeShaders)) + "\n";
-    OutStr += "OptimizeMeshes: " + to_string(static_cast<int>(OptimizeMeshes)) + "\n";
-    OutStr += "NoMapFromMeshes: " + to_string(static_cast<int>(NoMapFromMeshes)) + "\n";
-    OutStr += "NoPlugin: " + to_string(static_cast<int>(NoPlugin)) + "\n";
-    OutStr += "NoZip: " + to_string(static_cast<int>(NoZip)) + "\n";
-    OutStr += "NoCleanup: " + to_string(static_cast<int>(NoCleanup)) + "\n";
-    OutStr += "NoDefaultConfig: " + to_string(static_cast<int>(NoDefaultConfig)) + "\n";
-    OutStr += "IgnoreParallax: " + to_string(static_cast<int>(IgnoreParallax)) + "\n";
-    OutStr += "IgnoreComplexMaterial: " + to_string(static_cast<int>(IgnoreComplexMaterial)) + "\n";
-    OutStr += "IgnoreTruePBR: " + to_string(static_cast<int>(IgnoreTruePBR)) + "\n";
-    OutStr += "DisableMLP: " + to_string(static_cast<int>(DisableMLP));
-
-    return OutStr;
-  }
 };
 
 // Store game type strings and their corresponding BethesdaGame::GameType enum
@@ -118,7 +69,7 @@ auto getGameTypeMapStr() -> string {
 }
 
 auto deployAssets(ParallaxGenDirectory *PGD, const filesystem::path &OutputDir,
-                              const filesystem::path &ExePath) -> void {
+                  const filesystem::path &ExePath) -> void {
   // Install default cubemap file if needed
   static const filesystem::path DynCubeMapPath = "textures/cubemaps/dynamic1pxcubemap_black.dds";
   if (!PGD->isFile(DynCubeMapPath)) {
@@ -163,55 +114,55 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   // Alpha message
   spdlog::warn("ParallaxGen is currently in ALPHA. Please file detailed bug reports on nexus or github.");
 
+  // Initialize UI
+  ParallaxGenUI::init();
+
+  // Initialize ParallaxGenConfig
+  auto PGC = ParallaxGenConfig(ExePath);
+  PGC.loadConfig();
+
+  auto Params = PGC.getParams();
+
+  // Show launcher UI
+  if (!Args.Autostart) {
+    Params = ParallaxGenUI::showLauncher(Params);
+    PGC.setParams(Params);
+  }
+
   // Print configuration parameters
-  spdlog::debug("Configuration Parameters:\n\n{}\n", Args.getString());
+  spdlog::debug(L"Configuration Parameters:\n\n{}\n", Params.getString());
 
   // print output location
-  spdlog::info(L"ParallaxGen output directory (the contents will be deleted if you "
-               L"start generation!): {}",
-               Args.OutputDir.wstring());
-
-  // Create bethesda game type object
-  BethesdaGame::GameType BGType = getGameTypeMap().at(Args.GameType); // NOLINT
+  spdlog::info(L"ParallaxGen output directory: {}", Params.Output.Dir.wstring());
 
   // Create relevant objects
-  const auto BG = BethesdaGame(BGType, true, Args.GameDir);
-
-  ModManagerDirectory::ModManagerType MMType = ModManagerDirectory::ModManagerType::None;
-  if (Args.ModManagerType == "vortex") {
-    MMType = ModManagerDirectory::ModManagerType::Vortex;
-  } else if (Args.ModManagerType == "mo2") {
-    MMType = ModManagerDirectory::ModManagerType::ModOrganizer2;
-  }
+  const auto BG = BethesdaGame(Params.Game.Type, true, Params.Game.Dir);
 
   // Create patcher factory
   vector<function<unique_ptr<PatcherShader>(filesystem::path, nifly::NifFile *)>> PatcherFactories;
-  if (!Args.IgnoreParallax) {
+  if (Params.ShaderPatcher.Parallax) {
     PatcherFactories.emplace_back([](const filesystem::path &NIFFile, nifly::NifFile *NIF) {
       return make_unique<PatcherVanillaParallax>(NIFFile, NIF);
     });
   }
-  if (!Args.IgnoreComplexMaterial) {
+  if (Params.ShaderPatcher.ComplexMaterial) {
     PatcherFactories.emplace_back([](const filesystem::path &NIFFile, nifly::NifFile *NIF) {
       return make_unique<PatcherComplexMaterial>(NIFFile, NIF);
     });
   }
-  if (!Args.IgnoreTruePBR) {
+  if (Params.ShaderPatcher.TruePBR) {
     PatcherFactories.emplace_back(
         [](const filesystem::path &NIFFile, nifly::NifFile *NIF) { return make_unique<PatcherTruePBR>(NIFFile, NIF); });
   }
 
-  auto MMD = ModManagerDirectory(MMType);
-  auto PGD = ParallaxGenDirectory(BG, Args.OutputDir, &MMD);
-  auto PGC = ParallaxGenConfig(ExePath);
-  auto PGD3D = ParallaxGenD3D(&PGD, Args.OutputDir, ExePath, !Args.NoGPU);
-  auto PG = ParallaxGen(Args.OutputDir, &PGD, &PGC, &PGD3D, Args.OptimizeMeshes, Args.UpgradeShaders);
-
-  // Initialize UI
-  ParallaxGenUI::init();
+  auto MMD = ModManagerDirectory(Params.ModManager.Type);
+  auto PGD = ParallaxGenDirectory(BG, Params.Output.Dir, &MMD);
+  auto PGD3D = ParallaxGenD3D(&PGD, Params.Output.Dir, ExePath, Params.Processing.GPUAcceleration);
+  auto PG = ParallaxGen(Params.Output.Dir, &PGD, &PGD3D, Params.PostPatcher.OptimizeMeshes,
+                        Params.ShaderTransforms.ParallaxToCM);
 
   // Check if GPU needs to be initialized
-  if (!Args.NoGPU) {
+  if (Params.Processing.GPUAcceleration) {
     PGD3D.initGPU();
   }
 
@@ -219,26 +170,20 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   // Generation
   //
 
-  // User Input to Continue
-  if (!Args.Autostart) {
-    cout << "Press ENTER to start ParallaxGen...";
-    cin.get();
-  }
-
   // Get current time to compare later
   auto StartTime = chrono::high_resolution_clock::now();
   long long TimeTaken = 0;
 
   // Create output directory
   try {
-    filesystem::create_directories(Args.OutputDir);
+    filesystem::create_directories(Params.Output.Dir);
   } catch (const filesystem::filesystem_error &E) {
     spdlog::error("Failed to create output directory: {}", E.what());
     exit(1);
   }
 
   // If output dir is the same as data dir meshes might get overwritten
-  if (filesystem::equivalent(Args.OutputDir, PGD.getDataPath())) {
+  if (filesystem::equivalent(Params.Output.Dir, PGD.getDataPath())) {
     spdlog::critical("Output directory cannot be the same directory as your data folder. "
                      "Exiting.");
     exit(1);
@@ -256,37 +201,34 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   }
 
   // Init PGP library
-  if (!Args.NoPlugin) {
+  if (Params.Processing.PluginPatching) {
     spdlog::info("Initializing plugin patcher");
-    ParallaxGenPlugin::loadStatics(&PGD, &PGC);
+    ParallaxGenPlugin::loadStatics(&PGD);
     ParallaxGenPlugin::initialize(BG);
     ParallaxGenPlugin::populateObjs();
   }
 
-  // Load configs
-  PGC.loadConfig(!Args.NoDefaultConfig);
-
   // Populate file map from data directory
-  if (MMType == ModManagerDirectory::ModManagerType::ModOrganizer2 && !Args.MO2InstanceDir.empty() &&
-      !Args.MO2Profile.empty()) {
+  if (Params.ModManager.Type == ModManagerDirectory::ModManagerType::ModOrganizer2 &&
+      !Params.ModManager.MO2InstanceDir.empty() && !Params.ModManager.MO2Profile.empty()) {
     // MO2
-    auto MO2StagingFolder = Args.MO2InstanceDir / "mods";
-    auto MO2ModlistTXT = Args.MO2InstanceDir / "profiles" / Args.MO2Profile / "modlist.txt";
+    auto MO2StagingFolder = Params.ModManager.MO2InstanceDir / "mods";
+    auto MO2ModlistTXT = Params.ModManager.MO2InstanceDir / "profiles" / Params.ModManager.MO2Profile / "modlist.txt";
     MMD.populateInfo(MO2ModlistTXT, MO2StagingFolder);
     MMD.populateModFileMap();
-  } else if (MMType == ModManagerDirectory::ModManagerType::Vortex) {
+  } else if (Params.ModManager.Type == ModManagerDirectory::ModManagerType::Vortex) {
     // Vortex
     MMD.populateInfo(BG.getGameDataPath() / "vortex.deployment.json");
     MMD.populateModFileMap();
   }
 
-  PGD.populateFileMap(!Args.NoBSA);
+  PGD.populateFileMap(Params.Processing.BSA);
 
   auto VanillaBSAList = PGC.getVanillaBSAList();
 
   // Map files
-  PGD.mapFiles(PGC.getNIFBlocklist(), PGC.getManualTextureMaps(), VanillaBSAList, !Args.NoMapFromMeshes,
-               !Args.NoMultithread, Args.HighMem);
+  PGD.mapFiles(PGC.getNIFBlocklist(), PGC.getManualTextureMaps(), VanillaBSAList, Params.Processing.MapFromMeshes,
+               Params.Processing.Multithread, Params.Processing.HighMem);
 
   // Find CM maps
   spdlog::info("Finding complex material env maps");
@@ -296,12 +238,13 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   // Load patcher static vars
   PatcherShader::loadStatics(PGD, PGD3D);
   PatcherTruePBR::loadStatics(PGD.getPBRJSONs());
-  PatcherComplexMaterial::loadStatics(Args.DisableMLP, PGC.getDynCubemapBlocklist());
+  PatcherComplexMaterial::loadStatics(Params.PrePatcher.DisableMLP, PGC.getDynCubemapBlocklist());
   // PatcherVanillaParallax::loadStatics();
 
-  if (MMType != ModManagerDirectory::ModManagerType::None) {
+  if (Params.ModManager.Type != ModManagerDirectory::ModManagerType::None) {
     // Find conflicts
-    const auto ModConflicts = PG.findModConflicts(PatcherFactories, !Args.NoMultithread, !Args.NoPlugin);
+    const auto ModConflicts =
+        PG.findModConflicts(PatcherFactories, Params.Processing.Multithread, Params.Processing.PluginPatching);
     const auto ExistingOrder = PGC.getModOrder();
 
     if (!ModConflicts.empty()) {
@@ -317,8 +260,9 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   }
 
   // Patch meshes if set
-  if (!Args.IgnoreParallax || !Args.IgnoreComplexMaterial || !Args.IgnoreTruePBR) {
-    PG.patchMeshes(PatcherFactories, !Args.NoMultithread, !Args.NoPlugin);
+  auto ModPriorityMap = PGC.getModPriorityMap();
+  if (Params.ShaderPatcher.Parallax || Params.ShaderPatcher.ComplexMaterial || Params.ShaderPatcher.TruePBR) {
+    PG.patchMeshes(PatcherFactories, &ModPriorityMap, Params.Processing.Multithread, Params.Processing.PluginPatching);
   }
 
   // Release cached files, if any
@@ -327,20 +271,16 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   spdlog::info("ParallaxGen has finished patching meshes.");
 
   // Write plugin
-  if (!Args.NoPlugin) {
+  if (Params.Processing.PluginPatching) {
     spdlog::info("Saving ParallaxGen.esp");
-    ParallaxGenPlugin::savePlugin(Args.OutputDir);
+    ParallaxGenPlugin::savePlugin(Params.Output.Dir);
   }
 
-  deployAssets(&PGD, Args.OutputDir, ExePath);
+  deployAssets(&PGD, Params.Output.Dir, ExePath);
 
   // archive
-  if (!Args.NoZip) {
+  if (Params.Output.Zip) {
     PG.zipMeshes();
-  }
-
-  // cleanup
-  if (!Args.NoCleanup) {
     PG.deleteMeshes();
   }
 
@@ -351,6 +291,10 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 }
 
 void exitBlocking() {
+  if (ParallaxGenUI::UIExitTriggered) {
+    return;
+  }
+
   cout << "Press ENTER to exit...";
   cin.get();
 }
@@ -374,81 +318,12 @@ auto getExecutablePath() -> filesystem::path {
   return {};
 }
 
-void addArguments(CLI::App &App, ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
+void addArguments(CLI::App &App, ParallaxGenCLIArgs &Args) {
   // Logging
   App.add_flag("-v", Args.Verbosity,
                "Verbosity level -v for DEBUG data or -vv for TRACE data "
                "(warning: TRACE data is very verbose)");
-  // Game
-  App.add_option("-d,--game-dir", Args.GameDir, "Manually specify game directory");
-  App.add_option("-g,--game-type", Args.GameType, "Specify game type [" + getGameTypeMapStr() + "]");
-  App.add_option("-m,--mod-manager", Args.ModManagerType, R"(Specify mod manager type ("mo2" or "vortex"))");
-  App.add_option("--mo2-instance-dir", Args.MO2InstanceDir, "MO2 ONLY: Specify MO2 instance directory");
-  App.add_option("--mo2-profile", Args.MO2Profile, "MO2 ONLY: Specify MO2 profile to use if other than 'Default'");
-  App.add_flag("--no-bsa", Args.NoBSA, "Don't load BSA files, only loose files");
-  // App Options
   App.add_flag("--autostart", Args.Autostart, "Start generation without user input");
-  App.add_flag("--no-multithread", Args.NoMultithread, "Don't use multithreading (Slower)");
-  auto *FlagNoGpu = App.add_flag("--no-gpu", Args.NoGPU, "Don't use the GPU for any operations (Slower)");
-  App.add_flag("--no-default-conifg", Args.NoDefaultConfig,
-               "Don't load the default config file (You need to know what "
-               "you're doing for this)");
-  // Output
-  App.add_option("-o,--output-dir", Args.OutputDir, "Manually specify output directory");
-  App.add_flag("--optimize-meshes", Args.OptimizeMeshes, "Optimize meshes before saving them");
-  App.add_flag("--no-map-from-meshes", Args.NoMapFromMeshes,
-               "Don't map textures from meshes (faster but less accurate)");
-  App.add_flag("--no-plugin", Args.NoPlugin, "Don't create a ParallaxGen.esp plugin");
-  App.add_flag("--high-mem", Args.HighMem, "Enable high memory usage (faster runtime but uses a lot more RAM)");
-  App.add_flag("--no-zip", Args.NoZip, "Don't zip the output meshes (also enables --no-cleanup)");
-  App.add_flag("--no-cleanup", Args.NoCleanup, "Don't delete generated meshes after zipping");
-  // Patchers
-  auto *FlagIgnoreParallax =
-      App.add_flag("--ignore-parallax", Args.IgnoreParallax, "Don't generate any parallax meshes");
-  auto *FlagIgnoreCM = App.add_flag("--ignore-complex-material", Args.IgnoreComplexMaterial,
-                                    "Don't generate any complex material meshes");
-  App.add_flag("--ignore-truepbr", Args.IgnoreTruePBR, "Don't apply any TruePBR configs in the load order");
-  App.add_flag("--disable-mlp", Args.DisableMLP, "Disable MLP (Multi-Layer Parallax) if complex material is possible")
-      ->excludes(FlagIgnoreCM);
-  App.add_flag("--upgrade-shaders", Args.UpgradeShaders, "Upgrade shaders to a better version whenever possible")
-      ->excludes(FlagNoGpu)
-      ->excludes(FlagIgnoreParallax)
-      ->excludes(FlagIgnoreCM);
-
-  // Multi-argument Validation
-  App.callback([&Args, &ExePath]() {
-    // One action needs to be enabled
-    if (Args.IgnoreParallax && Args.IgnoreComplexMaterial && Args.IgnoreTruePBR && !Args.UpgradeShaders) {
-      throw CLI::ValidationError("No action items to do (check that you are not ignoring all patchers)");
-    }
-
-    // Validate Game Type
-    const auto GameTypeMap = getGameTypeMap();
-    if (GameTypeMap.find(Args.GameType) == GameTypeMap.end()) {
-      throw CLI::ValidationError("Invalid game type (-g) specified: " + Args.GameType + ". Available options are [" +
-                                 getGameTypeMapStr() + "]");
-    }
-
-    // Check if output dir is set, otherwise set default
-    if (Args.OutputDir.empty()) {
-      Args.OutputDir = ExePath / "ParallaxGen_Output";
-    } else {
-      // Check if output dir is a directory
-      if (!filesystem::is_directory(Args.OutputDir) && filesystem::exists(Args.OutputDir)) {
-        throw CLI::ValidationError("Output directory (-o) must be a directory or not exist");
-      }
-    }
-
-    // If --no-zip is set, also set --no-cleanup
-    if (Args.NoZip) {
-      Args.NoCleanup = true;
-    }
-
-    if (Args.ModManagerType == "mo2" && Args.MO2InstanceDir.empty()) {
-      throw CLI::ValidationError("MO2 instance directory must be specified with --mo2-instance-dir when using \"mo2\" "
-                                 "mod manager type");
-    }
-  });
 }
 
 void initLogger(const filesystem::path &LOGPATH, const ParallaxGenCLIArgs &Args) {
@@ -486,6 +361,12 @@ void initLogger(const filesystem::path &LOGPATH, const ParallaxGenCLIArgs &Args)
 }
 
 auto main(int ArgC, char **ArgV) -> int {
+  // Block until enter only in debug mode
+  #ifdef _DEBUG
+  cout << "Press ENTER to start (DEBUG mode)...";
+  cin.get();
+  #endif
+
   // This is what keeps the console window open after the program exits until user input
   if (atexit(exitBlocking) != 0) {
     cerr << "Failed to register exitBlocking function\n";
@@ -498,7 +379,7 @@ auto main(int ArgC, char **ArgV) -> int {
   // CLI Arguments
   ParallaxGenCLIArgs Args;
   CLI::App App{"ParallaxGen: Auto convert meshes to parallax meshes"};
-  addArguments(App, Args, ExePath);
+  addArguments(App, Args);
 
   // Parse CLI Arguments (this is what exits on any validation issues)
   CLI11_PARSE(App, ArgC, ArgV);

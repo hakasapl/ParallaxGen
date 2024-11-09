@@ -65,6 +65,11 @@ public:
   // Get number of active plugins including Bethesda master files
   [[nodiscard]] auto getActivePlugins(const bool &TrimExtension = false) const -> std::vector<std::wstring>;
 
+  // Helpers
+  [[nodiscard]] static auto getGameTypes() -> std::vector<GameType>;
+  [[nodiscard]] static auto getStrFromGameType(const GameType &Type) -> std::string;
+  [[nodiscard]] static auto getGameTypeFromStr(const std::string &Type) -> GameType;
+
 private:
   [[nodiscard]] auto getGameDocumentSystemPath() const -> std::filesystem::path;
   [[nodiscard]] auto getGameAppdataSystemPath() const -> std::filesystem::path;

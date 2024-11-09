@@ -10,7 +10,6 @@
 #include <unordered_set>
 
 #include "NIFUtil.hpp"
-#include "ParallaxGenConfig.hpp"
 #include "ParallaxGenD3D.hpp"
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenTask.hpp"
@@ -24,7 +23,6 @@ private:
 
   // Dependency objects
   ParallaxGenDirectory *PGD;
-  ParallaxGenConfig *PGC;
   ParallaxGenD3D *PGD3D;
 
   // sort blocks enabled, optimize disabled (for now)
@@ -95,19 +93,20 @@ public:
   //
 
   // constructor
-  ParallaxGen(std::filesystem::path OutputDir, ParallaxGenDirectory *PGD, ParallaxGenConfig *PGC, ParallaxGenD3D *PGD3D,
+  ParallaxGen(std::filesystem::path OutputDir, ParallaxGenDirectory *PGD, ParallaxGenD3D *PGD3D,
               const bool &OptimizeMeshes = false, const bool &UpgradeShaders = false);
   // enables parallax on relevant meshes
   void
   patchMeshes(const std::vector<std::function<std::unique_ptr<PatcherShader>(std::filesystem::path, nifly::NifFile *)>>
                   &Patchers,
-              const bool &MultiThread = true, const bool &PatchPlugin = true);
+              const std::unordered_map<std::wstring, int> *ModPriority, const bool &MultiThread = true,
+              const bool &PatchPlugin = true);
   // Dry run for finding potential matches (used with mod manager integration)
   [[nodiscard]] auto findModConflicts(
       const std::vector<std::function<std::unique_ptr<PatcherShader>(std::filesystem::path, nifly::NifFile *)>>
           &Patchers,
-      const bool &MultiThread = true,
-      const bool &PatchPlugin = true) -> std::unordered_map<std::wstring, std::tuple<std::set<NIFUtil::ShapeShader>, std::unordered_set<std::wstring>>>;
+      const bool &MultiThread = true, const bool &PatchPlugin = true)
+      -> std::unordered_map<std::wstring, std::tuple<std::set<NIFUtil::ShapeShader>, std::unordered_set<std::wstring>>>;
   // zips all meshes and removes originals
   void zipMeshes() const;
   // deletes generated meshes
@@ -129,20 +128,24 @@ private:
                                          std::wstring &NewCMMap) -> ParallaxGenTask::PGResult;
 
   // processes a NIF file (enable parallax if needed)
-  auto
-  processNIF(const std::vector<std::function<std::unique_ptr<PatcherShader>(std::filesystem::path, nifly::NifFile *)>>
-                 &Patchers,
-             const std::filesystem::path &NIFFile, nlohmann::json *DiffJSON, const bool &PatchPlugin = true,
-             const bool &Dry = false,
-             std::unordered_map<std::wstring, std::tuple<std::set<NIFUtil::ShapeShader>, std::unordered_set<std::wstring>>> *ConflictMods = nullptr,
-             std::mutex *ConflictModsMutex = nullptr) -> ParallaxGenTask::PGResult;
+  auto processNIF(
+      const std::vector<std::function<std::unique_ptr<PatcherShader>(std::filesystem::path, nifly::NifFile *)>>
+          &Patchers,
+      const std::unordered_map<std::wstring, int> *ModPriority, const std::filesystem::path &NIFFile,
+      nlohmann::json *DiffJSON, const bool &PatchPlugin = true, const bool &Dry = false,
+      std::unordered_map<std::wstring, std::tuple<std::set<NIFUtil::ShapeShader>, std::unordered_set<std::wstring>>>
+          *ConflictMods = nullptr,
+      std::mutex *ConflictModsMutex = nullptr) -> ParallaxGenTask::PGResult;
 
   // processes a shape within a NIF file
-  auto processShape(const std::filesystem::path &NIFPath, nifly::NifFile &NIF, nifly::NiShape *NIFShape,
-                    const int &ShapeIndex, const std::vector<std::unique_ptr<PatcherShader>> &Patchers, bool &ShapeModified,
-                    bool &ShapeDeleted, NIFUtil::ShapeShader &ShaderApplied, const bool &Dry = false,
-                    std::unordered_map<std::wstring, std::tuple<std::set<NIFUtil::ShapeShader>, std::unordered_set<std::wstring>>> *ConflictMods = nullptr,
-                    std::mutex *ConflictModsMutex = nullptr) -> ParallaxGenTask::PGResult;
+  auto processShape(
+      const std::filesystem::path &NIFPath, nifly::NifFile &NIF, nifly::NiShape *NIFShape, const int &ShapeIndex,
+      const std::vector<std::unique_ptr<PatcherShader>> &Patchers,
+      const std::unordered_map<std::wstring, int> *ModPriority, bool &ShapeModified, bool &ShapeDeleted,
+      NIFUtil::ShapeShader &ShaderApplied, const bool &Dry = false,
+      std::unordered_map<std::wstring, std::tuple<std::set<NIFUtil::ShapeShader>, std::unordered_set<std::wstring>>>
+          *ConflictMods = nullptr,
+      std::mutex *ConflictModsMutex = nullptr) -> ParallaxGenTask::PGResult;
 
   // Zip methods
   void addFileToZip(mz_zip_archive &Zip, const std::filesystem::path &FilePath,

@@ -21,7 +21,8 @@
 
 using namespace std;
 
-BethesdaGame::BethesdaGame(GameType GameType, const bool &Logging, const filesystem::path &GamePath, const filesystem::path &AppDataPath, const filesystem::path &DocumentPath)
+BethesdaGame::BethesdaGame(GameType GameType, const bool &Logging, const filesystem::path &GamePath,
+                           const filesystem::path &AppDataPath, const filesystem::path &DocumentPath)
     : ObjGameType(GameType), Logging(Logging) {
   if (GamePath.empty()) {
     // If the game path is empty, find
@@ -401,4 +402,35 @@ auto BethesdaGame::getSystemPath(const GUID &FolderID) -> filesystem::path {
 
   // Handle error
   return {};
+}
+
+auto BethesdaGame::getGameTypes() -> vector<GameType> {
+  const static auto GameTypes = vector<GameType>{GameType::SKYRIM_SE, GameType::SKYRIM_GOG, GameType::SKYRIM,
+                                                 GameType::SKYRIM_VR, GameType::ENDERAL, GameType::ENDERAL_SE};
+  return GameTypes;
+}
+
+auto BethesdaGame::getStrFromGameType(const GameType &Type) -> string {
+  const static auto GameTypeToStrMap = unordered_map<GameType, string>{
+      {GameType::SKYRIM_SE, "Skyrim SE"}, {GameType::SKYRIM_GOG, "Skyrim GOG"}, {GameType::SKYRIM, "Skyrim"},
+      {GameType::SKYRIM_VR, "Skyrim VR"}, {GameType::ENDERAL, "Enderal"},       {GameType::ENDERAL_SE, "Enderal SE"}};
+
+  if (GameTypeToStrMap.contains(Type)) {
+    return GameTypeToStrMap.at(Type);
+  }
+
+  return GameTypeToStrMap.at(GameType::SKYRIM_SE);
+}
+
+auto BethesdaGame::getGameTypeFromStr(const string &Type) -> GameType {
+  const static auto StrToGameTypeMap = unordered_map<string, GameType>{{"Skyrim SE", GameType::SKYRIM_SE},
+                                                                            {"Skyrim GOG", GameType::SKYRIM_GOG},
+                                                                            {"Skyrim", GameType::SKYRIM},
+                                                                            {"Skyrim VR", GameType::SKYRIM_VR},
+                                                                            {"Enderal", GameType::ENDERAL},
+                                                                            {"Enderal SE", GameType::ENDERAL_SE}};
+
+  if (StrToGameTypeMap.contains(Type)){return StrToGameTypeMap.at(Type);}
+
+return StrToGameTypeMap.at("Skyrim SE");
 }

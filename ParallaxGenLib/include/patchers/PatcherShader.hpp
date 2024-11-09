@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "NIFUtil.hpp"
-#include "ParallaxGenConfig.hpp"
 #include "ParallaxGenD3D.hpp"
 #include "ParallaxGenDirectory.hpp"
 

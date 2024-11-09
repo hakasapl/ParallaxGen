@@ -6,7 +6,6 @@
 #include <winbase.h>
 
 #include "NIFUtil.hpp"
-#include "ParallaxGenConfig.hpp"
 #include "ParallaxGenMutagenWrapperNE.h"
 #include "ParallaxGenUtil.hpp"
 
@@ -231,12 +230,8 @@ mutex ParallaxGenPlugin::TXSTWarningMapMutex;
 unordered_map<int, NIFUtil::ShapeShader> ParallaxGenPlugin::TXSTWarningMap; // NOLINT
 
 ParallaxGenDirectory *ParallaxGenPlugin::PGD;
-ParallaxGenConfig *ParallaxGenPlugin::PGC;
 
-void ParallaxGenPlugin::loadStatics(ParallaxGenDirectory *PGD, ParallaxGenConfig *PGC) {
-  ParallaxGenPlugin::PGD = PGD;
-  ParallaxGenPlugin::PGC = PGC;
-}
+void ParallaxGenPlugin::loadStatics(ParallaxGenDirectory *PGD) { ParallaxGenPlugin::PGD = PGD; }
 
 void ParallaxGenPlugin::initialize(const BethesdaGame &Game) {
   // Maps BethesdaGame::GameType to Mutagen game type
@@ -252,8 +247,9 @@ void ParallaxGenPlugin::initialize(const BethesdaGame &Game) {
 void ParallaxGenPlugin::populateObjs() { libPopulateObjs(); }
 
 void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, const wstring &NIFPath,
-                                     const wstring &Name3D, const int &Index3DOld, const int &Index3DNew, const vector<unique_ptr<PatcherShader>> &Patchers,
-                                     std::wstring &ResultMatchedPath,
+                                     const wstring &Name3D, const int &Index3DOld, const int &Index3DNew,
+                                     const vector<unique_ptr<PatcherShader>> &Patchers,
+                                     const unordered_map<wstring, int> *ModPriority, std::wstring &ResultMatchedPath,
                                      std::unordered_set<NIFUtil::TextureSlots> &ResultMatchedFrom,
                                      std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots) {
   if (AppliedShader == NIFUtil::ShapeShader::NONE) {
@@ -328,9 +324,16 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
     PatcherShader::PatcherMatch WinningMatch;
     wstring DecisionMod;
 
-    const auto MeshFilePriority = PGC->getModPriority(PGD->getMod(NIFPath));
+    int MeshFilePriority = -1;
+    if (ModPriority != nullptr && ModPriority->find(NIFPath) != ModPriority->end()) {
+      MeshFilePriority = ModPriority->at(NIFPath);
+    }
+
     for (const auto &[Mod, Match] : Matches) {
-      auto CurPriority = PGC->getModPriority(Mod);
+      int CurPriority = -1;
+      if (ModPriority != nullptr && ModPriority->find(Mod) != ModPriority->end()) {
+        CurPriority = ModPriority->at(Mod);
+      }
 
       if (CurPriority < MeshFilePriority) {
         // skip mods with lower priority than mesh file
@@ -351,7 +354,7 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
     ResultMatchedFrom = WinningMatch.MatchedFrom;
 
     auto PatcherIt = std::find_if(Patchers.begin(), Patchers.end(),
-                                [&AppliedShader](auto &P) { return (P->getShaderType() == AppliedShader); });
+                                  [&AppliedShader](auto &P) { return (P->getShaderType() == AppliedShader); });
 
     auto Patcher = (PatcherIt != Patchers.end()) ? (*PatcherIt).get() : nullptr;
 
