@@ -283,7 +283,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   // archive
   if (Params.Output.Zip) {
     PG.zipMeshes();
-    PG.deleteMeshes();
+    PG.deleteOutputDir(false);
   }
 
   const auto EndTime = chrono::high_resolution_clock::now();
