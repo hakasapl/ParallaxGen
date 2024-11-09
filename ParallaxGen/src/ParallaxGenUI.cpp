@@ -25,7 +25,7 @@ LauncherWindow::LauncherWindow(const ParallaxGenConfig::PGParams &Params)
   auto *MainSizer = new wxBoxSizer(wxHORIZONTAL); // NOLINT(cppcoreguidelines-owning-memory)
 
   // Left/Right sizers
-  auto *LeftSizer = new wxBoxSizer(wxVERTICAL);  // NOLINT(cppcoreguidelines-owning-memory)
+  auto *LeftSizer = new wxBoxSizer(wxVERTICAL); // NOLINT(cppcoreguidelines-owning-memory)
   LeftSizer->SetMinSize(wxSize(800, -1));
   auto *RightSizer = new wxBoxSizer(wxVERTICAL); // NOLINT(cppcoreguidelines-owning-memory)
 
@@ -40,7 +40,8 @@ LauncherWindow::LauncherWindow(const ParallaxGenConfig::PGParams &Params)
 
   // Game Location
   auto *GameLocationLabel = new wxStaticText(this, wxID_ANY, "Location"); // NOLINT(cppcoreguidelines-owning-memory)
-  GameLocationTextbox = new wxTextCtrl(this, wxID_ANY); // NOLINT(cppcoreguidelines-owning-memory)
+  GameLocationTextbox = new wxTextCtrl(this, wxID_ANY);                   // NOLINT(cppcoreguidelines-owning-memory)
+  GameLocationTextbox->SetToolTip("Path to the game folder (NOT the data folder)");
   auto *GameLocationBrowseButton = new wxButton(this, wxID_ANY, "Browse");
   GameLocationBrowseButton->Bind(wxEVT_BUTTON, &LauncherWindow::onBrowseGameLocation, this);
 
@@ -92,6 +93,7 @@ LauncherWindow::LauncherWindow(const ParallaxGenConfig::PGParams &Params)
       new wxStaticText(this, wxID_ANY, "Instance Location"); // NOLINT(cppcoreguidelines-owning-memory)
 
   MO2InstanceLocationTextbox = new wxTextCtrl(this, wxID_ANY); // NOLINT(cppcoreguidelines-owning-memory)
+  MO2InstanceLocationTextbox->SetToolTip("Path to the MO2 instance folder (Folder Icon > Open Instnace folder in MO2)");
   MO2InstanceLocationTextbox->Bind(wxEVT_TEXT, &LauncherWindow::onMO2InstanceLocationChange, this);
 
   auto *MO2InstanceBrowseButton = new wxButton(this, wxID_ANY, "Browse");
@@ -103,6 +105,7 @@ LauncherWindow::LauncherWindow(const ParallaxGenConfig::PGParams &Params)
   // Dropdown for MO2 profile selection
   auto *MO2ProfileLabel = new wxStaticText(this, wxID_ANY, "Profile"); // NOLINT(cppcoreguidelines-owning-memory)
   MO2ProfileChoice = new wxChoice(this, wxID_ANY);                     // NOLINT(cppcoreguidelines-owning-memory)
+  MO2ProfileChoice->SetToolTip("MO2 profile to read from");
 
   // Add the label and dropdown to MO2 options sizer
   MO2OptionsSizer->Add(MO2InstanceLocationLabel, 0, wxLEFT | wxRIGHT | wxTOP, 5);
@@ -123,7 +126,10 @@ LauncherWindow::LauncherWindow(const ParallaxGenConfig::PGParams &Params)
   auto *OutputSizer = new wxStaticBoxSizer(wxVERTICAL, this, "Output");
 
   auto *OutputLocationLabel = new wxStaticText(this, wxID_ANY, "Location"); // NOLINT(cppcoreguidelines-owning-memory)
-  OutputLocationTextbox = new wxTextCtrl(this, wxID_ANY); // NOLINT(cppcoreguidelines-owning-memory)
+  OutputLocationTextbox = new wxTextCtrl(this, wxID_ANY);                   // NOLINT(cppcoreguidelines-owning-memory)
+  OutputLocationTextbox->SetToolTip(
+      "Path to the output folder - This folder should be used EXCLUSIVELY for ParallaxGen. Don't set it to your data "
+      "directory or any other folder that contains mods.");
   auto *OutputLocationBrowseButton = new wxButton(this, wxID_ANY, "Browse");
   OutputLocationBrowseButton->Bind(wxEVT_BUTTON, &LauncherWindow::onBrowseOutputLocation, this);
 
@@ -155,25 +161,34 @@ LauncherWindow::LauncherWindow(const ParallaxGenConfig::PGParams &Params)
 
   ProcessingPluginPatchingCheckbox = // NOLINT(cppcoreguidelines-owning-memory)
       new wxCheckBox(this, wxID_ANY, "Plugin Patching");
+  ProcessingPluginPatchingCheckbox->SetToolTip(
+      "Creates a 'ParallaxGen.esp' plugin in the output that patches TXST records according to how NIFs were patched");
   ProcessingOptionsSizer->Add(ProcessingPluginPatchingCheckbox, 0, wxALL, 5);
 
   ProcessingMultithreadingCheckbox = // NOLINT(cppcoreguidelines-owning-memory)
       new wxCheckBox(this, wxID_ANY, "Multithreading");
+  ProcessingMultithreadingCheckbox->SetToolTip("Speeds up runtime at the cost of using more resources");
   ProcessingOptionsSizer->Add(ProcessingMultithreadingCheckbox, 0, wxALL, 5);
 
   ProcessingHighMemCheckbox = // NOLINT(cppcoreguidelines-owning-memory)
       new wxCheckBox(this, wxID_ANY, "High Memory Usage");
+  ProcessingHighMemCheckbox->SetToolTip(
+      "Uses more memory to speed up processing. You need to have enough RAM to be able to load ALL your NIFs at once.");
   ProcessingOptionsSizer->Add(ProcessingHighMemCheckbox, 0, wxALL, 5);
 
   ProcessingGPUAccelerationCheckbox = // NOLINT(cppcoreguidelines-owning-memory)
       new wxCheckBox(this, wxID_ANY, "GPU Acceleration");
+  ProcessingGPUAccelerationCheckbox->SetToolTip("Uses the GPU to speed up processing some DDS related tasks");
   ProcessingOptionsSizer->Add(ProcessingGPUAccelerationCheckbox, 0, wxALL, 5);
 
   ProcessingMapFromMeshesCheckbox = // NOLINT(cppcoreguidelines-owning-memory)
       new wxCheckBox(this, wxID_ANY, "Map Textures From Meshes");
+  ProcessingMapFromMeshesCheckbox->SetToolTip("Attempts to map textures from meshes instead of relying entirely on the "
+                                              "DDS suffixes (slower, but more accurate)");
   ProcessingOptionsSizer->Add(ProcessingMapFromMeshesCheckbox, 0, wxALL, 5);
 
   ProcessingBSACheckbox = new wxCheckBox(this, wxID_ANY, "Read BSAs"); // NOLINT(cppcoreguidelines-owning-memory)
+  ProcessingBSACheckbox->SetToolTip("Read meshes/textures from BSAs in addition to loose files");
   ProcessingOptionsSizer->Add(ProcessingBSACheckbox, 0, wxALL, 5);
 
   AdvancedOptionsSizer->Add(ProcessingOptionsSizer, 0, wxEXPAND | wxALL, 5);
@@ -192,6 +207,7 @@ LauncherWindow::LauncherWindow(const ParallaxGenConfig::PGParams &Params)
 
   PrePatcherDisableMLPCheckbox = // NOLINT(cppcoreguidelines-owning-memory)
       new wxCheckBox(this, wxID_ANY, "Disable Multi-Layer Parallax");
+  PrePatcherDisableMLPCheckbox->SetToolTip("Disables Multi-Layer Parallax in all meshes (Usually not recommended)");
   PrePatcherSizer->Add(PrePatcherDisableMLPCheckbox, 0, wxALL, 5);
 
   RightSizer->Add(PrePatcherSizer, 0, wxEXPAND | wxALL, 5);
@@ -220,6 +236,9 @@ LauncherWindow::LauncherWindow(const ParallaxGenConfig::PGParams &Params)
 
   ShaderTransformParallaxToCMCheckbox = // NOLINT(cppcoreguidelines-owning-memory)
       new wxCheckBox(this, wxID_ANY, "Upgrade Parallax to Complex Material");
+  ShaderTransformParallaxToCMCheckbox->SetToolTip(
+      "Upgrages any parallax textures and meshes to complex material by moving the height map to the alpha channel of "
+      "the environment mask (highly recommended)");
   ShaderTransformSizer->Add(ShaderTransformParallaxToCMCheckbox, 0, wxALL, 5);
 
   RightSizer->Add(ShaderTransformSizer, 0, wxEXPAND | wxALL, 5);
@@ -231,6 +250,7 @@ LauncherWindow::LauncherWindow(const ParallaxGenConfig::PGParams &Params)
 
   PostPatcherOptimizeMeshesCheckbox = // NOLINT(cppcoreguidelines-owning-memory)
       new wxCheckBox(this, wxID_ANY, "Optimize Meshes (Experimental)");
+  PostPatcherOptimizeMeshesCheckbox->SetToolTip("Experimental - sometimes results in invisible meshes");
   PostPatcherSizer->Add(PostPatcherOptimizeMeshesCheckbox, 0, wxALL, 5);
 
   RightSizer->Add(PostPatcherSizer, 0, wxEXPAND | wxALL, 5);

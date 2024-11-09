@@ -340,7 +340,7 @@ auto ParallaxGenConfig::validateParams(const PGParams &Params, vector<string> &E
   }
 
   // Processing
-  
+
   // Pre-Patchers
 
   // Shader Patchers
