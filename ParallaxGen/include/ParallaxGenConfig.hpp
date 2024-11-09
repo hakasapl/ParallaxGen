@@ -113,6 +113,7 @@ public:
 
   [[nodiscard]] auto getParams() const -> PGParams;
   void setParams(const PGParams &Params);
+  [[nodiscard]] static auto validateParams(const PGParams &Params, std::vector<std::string> &Errors) -> bool;
 
 private:
   static auto parseJSON(const std::filesystem::path &JSONFile, const std::vector<std::byte> &Bytes,

@@ -198,6 +198,15 @@ auto ParallaxGenConfig::addConfigJSON(const nlohmann::json &J) -> void {
 
     // "postpatcher"
     ParamJ["postpatcher"]["optimizemeshes"].get_to<bool>(Params.PostPatcher.OptimizeMeshes);
+
+    // Fill in empty values with defaults if needed
+    if (Params.Game.Dir.empty()) {
+      Params.Game.Dir = BethesdaGame::findGamePathFromSteam(Params.Game.Type);
+    }
+
+    if (Params.Output.Dir.empty()) {
+      Params.Output.Dir = ExePath / "ParallaxGen_Output";
+    }
   }
 }
 
@@ -292,6 +301,62 @@ auto ParallaxGenConfig::getParams() const -> PGParams { return Params; }
 void ParallaxGenConfig::setParams(const PGParams &Params) {
   this->Params = Params;
   saveUserConfig();
+}
+
+auto ParallaxGenConfig::validateParams(const PGParams &Params, vector<string> &Errors) -> bool {
+  // Game
+  if (Params.Game.Dir.empty()) {
+    Errors.emplace_back("Game Location is required.");
+  }
+
+  if (!BethesdaGame::isGamePathValid(Params.Game.Dir, Params.Game.Type)) {
+    Errors.emplace_back("Game Location is not valid.");
+  }
+
+  // Mod Manager
+  if (Params.ModManager.Type == ModManagerDirectory::ModManagerType::ModOrganizer2) {
+    if (Params.ModManager.MO2InstanceDir.empty()) {
+      Errors.emplace_back("MO2 Instance Location is required");
+    }
+
+    if (!filesystem::exists(Params.ModManager.MO2InstanceDir)) {
+      Errors.emplace_back("MO2 Instance Location does not exist");
+    }
+
+    if (Params.ModManager.MO2Profile.empty()) {
+      Errors.emplace_back("MO2 Profile is required");
+    }
+
+    // Check if the MO2 profile exists
+    filesystem::path ProfilesDir = Params.ModManager.MO2InstanceDir / "profiles" / Params.ModManager.MO2Profile;
+    if (!filesystem::exists(ProfilesDir)) {
+      Errors.emplace_back("MO2 Profile does not exist");
+    }
+  }
+
+  // Output
+  if (Params.Output.Dir.empty()) {
+    Errors.emplace_back("Output Location is required");
+  }
+
+  // Processing
+  
+  // Pre-Patchers
+
+  // Shader Patchers
+
+  // Shader Transforms
+  if (Params.ShaderTransforms.ParallaxToCM && (!Params.ShaderPatcher.Parallax || !Params.ShaderPatcher.ComplexMaterial)) {
+    Errors.emplace_back("Upgrade Parallax to Complex Material requires both the Complex Material and Parallax shader patchers");
+  }
+
+  if (Params.ShaderTransforms.ParallaxToCM && !Params.Processing.GPUAcceleration) {
+    Errors.emplace_back("Upgrade Parallax to Complex Material requires GPU acceleration to be enabled");
+  }
+
+  // Post-Patchers
+
+  return Errors.empty();
 }
 
 void ParallaxGenConfig::saveUserConfig() const {

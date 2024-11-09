@@ -84,6 +84,8 @@ private:
   bool AdvancedVisible = false;
   void onToggleAdvanced(wxCommandEvent &Event);
 
+  void onUpgradeToCMChanged(wxCommandEvent &Event);
+
   //
   // Validation
   //

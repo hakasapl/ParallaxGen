@@ -13,7 +13,6 @@
 #include <map>
 #include <stdexcept>
 #include <string>
-#include <unordered_set>
 
 #include <boost/algorithm/string/join.hpp>
 
@@ -26,7 +25,7 @@ BethesdaGame::BethesdaGame(GameType GameType, const bool &Logging, const filesys
     : ObjGameType(GameType), Logging(Logging) {
   if (GamePath.empty()) {
     // If the game path is empty, find
-    this->GamePath = this->findGamePathFromSteam();
+    this->GamePath = findGamePathFromSteam(GameType);
   } else {
     // If the game path is not empty, use the provided game path
     this->GamePath = GamePath;
@@ -56,11 +55,10 @@ BethesdaGame::BethesdaGame(GameType GameType, const bool &Logging, const filesys
 
   this->GameDataPath = this->GamePath / "Data";
 
-  const auto CheckPath = this->GameDataPath / getDataCheckFile();
-  if (!filesystem::exists(CheckPath)) {
-    // If the game data path does not contain Skyrim.esm, throw an exception
+  if (!isGamePathValid(this->GamePath, GameType)) {
+    // If the game path does not contain Skyrim.esm, throw an exception
     if (this->Logging) {
-      spdlog::critical(L"Game data location is invalid: {} does not exist", CheckPath.wstring());
+      spdlog::critical(L"Game data location is invalid: {} does not contain Skyrim.esm", this->GameDataPath.wstring());
       exit(1);
     } else {
       throw runtime_error("Game data path does not contain Skyrim.esm");
@@ -80,6 +78,14 @@ BethesdaGame::BethesdaGame(GameType GameType, const bool &Logging, const filesys
   } else {
     GameDocumentPath = DocumentPath;
   }
+}
+
+auto BethesdaGame::isGamePathValid(const std::filesystem::path &GamePath, const GameType &Type) -> bool {
+  // Check if the game path is valid
+  const auto GameDataPath = GamePath / "Data";
+
+  const auto CheckPath = GameDataPath / getDataCheckFile(Type);
+  return filesystem::exists(CheckPath);
 }
 
 // Statics
@@ -191,28 +197,28 @@ auto BethesdaGame::getSteamGameID() const -> int {
   return {};
 }
 
-auto BethesdaGame::getDataCheckFile() const -> filesystem::path {
-  if (ObjGameType == BethesdaGame::GameType::SKYRIM_SE) {
+auto BethesdaGame::getDataCheckFile(const GameType &Type) -> filesystem::path {
+  if (Type == BethesdaGame::GameType::SKYRIM_SE) {
     return "Skyrim.esm";
   }
 
-  if (ObjGameType == BethesdaGame::GameType::SKYRIM_GOG) {
+  if (Type == BethesdaGame::GameType::SKYRIM_GOG) {
     return "Skyrim.esm";
   }
 
-  if (ObjGameType == BethesdaGame::GameType::SKYRIM_VR) {
+  if (Type == BethesdaGame::GameType::SKYRIM_VR) {
     return "SkyrimVR.esm";
   }
 
-  if (ObjGameType == BethesdaGame::GameType::SKYRIM) {
+  if (Type == BethesdaGame::GameType::SKYRIM) {
     return "Skyrim.esm";
   }
 
-  if (ObjGameType == BethesdaGame::GameType::ENDERAL) {
+  if (Type == BethesdaGame::GameType::ENDERAL) {
     return "Enderal - Forgotten Stories.esm";
   }
 
-  if (ObjGameType == BethesdaGame::GameType::ENDERAL_SE) {
+  if (Type == BethesdaGame::GameType::ENDERAL_SE) {
     return "Enderal - Forgotten Stories.esm";
   }
 
@@ -227,7 +233,7 @@ auto BethesdaGame::getGamePath() const -> filesystem::path {
   return GamePath;
 }
 
-auto BethesdaGame::getGameRegistryPath() const -> std::string {
+auto BethesdaGame::getGameRegistryPath(const GameType &Type) -> std::string {
   const string BasePathSkyrim = R"(SOFTWARE\WOW6432Node\bethesda softworks\)";
   const string BasePathEnderal = R"(Software\Sure AI\)";
 
@@ -237,8 +243,8 @@ auto BethesdaGame::getGameRegistryPath() const -> std::string {
                                                  {GameType::ENDERAL, BasePathEnderal + "Enderal"},
                                                  {GameType::ENDERAL_SE, BasePathEnderal + "EnderalSE"}};
 
-  if (GameToPathMap.contains(ObjGameType)) {
-    return GameToPathMap.at(ObjGameType);
+  if (GameToPathMap.contains(Type)) {
+    return GameToPathMap.at(Type);
   }
 
   return {};
@@ -246,13 +252,13 @@ auto BethesdaGame::getGameRegistryPath() const -> std::string {
 
 auto BethesdaGame::getGameDataPath() const -> filesystem::path { return GameDataPath; }
 
-auto BethesdaGame::findGamePathFromSteam() const -> filesystem::path {
+auto BethesdaGame::findGamePathFromSteam(const GameType &Type) -> filesystem::path {
   // Find the game path from the registry
   // If the game is not found, return an empty string
 
-  HKEY BaseHKey = (ObjGameType == GameType::ENDERAL || ObjGameType == GameType::ENDERAL_SE) ? HKEY_CURRENT_USER
+  HKEY BaseHKey = (Type == GameType::ENDERAL || Type == GameType::ENDERAL_SE) ? HKEY_CURRENT_USER
                                                                                             : HKEY_LOCAL_MACHINE;
-  const string RegPath = getGameRegistryPath();
+  const string RegPath = getGameRegistryPath(Type);
 
   char Data[REG_BUFFER_SIZE]{};
   DWORD DataSize = REG_BUFFER_SIZE;

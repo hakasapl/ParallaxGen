@@ -35,7 +35,7 @@ private:
   [[nodiscard]] auto getDocumentLocation() const -> std::filesystem::path;
   [[nodiscard]] auto getAppDataLocation() const -> std::filesystem::path;
   [[nodiscard]] auto getSteamGameID() const -> int;
-  [[nodiscard]] auto getDataCheckFile() const -> std::filesystem::path;
+  [[nodiscard]] static auto getDataCheckFile(const GameType &Type) -> std::filesystem::path;
 
   // stores the game type
   GameType ObjGameType;
@@ -69,16 +69,17 @@ public:
   [[nodiscard]] static auto getGameTypes() -> std::vector<GameType>;
   [[nodiscard]] static auto getStrFromGameType(const GameType &Type) -> std::string;
   [[nodiscard]] static auto getGameTypeFromStr(const std::string &Type) -> GameType;
+  [[nodiscard]] static auto isGamePathValid(const std::filesystem::path &GamePath, const GameType &Type) -> bool;
+
+  // locates the steam install locatino of steam
+  [[nodiscard]] static auto findGamePathFromSteam(const GameType &Type) -> std::filesystem::path;
 
 private:
   [[nodiscard]] auto getGameDocumentSystemPath() const -> std::filesystem::path;
   [[nodiscard]] auto getGameAppdataSystemPath() const -> std::filesystem::path;
 
-  // locates the steam install locatino of steam
-  [[nodiscard]] auto findGamePathFromSteam() const -> std::filesystem::path;
-
   // gets the system path for a folder (from windows.h)
   static auto getSystemPath(const GUID &FolderID) -> std::filesystem::path;
 
-  [[nodiscard]] auto getGameRegistryPath() const -> std::string;
+  [[nodiscard]] static auto getGameRegistryPath(const GameType &Type) -> std::string;
 };
