@@ -6,6 +6,7 @@
 - Complex material will set env map scale to 1.0 now
 - Fixed PBR bug when there were two overlapping matches
 - Default textures are applied when TXST record cannot be patched for a shader
+- BSLODTriShapes are now patched too
 
 ## [0.6.0] - 2024-10-06
 
