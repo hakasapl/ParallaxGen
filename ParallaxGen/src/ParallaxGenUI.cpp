@@ -604,9 +604,6 @@ void ModSortDialog::onMouseLeftDown(wxMouseEvent &Event) {
            wxNOT_FOUND) {
       DraggedIndices.push_back(SelectedItem);
     }
-
-    // Set the initial drag index
-    DraggedIndex = ItemIndex;
   }
   Event.Skip();
 }
@@ -650,7 +647,6 @@ void ModSortDialog::onMouseLeftUp(wxMouseEvent &Event) {
 
     // Reset indices to prepare for the next drag
     DraggedIndices.clear();
-    DraggedIndex = -1;
     TargetLineIndex = -1;
   }
 

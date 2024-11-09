@@ -2,6 +2,8 @@
 
 ## [0.7.0] - UNRELEASED
 
+- Added a launcher GUI
+- All CLI arguments except --autostart and -v/-vv have been removed in favor of the persistent GUI
 - Added a mod manager priority system with UI
 - Complex material will set env map scale to 1.0 now
 - Fixed PBR bug when there were two overlapping matches
