@@ -16,7 +16,7 @@ TEST(NIFUtilTests, ShaderTests) {
     float f1 = 1.0f;
     float f2 = 0.0f;
     for ( int i= 0; i < 10; i++)  f2 += 0.1f;
-    bool Changed;
+    bool Changed = false;
     NIFUtil::setShaderFloat(f1, f2, Changed);
     EXPECT_FALSE(Changed);
 
@@ -24,6 +24,7 @@ TEST(NIFUtilTests, ShaderTests) {
     NIFUtil::setShaderFloat(f1, 0.5f, Changed);
     EXPECT_TRUE(Changed);
 
+    Changed = false;
     NIFUtil::setShaderFloat(f1, 0.5f, Changed);
     EXPECT_FALSE(Changed);
 }
@@ -81,9 +82,10 @@ TEST(NIFUtilTests, NIFTests) {
   auto TextureSlotsOld = TextureSlots;
   decltype(TextureSlotsOld) TextureSlotsEmpty{};
 
-  bool Changed;
+  bool Changed = false;
   NIFUtil::setTextureSlots(&NIF, Shapes[0], TextureSlotsEmpty, Changed);
   EXPECT_TRUE(Changed);
+  Changed = false;
   NIFUtil::setTextureSlots(&NIF, Shapes[0], TextureSlotsEmpty, Changed);
   EXPECT_FALSE(Changed);
 
@@ -108,6 +110,7 @@ TEST(NIFUtilTests, NIFTests) {
   auto Shader = dynamic_cast<nifly::BSShaderProperty *> (NIF.GetShader(Shapes[0]));
 
   EXPECT_TRUE(NIFUtil::hasShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags1::SLSF1_CAST_SHADOWS));
+  Changed = false;
   NIFUtil::setShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags1::SLSF1_CAST_SHADOWS, Changed);
   EXPECT_FALSE(Changed);
 
@@ -118,6 +121,8 @@ TEST(NIFUtilTests, NIFTests) {
   NIFUtil::configureShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags1::SLSF1_CAST_SHADOWS, false, Changed);
   EXPECT_TRUE(Changed);
   EXPECT_FALSE(NIFUtil::hasShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags1::SLSF1_CAST_SHADOWS));
+
+  Changed = false;
   NIFUtil::configureShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags1::SLSF1_CAST_SHADOWS, false, Changed);
   EXPECT_FALSE(Changed);
   NIFUtil::configureShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags1::SLSF1_CAST_SHADOWS, true, Changed);
@@ -132,6 +137,7 @@ TEST(NIFUtilTests, NIFTests) {
 
   // flags2
   EXPECT_TRUE(NIFUtil::hasShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags2::SLSF2_ZBUFFER_WRITE));
+  Changed = false;
   NIFUtil::setShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags2::SLSF2_ZBUFFER_WRITE, Changed);
   EXPECT_FALSE(Changed);
 
@@ -142,6 +148,7 @@ TEST(NIFUtilTests, NIFTests) {
   NIFUtil::configureShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags2::SLSF2_ZBUFFER_WRITE, false, Changed);
   EXPECT_TRUE(Changed);
   EXPECT_FALSE(NIFUtil::hasShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags2::SLSF2_ZBUFFER_WRITE));
+  Changed = false;
   NIFUtil::configureShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags2::SLSF2_ZBUFFER_WRITE, false, Changed);
   EXPECT_FALSE(Changed);
   NIFUtil::configureShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags2::SLSF2_ZBUFFER_WRITE, true, Changed);
@@ -155,6 +162,7 @@ TEST(NIFUtilTests, NIFTests) {
   EXPECT_TRUE(NIFUtil::hasShaderFlag(Shader, nifly::SkyrimShaderPropertyFlags2::SLSF2_ZBUFFER_WRITE));
 
   // shader type
+  Changed = false;
   NIFUtil::setShaderType(Shader, nifly::BSLightingShaderPropertyShaderType::BSLSP_DEFAULT, Changed);
   EXPECT_FALSE(Changed);
   NIFUtil::setShaderType(Shader, nifly::BSLightingShaderPropertyShaderType::BSLSP_PARALLAX, Changed);

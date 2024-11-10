@@ -110,13 +110,13 @@ auto setShaderType(nifly::NiShader *NIFShader, const nifly::BSLightingShaderProp
 /// @brief set a new value for a float value
 /// @param Value the value to change
 /// @param[in] NewValue the new value to set
-/// @param Changed if the value was changed
+/// @param[in,out] Changed set to true if the value was changed, not altered otherwise
 auto setShaderFloat(float &Value, const float &NewValue, bool &Changed) -> void;
 
 /// @brief set a new value for a vector float value
 /// @param Value the value to change
 /// @param[in] NewValue the new value
-/// @param[out] Changed if the value was actually changed
+/// @param[in,out] Changed set to true if the value was actually changed, not altered otherwise
 /// @return
 auto setShaderVec2(nifly::Vector2 &Value, const nifly::Vector2 &NewValue, bool &Changed) -> void;
 
@@ -135,28 +135,28 @@ auto hasShaderFlag(nifly::BSShaderProperty *NIFShaderBSLSP, const nifly::SkyrimS
 /// @brief set a given shader flag 1 for a shader
 /// @param NIFShaderBSLSP the shader
 /// @param[in] Flag the flag to set
-/// @param[out] Changed false if flag was already set
+/// @param[in,out] Changed set to true if the flag actually changed, not altered otherwise
 auto setShaderFlag(nifly::BSShaderProperty *NIFShaderBSLSP, const nifly::SkyrimShaderPropertyFlags1 &Flag,
                    bool &Changed) -> void;
 
 /// @brief set a given shader flag 2 for a shader
 /// @param NIFShaderBSLSP the shader
 /// @param[in] Flag the flag to set
-/// @param[out] Changed false if flag was already set
+/// @param[in,out] Changed set to true if the flag actually changed, not altered otherwise
 auto setShaderFlag(nifly::BSShaderProperty *NIFShaderBSLSP, const nifly::SkyrimShaderPropertyFlags2 &Flag,
                    bool &Changed) -> void;
 
 /// @brief clear all shader flags 1 for a shader
 /// @param NIFShaderBSLSP the shader
 /// @param[in] Flag the flag1 to clear
-/// @param[out] Changed false if flags was already empty
+/// @param[in,out] Changed set to true if the shader flags changed, not altered otherwise
 auto clearShaderFlag(nifly::BSShaderProperty *NIFShaderBSLSP, const nifly::SkyrimShaderPropertyFlags1 &Flag,
                      bool &Changed) -> void;
 
 /// @brief clear all shader flags 2 for a shader
 /// @param NIFShaderBSLSP the shader
 /// @param[in] Flag the flag2 to clear
-/// @param[out] Changed false if flags were already empty
+/// @param[in,out] Changed set to true if the shader flags changed, not altered otherwise
 auto clearShaderFlag(nifly::BSShaderProperty *NIFShaderBSLSP, const nifly::SkyrimShaderPropertyFlags2 &Flag,
                      bool &Changed) -> void;
 
@@ -165,7 +165,7 @@ auto clearShaderFlag(nifly::BSShaderProperty *NIFShaderBSLSP, const nifly::Skyri
 /// @param NIFShaderBSLSP the shader
 /// @param[in] Flag the flag to set
 /// @param[in] Enable enable or disable the flag
-/// @param[out] Changed if flag was changed during the operation
+/// @param[in,out] Changed set to true if flag was changed during the operation, not altered otherwise
 auto configureShaderFlag(nifly::BSShaderProperty *NIFShaderBSLSP, const nifly::SkyrimShaderPropertyFlags1 &Flag,
                          const bool &Enable, bool &Changed) -> void;
 
@@ -173,7 +173,7 @@ auto configureShaderFlag(nifly::BSShaderProperty *NIFShaderBSLSP, const nifly::S
 /// @param NIFShaderBSLSP the shader
 /// @param[in] Flag the flag to set
 /// @param[in] Enable enable or disable the flag
-/// @param[out] Changed if flag was changed during the operation
+/// @param[in,out] Changed set to true if the flag was changed, not altered otherwise
 auto configureShaderFlag(nifly::BSShaderProperty *NIFShaderBSLSP, const nifly::SkyrimShaderPropertyFlags2 &Flag,
                          const bool &Enable, bool &Changed) -> void;
 
@@ -183,7 +183,7 @@ auto configureShaderFlag(nifly::BSShaderProperty *NIFShaderBSLSP, const nifly::S
 /// @param NIFShape the shape
 /// @param[in] Slot texture slot
 /// @param[in] TexturePath the path to set
-/// @param[out] Changed false if the path was already set
+/// @param[in,out] Changed set to true of the texture slot changed, not altered otherwise
 auto setTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, const TextureSlots &Slot,
                     const std::wstring &TexturePath, bool &Changed) -> void;
 
@@ -192,7 +192,7 @@ auto setTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, const Texture
 /// @param NIFShape the shape
 /// @param[in] Slot texture slot
 /// @param[in] TexturePath the path to set
-/// @param[out] Changed false if the path was already set
+/// @param[in,out] Changed set to true if the slot changed, not altered otherwise
 auto setTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, const TextureSlots &Slot,
                     const std::string &TexturePath, bool &Changed) -> void;
 
@@ -200,7 +200,7 @@ auto setTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, const Texture
 /// @param NIF nif
 /// @param NIFShape the shape
 /// @param[in] NewSlots textures to set
-/// @param Changed false if none of the slots was changed
+/// @param[in,out] Changed set to true if the slots changed, not altered otherwise
 auto setTextureSlots(nifly::NifFile *NIF, nifly::NiShape *NIFShape,
                      const std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots, bool &Changed) -> void;
 

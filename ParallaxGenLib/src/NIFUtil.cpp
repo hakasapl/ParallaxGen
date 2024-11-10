@@ -204,8 +204,6 @@ auto NIFUtil::setShaderType(nifly::NiShader *NIFShader, const nifly::BSLightingS
   if (NIFShader->GetShaderType() != Type) {
     NIFShader->SetShaderType(Type);
     Changed = true;
-  } else {
-    Changed = false;
   }
 }
 
@@ -213,8 +211,6 @@ auto NIFUtil::setShaderFloat(float &Value, const float &NewValue, bool &Changed)
   if (fabs(Value - NewValue) > 10e-05f) {
     Value = NewValue;
     Changed = true;
-  } else {
-    Changed = false;
   }
 }
 
@@ -222,8 +218,6 @@ auto NIFUtil::setShaderVec2(nifly::Vector2 &Value, const nifly::Vector2 &NewValu
   if (Value != NewValue) {
     Value = NewValue;
     Changed = true;
-  } else {
-    Changed = false;
   }
 }
 
@@ -243,8 +237,6 @@ auto NIFUtil::setShaderFlag(nifly::BSShaderProperty *NIFShaderBSLSP, const nifly
   if (!hasShaderFlag(NIFShaderBSLSP, Flag)) {
     NIFShaderBSLSP->shaderFlags1 |= Flag;
     Changed = true;
-  } else {
-    Changed = false;
   }
 }
 
@@ -253,8 +245,6 @@ auto NIFUtil::setShaderFlag(nifly::BSShaderProperty *NIFShaderBSLSP, const nifly
   if (!hasShaderFlag(NIFShaderBSLSP, Flag)) {
     NIFShaderBSLSP->shaderFlags2 |= Flag;
     Changed = true;
-  } else {
-    Changed = false;
   }
 }
 
@@ -263,8 +253,6 @@ auto NIFUtil::clearShaderFlag(nifly::BSShaderProperty *NIFShaderBSLSP, const nif
   if (hasShaderFlag(NIFShaderBSLSP, Flag)) {
     NIFShaderBSLSP->shaderFlags1 &= ~Flag;
     Changed = true;
-  } else {
-    Changed = false;
   }
 }
 
@@ -273,8 +261,6 @@ auto NIFUtil::clearShaderFlag(nifly::BSShaderProperty *NIFShaderBSLSP, const nif
   if (hasShaderFlag(NIFShaderBSLSP, Flag)) {
     NIFShaderBSLSP->shaderFlags2 &= ~Flag;
     Changed = true;
-  } else {
-    Changed = false;
   }
 }
 
@@ -313,18 +299,13 @@ auto NIFUtil::setTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, cons
     auto NewTex = TexturePath;
     NIF->SetTextureSlot(NIFShape, NewTex, static_cast<unsigned int>(Slot));
     Changed = true;
-  } else {
-    Changed = false;
   }
 }
 
 auto NIFUtil::setTextureSlots(nifly::NifFile *NIF, nifly::NiShape *NIFShape,
                               const std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots, bool &Changed) -> void {
-  Changed = false;
   for (uint32_t I = 0; I < NUM_TEXTURE_SLOTS; I++) {
-    bool SlotChanged;
-    setTextureSlot(NIF, NIFShape, static_cast<TextureSlots>(I), NewSlots[I], SlotChanged);
-    Changed |= SlotChanged;
+    setTextureSlot(NIF, NIFShape, static_cast<TextureSlots>(I), NewSlots[I], Changed);
   }
 }
 
