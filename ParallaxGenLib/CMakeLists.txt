@@ -149,7 +149,7 @@ set (TESTS
   "tests/BethesdaDirectoryTests.cpp"
   "tests/ParallaxGenDirectoryTests.cpp"
   "tests/BethesdaGameTestsSkyrimSEInstalled.cpp"
-)
+  "tests/NIFUtilTests.cpp")
 
 add_executable(
   ${PARALLAXGENLIB_TEST_NAME}
