@@ -123,7 +123,8 @@ auto PatcherTruePBR::getShaderType() -> NIFUtil::ShapeShader {
 }
 
 auto PatcherTruePBR::canApply([[maybe_unused]] nifly::NiShape &NIFShape) -> bool {
-  return true;
+  auto *const Shader = getNIF()->GetShader(&NIFShape);
+  return Shader->GetShaderType() != BSLSP_SKINTINT && Shader->GetShaderType() != BSLSP_FACE;
 }
 
 auto PatcherTruePBR::shouldApply(nifly::NiShape &NIFShape, std::vector<PatcherMatch> &Matches) -> bool {
