@@ -467,6 +467,11 @@ void LauncherWindow::onGameTypeChanged([[maybe_unused]] wxCommandEvent &Event) {
   // update the game location textbox from bethesdagame
   for (const auto &GameType : BethesdaGame::getGameTypes()) {
     if (GameTypeRadios[GameType]->GetValue()) {
+      if (InitParams.Game.Type == GameType) {
+        GameLocationTextbox->SetValue(InitParams.Game.Dir.wstring());
+        return;
+      }
+
       GameLocationTextbox->SetValue(BethesdaGame::findGamePathFromSteam(GameType).wstring());
       return;
     }
