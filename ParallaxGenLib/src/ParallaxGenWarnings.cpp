@@ -124,7 +124,7 @@ void ParallaxGenWarnings::meshWarn(const wstring &MatchedPath, const wstring &NI
   }
 
   // log warning
-  spdlog::warn(
-      L"[Potential Mesh Mismatch] Mod \"{}\" assets were used on meshes from mod \"{}\". Please verify that this is intended.",
-      MatchedPathMod, NIFPathMod);
+  //spdlog::warn(
+  //    L"[Potential Mesh Mismatch] Mod \"{}\" assets were used on meshes from mod \"{}\". Please verify that this is intended.",
+  //    MatchedPathMod, NIFPathMod);
 }
