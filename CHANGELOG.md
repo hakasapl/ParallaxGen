@@ -10,6 +10,7 @@
 - Default textures are applied when TXST record cannot be patched for a shader
 - Output directory will only delete items that parallaxgen might have generates (meshes folder, textures folder, PG files)
 - BSLODTriShapes are now patched too
+- Upgrade shaders only upgrades what is required now
 
 ## [0.6.0] - 2024-10-06
 

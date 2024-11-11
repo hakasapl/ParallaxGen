@@ -12,11 +12,13 @@
 #include <fstream>
 #include <memory>
 #include <mutex>
+#include <ranges>
 #include <spdlog/spdlog.h>
 #include <string>
 #include <unordered_set>
 #include <utility>
 #include <vector>
+
 
 #include <d3d11.h>
 
@@ -34,8 +36,8 @@ using namespace std;
 using namespace ParallaxGenUtil;
 using namespace nifly;
 
-ParallaxGen::ParallaxGen(filesystem::path OutputDir, ParallaxGenDirectory *PGD,
-                         ParallaxGenD3D *PGD3D, const bool &OptimizeMeshes)
+ParallaxGen::ParallaxGen(filesystem::path OutputDir, ParallaxGenDirectory *PGD, ParallaxGenD3D *PGD3D,
+                         const bool &OptimizeMeshes)
     : OutputDir(std::move(OutputDir)), PGD(PGD), PGD3D(PGD3D) {
   // constructor
 
@@ -43,9 +45,8 @@ ParallaxGen::ParallaxGen(filesystem::path OutputDir, ParallaxGenDirectory *PGD,
   NIFSaveOptions.optimize = OptimizeMeshes;
 }
 
-void ParallaxGen::patchMeshes(
-    const PatcherUtil::PatcherSet &Patchers, const unordered_map<wstring, int> *ModPriority,
-    const bool &MultiThread, const bool &PatchPlugin) {
+void ParallaxGen::patchMeshes(const PatcherUtil::PatcherSet &Patchers, const unordered_map<wstring, int> *ModPriority,
+                              const bool &MultiThread, const bool &PatchPlugin) {
   auto Meshes = PGD->getMeshes();
 
   // Create task tracker
@@ -98,10 +99,9 @@ void ParallaxGen::patchMeshes(
   DiffJSONFile.close();
 }
 
-auto ParallaxGen::findModConflicts(
-    const PatcherUtil::PatcherSet &Patchers,
-    const bool &MultiThread,
-    const bool &PatchPlugin) -> unordered_map<wstring, tuple<set<NIFUtil::ShapeShader>, unordered_set<wstring>>> {
+auto ParallaxGen::findModConflicts(const PatcherUtil::PatcherSet &Patchers, const bool &MultiThread,
+                                   const bool &PatchPlugin)
+    -> unordered_map<wstring, tuple<set<NIFUtil::ShapeShader>, unordered_set<wstring>>> {
   auto Meshes = PGD->getMeshes();
 
   // Create task tracker
@@ -125,18 +125,18 @@ auto ParallaxGen::findModConflicts(
     boost::asio::thread_pool MeshPatchPool(NumThreads);
 
     for (const auto &Mesh : Meshes) {
-      boost::asio::post(
-          MeshPatchPool, [this, &TaskTracker, &Mesh, &PatchPlugin, &ConflictMods, &ConflictModsMutex, &Patchers] {
-            ParallaxGenTask::PGResult Result = ParallaxGenTask::PGResult::SUCCESS;
-            try {
-              Result = processNIF(Patchers, nullptr, Mesh, nullptr, PatchPlugin, true, &ConflictMods, &ConflictModsMutex);
-            } catch (const exception &E) {
-              spdlog::error(L"Exception in thread finding mod conflicts {}: {}", Mesh.wstring(), strToWstr(E.what()));
-              Result = ParallaxGenTask::PGResult::FAILURE;
-            }
+      boost::asio::post(MeshPatchPool, [this, &TaskTracker, &Mesh, &PatchPlugin, &ConflictMods, &ConflictModsMutex,
+                                        &Patchers] {
+        ParallaxGenTask::PGResult Result = ParallaxGenTask::PGResult::SUCCESS;
+        try {
+          Result = processNIF(Patchers, nullptr, Mesh, nullptr, PatchPlugin, true, &ConflictMods, &ConflictModsMutex);
+        } catch (const exception &E) {
+          spdlog::error(L"Exception in thread finding mod conflicts {}: {}", Mesh.wstring(), strToWstr(E.what()));
+          Result = ParallaxGenTask::PGResult::FAILURE;
+        }
 
-            TaskTracker.completeJob(Result);
-          });
+        TaskTracker.completeJob(Result);
+      });
     }
 
     // verify that all threads complete (should be redundant)
@@ -144,7 +144,8 @@ auto ParallaxGen::findModConflicts(
 
   } else {
     for (const auto &Mesh : Meshes) {
-      TaskTracker.completeJob(processNIF(Patchers, nullptr, Mesh, nullptr, true, true, &ConflictMods, &ConflictModsMutex));
+      TaskTracker.completeJob(
+          processNIF(Patchers, nullptr, Mesh, nullptr, true, true, &ConflictMods, &ConflictModsMutex));
     }
   }
 
@@ -278,8 +279,9 @@ auto ParallaxGen::processNIF(
     bool ShapeDeleted = false;
     NIFUtil::ShapeShader ShaderApplied = NIFUtil::ShapeShader::NONE;
     ParallaxGenTask::updatePGResult(Result,
-                                    processShape(NIFFile, NIF, NIFShape, OldShapeIndex, PatcherObjects, ModPriority, ShapeModified,
-                                                 ShapeDeleted, ShaderApplied, Dry, ConflictMods, ConflictModsMutex),
+                                    processShape(NIFFile, NIF, NIFShape, OldShapeIndex, PatcherObjects, ModPriority,
+                                                 ShapeModified, ShapeDeleted, ShaderApplied, Dry, ConflictMods,
+                                                 ConflictModsMutex),
                                     ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
 
     // Update NIFModified if shape was modified
@@ -355,8 +357,9 @@ auto ParallaxGen::processNIF(
 
 auto ParallaxGen::processShape(
     const filesystem::path &NIFPath, NifFile &NIF, NiShape *NIFShape, const int &ShapeIndex,
-    const PatcherUtil::PatcherObjectSet &Patchers, const unordered_map<wstring, int> *ModPriority, bool &ShapeModified, bool &ShapeDeleted, NIFUtil::ShapeShader &ShaderApplied,
-    const bool &Dry, unordered_map<wstring, tuple<set<NIFUtil::ShapeShader>, unordered_set<wstring>>> *ConflictMods,
+    const PatcherUtil::PatcherObjectSet &Patchers, const unordered_map<wstring, int> *ModPriority, bool &ShapeModified,
+    bool &ShapeDeleted, NIFUtil::ShapeShader &ShaderApplied, const bool &Dry,
+    unordered_map<wstring, tuple<set<NIFUtil::ShapeShader>, unordered_set<wstring>>> *ConflictMods,
     mutex *ConflictModsMutex) -> ParallaxGenTask::PGResult {
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
@@ -437,18 +440,15 @@ auto ParallaxGen::processShape(
         CurMatch.Shader = Shader;
         CurMatch.Match = Match;
         CurMatch.ShaderTransformTo = NIFUtil::ShapeShader::NONE;
-        CurMatch.Transform = nullptr;
 
         // See if transform is possible
         if (Patchers.ShaderTransformPatchers.contains(Shader)) {
           const auto &AvailableTransforms = Patchers.ShaderTransformPatchers.at(Shader);
           // loop from highest element of map to 0
-          for (auto TransformIter = AvailableTransforms.rbegin(); TransformIter != AvailableTransforms.rend();
-               TransformIter++) {
-            if (Patchers.ShaderPatchers.at(TransformIter->first)->canApply(*NIFShape)) {
+          for (const auto &AvailableTransform : ranges::reverse_view(AvailableTransforms)) {
+            if (Patchers.ShaderPatchers.at(AvailableTransform.first)->canApply(*NIFShape)) {
               // Found a transform that can apply, set the transform in the match
-              CurMatch.ShaderTransformTo = TransformIter->first;
-              CurMatch.Transform = &TransformIter->second;
+              CurMatch.ShaderTransformTo = AvailableTransform.first;
               break;
             }
           }
@@ -457,10 +457,7 @@ auto ParallaxGen::processShape(
         // Add to matches if shader can apply (or if transform shader exists and can apply)
         if (Patcher->canApply(*NIFShape) || CurMatch.ShaderTransformTo != NIFUtil::ShapeShader::NONE) {
           Matches.push_back(CurMatch);
-
-          if (Dry) {
-            ModSet.insert(CurMatch.Mod);
-          }
+          ModSet.insert(CurMatch.Mod);
         }
       }
     }
@@ -479,7 +476,7 @@ auto ParallaxGen::processShape(
   }
 
   // Populate conflict mods if set
-  if (Dry && ConflictMods != nullptr && ModSet.size() > 1) {
+  if (ConflictMods != nullptr && ModSet.size() > 1) {
     lock_guard<mutex> Lock(*ConflictModsMutex);
 
     // add mods to conflict set
@@ -491,7 +488,10 @@ auto ParallaxGen::processShape(
       get<0>((*ConflictMods)[Match.Mod]).insert(Match.Shader);
       get<1>((*ConflictMods)[Match.Mod]).insert(ModSet.begin(), ModSet.end());
     }
+  }
 
+  if (Dry) {
+    // skip if dry run
     return Result;
   }
 
@@ -535,13 +535,16 @@ auto ParallaxGen::processShape(
 
   // Transform if required
   if (WinningShaderMatch.ShaderTransformTo != NIFUtil::ShapeShader::NONE) {
+    // Find transform object
+    auto *const Transform =
+        Patchers.ShaderTransformPatchers.at(WinningShaderMatch.Shader).at(WinningShaderMatch.ShaderTransformTo).get();
+
     // Transform Shader
-    WinningShaderMatch.Match = (*WinningShaderMatch.Transform)->transform(WinningShaderMatch.Match);
+    WinningShaderMatch.Match = Transform->transform(WinningShaderMatch.Match);
     WinningShaderMatch.Shader = WinningShaderMatch.ShaderTransformTo;
 
     // Reset Transform
     WinningShaderMatch.ShaderTransformTo = NIFUtil::ShapeShader::NONE;
-    WinningShaderMatch.Transform = nullptr;
   }
 
   // loop through patchers

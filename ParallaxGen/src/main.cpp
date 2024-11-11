@@ -122,6 +122,9 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   auto PGC = ParallaxGenConfig(ExePath);
   PGC.loadConfig();
 
+  // Initialize UI
+  ParallaxGenUI::init();
+
   auto Params = PGC.getParams();
 
   // Show launcher UI
@@ -139,28 +142,12 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   // Create relevant objects
   const auto BG = BethesdaGame(Params.Game.Type, true, Params.Game.Dir);
 
-  // Create patcher factory
-  PatcherUtil::PatcherSet Patchers;
-  if (Params.ShaderPatcher.Parallax) {
-    Patchers.ShaderPatchers.emplace(PatcherVanillaParallax::getShaderType(), PatcherVanillaParallax::getFactory());
-  }
-  if (Params.ShaderPatcher.ComplexMaterial) {
-    Patchers.ShaderPatchers.emplace(PatcherComplexMaterial::getShaderType(), PatcherComplexMaterial::getFactory());
-  }
-  if (Params.ShaderPatcher.TruePBR) {
-   Patchers.ShaderPatchers.emplace(PatcherTruePBR::getShaderType(), PatcherTruePBR::getFactory());
-  }
-  if (Params.ShaderTransforms.ParallaxToCM) {
-    Patchers.ShaderTransformPatchers[PatcherUpgradeParallaxToCM::getFromShader()].emplace(PatcherUpgradeParallaxToCM::getToShader(), PatcherUpgradeParallaxToCM::getFactory());
-  }
-
   auto MMD = ModManagerDirectory(Params.ModManager.Type);
   auto PGD = ParallaxGenDirectory(BG, Params.Output.Dir, &MMD);
   auto PGD3D = ParallaxGenD3D(&PGD, Params.Output.Dir, ExePath, Params.Processing.GPUAcceleration);
   auto PG = ParallaxGen(Params.Output.Dir, &PGD, &PGD3D, Params.PostPatcher.OptimizeMeshes);
 
-  // Initialize UI
-  ParallaxGenUI::init();
+  Patcher::loadStatics(PGD, PGD3D);
 
   // Check if GPU needs to be initialized
   if (Params.Processing.GPUAcceleration) {
@@ -236,11 +223,22 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   PGD3D.findCMMaps(VanillaBSAList);
   spdlog::info("Done finding complex material env maps");
 
-  // Load patcher static vars
-  PatcherShader::loadStatics(PGD, PGD3D);
-  PatcherTruePBR::loadStatics(PGD.getPBRJSONs());
-  PatcherComplexMaterial::loadStatics(Params.PrePatcher.DisableMLP, PGC.getDynCubemapBlocklist());
-  // PatcherVanillaParallax::loadStatics();
+  // Create patcher factory
+  PatcherUtil::PatcherSet Patchers;
+  if (Params.ShaderPatcher.Parallax) {
+    Patchers.ShaderPatchers.emplace(PatcherVanillaParallax::getShaderType(), PatcherVanillaParallax::getFactory());
+  }
+  if (Params.ShaderPatcher.ComplexMaterial) {
+    Patchers.ShaderPatchers.emplace(PatcherComplexMaterial::getShaderType(), PatcherComplexMaterial::getFactory());
+    PatcherComplexMaterial::loadStatics(Params.PrePatcher.DisableMLP, PGC.getDynCubemapBlocklist());
+  }
+  if (Params.ShaderPatcher.TruePBR) {
+   Patchers.ShaderPatchers.emplace(PatcherTruePBR::getShaderType(), PatcherTruePBR::getFactory());
+   PatcherTruePBR::loadStatics(PGD.getPBRJSONs());
+  }
+  if (Params.ShaderTransforms.ParallaxToCM) {
+    Patchers.ShaderTransformPatchers[PatcherUpgradeParallaxToCM::getFromShader()].emplace(PatcherUpgradeParallaxToCM::getToShader(), PatcherUpgradeParallaxToCM::getFactory());
+  }
 
   if (Params.ModManager.Type != ModManagerDirectory::ModManagerType::None) {
     // Find conflicts

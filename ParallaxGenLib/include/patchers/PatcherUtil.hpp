@@ -30,6 +30,5 @@ public:
     NIFUtil::ShapeShader Shader;
     PatcherShader::PatcherMatch Match;
     NIFUtil::ShapeShader ShaderTransformTo;
-    const std::unique_ptr<PatcherShaderTransform> *Transform;
   };
 };

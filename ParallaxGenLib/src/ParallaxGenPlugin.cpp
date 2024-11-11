@@ -251,7 +251,8 @@ void ParallaxGenPlugin::populateObjs() { libPopulateObjs(); }
 
 void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, const wstring &NIFPath,
                                      const wstring &Name3D, const int &Index3DOld, const int &Index3DNew,
-                                     const PatcherUtil::PatcherObjectSet &Patchers, const unordered_map<wstring, int> *ModPriority,
+                                     const PatcherUtil::PatcherObjectSet &Patchers,
+                                     const unordered_map<wstring, int> *ModPriority,
                                      std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots) {
   if (AppliedShader == NIFUtil::ShapeShader::NONE) {
     spdlog::trace(L"Plugin Patching | {} | {} | {} | Skipping: No shader applied", NIFPath, Name3D, Index3DOld);
@@ -318,7 +319,6 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
         CurMatch.Shader = Shader;
         CurMatch.Match = Match;
         CurMatch.ShaderTransformTo = NIFUtil::ShapeShader::NONE;
-        CurMatch.Transform = nullptr;
 
         // See if transform is possible
         if (Patchers.ShaderTransformPatchers.contains(Shader)) {
@@ -327,7 +327,6 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
           if (AvailableTransforms.contains(AppliedShader)) {
             const auto TransformIter = AvailableTransforms.find(AppliedShader);
             CurMatch.ShaderTransformTo = TransformIter->first;
-            CurMatch.Transform = &TransformIter->second;
           }
         }
 
@@ -375,13 +374,16 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
 
     // Transform if required
     if (WinningShaderMatch.ShaderTransformTo != NIFUtil::ShapeShader::NONE) {
+      // Find transform object
+      auto *const Transform =
+          Patchers.ShaderTransformPatchers.at(WinningShaderMatch.Shader).at(WinningShaderMatch.ShaderTransformTo).get();
+
       // Transform Shader
-      WinningShaderMatch.Match = (*WinningShaderMatch.Transform)->transform(WinningShaderMatch.Match);
+      WinningShaderMatch.Match = Transform->transform(WinningShaderMatch.Match);
       WinningShaderMatch.Shader = WinningShaderMatch.ShaderTransformTo;
 
       // Reset Transform
       WinningShaderMatch.ShaderTransformTo = NIFUtil::ShapeShader::NONE;
-      WinningShaderMatch.Transform = nullptr;
     }
 
     // Run patcher
@@ -411,7 +413,8 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
 
     // Post warnings if any
     for (const auto &CurMatchedFrom : WinningShaderMatch.Match.MatchedFrom) {
-      ParallaxGenWarnings::mismatchWarn(WinningShaderMatch.Match.MatchedPath, NewSlots[static_cast<int>(CurMatchedFrom)]);
+      ParallaxGenWarnings::mismatchWarn(WinningShaderMatch.Match.MatchedPath,
+                                        NewSlots[static_cast<int>(CurMatchedFrom)]);
     }
 
     ParallaxGenWarnings::meshWarn(WinningShaderMatch.Match.MatchedPath, NIFPath);
