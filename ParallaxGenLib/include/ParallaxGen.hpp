@@ -10,7 +10,6 @@
 #include <unordered_set>
 
 #include "NIFUtil.hpp"
-#include "ParallaxGenConfig.hpp"
 #include "ParallaxGenD3D.hpp"
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenTask.hpp"
@@ -24,7 +23,6 @@ private:
 
   // Dependency objects
   ParallaxGenDirectory *PGD;
-  ParallaxGenConfig *PGC;
   ParallaxGenD3D *PGD3D;
 
   // sort blocks enabled, optimize disabled (for now)
@@ -64,7 +62,7 @@ public:
               const bool &OptimizeMeshes = false);
   // enables parallax on relevant meshes
   void
-  patchMeshes(const PatcherUtil::PatcherSet &Patchers,
+  patchMeshes(const PatcherUtil::PatcherSet &Patchers, const std::unordered_map<std::wstring, int> *ModPriority,
               const bool &MultiThread = true, const bool &PatchPlugin = true);
   // Dry run for finding potential matches (used with mod manager integration)
   [[nodiscard]] auto findModConflicts(
@@ -87,7 +85,7 @@ private:
 
   // processes a NIF file (enable parallax if needed)
   auto processNIF(
-      const PatcherUtil::PatcherSet &Patchers, const std::filesystem::path &NIFFile, nlohmann::json *DiffJSON,
+      const PatcherUtil::PatcherSet &Patchers, const std::unordered_map<std::wstring, int> *ModPriority, const std::filesystem::path &NIFFile, nlohmann::json *DiffJSON,
       const bool &PatchPlugin = true, const bool &Dry = false,
       std::unordered_map<std::wstring, std::tuple<std::set<NIFUtil::ShapeShader>, std::unordered_set<std::wstring>>>
           *ConflictMods = nullptr,
@@ -96,7 +94,7 @@ private:
   // processes a shape within a NIF file
   auto processShape(
       const std::filesystem::path &NIFPath, nifly::NifFile &NIF, nifly::NiShape *NIFShape, const int &ShapeIndex,
-      const PatcherUtil::PatcherObjectSet &Patchers, bool &ShapeModified, bool &ShapeDeleted, NIFUtil::ShapeShader &ShaderApplied,
+      const PatcherUtil::PatcherObjectSet &Patchers, const std::unordered_map<std::wstring, int> *ModPriority, bool &ShapeModified, bool &ShapeDeleted, NIFUtil::ShapeShader &ShaderApplied,
       const bool &Dry = false,
       std::unordered_map<std::wstring, std::tuple<std::set<NIFUtil::ShapeShader>, std::unordered_set<std::wstring>>>
           *ConflictMods = nullptr,

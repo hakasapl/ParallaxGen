@@ -10,8 +10,8 @@ class ModManagerDirectory {
 public:
   enum class ModManagerType {
     None,
-    ModOrganizer2,
-    Vortex
+    Vortex,
+    ModOrganizer2
   };
 
 private:
@@ -31,6 +31,11 @@ public:
 
   [[nodiscard]] auto getModFileMap() const -> const std::unordered_map<std::filesystem::path, std::wstring> &;
   [[nodiscard]] auto getMod(const std::filesystem::path &RelPath) const -> std::wstring;
+
+  // Helpers
+  [[nodiscard]] static auto getModManagerTypes() -> std::vector<ModManagerType>;
+  [[nodiscard]] static auto getStrFromModManagerType(const ModManagerType &Type) -> std::string;
+  [[nodiscard]] static auto getModManagerTypeFromStr(const std::string &Type) -> ModManagerType;
 
 private:
   void populateModFileMapMO2();

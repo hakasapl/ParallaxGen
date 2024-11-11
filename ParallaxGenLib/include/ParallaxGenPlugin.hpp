@@ -7,7 +7,6 @@
 
 #include "BethesdaGame.hpp"
 #include "NIFUtil.hpp"
-#include "ParallaxGenConfig.hpp"
 #include "ParallaxGenDirectory.hpp"
 #include "patchers/PatcherUtil.hpp"
 
@@ -70,10 +69,9 @@ private:
   static void logMessages();
 
   static ParallaxGenDirectory *PGD;
-  static ParallaxGenConfig *PGC;
 
 public:
-  static void loadStatics(ParallaxGenDirectory *PGD, ParallaxGenConfig *PGC);
+  static void loadStatics(ParallaxGenDirectory *PGD);
 
   static void initialize(const BethesdaGame &Game);
 
@@ -90,6 +88,7 @@ public:
   static void processShape(const NIFUtil::ShapeShader &AppliedShader, const std::wstring &NIFPath,
                            const std::wstring &Name3D, const int &Index3DOld, const int &Index3DNew,
                            const PatcherUtil::PatcherObjectSet &Patchers,
+                           const std::unordered_map<std::wstring, int> *ModPriority,
                            std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots);
 
   static void savePlugin(const std::filesystem::path &OutputDir);

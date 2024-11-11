@@ -7,7 +7,6 @@
 
 #include "Logger.hpp"
 #include "NIFUtil.hpp"
-#include "ParallaxGenConfig.hpp"
 #include "ParallaxGenMutagenWrapperNE.h"
 #include "ParallaxGenUtil.hpp"
 #include "ParallaxGenWarnings.hpp"
@@ -234,12 +233,8 @@ mutex ParallaxGenPlugin::TXSTWarningMapMutex;
 unordered_map<int, NIFUtil::ShapeShader> ParallaxGenPlugin::TXSTWarningMap; // NOLINT
 
 ParallaxGenDirectory *ParallaxGenPlugin::PGD;
-ParallaxGenConfig *ParallaxGenPlugin::PGC;
 
-void ParallaxGenPlugin::loadStatics(ParallaxGenDirectory *PGD, ParallaxGenConfig *PGC) {
-  ParallaxGenPlugin::PGD = PGD;
-  ParallaxGenPlugin::PGC = PGC;
-}
+void ParallaxGenPlugin::loadStatics(ParallaxGenDirectory *PGD) { ParallaxGenPlugin::PGD = PGD; }
 
 void ParallaxGenPlugin::initialize(const BethesdaGame &Game) {
   // Maps BethesdaGame::GameType to Mutagen game type
@@ -256,7 +251,7 @@ void ParallaxGenPlugin::populateObjs() { libPopulateObjs(); }
 
 void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, const wstring &NIFPath,
                                      const wstring &Name3D, const int &Index3DOld, const int &Index3DNew,
-                                     const PatcherUtil::PatcherObjectSet &Patchers,
+                                     const PatcherUtil::PatcherObjectSet &Patchers, const unordered_map<wstring, int> *ModPriority,
                                      std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots) {
   if (AppliedShader == NIFUtil::ShapeShader::NONE) {
     spdlog::trace(L"Plugin Patching | {} | {} | {} | Skipping: No shader applied", NIFPath, Name3D, Index3DOld);
@@ -348,12 +343,16 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
     int MaxPriority = -1;
     auto WinningShaderMatch = PatcherUtil::ShaderPatcherMatch();
 
-    const auto MeshFilePriority = PGC->getModPriority(PGD->getMod(NIFPath));
-    for (const auto &Match : Matches) {
-      Logger::Prefix PrefixMod(Match.Mod);
-      Logger::trace(L"Checking mod");
+    int MeshFilePriority = -1;
+    if (ModPriority != nullptr && ModPriority->find(NIFPath) != ModPriority->end()) {
+      MeshFilePriority = ModPriority->at(NIFPath);
+    }
 
-      auto CurPriority = PGC->getModPriority(Match.Mod);
+    for (const auto &[Mod, Match] : Matches) {
+      int CurPriority = -1;
+      if (ModPriority != nullptr && ModPriority->find(Mod) != ModPriority->end()) {
+        CurPriority = ModPriority->at(Mod);
+      }
 
       if (CurPriority < MeshFilePriority && CurPriority != -1 && MeshFilePriority != -1) {
         // skip mods with lower priority than mesh file

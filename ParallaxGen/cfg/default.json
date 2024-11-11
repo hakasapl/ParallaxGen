@@ -30,5 +30,42 @@
     "Project Clarity AIO Half Res Packed5 - Textures.bsa",
     "Project Clarity AIO Half Res Packed6 - Textures.bsa"
   ],
-  "mod_order": []
+  "mod_order": [],
+  "params": {
+    "game": {
+      "dir": "",
+      "type": 0
+    },
+    "modmanager": {
+      "mo2instancedir": "",
+      "mo2profile": "Default",
+      "type": 0
+    },
+    "output": {
+      "dir": "",
+      "zip": true
+    },
+    "postpatcher": {
+      "optimizemeshes": false
+    },
+    "prepatcher": {
+      "disablemlp": false
+    },
+    "processing": {
+      "bsa": true,
+      "gpuacceleration": true,
+      "highmem": false,
+      "mapfrommeshes": true,
+      "multithread": true,
+      "pluginpatching": true
+    },
+    "shaderpatcher": {
+      "complexmaterial": true,
+      "parallax": true,
+      "truepbr": true
+    },
+    "shadertransforms": {
+      "parallaxtocm": false
+    }
+  }
 }
