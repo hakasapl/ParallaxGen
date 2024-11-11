@@ -131,6 +131,25 @@ private:
    */
   void onBrowseOutputLocation(wxCommandEvent &Event);
 
+  /**
+   * @brief Event handler responsible for changing game location when game type is changed
+   *
+   * @param Event wxWidgets event object
+   */
+  void onGameTypeChanged(wxCommandEvent &Event);
+
+  /**
+   * @brief Event handler responsible for enabling/disabling elements based on selection
+   *
+   * @param Event wxWidgets event object
+   */
+  void onUpdateDeps(wxCommandEvent &Event);
+
+  /**
+   * @brief Updates disabled elements based on the current state of the UI
+   */
+  void updateDisabledElements();
+
   wxBoxSizer *AdvancedOptionsSizer; /** Container that stores advanced options */
   wxButton *AdvancedButton;         /** Button to show/hide advanced options */
   bool AdvancedVisible = false;     /** Stores whether advanced options are shown or not */

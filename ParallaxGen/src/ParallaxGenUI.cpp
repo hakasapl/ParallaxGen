@@ -4,6 +4,7 @@
 #include <list>
 #include <wx/app.h>
 #include <wx/arrstr.h>
+#include <wx/event.h>
 #include <wx/gdicmn.h>
 #include <wx/msw/statbox.h>
 #include <wx/msw/stattext.h>
@@ -26,7 +27,7 @@ LauncherWindow::LauncherWindow(const ParallaxGenConfig::PGParams &Params)
 
   // Left/Right sizers
   auto *LeftSizer = new wxBoxSizer(wxVERTICAL); // NOLINT(cppcoreguidelines-owning-memory)
-  LeftSizer->SetMinSize(wxSize(800, -1));
+  LeftSizer->SetMinSize(wxSize(600, -1));
   auto *RightSizer = new wxBoxSizer(wxVERTICAL); // NOLINT(cppcoreguidelines-owning-memory)
 
   //
@@ -60,6 +61,7 @@ LauncherWindow::LauncherWindow(const ParallaxGenConfig::PGParams &Params)
   for (const auto &GameType : BethesdaGame::getGameTypes()) {
     auto *Radio = new wxRadioButton(this, wxID_ANY, BethesdaGame::getStrFromGameType(GameType), wxDefaultPosition,
                                     wxDefaultSize, IsFirst ? wxRB_GROUP : 0);
+    Radio->Bind(wxEVT_RADIOBUTTON, &LauncherWindow::onGameTypeChanged, this);
     IsFirst = false;
     GameTypeRadios[GameType] = Radio;
     GameSizer->Add(Radio, 0, wxALL, 5);
@@ -71,7 +73,7 @@ LauncherWindow::LauncherWindow(const ParallaxGenConfig::PGParams &Params)
   // Mod Manager
   //
   auto *ModManagerSizer =
-      new wxStaticBoxSizer(wxVERTICAL, this, "Mod Manager"); // NOLINT(cppcoreguidelines-owning-memory)
+      new wxStaticBoxSizer(wxVERTICAL, this, "Conflict Resolution Mod Manager"); // NOLINT(cppcoreguidelines-owning-memory)
 
   IsFirst = true;
   for (const auto &MMType : ModManagerDirectory::getModManagerTypes()) {
@@ -239,6 +241,7 @@ LauncherWindow::LauncherWindow(const ParallaxGenConfig::PGParams &Params)
   ShaderTransformParallaxToCMCheckbox->SetToolTip(
       "Upgrages any parallax textures and meshes to complex material by moving the height map to the alpha channel of "
       "the environment mask (highly recommended)");
+  ShaderTransformParallaxToCMCheckbox->Bind(wxEVT_CHECKBOX, &LauncherWindow::onUpdateDeps, this);
   ShaderTransformSizer->Add(ShaderTransformParallaxToCMCheckbox, 0, wxALL, 5);
 
   RightSizer->Add(ShaderTransformSizer, 0, wxEXPAND | wxALL, 5);
@@ -332,6 +335,9 @@ void LauncherWindow::onInitDialog(wxInitDialogEvent &Event) {
 
   // Post-Patchers
   PostPatcherOptimizeMeshesCheckbox->SetValue(InitParams.PostPatcher.OptimizeMeshes);
+
+  // Trigger the updateDeps event to update the dependencies
+  updateDisabledElements();
 
   // Call the base class's event handler if needed
   Event.Skip();
@@ -454,6 +460,42 @@ void LauncherWindow::onBrowseOutputLocation([[maybe_unused]] wxCommandEvent &Eve
   wxDirDialog Dialog(this, "Select Output Location", OutputLocationTextbox->GetValue());
   if (Dialog.ShowModal() == wxID_OK) {
     OutputLocationTextbox->SetValue(Dialog.GetPath());
+  }
+}
+
+void LauncherWindow::onGameTypeChanged([[maybe_unused]] wxCommandEvent &Event) {
+  // update the game location textbox from bethesdagame
+  for (const auto &GameType : BethesdaGame::getGameTypes()) {
+    if (GameTypeRadios[GameType]->GetValue()) {
+      GameLocationTextbox->SetValue(BethesdaGame::findGamePathFromSteam(GameType).wstring());
+      return;
+    }
+  }
+}
+
+void LauncherWindow::onUpdateDeps([[maybe_unused]] wxCommandEvent &Event) {
+  updateDisabledElements();
+}
+
+void LauncherWindow::updateDisabledElements() {
+  const auto CurParams = getParams();
+
+  if (CurParams.ShaderTransforms.ParallaxToCM) {
+    // disable and check vanilla parallax patcher
+    ShaderPatcherParallaxCheckbox->SetValue(true);
+    ShaderPatcherParallaxCheckbox->Enable(false);
+
+    // disable and check CM patcher
+    ShaderPatcherComplexMaterialCheckbox->SetValue(true);
+    ShaderPatcherComplexMaterialCheckbox->Enable(false);
+
+    // disable and check GPU acceleration
+    ProcessingGPUAccelerationCheckbox->SetValue(true);
+    ProcessingGPUAccelerationCheckbox->Enable(false);
+  } else {
+    ShaderPatcherParallaxCheckbox->Enable(true);
+    ShaderPatcherComplexMaterialCheckbox->Enable(true);
+    ProcessingGPUAccelerationCheckbox->Enable(true);
   }
 }
 
