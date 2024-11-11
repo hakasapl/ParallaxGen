@@ -1,5 +1,6 @@
 #include "patchers/PatcherVanillaParallax.hpp"
 
+#include <Geometry.hpp>
 #include <boost/algorithm/string.hpp>
 
 #include "Logger.hpp"
@@ -7,8 +8,18 @@
 
 using namespace std;
 
+auto PatcherVanillaParallax::getFactory() -> PatcherShader::PatcherShaderFactory {
+  return [](const filesystem::path& NIFPath, nifly::NifFile *NIF) -> unique_ptr<PatcherShader> {
+    return make_unique<PatcherVanillaParallax>(NIFPath, NIF);
+  };
+}
+
+auto PatcherVanillaParallax::getShaderType() -> NIFUtil::ShapeShader {
+  return NIFUtil::ShapeShader::VANILLAPARALLAX;
+}
+
 PatcherVanillaParallax::PatcherVanillaParallax(filesystem::path NIFPath, nifly::NifFile *NIF)
-    : PatcherShader(std::move(NIFPath), NIF, "VanillaParallax", NIFUtil::ShapeShader::VANILLAPARALLAX) {
+    : PatcherShader(std::move(NIFPath), NIF, "VanillaParallax") {
   // Determine if NIF has attached havok animations
   vector<NiObject *> NIFBlockTree;
   NIF->GetTree(NIFBlockTree);
@@ -20,23 +31,19 @@ PatcherVanillaParallax::PatcherVanillaParallax(filesystem::path NIFPath, nifly::
   }
 }
 
-auto PatcherVanillaParallax::shouldApply(NiShape &NIFShape,
-                                         vector<PatcherShader::PatcherMatch> &Matches) -> bool {
-  // Prep
-  Logger::trace(L"Starting checking");
-
+auto PatcherVanillaParallax::canApply(NiShape &NIFShape) -> bool {
   auto *NIFShader = getNIF()->GetShader(&NIFShape);
   auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
 
   // Check if nif has attached havok (Results in crashes for vanilla Parallax)
   if (HasAttachedHavok) {
-    Logger::trace(L"Shape Rejected: Attached havok animations");
+    Logger::trace(L"Cannot Apply: Attached havok animations");
     return false;
   }
 
   // ignore skinned meshes, these don't support Parallax
   if (NIFShape.HasSkinInstance() || NIFShape.IsSkinned()) {
-    Logger::trace(L"Shape Rejected: Skinned mesh");
+    Logger::trace(L"Cannot Apply: Skinned mesh");
     return false;
   }
 
@@ -44,14 +51,14 @@ auto PatcherVanillaParallax::shouldApply(NiShape &NIFShape,
   auto NIFShaderType = static_cast<nifly::BSLightingShaderPropertyShaderType>(NIFShader->GetShaderType());
   if (NIFShaderType != BSLSP_DEFAULT && NIFShaderType != BSLSP_PARALLAX && NIFShaderType != BSLSP_ENVMAP) {
     // don't overwrite existing NIFShaders
-    Logger::trace(L"Shape Rejected: Incorrect NIFShader type");
+    Logger::trace(L"Cannot Apply: Incorrect NIFShader type");
     return false;
   }
 
   // decals don't work with regular Parallax
   if (NIFUtil::hasShaderFlag(NIFShaderBSLSP, SLSF1_DECAL) ||
       NIFUtil::hasShaderFlag(NIFShaderBSLSP, SLSF1_DYNAMIC_DECAL)) {
-    Logger::trace(L"Shape Rejected: Shape has decal");
+    Logger::trace(L"Cannot Apply: Shape has decal");
     return false;
   }
 
@@ -59,30 +66,20 @@ auto PatcherVanillaParallax::shouldApply(NiShape &NIFShape,
   if (NIFUtil::hasShaderFlag(NIFShaderBSLSP, SLSF2_SOFT_LIGHTING) ||
       NIFUtil::hasShaderFlag(NIFShaderBSLSP, SLSF2_RIM_LIGHTING) ||
       NIFUtil::hasShaderFlag(NIFShaderBSLSP, SLSF2_BACK_LIGHTING)) {
-    Logger::trace(L"Shape Rejected: Lighting on shape");
+    Logger::trace(L"Cannot Apply: Lighting on shape");
     return false;
   }
 
-  // Get slots
-  auto OldSlots = NIFUtil::getTextureSlots(getNIF(), &NIFShape);
-  // Check if parallax map exists
-  if (shouldApply(OldSlots, Matches)) {
-    for (const auto &MatchedPath : Matches) {
-      Logger::trace(L"Found Parallax map: {}", MatchedPath.MatchedPath);
-    }
-  } else {
-    Logger::trace(L"No Parallax map found");
-    return false;
-  }
-
-  // All checks passed
-  Logger::trace(L"Shape Accepted");
   return true;
+}
+
+auto PatcherVanillaParallax::shouldApply(nifly::NiShape &NIFShape, std::vector<PatcherMatch> &Matches) -> bool {
+  return shouldApply(NIFUtil::getTextureSlots(getNIF(), &NIFShape), Matches);
 }
 
 auto PatcherVanillaParallax::shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
                                          std::vector<PatcherMatch> &Matches) -> bool {
-  static const auto HeightBaseMap = getSlotLookupMap(NIFUtil::TextureSlots::PARALLAX);
+  static const auto HeightBaseMap = getPGD()->getTextureMapConst(NIFUtil::TextureSlots::PARALLAX);
 
   Matches.clear();
 
@@ -96,7 +93,7 @@ auto PatcherVanillaParallax::shouldApply(const std::array<std::wstring, NUM_TEXT
   NIFUtil::TextureSlots MatchedFromSlot = NIFUtil::TextureSlots::NORMAL;
   for (int Slot : SlotSearch) {
     BaseMap = OldSlots[Slot];
-    if (BaseMap.empty() || !isFile(BaseMap)) {
+    if (BaseMap.empty() || !getPGD()->isFile(BaseMap)) {
       continue;
     }
 
@@ -113,7 +110,7 @@ auto PatcherVanillaParallax::shouldApply(const std::array<std::wstring, NUM_TEXT
   // Check aspect ratio matches
   PatcherMatch LastMatch; // Variable to store the match that equals OldSlots[Slot], if found
   for (const auto &Match : FoundMatches) {
-    if (isSameAspectRatio(BaseMap, Match.Path)) {
+    if (getPGD3D()->checkIfAspectRatioMatches(BaseMap, Match.Path)) {
       PatcherMatch CurMatch;
       CurMatch.MatchedPath = Match.Path;
       CurMatch.MatchedFrom.insert(MatchedFromSlot);

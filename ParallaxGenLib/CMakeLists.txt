@@ -18,6 +18,10 @@ set(HEADERS
     "include/patchers/PatcherComplexMaterial.hpp"
     "include/patchers/PatcherTruePBR.hpp"
     "include/patchers/PatcherVanillaParallax.hpp"
+    "include/patchers/PatcherShaderTransform.hpp"
+    "include/patchers/PatcherUpgradeParallaxToCM.hpp"
+    "include/patchers/Patcher.hpp"
+    "include/patchers/PatcherUtil.hpp"
 )
 
 set(SOURCES
@@ -39,6 +43,10 @@ set(SOURCES
     "src/patchers/PatcherComplexMaterial.cpp"
     "src/patchers/PatcherTruePBR.cpp"
     "src/patchers/PatcherVanillaParallax.cpp"
+    "src/patchers/PatcherShaderTransform.cpp"
+    "src/patchers/PatcherUpgradeParallaxToCM.cpp"
+    "src/patchers/Patcher.cpp"
+    "src/patchers/PatcherUtil.cpp"
 )
 
 include_directories("include")

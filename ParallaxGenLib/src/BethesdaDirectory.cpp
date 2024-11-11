@@ -275,6 +275,8 @@ auto BethesdaDirectory::getLooseFileFullPath(const filesystem::path &RelPath) co
 
 auto BethesdaDirectory::getDataPath() const -> filesystem::path { return DataDir; }
 
+auto BethesdaDirectory::getGeneratedPath() const -> filesystem::path { return GeneratedDir; }
+
 auto BethesdaDirectory::findFiles(const bool &Lower, const vector<wstring> &GlobListAllow,
                                   const vector<wstring> &GlobListDeny, const vector<wstring> &ArchiveListDeny,
                                   const bool &LogFindings, const bool &AllowWString) const -> vector<filesystem::path> {

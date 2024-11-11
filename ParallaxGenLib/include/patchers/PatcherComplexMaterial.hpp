@@ -16,11 +16,14 @@ private:
   static bool DisableMLP;
 
 public:
+  static auto getFactory() -> PatcherShader::PatcherShaderFactory;
+  static void loadStatics(const bool &DisableMLP, const std::unordered_set<std::wstring> &DynCubemapBlocklist);
+  static auto getShaderType() -> NIFUtil::ShapeShader;
+
   PatcherComplexMaterial(std::filesystem::path NIFPath, nifly::NifFile *NIF);
 
-  static void loadStatics(const bool &DisableMLP, const std::unordered_set<std::wstring> &DynCubemapBlocklist);
-
   // check if complex material should be enabled on shape
+  auto canApply(nifly::NiShape &NIFShape) -> bool override;
   auto shouldApply(nifly::NiShape &NIFShape, std::vector<PatcherMatch> &Matches) -> bool override;
   auto shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
                    std::vector<PatcherMatch> &Matches) -> bool override;

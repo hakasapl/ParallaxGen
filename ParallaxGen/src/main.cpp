@@ -24,6 +24,7 @@
 
 #include "BethesdaGame.hpp"
 #include "ModManagerDirectory.hpp"
+#include "NIFUtil.hpp"
 #include "ParallaxGen.hpp"
 #include "ParallaxGenConfig.hpp"
 #include "ParallaxGenD3D.hpp"
@@ -34,6 +35,8 @@
 #include "patchers/PatcherComplexMaterial.hpp"
 #include "patchers/PatcherShader.hpp"
 #include "patchers/PatcherTruePBR.hpp"
+#include "patchers/PatcherUpgradeParallaxToCM.hpp"
+#include "patchers/PatcherUtil.hpp"
 #include "patchers/PatcherVanillaParallax.hpp"
 
 constexpr unsigned MAX_LOG_SIZE = 5242880;
@@ -186,27 +189,25 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   }
 
   // Create patcher factory
-  vector<function<unique_ptr<PatcherShader>(filesystem::path, nifly::NifFile *)>> PatcherFactories;
+  PatcherUtil::PatcherSet Patchers;
   if (!Args.IgnoreParallax) {
-    PatcherFactories.emplace_back([](const filesystem::path &NIFFile, nifly::NifFile *NIF) {
-      return make_unique<PatcherVanillaParallax>(NIFFile, NIF);
-    });
+    Patchers.ShaderPatchers.emplace(PatcherVanillaParallax::getShaderType(), PatcherVanillaParallax::getFactory());
   }
   if (!Args.IgnoreComplexMaterial) {
-    PatcherFactories.emplace_back([](const filesystem::path &NIFFile, nifly::NifFile *NIF) {
-      return make_unique<PatcherComplexMaterial>(NIFFile, NIF);
-    });
+    Patchers.ShaderPatchers.emplace(PatcherComplexMaterial::getShaderType(), PatcherComplexMaterial::getFactory());
   }
   if (!Args.IgnoreTruePBR) {
-    PatcherFactories.emplace_back(
-        [](const filesystem::path &NIFFile, nifly::NifFile *NIF) { return make_unique<PatcherTruePBR>(NIFFile, NIF); });
+    Patchers.ShaderPatchers.emplace(PatcherTruePBR::getShaderType(), PatcherTruePBR::getFactory());
+  }
+  if (Args.UpgradeShaders) {
+    Patchers.ShaderTransformPatchers[PatcherUpgradeParallaxToCM::getFromShader()].emplace(PatcherUpgradeParallaxToCM::getToShader(), PatcherUpgradeParallaxToCM::getFactory());
   }
 
   auto MMD = ModManagerDirectory(MMType);
   auto PGD = ParallaxGenDirectory(BG, Args.OutputDir, &MMD);
   auto PGC = ParallaxGenConfig(ExePath);
   auto PGD3D = ParallaxGenD3D(&PGD, Args.OutputDir, ExePath, !Args.NoGPU);
-  auto PG = ParallaxGen(Args.OutputDir, &PGD, &PGC, &PGD3D, Args.OptimizeMeshes, Args.UpgradeShaders);
+  auto PG = ParallaxGen(Args.OutputDir, &PGD, &PGC, &PGD3D, Args.OptimizeMeshes);
 
   // Initialize UI
   ParallaxGenUI::init();
@@ -305,7 +306,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   if (MMType != ModManagerDirectory::ModManagerType::None) {
     // Find conflicts
-    const auto ModConflicts = PG.findModConflicts(PatcherFactories, !Args.NoMultithread, !Args.NoPlugin);
+    const auto ModConflicts = PG.findModConflicts(Patchers, !Args.NoMultithread, !Args.NoPlugin);
     const auto ExistingOrder = PGC.getModOrder();
 
     if (!ModConflicts.empty()) {
@@ -322,7 +323,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   // Patch meshes if set
   if (!Args.IgnoreParallax || !Args.IgnoreComplexMaterial || !Args.IgnoreTruePBR) {
-    PG.patchMeshes(PatcherFactories, !Args.NoMultithread, !Args.NoPlugin);
+    PG.patchMeshes(Patchers, !Args.NoMultithread, !Args.NoPlugin);
   }
 
   // Release cached files, if any
