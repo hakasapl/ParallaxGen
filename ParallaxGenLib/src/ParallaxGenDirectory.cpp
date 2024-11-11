@@ -398,16 +398,21 @@ auto ParallaxGenDirectory::updateUnconfirmedTexturesMap(
 
 auto ParallaxGenDirectory::addToTextureMaps(const filesystem::path &Path, const NIFUtil::TextureSlots &Slot,
                                             const NIFUtil::TextureType &Type) -> void {
-  // Use mutex to make this thread safe
-  lock_guard<mutex> Lock(TextureMapsMutex);
-
   // Get texture base
   const auto &Base = NIFUtil::getTexBase(Path);
   const auto &SlotInt = static_cast<size_t>(Slot);
 
   // Add to texture map
   NIFUtil::PGTexture NewPGTexture = {Path, Type};
-  TextureMaps[SlotInt][Base].insert(NewPGTexture);
+  {
+    lock_guard<mutex> Lock(TextureMapsMutex);
+    TextureMaps[SlotInt][Base].insert(NewPGTexture);
+  }
+
+  {
+    lock_guard<mutex> Lock(TextureTypesMutex);
+    TextureTypes[Path] = Type;
+  }
 }
 
 auto ParallaxGenDirectory::addMesh(const filesystem::path &Path) -> void {
@@ -433,3 +438,13 @@ auto ParallaxGenDirectory::getMeshes() const -> const unordered_set<filesystem::
 auto ParallaxGenDirectory::getPBRJSONs() const -> const vector<filesystem::path> & { return PBRJSONs; }
 
 auto ParallaxGenDirectory::getPGJSONs() const -> const vector<filesystem::path> & { return PGJSONs; }
+
+auto ParallaxGenDirectory::getTextureType(const filesystem::path &Path) -> NIFUtil::TextureType {
+  lock_guard<mutex> Lock(TextureTypesMutex);
+
+  if (TextureTypes.find(Path) != TextureTypes.end()) {
+    return TextureTypes.at(Path);
+  }
+
+  return NIFUtil::TextureType::UNKNOWN;
+}

@@ -35,12 +35,14 @@ private:
 
   // Structures to store relevant files (sometimes their contents)
   std::array<std::map<std::wstring, std::unordered_set<NIFUtil::PGTexture, NIFUtil::PGTextureHasher>>, NUM_TEXTURE_SLOTS> TextureMaps{};
+  std::unordered_map<std::filesystem::path, NIFUtil::TextureType> TextureTypes;
   std::unordered_set<std::filesystem::path> Meshes{};
   std::vector<std::filesystem::path> PBRJSONs{};
   std::vector<std::filesystem::path> PGJSONs{};
 
   // Mutexes
   std::mutex TextureMapsMutex;
+  std::mutex TextureTypesMutex;
   std::mutex MeshesMutex;
 
 public:
@@ -109,4 +111,6 @@ public:
   [[nodiscard]] auto getPBRJSONs() const -> const std::vector<std::filesystem::path> &;
 
   [[nodiscard]] auto getPGJSONs() const -> const std::vector<std::filesystem::path> &;
+
+  auto getTextureType(const std::filesystem::path &Path) -> NIFUtil::TextureType;
 };

@@ -218,6 +218,22 @@ auto PatcherTruePBR::shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOT
            get<0>(*(static_pointer_cast<map<size_t, tuple<nlohmann::json, wstring>>>(B.ExtraData)->begin()));
   });
 
+  // Check for no-JSON RMAOS
+  if (TruePBRData.empty()) {
+    auto RMAOSPath = OldSlots[static_cast<size_t>(NIFUtil::TextureSlots::ENVMASK)];
+    // if not start with PBR add it for the check
+    if (boost::istarts_with(RMAOSPath, "textures\\") && !boost::istarts_with(RMAOSPath, "textures\\pbr\\")) {
+      RMAOSPath.replace(0, TEXTURE_STR_LENGTH, L"textures\\pbr\\");
+    }
+
+    if (getPGD()->getTextureType(RMAOSPath) == NIFUtil::TextureType::RMAOS) {
+      Logger::trace(L"Found RMAOS without JSON: {}", RMAOSPath);
+      PatcherMatch Match;
+      Match.MatchedPath = RMAOSPath;
+      Matches.insert(Matches.begin(), Match);
+    }
+  }
+
   return Matches.size() > 0;
 }
 
@@ -371,9 +387,17 @@ auto PatcherTruePBR::insertTruePBRData(std::map<size_t, std::tuple<nlohmann::jso
 
 auto PatcherTruePBR::applyPatch(nifly::NiShape &NIFShape, const PatcherMatch &Match, bool &NIFModified,
                                 bool &ShapeDeleted) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
-  if (Match.MatchedPath == getNIFPath().wstring()) {
-    // don't do anything if matched path is current NIF
-    return NIFUtil::getTextureSlots(getNIF(), &NIFShape);
+  if (Match.MatchedPath == getNIFPath().wstring() || getPGD()->getTextureType(Match.MatchedPath) == NIFUtil::TextureType::RMAOS) {
+    // already has PBR, just add PBR prefix to the slots if not already there
+    const auto OldSlots = NIFUtil::getTextureSlots(getNIF(), &NIFShape);
+    auto NewSlots = OldSlots;
+    for (size_t I = 0; I < NUM_TEXTURE_SLOTS; I++) {
+      if (boost::istarts_with(OldSlots[I], "textures\\") && !boost::istarts_with(OldSlots[I], "textures\\pbr\\")) {
+        NewSlots[I].replace(0, TEXTURE_STR_LENGTH, L"textures\\pbr\\");
+      }
+    }
+
+    return NewSlots;
   }
 
   // get extra data from match
@@ -391,9 +415,16 @@ auto PatcherTruePBR::applyPatch(nifly::NiShape &NIFShape, const PatcherMatch &Ma
 
 auto PatcherTruePBR::applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
                                      const PatcherMatch &Match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
-  if (Match.MatchedPath == getNIFPath().wstring()) {
-    // don't do anything if matched path is current NIF
-    return OldSlots;
+  if (Match.MatchedPath == getNIFPath().wstring() || getPGD()->getTextureType(Match.MatchedPath) == NIFUtil::TextureType::RMAOS) {
+    // already has PBR, just add PBR prefix to the slots if not already there
+    auto NewSlots = OldSlots;
+    for (size_t I = 0; I < NUM_TEXTURE_SLOTS; I++) {
+      if (boost::istarts_with(OldSlots[I], "textures\\") && !boost::istarts_with(OldSlots[I], "textures\\pbr\\")) {
+        NewSlots[I].replace(0, TEXTURE_STR_LENGTH, L"textures\\pbr\\");
+      }
+    }
+
+    return NewSlots;
   }
 
   auto NewSlots = OldSlots;
