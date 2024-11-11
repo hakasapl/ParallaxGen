@@ -118,9 +118,6 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   // Alpha message
   spdlog::warn("ParallaxGen is currently in ALPHA. Please file detailed bug reports on nexus or github.");
 
-  // Initialize UI
-  ParallaxGenUI::init();
-
   // Initialize ParallaxGenConfig
   auto PGC = ParallaxGenConfig(ExePath);
   PGC.loadConfig();
@@ -143,7 +140,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   const auto BG = BethesdaGame(Params.Game.Type, true, Params.Game.Dir);
 
   // Create patcher factory
-  vector<function<unique_ptr<PatcherShader>(filesystem::path, nifly::NifFile *)>> PatcherFactories;
+  PatcherUtil::PatcherSet Patchers;
   if (Params.ShaderPatcher.Parallax) {
     Patchers.ShaderPatchers.emplace(PatcherVanillaParallax::getShaderType(), PatcherVanillaParallax::getFactory());
   }
@@ -164,9 +161,6 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   // Initialize UI
   ParallaxGenUI::init();
-
-  // Init Warnings
-  ParallaxGenWarnings::init(&PGD, &PGC);
 
   // Check if GPU needs to be initialized
   if (Params.Processing.GPUAcceleration) {

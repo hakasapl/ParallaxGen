@@ -58,7 +58,7 @@ public:
   //
 
   // constructor
-  ParallaxGen(std::filesystem::path OutputDir, ParallaxGenDirectory *PGD, ParallaxGenConfig *PGC, ParallaxGenD3D *PGD3D,
+  ParallaxGen(std::filesystem::path OutputDir, ParallaxGenDirectory *PGD, ParallaxGenD3D *PGD3D,
               const bool &OptimizeMeshes = false);
   // enables parallax on relevant meshes
   void

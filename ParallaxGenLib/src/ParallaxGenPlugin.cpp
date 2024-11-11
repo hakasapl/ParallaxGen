@@ -348,10 +348,10 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
       MeshFilePriority = ModPriority->at(NIFPath);
     }
 
-    for (const auto &[Mod, Match] : Matches) {
+    for (const auto &Match : Matches) {
       int CurPriority = -1;
-      if (ModPriority != nullptr && ModPriority->find(Mod) != ModPriority->end()) {
-        CurPriority = ModPriority->at(Mod);
+      if (ModPriority != nullptr && ModPriority->find(Match.Mod) != ModPriority->end()) {
+        CurPriority = ModPriority->at(Match.Mod);
       }
 
       if (CurPriority < MeshFilePriority && CurPriority != -1 && MeshFilePriority != -1) {

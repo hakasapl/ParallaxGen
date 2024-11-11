@@ -34,9 +34,9 @@ using namespace std;
 using namespace ParallaxGenUtil;
 using namespace nifly;
 
-ParallaxGen::ParallaxGen(filesystem::path OutputDir, ParallaxGenDirectory *PGD, ParallaxGenConfig *PGC,
+ParallaxGen::ParallaxGen(filesystem::path OutputDir, ParallaxGenDirectory *PGD,
                          ParallaxGenD3D *PGD3D, const bool &OptimizeMeshes)
-    : OutputDir(std::move(OutputDir)), PGD(PGD), PGC(PGC), PGD3D(PGD3D) {
+    : OutputDir(std::move(OutputDir)), PGD(PGD), PGD3D(PGD3D) {
   // constructor
 
   // set optimize meshes flag
@@ -505,13 +505,13 @@ auto ParallaxGen::processShape(
     MeshFilePriority = ModPriority->at(NIFPath);
   }
 
-  for (const auto &[Mod, Shader, Match] : Matches) {
-    Logger::Prefix PrefixMod(Mod);
+  for (const auto &Match : Matches) {
+    Logger::Prefix PrefixMod(Match.Mod);
     Logger::trace(L"Checking mod");
 
     int CurPriority = -1;
-    if (ModPriority != nullptr && ModPriority->find(Mod) != ModPriority->end()) {
-      CurPriority = ModPriority->at(Mod);
+    if (ModPriority != nullptr && ModPriority->find(Match.Mod) != ModPriority->end()) {
+      CurPriority = ModPriority->at(Match.Mod);
     }
 
     if (CurPriority < MeshFilePriority && CurPriority != -1 && MeshFilePriority != -1) {
