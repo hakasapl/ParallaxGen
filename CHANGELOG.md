@@ -11,6 +11,8 @@
 - Output directory will only delete items that parallaxgen might have generates (meshes folder, textures folder, PG files)
 - BSLODTriShapes are now patched too
 - Upgrade shaders only upgrades what is required now
+- If user does not have .NET framework an error is posted now
+- PBR ignore Skin Tint and Face Tint types now
 
 ## [0.6.0] - 2024-10-06
 
