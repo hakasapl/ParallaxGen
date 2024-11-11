@@ -37,11 +37,14 @@ public:
   static auto getTruePBRNormalInverse() -> std::map<std::wstring, std::vector<size_t>> &;
   static auto getTruePBRConfigFilenameFields() -> std::vector<std::string>;
 
+  static auto getFactory() -> PatcherShader::PatcherShaderFactory;
+  static void loadStatics(const std::vector<std::filesystem::path> &PBRJSONs);
+  static auto getShaderType() -> NIFUtil::ShapeShader;
+
   PatcherTruePBR(std::filesystem::path NIFPath, nifly::NifFile *NIF);
 
-  static void loadStatics(const std::vector<std::filesystem::path> &PBRJSONs);
-
   // check if truepbr should be enabled on shape
+  auto canApply(nifly::NiShape &NIFShape) -> bool override;
   auto shouldApply(nifly::NiShape &NIFShape, std::vector<PatcherMatch> &Matches) -> bool override;
   auto shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
                    std::vector<PatcherMatch> &Matches) -> bool override;

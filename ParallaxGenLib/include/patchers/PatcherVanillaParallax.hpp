@@ -12,9 +12,13 @@ private:
   bool HasAttachedHavok = false;
 
 public:
+  static auto getFactory() -> PatcherShader::PatcherShaderFactory;
+  static auto getShaderType() -> NIFUtil::ShapeShader;
+
   PatcherVanillaParallax(std::filesystem::path NIFPath, nifly::NifFile *NIF);
 
   // check if vanilla parallax should be enabled on shape
+  auto canApply(nifly::NiShape &NIFShape) -> bool override;
   auto shouldApply(nifly::NiShape &NIFShape, std::vector<PatcherMatch> &Matches) -> bool override;
   auto shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
                    std::vector<PatcherMatch> &Matches) -> bool override;

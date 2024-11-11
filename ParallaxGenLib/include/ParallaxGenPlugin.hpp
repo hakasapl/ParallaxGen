@@ -8,7 +8,7 @@
 #include "BethesdaGame.hpp"
 #include "NIFUtil.hpp"
 #include "ParallaxGenDirectory.hpp"
-#include "patchers/PatcherShader.hpp"
+#include "patchers/PatcherUtil.hpp"
 
 #define LOG_POLL_INTERVAL 1000
 
@@ -87,7 +87,7 @@ public:
   /// @param[out] NewSlots textures that were assigned to the texture set slots
   static void processShape(const NIFUtil::ShapeShader &AppliedShader, const std::wstring &NIFPath,
                            const std::wstring &Name3D, const int &Index3DOld, const int &Index3DNew,
-                           const std::vector<std::unique_ptr<PatcherShader>> &Patchers,
+                           const PatcherUtil::PatcherObjectSet &Patchers,
                            const std::unordered_map<std::wstring, int> *ModPriority,
                            std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots);
 
