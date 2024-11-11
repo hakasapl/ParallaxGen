@@ -338,53 +338,9 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
     }
 
     // Find winning mod
-    // TODO this is duplicate code
-    int MaxPriority = -1;
-    auto WinningShaderMatch = PatcherUtil::ShaderPatcherMatch();
-
-    int MeshFilePriority = -1;
-    if (ModPriority != nullptr && ModPriority->find(NIFPath) != ModPriority->end()) {
-      MeshFilePriority = ModPriority->at(NIFPath);
-    }
-
-    for (const auto &Match : Matches) {
-      int CurPriority = -1;
-      if (ModPriority != nullptr && ModPriority->find(Match.Mod) != ModPriority->end()) {
-        CurPriority = ModPriority->at(Match.Mod);
-      }
-
-      if (CurPriority < MeshFilePriority && CurPriority != -1 && MeshFilePriority != -1) {
-        // skip mods with lower priority than mesh file
-        Logger::trace(L"Rejecting: Mod has lower priority than mesh file");
-        continue;
-      }
-
-      if (CurPriority < MaxPriority) {
-        // skip mods with lower priority than current winner
-        Logger::trace(L"Rejecting: Mod has lower priority than current winner");
-        continue;
-      }
-
-      Logger::trace(L"Mod accepted");
-      MaxPriority = CurPriority;
-      WinningShaderMatch = Match;
-    }
-
-    Logger::trace(L"Winning mod: {}", WinningShaderMatch.Mod);
-
-    // Transform if required
-    if (WinningShaderMatch.ShaderTransformTo != NIFUtil::ShapeShader::NONE) {
-      // Find transform object
-      auto *const Transform =
-          Patchers.ShaderTransformPatchers.at(WinningShaderMatch.Shader).at(WinningShaderMatch.ShaderTransformTo).get();
-
-      // Transform Shader
-      WinningShaderMatch.Match = Transform->transform(WinningShaderMatch.Match);
-      WinningShaderMatch.Shader = WinningShaderMatch.ShaderTransformTo;
-
-      // Reset Transform
-      WinningShaderMatch.ShaderTransformTo = NIFUtil::ShapeShader::NONE;
-    }
+    auto WinningShaderMatch = PatcherUtil::getWinningMatch(Matches, NIFPath, ModPriority);
+    // Apply transforms
+    WinningShaderMatch = PatcherUtil::applyTransformIfNeeded(WinningShaderMatch, Patchers);
 
     // Run patcher
     if (WinningShaderMatch.Match.MatchedPath.empty()) {

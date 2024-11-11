@@ -31,4 +31,8 @@ public:
     PatcherShader::PatcherMatch Match;
     NIFUtil::ShapeShader ShaderTransformTo;
   };
+
+  static auto getWinningMatch(const std::vector<ShaderPatcherMatch> &Matches, const std::filesystem::path &NIFPath, const std::unordered_map<std::wstring, int> *ModPriority = nullptr) -> ShaderPatcherMatch;
+
+  static auto applyTransformIfNeeded(const ShaderPatcherMatch &Match, const PatcherObjectSet &Patchers) -> ShaderPatcherMatch;
 };
