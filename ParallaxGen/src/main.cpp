@@ -23,6 +23,7 @@
 #include <unordered_map>
 
 #include "BethesdaGame.hpp"
+#include "GUI/LauncherWindow.hpp"
 #include "ModManagerDirectory.hpp"
 #include "NIFUtil.hpp"
 #include "ParallaxGen.hpp"
@@ -291,7 +292,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 }
 
 void exitBlocking() {
-  if (ParallaxGenUI::UIExitTriggered) {
+  if (LauncherWindow::UIExitTriggered) {
     return;
   }
 

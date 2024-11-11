@@ -2,11 +2,15 @@
 set (HEADERS
     "include/ParallaxGenConfig.hpp"
     "include/ParallaxGenUI.hpp"
+    "include/GUI/LauncherWindow.hpp"
+    "include/GUI/ModSortDialog.hpp"
 )
 
 set(SOURCES
     "src/ParallaxGenConfig.cpp"
     "src/ParallaxGenUI.cpp"
+    "src/GUI/LauncherWindow.cpp"
+    "src/GUI/ModSortDialog.cpp"
     "src/main.cpp"
 )
 
