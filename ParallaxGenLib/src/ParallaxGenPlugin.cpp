@@ -15,6 +15,21 @@
 
 using namespace std;
 
+namespace {
+void dnne_failure(enum failure_type type, int error_code) {
+  if (type == failure_type::failure_load_runtime) {
+    if (error_code == 0x80008096) { // FrameworkMissingFailure from https://github.com/dotnet/runtime/blob/main/src/native/corehost/error_codes.h
+      spdlog::critical("The required .NET runtime is missing");
+    } else {
+      spdlog::critical("Could not load .NET runtime, error code {:#X}", error_code);
+    }
+  } else if (type == failure_type::failure_load_export) {
+    spdlog::critical("Could not load .NET exports, error code {:#X}", error_code);
+  }
+  exit(1);
+}
+} // namespace
+
 mutex ParallaxGenPlugin::LibMutex;
 
 void ParallaxGenPlugin::libLogMessageIfExists() {
@@ -240,6 +255,8 @@ void ParallaxGenPlugin::loadStatics(ParallaxGenDirectory *PGD, ParallaxGenConfig
 }
 
 void ParallaxGenPlugin::initialize(const BethesdaGame &Game) {
+  set_failure_callback(dnne_failure);
+
   // Maps BethesdaGame::GameType to Mutagen game type
   static const unordered_map<BethesdaGame::GameType, int> MutagenGameTypeMap = {
       {BethesdaGame::GameType::SKYRIM, 1},     {BethesdaGame::GameType::SKYRIM_SE, 2},
