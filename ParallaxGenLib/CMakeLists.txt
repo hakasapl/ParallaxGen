@@ -6,11 +6,9 @@ set(HEADERS
     "include/ModManagerDirectory.hpp"
     "include/NIFUtil.hpp"
     "include/ParallaxGen.hpp"
-    "include/ParallaxGenConfig.hpp"
     "include/ParallaxGenD3D.hpp"
     "include/ParallaxGenPlugin.hpp"
     "include/ParallaxGenTask.hpp"
-    "include/ParallaxGenUI.hpp"
     "include/ParallaxGenUtil.hpp"
     "include/ParallaxGenWarnings.hpp"
     "include/ParallaxGenDirectory.hpp"
@@ -18,6 +16,10 @@ set(HEADERS
     "include/patchers/PatcherComplexMaterial.hpp"
     "include/patchers/PatcherTruePBR.hpp"
     "include/patchers/PatcherVanillaParallax.hpp"
+    "include/patchers/PatcherShaderTransform.hpp"
+    "include/patchers/PatcherUpgradeParallaxToCM.hpp"
+    "include/patchers/Patcher.hpp"
+    "include/patchers/PatcherUtil.hpp"
 )
 
 set(SOURCES
@@ -27,11 +29,9 @@ set(SOURCES
     "src/ModManagerDirectory.cpp"
     "src/NIFUtil.cpp"
     "src/ParallaxGen.cpp"
-    "src/ParallaxGenConfig.cpp"
     "src/ParallaxGenD3D.cpp"
     "src/ParallaxGenPlugin.cpp"
     "src/ParallaxGenTask.cpp"
-    "src/ParallaxGenUI.cpp"
     "src/ParallaxGenUtil.cpp"
     "src/ParallaxGenWarnings.cpp"
     "src/ParallaxGenDirectory.cpp"
@@ -39,6 +39,10 @@ set(SOURCES
     "src/patchers/PatcherComplexMaterial.cpp"
     "src/patchers/PatcherTruePBR.cpp"
     "src/patchers/PatcherVanillaParallax.cpp"
+    "src/patchers/PatcherShaderTransform.cpp"
+    "src/patchers/PatcherUpgradeParallaxToCM.cpp"
+    "src/patchers/Patcher.cpp"
+    "src/patchers/PatcherUtil.cpp"
 )
 
 include_directories("include")
@@ -56,7 +60,6 @@ find_package(directxtex REQUIRED CONFIG)
 find_package(miniz REQUIRED CONFIG)
 find_package(nlohmann_json REQUIRED CONFIG)
 find_package(nlohmann_json_schema_validator REQUIRED)
-find_package(wxwidgets REQUIRED COMPONENTS core base)
 find_package(nifly REQUIRED CONFIG)
 
 set(DirectXTK_LIBS
@@ -85,7 +88,6 @@ target_link_libraries(ParallaxGenLib PUBLIC
     Shlwapi
     nlohmann_json::nlohmann_json
     nlohmann_json_schema_validator::validator
-    ${wxWidgets_LIBRARIES}
 )
 target_include_directories(ParallaxGenLib PUBLIC include)
 
@@ -118,23 +120,9 @@ install(FILES $<TARGET_RUNTIME_DLLS:ParallaxGenLib> DESTINATION . )
 if (${CMAKE_BUILD_TYPE} STREQUAL "Release" OR ${CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo" OR ${CMAKE_BUILD_TYPE} STREQUAL "MinSizeRel")
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/lz4.dll DESTINATION . )
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/zlib1.dll DESTINATION . )
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/wxbase32u_vc_custom.dll DESTINATION . )
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/wxmsw32u_core_vc_custom.dll DESTINATION . )
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/pcre2-16.dll DESTINATION . )
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/jpeg62.dll DESTINATION . )
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libpng16.dll DESTINATION . )
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/tiff.dll DESTINATION . )
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/liblzma.dll DESTINATION . )
 elseif(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/lz4d.dll DESTINATION . )
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/zlibd1.dll DESTINATION . )
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/wxbase32ud_vc_custom.dll DESTINATION . )
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/wxmsw32ud_core_vc_custom.dll DESTINATION . )
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/pcre2-16d.dll DESTINATION . )
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/jpeg62.dll DESTINATION . )
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libpng16d.dll DESTINATION . )
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/tiffd.dll DESTINATION . )
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/liblzma.dll DESTINATION . )
 endif()
 
 # Test

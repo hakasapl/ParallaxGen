@@ -1,10 +1,4 @@
-#include "ParallaxGenUI.hpp"
-
-#include <boost/algorithm/string/join.hpp>
-#include <list>
-#include <wx/gdicmn.h>
-
-#include "ParallaxGenUtil.hpp"
+#include "GUI/ModSortDialog.hpp"
 
 using namespace std;
 
@@ -17,9 +11,10 @@ ModSortDialog::ModSortDialog(const std::vector<std::wstring> &Mods, const std::v
       ScrollTimer(this), ConflictsMap(Conflicts), SortAscending(true) {
   Bind(wxEVT_TIMER, &ModSortDialog::onTimer, this, ScrollTimer.GetId());
 
-  auto *MainSizer = new wxBoxSizer(wxVERTICAL);
+  auto *MainSizer = new wxBoxSizer(wxVERTICAL); // NOLINT(cppcoreguidelines-owning-memory)
   // Create the ListCtrl
-  ListCtrl = new wxListCtrl(this, wxID_ANY, wxDefaultPosition, wxSize(250, 300), wxLC_REPORT);
+  ListCtrl = // NOLINT(cppcoreguidelines-owning-memory)
+      new wxListCtrl(this, wxID_ANY, wxDefaultPosition, wxSize(250, 300), wxLC_REPORT);
   ListCtrl->InsertColumn(0, "Mod");
   ListCtrl->InsertColumn(1, "Shader");
   ListCtrl->InsertColumn(2, "Priority");
@@ -58,7 +53,9 @@ ModSortDialog::ModSortDialog(const std::vector<std::wstring> &Mods, const std::v
   // Add wrapped message at the top
   static const std::wstring Message = L"The following mods have been detected as potential conflicts. Please set the "
                                       L"priority order for these mods. Mods that are highlighted in green are new mods "
-                                      L"that do not exist in the saved order and may need to be sorted.";
+                                      L"that do not exist in the saved order and may need to be sorted. Mods "
+                                      L"highlighted in yellow conflict with the currently selected mod. Higher "
+                                      L"priority mods win over lower priority mods";
   // Create the wxStaticText and set wrapping
   auto *MessageText = new wxStaticText(this, wxID_ANY, Message, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
   MessageText->Wrap(TotalWidth - 40); // Adjust wrapping width
@@ -71,7 +68,7 @@ ModSortDialog::ModSortDialog(const std::vector<std::wstring> &Mods, const std::v
 
   // Adjust dialog width to match the total width of columns and padding
   SetSizeHints(TotalWidth, 400, TotalWidth, wxDefaultCoord); // Adjust minimum width and height
-  SetSize(TotalWidth, 600);    // Set dialog size
+  SetSize(TotalWidth, 600);                                  // Set dialog size
 
   MainSizer->Add(ListCtrl, 1, wxEXPAND | wxALL, 10);
 
@@ -133,9 +130,6 @@ void ModSortDialog::onMouseLeftDown(wxMouseEvent &Event) {
            wxNOT_FOUND) {
       DraggedIndices.push_back(SelectedItem);
     }
-
-    // Set the initial drag index
-    DraggedIndex = ItemIndex;
   }
   Event.Skip();
 }
@@ -179,7 +173,6 @@ void ModSortDialog::onMouseLeftUp(wxMouseEvent &Event) {
 
     // Reset indices to prepare for the next drag
     DraggedIndices.clear();
-    DraggedIndex = -1;
     TargetLineIndex = -1;
   }
 
@@ -226,7 +219,7 @@ void ModSortDialog::onMouseMotion(wxMouseEvent &Event) {
   Event.Skip();
 }
 
-void ModSortDialog::onTimer(wxTimerEvent &Event) {
+void ModSortDialog::onTimer([[maybe_unused]] wxTimerEvent &Event) {
   // Get the current mouse position relative to the ListCtrl
   wxPoint MousePos = ScreenToClient(wxGetMousePosition());
   wxRect ListCtrlRect = ListCtrl->GetRect();
@@ -379,93 +372,4 @@ auto ModSortDialog::getSortedItems() const -> std::vector<std::wstring> {
   }
 
   return SortedItems;
-}
-
-// ParallaxGenUI class
-
-void ParallaxGenUI::init() {
-  wxApp::SetInstance(new wxApp());
-  if (!wxEntryStart(nullptr, nullptr)) {
-    throw runtime_error("Failed to initialize wxWidgets");
-  }
-}
-
-auto ParallaxGenUI::selectModOrder(
-    const std::unordered_map<std::wstring, tuple<std::set<NIFUtil::ShapeShader>, unordered_set<wstring>>> &Conflicts,
-    const std::vector<std::wstring> &ExistingMods) -> std::vector<std::wstring> {
-
-  vector<wstring> FinalModOrder;
-  if (ExistingMods.size() == 0) {
-    std::vector<std::pair<NIFUtil::ShapeShader, std::wstring>> ModOrder;
-    for (const auto &[Mod, Value] : Conflicts) {
-      const auto &ShaderSet = std::get<0>(Value);
-      if (!ShaderSet.empty()) {
-        ModOrder.emplace_back(*prev(ShaderSet.end()), Mod); // Get the first shader
-      }
-    }
-    // no existing load order, sort for defaults
-    // Sort by ShapeShader first, and then by key name lexicographically
-    std::sort(ModOrder.begin(), ModOrder.end(), [](const auto &Lhs, const auto &Rhs) {
-      if (Lhs.first == Rhs.first) {
-        return Lhs.second < Rhs.second; // Secondary sort by wstring key
-      }
-      return Lhs.first < Rhs.first; // Primary sort by ShapeShader
-    });
-
-    for (const auto &[Shader, Mod] : ModOrder) {
-      FinalModOrder.push_back(Mod);
-    }
-  } else {
-    vector<wstring> NewMods;
-    // Add existing mod order
-    for (const auto &Mod : ExistingMods) {
-      // check if existing mods contain the mod
-      if (Conflicts.find(Mod) != Conflicts.end()) {
-        // add to final mod order
-        FinalModOrder.push_back(Mod);
-      }
-    }
-
-    // Add new load mods
-    for (const auto &[Mod, Data] : Conflicts) {
-      // check if mod is in existing order
-      if (find(ExistingMods.begin(), ExistingMods.end(), Mod) == ExistingMods.end()) {
-        // add to new mods
-        FinalModOrder.insert(FinalModOrder.begin(), Mod);
-      }
-    }
-  }
-
-  // split into vectors
-  vector<wstring> ModStrs;
-  vector<wstring> ShaderCombinedStrs;
-  vector<bool> IsNew;
-  unordered_map<wstring, unordered_set<wstring>> ConflictTracker;
-
-  // first loop through existing order to restore is
-
-  for (const auto &Mod : FinalModOrder) {
-    ModStrs.push_back(Mod);
-
-    vector<wstring> ShaderStrs;
-    for (const auto &Shader : get<0>(Conflicts.at(Mod))) {
-      ShaderStrs.insert(ShaderStrs.begin(), ParallaxGenUtil::strToWstr(NIFUtil::getStrFromShader(Shader)));
-    }
-
-    auto ShaderStr = boost::join(ShaderStrs, L",");
-    ShaderCombinedStrs.push_back(ShaderStr);
-
-    // check if mod is in existing order
-    IsNew.push_back(find(ExistingMods.begin(), ExistingMods.end(), Mod) == ExistingMods.end());
-
-    // add to conflict tracker
-    ConflictTracker.insert({Mod, get<1>(Conflicts.at(Mod))});
-  }
-
-  ModSortDialog Dialog(ModStrs, ShaderCombinedStrs, IsNew, ConflictTracker);
-  if (Dialog.ShowModal() == wxID_OK) {
-    return Dialog.getSortedItems();
-  }
-
-  return ModStrs; // Return the original order if cancelled or closed
 }

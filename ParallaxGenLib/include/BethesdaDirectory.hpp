@@ -124,6 +124,13 @@ public:
   [[nodiscard]] auto getDataPath() const -> std::filesystem::path;
 
   /**
+   * @brief Get the Generated Path
+   *
+   * @return std::filesystem::path absolute path to the generated directory
+   */
+  [[nodiscard]] auto getGeneratedPath() const -> std::filesystem::path;
+
+  /**
    * @brief Get bytes from a file in the load order. Throws runtime_error if file does not exist and logging is turned off
    *
    * @param RelPath path to the file relative to the data directory

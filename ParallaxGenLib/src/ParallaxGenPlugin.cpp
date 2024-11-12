@@ -5,11 +5,12 @@
 #include <unordered_map>
 #include <winbase.h>
 
+#include "Logger.hpp"
 #include "NIFUtil.hpp"
-#include "ParallaxGenConfig.hpp"
 #include "ParallaxGenMutagenWrapperNE.h"
 #include "ParallaxGenUtil.hpp"
 #include "ParallaxGenWarnings.hpp"
+#include "patchers/PatcherUtil.hpp"
 
 #include <format>
 
@@ -247,12 +248,8 @@ mutex ParallaxGenPlugin::TXSTWarningMapMutex;
 unordered_map<int, NIFUtil::ShapeShader> ParallaxGenPlugin::TXSTWarningMap; // NOLINT
 
 ParallaxGenDirectory *ParallaxGenPlugin::PGD;
-ParallaxGenConfig *ParallaxGenPlugin::PGC;
 
-void ParallaxGenPlugin::loadStatics(ParallaxGenDirectory *PGD, ParallaxGenConfig *PGC) {
-  ParallaxGenPlugin::PGD = PGD;
-  ParallaxGenPlugin::PGC = PGC;
-}
+void ParallaxGenPlugin::loadStatics(ParallaxGenDirectory *PGD) { ParallaxGenPlugin::PGD = PGD; }
 
 void ParallaxGenPlugin::initialize(const BethesdaGame &Game) {
   set_failure_callback(dnne_failure);
@@ -271,7 +268,8 @@ void ParallaxGenPlugin::populateObjs() { libPopulateObjs(); }
 
 void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, const wstring &NIFPath,
                                      const wstring &Name3D, const int &Index3DOld, const int &Index3DNew,
-                                     const vector<unique_ptr<PatcherShader>> &Patchers,
+                                     const PatcherUtil::PatcherObjectSet &Patchers,
+                                     const unordered_map<wstring, int> *ModPriority,
                                      std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots) {
   if (AppliedShader == NIFUtil::ShapeShader::NONE) {
     spdlog::trace(L"Plugin Patching | {} | {} | {} | Skipping: No shader applied", NIFPath, Name3D, Index3DOld);
@@ -321,86 +319,78 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
     }
 
     // create a list of mods and the corresponding matches
-    vector<tuple<wstring, PatcherShader::PatcherMatch>> Matches;
+    vector<PatcherUtil::ShaderPatcherMatch> Matches;
+    for (const auto &[Shader, Patcher] : Patchers.ShaderPatchers) {
+      Logger::Prefix PrefixPatches(ParallaxGenUtil::strToWstr(Patcher->getPatcherName()));
 
-    for (const auto &Patcher : Patchers) {
-      if (Patcher->getShaderType() != AppliedShader) {
-        continue;
-      }
-
+      // Check if shader should be applied
       vector<PatcherShader::PatcherMatch> CurMatches;
       if (!Patcher->shouldApply(BaseSlots, CurMatches)) {
-        break;
+        Logger::trace(L"Rejecting: Shader not applicable");
+        continue;
       }
 
       for (const auto &Match : CurMatches) {
-        Matches.emplace_back(PGD->getMod(Match.MatchedPath), Match);
-      }
+        PatcherUtil::ShaderPatcherMatch CurMatch;
+        CurMatch.Mod = PGD->getMod(Match.MatchedPath);
+        CurMatch.Shader = Shader;
+        CurMatch.Match = Match;
+        CurMatch.ShaderTransformTo = NIFUtil::ShapeShader::NONE;
 
-      break;
+        // See if transform is possible
+        if (Patchers.ShaderTransformPatchers.contains(Shader)) {
+          const auto &AvailableTransforms = Patchers.ShaderTransformPatchers.at(Shader);
+          // check if transform is available
+          if (AvailableTransforms.contains(AppliedShader)) {
+            const auto TransformIter = AvailableTransforms.find(AppliedShader);
+            CurMatch.ShaderTransformTo = TransformIter->first;
+          }
+        }
+
+        // Add to matches if shader or transform matches applied shader
+        if (Shader == AppliedShader || CurMatch.ShaderTransformTo == AppliedShader) {
+          Matches.push_back(CurMatch);
+        }
+      }
     }
 
     // Find winning mod
-    int MaxPriority = -1;
-    PatcherShader::PatcherMatch WinningMatch;
-    wstring DecisionMod;
+    auto WinningShaderMatch = PatcherUtil::getWinningMatch(Matches, NIFPath, ModPriority);
+    // Apply transforms
+    WinningShaderMatch = PatcherUtil::applyTransformIfNeeded(WinningShaderMatch, Patchers);
 
-    const auto MeshFilePriority = PGC->getModPriority(PGD->getMod(NIFPath));
-    for (const auto &[Mod, Match] : Matches) {
-      auto CurPriority = PGC->getModPriority(Mod);
+    // Run patcher
+    if (WinningShaderMatch.Match.MatchedPath.empty()) {
+      // no shaders to apply
+      lock_guard<mutex> Lock(TXSTWarningMapMutex);
 
-      if (CurPriority < MeshFilePriority) {
-        // skip mods with lower priority than mesh file
-        continue;
+      if (TXSTWarningMap.find(TXSTIndex) != TXSTWarningMap.end() && TXSTWarningMap[TXSTIndex] == AppliedShader) {
+        // Warning already issued
+      } else {
+        TXSTWarningMap[TXSTIndex] = AppliedShader;
+        const auto [FormID, PluginName] = libGetTXSTFormID(TXSTIndex);
+
+        // todo: implement ESL flagged
+        const bool bESLFlagged = false;
+        const wstring FormIDStr =
+            (!bESLFlagged) ? format(L"{}/{:06X}", PluginName, FormID) : format(L"{0}/{1:03X}", PluginName, FormID);
+        spdlog::warn(L"Did not find required {} textures for {}, TXST {} - setting neutral textures",
+                     ParallaxGenUtil::strToWstr(NIFUtil::getStrFromShader(AppliedShader)),
+                     BaseSlots[static_cast<int>(NIFUtil::TextureSlots::DIFFUSE)], FormIDStr);
       }
 
-      if (CurPriority < MaxPriority) {
-        // skip mods with lower priority than current winner
-        continue;
-      }
-
-      MaxPriority = CurPriority;
-      WinningMatch = Match;
-      DecisionMod = Mod;
+      NewSlots = Patchers.ShaderPatchers.at(AppliedShader)->applyNeutral(BaseSlots);
+    } else {
+      NewSlots = Patchers.ShaderPatchers.at(AppliedShader)->applyPatchSlots(BaseSlots, WinningShaderMatch.Match);
     }
 
     // Post warnings if any
-    for (const auto &CurMatchedFrom : WinningMatch.MatchedFrom) {
-      ParallaxGenWarnings::mismatchWarn(WinningMatch.MatchedPath, NewSlots[static_cast<int>(CurMatchedFrom)]);
+    for (const auto &CurMatchedFrom : WinningShaderMatch.Match.MatchedFrom) {
+      ParallaxGenWarnings::mismatchWarn(WinningShaderMatch.Match.MatchedPath,
+                                        NewSlots[static_cast<int>(CurMatchedFrom)]);
     }
 
-    ParallaxGenWarnings::meshWarn(WinningMatch.MatchedPath, NIFPath);
-
-    auto PatcherIt = std::find_if(Patchers.begin(), Patchers.end(),
-                                  [&AppliedShader](auto &P) { return (P->getShaderType() == AppliedShader); });
-
-    auto Patcher = (PatcherIt != Patchers.end()) ? (*PatcherIt).get() : nullptr;
-
-    if (Patcher != nullptr) {
-      if (WinningMatch.MatchedPath.empty()) {
-        // no shaders to apply
-        lock_guard<mutex> Lock(TXSTWarningMapMutex);
-
-        if (TXSTWarningMap.find(TXSTIndex) != TXSTWarningMap.end() && TXSTWarningMap[TXSTIndex] == AppliedShader) {
-          // Warning already issued
-        } else {
-          TXSTWarningMap[TXSTIndex] = AppliedShader;
-          const auto [FormID, PluginName] = libGetTXSTFormID(TXSTIndex);
-
-          // todo: implement ESL flagged
-          const bool bESLFlagged = false;
-          const wstring FormIDStr =
-              (!bESLFlagged) ? format(L"{}/{:06X}", PluginName, FormID) : format(L"{0}/{1:03X}", PluginName, FormID);
-          spdlog::warn(L"Did not find required {} textures for {}, TXST {} - setting neutral textures",
-                       ParallaxGenUtil::strToWstr(NIFUtil::getStrFromShader(AppliedShader)),
-                       BaseSlots[static_cast<int>(NIFUtil::TextureSlots::DIFFUSE)], FormIDStr);
-        }
-
-        NewSlots = Patcher->applyNeutral(BaseSlots);
-      } else {
-        NewSlots = Patcher->applyPatchSlots(BaseSlots, WinningMatch);
-      }
-    }
+    ParallaxGenWarnings::meshWarn(WinningShaderMatch.Match.MatchedPath, NIFPath);
 
     // Check if oldprefix is the same as newprefix
     bool FoundDiff = false;

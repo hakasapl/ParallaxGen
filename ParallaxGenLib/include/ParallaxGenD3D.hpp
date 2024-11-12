@@ -73,8 +73,7 @@ public:
                                               const std::filesystem::path &EnvMap) -> DirectX::ScratchImage;
 
   // Checks if the aspect ratio of two DDS files match
-  auto checkIfAspectRatioMatches(const std::filesystem::path &DDSPath1, const std::filesystem::path &DDSPath2,
-                                 bool &CheckAspect) -> ParallaxGenTask::PGResult;
+  auto checkIfAspectRatioMatches(const std::filesystem::path &DDSPath1, const std::filesystem::path &DDSPath2) -> bool;
 
   // Gets the error message from an HRESULT for logging
   static auto getHRESULTErrorMessage(HRESULT HR) -> std::string;

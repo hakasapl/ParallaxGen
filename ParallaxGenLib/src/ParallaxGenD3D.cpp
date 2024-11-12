@@ -287,8 +287,7 @@ auto ParallaxGenD3D::countAlphaValuesCPU(const DirectX::ScratchImage &Image, con
 }
 
 auto ParallaxGenD3D::checkIfAspectRatioMatches(const std::filesystem::path &DDSPath1,
-                                               const std::filesystem::path &DDSPath2,
-                                               bool &CheckAspect) -> ParallaxGenTask::PGResult {
+                                               const std::filesystem::path &DDSPath2) -> bool {
 
   ParallaxGenTask::PGResult PGResult{};
 
@@ -296,13 +295,13 @@ auto ParallaxGenD3D::checkIfAspectRatioMatches(const std::filesystem::path &DDSP
   DirectX::TexMetadata DDSImageMeta1{};
   PGResult = getDDSMetadata(DDSPath1, DDSImageMeta1);
   if (PGResult != ParallaxGenTask::PGResult::SUCCESS) {
-    return PGResult;
+    return false;
   }
 
   DirectX::TexMetadata DDSImageMeta2{};
   PGResult = getDDSMetadata(DDSPath2, DDSImageMeta2);
   if (PGResult != ParallaxGenTask::PGResult::SUCCESS) {
-    return PGResult;
+    return false;
   }
 
   // calculate aspect ratios
@@ -310,9 +309,7 @@ auto ParallaxGenD3D::checkIfAspectRatioMatches(const std::filesystem::path &DDSP
   const float AspectRatio2 = static_cast<float>(DDSImageMeta2.width) / static_cast<float>(DDSImageMeta2.height);
 
   // check if aspect ratios don't match
-  CheckAspect = AspectRatio1 == AspectRatio2;
-
-  return ParallaxGenTask::PGResult::SUCCESS;
+  return AspectRatio1 == AspectRatio2;
 }
 
 //

@@ -3,14 +3,13 @@
 #include <mutex>
 #include <unordered_set>
 
-#include "ParallaxGenConfig.hpp"
 #include "ParallaxGenDirectory.hpp"
 
 class ParallaxGenWarnings {
 private:
   // Dependency objects
   static ParallaxGenDirectory *PGD; /** Pointer to initialized ParallaxGenDirectory object */
-  static ParallaxGenConfig *PGC;    /** Pointer to initialized ParallaxGenConfig object */
+  static const std::unordered_map<std::wstring, int> *ModPriority; /** Pointer to initialized ModPriority object */
 
   /**
    * @brief Struct that stores hash function for pair of wstrings (used for trackers)
@@ -44,7 +43,7 @@ public:
    * @param PGD pointer to initialized ParallaxGenDirectory instance
    * @param PGC pointer to initialized ParallaxGenConfig instance
    */
-  static void init(ParallaxGenDirectory *PGD, ParallaxGenConfig *PGC);
+  static void init(ParallaxGenDirectory *PGD, const std::unordered_map<std::wstring, int> *ModPriority);
 
   /**
    * @brief Posts warning about a mismatch between diffuse/normal and a matched path. Will not repost the same warning.

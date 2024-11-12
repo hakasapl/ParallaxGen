@@ -2,12 +2,18 @@
 
 ## [0.7.0] - UNRELEASED
 
-- Added a mod manager priority system with UI
+- Added a launcher GUI
+- All CLI arguments except --autostart and -v/-vv have been removed in favor of the persistent GUI
+- Added a mod manager priority conflict resolution system with UI
 - Complex material will set env map scale to 1.0 now
 - Fixed PBR bug when there were two overlapping matches
 - Default textures are applied when TXST record cannot be patched for a shader
 - Output directory will only delete items that parallaxgen might have generates (meshes folder, textures folder, PG files)
 - BSLODTriShapes are now patched too
+- Upgrade shaders only upgrades what is required now
+- If user does not have .NET framework an error is posted now
+- PBR ignore Skin Tint and Face Tint types now
+- meta.ini is not deleted when deleting previous output
 
 ## [0.6.0] - 2024-10-06
 

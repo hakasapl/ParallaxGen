@@ -1,34 +1,27 @@
 #pragma once
 
+#include <Geometry.hpp>
 #include <NifFile.hpp>
 
 #include <vector>
 
 #include "NIFUtil.hpp"
-#include "ParallaxGenConfig.hpp"
-#include "ParallaxGenD3D.hpp"
-#include "ParallaxGenDirectory.hpp"
+#include "patchers/Patcher.hpp"
 
-class PatcherShader {
-private:
-  // Instance vars
-  std::filesystem::path NIFPath;
-  nifly::NifFile *NIF;
-  std::string PatcherName;
-  NIFUtil::ShapeShader ShaderType;
-
-  // Static Tools
-  static ParallaxGenDirectory *PGD;
-  static ParallaxGenD3D *PGD3D;
-
-protected:
-  [[nodiscard]] auto getNIFPath() const -> std::filesystem::path;
-  [[nodiscard]] auto getNIF() const -> nifly::NifFile *;
-
+/**
+ * @class PatcherShader
+ * @brief Base class for shader patchers
+ */
+class PatcherShader : public Patcher {
 public:
-  [[nodiscard]] auto getPatcherName() const -> std::string;
-  [[nodiscard]] auto getShaderType() const -> NIFUtil::ShapeShader;
+  // type definitions
+  using PatcherShaderFactory = std::function<std::unique_ptr<PatcherShader>(std::filesystem::path, nifly::NifFile*)>;
+  using PatcherShaderObject = std::unique_ptr<PatcherShader>;
 
+  /**
+   * @struct PatcherMatch
+   * @brief Structure to store the matched texture and the texture slots it matched with
+   */
   struct PatcherMatch {
     std::wstring MatchedPath;                              // The path of the matched file
     std::unordered_set<NIFUtil::TextureSlots> MatchedFrom; // The texture slots that the match matched with
@@ -36,24 +29,21 @@ public:
   };
 
   // Constructors
-  PatcherShader(std::filesystem::path NIFPath, nifly::NifFile *NIF, std::string PatcherName,
-                const NIFUtil::ShapeShader &ShaderType);
+  PatcherShader(std::filesystem::path NIFPath, nifly::NifFile *NIF, std::string PatcherName);
   virtual ~PatcherShader() = default;
   PatcherShader(const PatcherShader &Other) = default;
   auto operator=(const PatcherShader &Other) -> PatcherShader & = default;
   PatcherShader(PatcherShader &&Other) noexcept = default;
   auto operator=(PatcherShader &&Other) noexcept -> PatcherShader & = default;
 
-  static void loadStatics(ParallaxGenDirectory &PGD, ParallaxGenD3D &PGD3D);
-
-  // Common helpers for all patchers
-  [[nodiscard]] static auto isSameAspectRatio(const std::filesystem::path &Texture1,
-                                              const std::filesystem::path &Texture2) -> bool;
-  [[nodiscard]] static auto isPrefixOrFile(const std::filesystem::path &Path) -> bool;
-  [[nodiscard]] static auto isFile(const std::filesystem::path &File) -> bool;
-  [[nodiscard]] static auto getFile(const std::filesystem::path &File) -> std::vector<std::byte>;
-  [[nodiscard]] static auto getSlotLookupMap(const NIFUtil::TextureSlots &Slot)
-      -> const std::map<std::wstring, std::unordered_set<NIFUtil::PGTexture, NIFUtil::PGTextureHasher>> &;
+  /**
+   * @brief Checks if a shape can be patched by this patcher (without looking at slots)
+   *
+   * @param NIFShape Shape to check
+   * @return true Shape can be patched
+   * @return false Shape cannot be patched
+   */
+  virtual auto canApply(nifly::NiShape &NIFShape) -> bool = 0;
 
   /// @brief  Methods that determine whether the patcher should apply to a shape
   /// @param[in] NIFShape shape to check

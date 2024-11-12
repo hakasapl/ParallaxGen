@@ -48,32 +48,7 @@ Plugins (mainly TXST records) will also be patched according to how the original
 
 Complex parallax has a lot of limitations that I didn't like, so I implemented shader upgrades into ParallaxGen. What this means is that by passing the [code]--upgrade-shaders[/code] argument, ParallaxGen will generate complex material environment mask files for every parallax height map you have in your load order, if an existing complex material map does not already exist. Then, when patching meshes, ParallaxGen will use those newly generated textures and enable complex material on meshes instead of complex parallax. In most cases you won't see any difference in-game between complex parallax and complex material since ParallaxGen does not add any extra data such as metalness and roughness (so you should still prefer to get complex material mods, which will). However, this will allow you to use single-pass snow shaders (ie. Vanilla or Better Dynamic Snow v3), see parallax on decals, and many more things that complex material supports where complex parallax doesn't. [b]In most cases I recommend enabling this flag always[/b]. This also fixes the dreaded blue/white distant mesh bug with parallax meshes. After running with this option the result will be NO complex parallax in your game.
 
-[size=4]Customizing ParallaxGen[/size]
-
-ParallaxGen has support for JSON configuration files in your load order. These are either designed to be shipped alongside a mod, or for a user to create in their own load order to customize ParallaxGen. JSON files are automatically merged internally so you can have as many as you want in your load order. You can name your json file anything you want and put it in the "parallaxgen" folder (<Skyrim Data Folder>/parallaxgen). The following spoiler shows the configuration file that ParallaxGen uses by default (this is loaded outside of your load order and is shipped alongside ParallaxGen). You can use windows wildcards (as shown in the default configuration), which should allow for lots of flexibility.
-
-[spoiler]
-[code]
-{
-  "dyncubemap_blocklist": [],
-  "nif_blocklist": [
-    "*\\cameras\\*",
-    "*\\decals\\*",
-    "*\\dyndolod\\*",
-    "*\\lod\\*",
-    "*\\magic\\*",
-    "*\\markers\\*",
-    "*\\mps\\*",
-    "*\\sky\\*",
-    "*\\water\\*",
-    "calientetools\\*"
-  ],
-  "texture_maps": {}
-}
-[/code]
-[/spoiler]
-
-[color=#6aa84f][size=6][center]Notes on Shader Types[/center][/size][/color]
+[color=#6aa84f][size=6][center][b]Notes on Shader Types[/b][/center][/size][/color]
 [spoiler]
 Parallax Mapping is an effect where the geometry gets more depth without using additional geometry, [url=https://www.nexusmods.com/skyrimspecialedition/mods/95134]Complex Parallax Material[/url] has good demonstration pictures. For the algorithm to work, either ENB or [url=https://www.nexusmods.com/skyrimspecialedition/mods/86492]Community Shaders[/url] with [url=https://www.nexusmods.com/skyrimspecialedition/mods/95134]Complex Parallax Material[/url] is needed. Also, parallax maps, otherwise known as height maps, are needed and shaders in the meshes need to be setup correctly. In skyrim there are three types of textures that are needed for this to work:
 
@@ -165,30 +140,8 @@ One of the main goals for ParallaxGen is to allow texture artists to worry about
 [size=6][b][center][color=#6aa84f]CLI arguments[/color][/center][/b][/size]You can add these arguments by editing the executable in MO2/Vortex. Here's what they do:
 [code]-v[/code] = Enable verbose mode - will print every NIF it patches
 [code]-vv[/code] = Trace mode - don't run this unless trying to report a bug or debugging reasons, it creates a huge amount of output that also slows down the general execution of the program
-[code]-d[/code] = Skyrim directory. If ParallaxGen is unable to automatically locate your skyrim installation you can specify it manually using -d "path/to/skyrim"
-[code]-g[/code] = game type. Defeault is "skyrimse". Other available options are "skyrim", "skyrimvr", "skyrimgog", "enderal", "enderalse"
-[code]-o[/code] = Output directory where patched meshes and textures will be stored (CANNOT be your data directory)
 [code]--autostart[/code] = Enabling this flag will skip the "Press ENTER to start generation" prompt and just start
-[code]--no-map-from-meshes[/code] = Enabling this flag will disable searching through NIFs to ID textures, which is faster, but less accurate
-[code]--no-gpu[/code] = Don't use GPU acceleration (this is slower and doesn't work in combination with --upgrade-shaders)
-[code]--no-plugin[/code] = Don't generate ParallaxGen.esp in the output
-[code]--upgrade-shaders[/code] = Enabling this flag will upgrade all complex parallax to complex material before patching meshes
-[code]--optimize-meshes[/code] = Enabling this flag will optimize generated meshes before saving (somewhat experimental)
-[code]--no-multithread[/code] = Enabling this flag will disable multithreading while processing
-[code]--high-mem[/code] = Enabling this flag requires that you have enough RAM to load every NIF in your load order at once, in exchange for faster processing
-[code]--disable-mlp[/code] = Enabling this flag will replace all MLP with complex material where possible in your load order
-[code]--no-bsa[/code] = Enabling this flag will stop ParallaxGen from reading any BSAs, and tell it to only read loose files
-[code]--no-zip[/code] = Enabling this flag will have ParallaxGen not create a zip file of the output meshes at the end of processing (this is done so you can import it into your mod manager easier), also enables --no-cleanup by default
-[code]--no-cleanup[/code] = Usually after creating the ZIP file the individual modified NIFs are deleted (in the output folder, not the data folder). Enabling this flag prevents that
-[code]--ignore-parallax[/code] = Don't generate complex parallax meshes
-[code]--ignore-complex-material[/code] = Don't generate complex material meshes
-[code]--ignore-truepbr[/code] = Don't patch any truepbr meshes
 
-[size=6][b][center][color=#6aa84f]Limitations[/color][/center][/b][/size]
-[list]
-[*]This tool has no way of determining whether the height map or environment map found matches the diffuse texture. In other words, you might have installed a mod that installs heightmap textures that don't come with existing diffuse textures and do not match each other. In game this will manifest as the parallax effect not matching the texture. The best way to avoid this is to try to ensure you don't have extraneous assets that you will not use in your load order.
-[*]ParallaxGen finds complex material by looking for _m.dds or _em.dds textures where their alpha layer is not 255 for at least half of the image. This method is very good at finding complex material, but there can always be edge cases where this app might miss one or falsely identify one.
-[/list]
 [size=6][b][center][color=#6aa84f]Linux Users[/color][/center][/b][/size]ParallaxGen mostly seems to work using proton on linux. For now, you will need the [code]--no-zip[/code] CLI argument and create the zip file yourself. None of the GPU features work yet as well so pass [code]--no-gpu[/code]. I am looking for ways to improve the experience on Linux but everything else seems to work properly for now. I do intend to spin up a Linux dev machine soon to figure out full proton compatibility so linux users can enjoy ParallaxGen the same. Thank you [url=https://next.nexusmods.com/profile/ThePrincessKing/about-me]ThePrincessKing[/url] for your help with testing on Linux!
 
 [size=6][center][color=#6aa84f][b]Contributors[/b][/color][/center][/size]This is an open-source project. We would love to have others contribute as well; check out the project's [url=https://github.com/hakasapl/ParallaxGen]GitHub page[/url] for more information. The following authors have contributed to ParallaxGen:

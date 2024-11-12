@@ -18,10 +18,18 @@ auto PatcherComplexMaterial::loadStatics(const bool &DisableMLP,
   PatcherComplexMaterial::DisableMLP = DisableMLP;
 }
 
-PatcherComplexMaterial::PatcherComplexMaterial(filesystem::path NIFPath, nifly::NifFile *NIF)
-    : PatcherShader(std::move(NIFPath), NIF, "ComplexMaterial", NIFUtil::ShapeShader::COMPLEXMATERIAL) {}
+auto PatcherComplexMaterial::getFactory() -> PatcherShader::PatcherShaderFactory {
+  return [](const filesystem::path &NIFPath, nifly::NifFile *NIF) -> unique_ptr<PatcherShader> {
+    return make_unique<PatcherComplexMaterial>(NIFPath, NIF);
+  };
+}
 
-auto PatcherComplexMaterial::shouldApply(NiShape &NIFShape, std::vector<PatcherMatch> &Matches) -> bool {
+auto PatcherComplexMaterial::getShaderType() -> NIFUtil::ShapeShader { return NIFUtil::ShapeShader::COMPLEXMATERIAL; }
+
+PatcherComplexMaterial::PatcherComplexMaterial(filesystem::path NIFPath, nifly::NifFile *NIF)
+    : PatcherShader(std::move(NIFPath), NIF, "ComplexMaterial") {}
+
+auto PatcherComplexMaterial::canApply(NiShape &NIFShape) -> bool {
   // Prep
   Logger::trace(L"Starting checking");
 
@@ -44,24 +52,17 @@ auto PatcherComplexMaterial::shouldApply(NiShape &NIFShape, std::vector<PatcherM
     return false;
   }
 
-  // Get slots
-  auto OldSlots = NIFUtil::getTextureSlots(getNIF(), &NIFShape);
-  if (shouldApply(OldSlots, Matches)) {
-    for (const auto &MatchedPath : Matches) {
-      Logger::trace(L"Found CM map: {}", MatchedPath.MatchedPath);
-    }
-  } else {
-    Logger::trace(L"No CM map found");
-    return false;
-  }
-
   Logger::trace(L"Shape Accepted");
   return true;
 }
 
+auto PatcherComplexMaterial::shouldApply(nifly::NiShape &NIFShape, std::vector<PatcherMatch> &Matches) -> bool {
+  return shouldApply(NIFUtil::getTextureSlots(getNIF(), &NIFShape), Matches);
+}
+
 auto PatcherComplexMaterial::shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
                                          std::vector<PatcherMatch> &Matches) -> bool {
-  static const auto CMBaseMap = getSlotLookupMap(NIFUtil::TextureSlots::ENVMASK);
+  static const auto CMBaseMap = getPGD()->getTextureMapConst(NIFUtil::TextureSlots::ENVMASK);
 
   Matches.clear();
 
@@ -75,7 +76,7 @@ auto PatcherComplexMaterial::shouldApply(const std::array<std::wstring, NUM_TEXT
   NIFUtil::TextureSlots MatchedFromSlot = NIFUtil::TextureSlots::NORMAL;
   for (int Slot : SlotSearch) {
     BaseMap = OldSlots[Slot];
-    if (BaseMap.empty() || !isFile(BaseMap)) {
+    if (BaseMap.empty() || !getPGD()->isFile(BaseMap)) {
       continue;
     }
 
@@ -91,7 +92,7 @@ auto PatcherComplexMaterial::shouldApply(const std::array<std::wstring, NUM_TEXT
 
   PatcherMatch LastMatch; // Variable to store the match that equals OldSlots[Slot], if found
   for (const auto &Match : FoundMatches) {
-    if (isSameAspectRatio(BaseMap, Match.Path)) {
+    if (getPGD3D()->checkIfAspectRatioMatches(BaseMap, Match.Path)) {
       PatcherMatch CurMatch;
       CurMatch.MatchedPath = Match.Path;
       CurMatch.MatchedFrom.insert(MatchedFromSlot);

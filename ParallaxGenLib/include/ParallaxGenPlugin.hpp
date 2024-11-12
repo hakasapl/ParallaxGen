@@ -7,9 +7,8 @@
 
 #include "BethesdaGame.hpp"
 #include "NIFUtil.hpp"
-#include "ParallaxGenConfig.hpp"
 #include "ParallaxGenDirectory.hpp"
-#include "patchers/PatcherShader.hpp"
+#include "patchers/PatcherUtil.hpp"
 
 #define LOG_POLL_INTERVAL 1000
 
@@ -70,10 +69,9 @@ private:
   static void logMessages();
 
   static ParallaxGenDirectory *PGD;
-  static ParallaxGenConfig *PGC;
 
 public:
-  static void loadStatics(ParallaxGenDirectory *PGD, ParallaxGenConfig *PGC);
+  static void loadStatics(ParallaxGenDirectory *PGD);
 
   static void initialize(const BethesdaGame &Game);
 
@@ -89,7 +87,8 @@ public:
   /// @param[out] NewSlots textures that were assigned to the texture set slots
   static void processShape(const NIFUtil::ShapeShader &AppliedShader, const std::wstring &NIFPath,
                            const std::wstring &Name3D, const int &Index3DOld, const int &Index3DNew,
-                           const std::vector<std::unique_ptr<PatcherShader>> &Patchers,
+                           const PatcherUtil::PatcherObjectSet &Patchers,
+                           const std::unordered_map<std::wstring, int> *ModPriority,
                            std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots);
 
   static void savePlugin(const std::filesystem::path &OutputDir);
