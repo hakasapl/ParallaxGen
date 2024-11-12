@@ -136,6 +136,7 @@ set (TESTS
   "tests/BethesdaGameTests.cpp"
   "tests/BethesdaDirectoryTests.cpp"
   "tests/ParallaxGenDirectoryTests.cpp"
+  "tests/ParallaxGenD3DTests.cpp"
   "tests/BethesdaGameTestsSkyrimSEInstalled.cpp"
   "tests/NIFUtilTests.cpp")
 

@@ -169,6 +169,10 @@ auto ParallaxGenD3D::checkIfCM(const filesystem::path &DDSPath, bool &Result) ->
 }
 
 auto ParallaxGenD3D::countAlphaValuesGPU(const DirectX::ScratchImage &Image) -> int {
+  if (!PtrContext || !PtrDevice || !ShaderCountAlphaValues) {
+    throw runtime_error("GPU not initialized");
+  } 
+
   // Create GPU texture
   ComPtr<ID3D11Texture2D> InputTex;
   if (createTexture2D(Image, InputTex) != ParallaxGenTask::PGResult::SUCCESS) {
@@ -420,6 +424,14 @@ auto ParallaxGenD3D::createComputeShader(const wstring &ShaderPath,
 auto ParallaxGenD3D::upgradeToComplexMaterial(const std::filesystem::path &ParallaxMap,
                                               const std::filesystem::path &EnvMap) -> DirectX::ScratchImage {
 
+  if (!UseGPU) {
+    throw runtime_error("GPU needed to upgrade to complex material");
+  }
+
+  if (!PtrContext || !PtrDevice || !ShaderMergeToComplexMaterial)
+  {
+    throw runtime_error("GPU was not initialized");
+  }
   lock_guard<mutex> Lock(UpgradeCMMutex);
 
   ParallaxGenTask::PGResult PGResult{};
@@ -429,9 +441,6 @@ auto ParallaxGenD3D::upgradeToComplexMaterial(const std::filesystem::path &Paral
 
   // Check if any texture was supplied
   if (!ParallaxExists && !EnvExists) {
-    spdlog::error(L"Unable to upgrade to complex material, no textures supplied. {} and "
-                  L"{}",
-                  ParallaxMap.wstring(), EnvMap.wstring());
     return {};
   }
 
