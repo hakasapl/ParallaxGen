@@ -14,9 +14,9 @@
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenTask.hpp"
 
-#define NUM_GPU_THREADS 16
-#define GPU_BUFFER_SIZE_MULTIPLE 16
-#define MAX_CHANNEL_VALUE 255
+constexpr unsigned NUM_GPU_THREADS = 16;
+constexpr unsigned GPU_BUFFER_SIZE_MULTIPLE = 16;
+constexpr unsigned MAX_CHANNEL_VALUE = 255;
 
 class ParallaxGenD3D {
 private:
