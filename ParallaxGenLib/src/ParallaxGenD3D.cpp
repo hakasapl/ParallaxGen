@@ -174,7 +174,7 @@ auto ParallaxGenD3D::checkIfCM(const filesystem::path &DDSPath, bool &Result) ->
 auto ParallaxGenD3D::countAlphaValuesGPU(const DirectX::ScratchImage &Image) -> int {
   if (!PtrContext || !PtrDevice || !ShaderCountAlphaValues) {
     throw runtime_error("GPU not initialized");
-  } 
+  }
 
   // Create GPU texture
   ComPtr<ID3D11Texture2D> InputTex;

@@ -34,15 +34,15 @@ protected:
   unique_ptr<ParallaxGenD3D> PGD3D;
 };
 
-TEST_P(ParallaxGenD3DTest, TextureTests) { 
+TEST_P(ParallaxGenD3DTest, TextureTests) {
     const unordered_set<wstring> BSAExcludes{L"Skyrim - Textures5.bsa"};
     PGD->populateFileMap(false); // includeBSAs = false, only loose files
-    PGD->mapFiles({}, {}, BSAExcludes, false); // MapFromMeshes = false, map only based on texture name for quick test runs and less dependency to PGD in this test
+    PGD->mapFiles({}, {}, BSAExcludes, true); // MapFromMeshes = false, map only based on texture name for quick test runs and less dependency to PGD in this test
 
     EXPECT_THROW(PGD3D->findCMMaps(BSAExcludes), runtime_error);
     EXPECT_THROW(PGD3D->upgradeToComplexMaterial("", ""), runtime_error);
 
-    PGD3D->initGPU(); 
+    PGD3D->initGPU();
 
     // make sure before conversion the type is ENVMASK and after the conversion COMPLEXMATERIAL
     auto EnvMaskMap = PGD->getTextureMapConst(NIFUtil::TextureSlots::ENVMASK);
