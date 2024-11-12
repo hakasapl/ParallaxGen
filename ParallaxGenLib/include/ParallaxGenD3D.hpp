@@ -71,9 +71,9 @@ public:
   /// @return result of the operation
   auto findCMMaps(const std::unordered_set<std::wstring>& BSAExcludes) -> ParallaxGenTask::PGResult;
 
-  /// @brief Attempt to upgrade vanilla parallax to complex material in the ouput directory
+  /// @brief Create a complex material map from the given textures
   /// @param ParallaxMap relative path to the height map in the data directory
-  /// @param EnvMap relative path to the env map in the data directory that should be created
+  /// @param EnvMap relative path to the env map mask in the data directory
   /// @return DirectX scratch image, format DXGI_FORMAT_BC3_UNORM on success, otherwise empty ScratchImage
   [[nodiscard]] auto upgradeToComplexMaterial(const std::filesystem::path &ParallaxMap,
                                               const std::filesystem::path &EnvMap) -> DirectX::ScratchImage;
