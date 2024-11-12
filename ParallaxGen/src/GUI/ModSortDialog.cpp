@@ -53,7 +53,9 @@ ModSortDialog::ModSortDialog(const std::vector<std::wstring> &Mods, const std::v
   // Add wrapped message at the top
   static const std::wstring Message = L"The following mods have been detected as potential conflicts. Please set the "
                                       L"priority order for these mods. Mods that are highlighted in green are new mods "
-                                      L"that do not exist in the saved order and may need to be sorted.";
+                                      L"that do not exist in the saved order and may need to be sorted. Mods "
+                                      L"highlighted in yellow conflict with the currently selected mod. Higher "
+                                      L"priority mods win over lower priority mods";
   // Create the wxStaticText and set wrapping
   auto *MessageText = new wxStaticText(this, wxID_ANY, Message, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
   MessageText->Wrap(TotalWidth - 40); // Adjust wrapping width
