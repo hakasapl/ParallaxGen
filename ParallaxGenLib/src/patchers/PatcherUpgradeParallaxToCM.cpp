@@ -11,6 +11,8 @@
 
 using namespace std;
 
+mutex PatcherUpgradeParallaxToCM::UpgradeCMMutex;
+
 auto PatcherUpgradeParallaxToCM::getFactory() -> PatcherShaderTransform::PatcherShaderTransformFactory {
   return [](filesystem::path NIFPath, nifly::NifFile *NIF) -> PatcherShaderTransformObject {
     return make_unique<PatcherUpgradeParallaxToCM>(std::move(NIFPath), NIF);

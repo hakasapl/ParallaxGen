@@ -10,7 +10,7 @@
  */
 class PatcherUpgradeParallaxToCM : public PatcherShaderTransform {
 private:
-  std::mutex UpgradeCMMutex; /** < Mutex for the upgrade to CM */
+  static std::mutex UpgradeCMMutex; /** < Mutex for the upgrade to CM */
 
 public:
   /**
