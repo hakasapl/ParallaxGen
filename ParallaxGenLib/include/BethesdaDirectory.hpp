@@ -69,6 +69,7 @@ private:
   std::filesystem::path GeneratedDir;                    /**< Stores the path to the generated directory */
   std::map<std::filesystem::path, BethesdaFile> FileMap; /** < Stores the file map for every file found in the load
                                                             order. Key is a lowercase path, value is a BethesdaFile */
+  std::mutex FileMapMutex;                               /** < Mutex for the file map */
   std::vector<ModFile> ModFiles;  /** < Stores files in mod staging directory */
 
   std::unordered_map<std::filesystem::path, std::vector<std::byte>> FileCache; /** < Stores a cache of file bytes */
@@ -167,7 +168,7 @@ public:
    * @return true if file is a loose file
    * @return false if file is not a loose file or doesn't exist
    */
-  [[nodiscard]] auto isLooseFile(const std::filesystem::path &RelPath) const -> bool;
+  [[nodiscard]] auto isLooseFile(const std::filesystem::path &RelPath) -> bool;
 
   /**
    * @brief Check if a file in the load order is a file from a BSA
@@ -176,7 +177,7 @@ public:
    * @return true if file is a BSA file
    * @return false if file is not a BSA file or doesn't exist
    */
-  [[nodiscard]] auto isBSAFile(const std::filesystem::path &RelPath) const -> bool;
+  [[nodiscard]] auto isBSAFile(const std::filesystem::path &RelPath) -> bool;
 
   /**
    * @brief Check if a file exists in the load order
@@ -185,7 +186,7 @@ public:
    * @return true if file exists in the load order
    * @return false if file does not exist in the load order
    */
-  [[nodiscard]] auto isFile(const std::filesystem::path &RelPath) const -> bool;
+  [[nodiscard]] auto isFile(const std::filesystem::path &RelPath) -> bool;
 
   /**
    * @brief Check if a file is a generated file
@@ -194,7 +195,7 @@ public:
    * @return true if file is generated
    * @return false if file is not generated
    */
-  [[nodiscard]] auto isGenerated(const std::filesystem::path &RelPath) const -> bool;
+  [[nodiscard]] auto isGenerated(const std::filesystem::path &RelPath) -> bool;
 
   /**
    * @brief Check if file is a directory
@@ -203,7 +204,7 @@ public:
    * @return true if file is a directory
    * @return false if file is not a directory or doesn't exist
    */
-  [[nodiscard]] auto isPrefix(const std::filesystem::path &RelPath) const -> bool;
+  [[nodiscard]] auto isPrefix(const std::filesystem::path &RelPath) -> bool;
 
   /**
    * @brief Get the full path of a loose file in the load order
@@ -211,7 +212,7 @@ public:
    * @param RelPath path to the file relative to the data directory
    * @return std::filesystem::path absolute path to the file
    */
-  [[nodiscard]] auto getLooseFileFullPath(const std::filesystem::path &RelPath) const -> std::filesystem::path;
+  [[nodiscard]] auto getLooseFileFullPath(const std::filesystem::path &RelPath) -> std::filesystem::path;
 
   /**
    * @brief Find files in the load order
@@ -351,7 +352,7 @@ private:
    * @param FilePath Path to get the object for
    * @return BethesdaFile object of file in load order
    */
-  [[nodiscard]] auto getFileFromMap(const std::filesystem::path &FilePath) const -> BethesdaFile;
+  [[nodiscard]] auto getFileFromMap(const std::filesystem::path &FilePath) -> BethesdaFile;
 
   /**
    * @brief Update the file map with
