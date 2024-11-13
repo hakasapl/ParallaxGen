@@ -126,13 +126,13 @@ auto ParallaxGenPlugin::libGetMatchingTXSTObjs(const wstring &NIFName, const wst
   lock_guard<mutex> Lock(LibMutex);
 
   int Length = 0;
-  GetMatchingTXSTObjsLength(NIFName.c_str(), Name3D.c_str(), Index3D, &Length);
+  GetMatchingTXSTObjs(NIFName.c_str(), Name3D.c_str(), Index3D, nullptr, nullptr, &Length);
   libLogMessageIfExists();
   libThrowExceptionIfExists();
 
   vector<int> TXSTIdArray(Length);
   vector<int> AltTexIdArray(Length);
-  GetMatchingTXSTObjs(NIFName.c_str(), Name3D.c_str(), Index3D, TXSTIdArray.data(), AltTexIdArray.data());
+  GetMatchingTXSTObjs(NIFName.c_str(), Name3D.c_str(), Index3D, TXSTIdArray.data(), AltTexIdArray.data(), nullptr);
   libLogMessageIfExists();
   libThrowExceptionIfExists();
 
@@ -249,6 +249,8 @@ unordered_map<int, NIFUtil::ShapeShader> ParallaxGenPlugin::TXSTWarningMap; // N
 
 ParallaxGenDirectory *ParallaxGenPlugin::PGD;
 
+mutex ParallaxGenPlugin::ProcessShapeMutex;
+
 void ParallaxGenPlugin::loadStatics(ParallaxGenDirectory *PGD) { ParallaxGenPlugin::PGD = PGD; }
 
 void ParallaxGenPlugin::initialize(const BethesdaGame &Game) {
@@ -276,7 +278,9 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
     return;
   }
 
-  auto Matches = libGetMatchingTXSTObjs(NIFPath, Name3D, Index3DOld);
+  lock_guard<mutex> Lock(ProcessShapeMutex);
+
+  const auto Matches = libGetMatchingTXSTObjs(NIFPath, Name3D, Index3DOld);
 
   // loop through matches
   for (const auto &[TXSTIndex, AltTexIndex] : Matches) {

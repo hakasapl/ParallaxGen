@@ -70,6 +70,8 @@ private:
 
   static ParallaxGenDirectory *PGD;
 
+  static std::mutex ProcessShapeMutex;
+
 public:
   static void loadStatics(ParallaxGenDirectory *PGD);
 

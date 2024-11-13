@@ -56,7 +56,7 @@ public static class MessageHandler
     // 3: Warning
     // 4: Error
     // 5: Critical
-    LogQueue.Enqueue(new Tuple<string, int>(message, level));
+    LogQueue.Enqueue(new Tuple<string, int>("[ParallaxGenMutagenWrapper] " + message, level));
   }
 
   [UnmanagedCallersOnly(EntryPoint = "GetLogMessage", CallConvs = [typeof(CallConvCdecl)])]
@@ -141,9 +141,9 @@ public class PGMutagen
     try
     {
       string dataPath = Marshal.PtrToStringUni(dataPathPtr) ?? string.Empty;
-      MessageHandler.Log("ParallaxGenMutagenWrapper | Initialize | Data Path: " + dataPath, 0);
+      MessageHandler.Log("[Initialize] Data Path: " + dataPath, 0);
       string outputPlugin = Marshal.PtrToStringUni(outputPluginPtr) ?? string.Empty;
-      MessageHandler.Log("ParallaxGenMutagenWrapper | Initialize | Output Plugin: " + dataPath, 0);
+      MessageHandler.Log("[Initialize] Output Plugin: " + dataPath, 0);
 
       // check if loadorder is defined
       if (loadOrder is not null)
@@ -263,8 +263,12 @@ public class PGMutagen
         throw new Exception("Initialize must be called before PopulateObjs");
       }
 
-      TXSTObjs = [.. Env.LoadOrder.PriorityOrder.TextureSet().WinningOverrides()];
-      MessageHandler.Log("ParallaxGenMutagenWrapper | PopulateObjs | Number of TXST Records Found: " + TXSTObjs.Count, 0);
+      TXSTObjs = [];
+      foreach (var textureSet in Env.LoadOrder.PriorityOrder.TextureSet().WinningOverrides())
+      {
+        MessageHandler.Log("[PopulateObjs] Adding TXST record as index " + TXSTObjs.Count + ": " + GetRecordDesc(textureSet), 0);
+        TXSTObjs.Add(textureSet);
+      }
 
       TXSTRefs = [];
       foreach (var txstRefObj in EnumerateModelRecords())
@@ -275,6 +279,7 @@ public class PGMutagen
         if (ModelRecs.Count == 0)
         {
           // Skip if there is nothing to search
+          MessageHandler.Log("[PopulateObjs] No models found for record: " + GetRecordDesc(txstRefObj), 0);
           continue;
         }
 
@@ -285,15 +290,17 @@ public class PGMutagen
           if (modelRec.AlternateTextures is null)
           {
             // no alternate textures
+            MessageHandler.Log("[PopulateObjs] No alternate textures found for a model record: " + GetRecordDesc(txstRefObj), 0);
             continue;
           }
 
           if (!CopiedRecord)
           {
-            // Deep copy major record
+            // Deep copy major recor
             try
             {
-              ModelCopies.Add(txstRefObj.DeepCopy());
+              var DeepCopy = txstRefObj.DeepCopy();
+              ModelCopies.Add(DeepCopy);
             }
             catch (Exception)
             {
@@ -312,6 +319,8 @@ public class PGMutagen
           nifName = nifName.ToLower();
           nifName = AddPrefixIfNotExists("meshes\\", nifName);
 
+          MessageHandler.Log("[PopulateObjs] NIF Name '" + nifName + "' found in model record in record " + GetRecordDesc(txstRefObj), 0);
+
           foreach (var alternateTexture in modelRec.AlternateTextures)
           {
             // Add to global
@@ -323,6 +332,8 @@ public class PGMutagen
             var newTXST = alternateTexture.NewTexture;
 
             var key = new Tuple<string, string, int>(nifName, name3D, index3D);
+
+            MessageHandler.Log("[PopulateObjs] Adding to AltTexRefs as index " + AltTexId + ": " + key.ToString(), 0);
 
             int newTXSTIndex = TXSTObjs.FindIndex(x => x.FormKey == newTXST.FormKey);
             if (newTXSTIndex < 0)
@@ -345,7 +356,7 @@ public class PGMutagen
                 TXSTRefs[key] = [];
               }
               TXSTRefs[key].Add(new Tuple<int, int>(newTXSTIndex, AltTexId));
-              MessageHandler.Log("ParallaxGenMutagenWrapper | PopulateObjs | Adding Alt Tex Reference: " + key.ToString() + " -> " + GetRecordDesc(newTXSTObj), 0);
+              MessageHandler.Log("[PopulateObjs] Adding Alt Tex Reference: " + key.ToString() + " -> " + GetRecordDesc(newTXSTObj), 0);
 
               AltTexParents[AltTexId] = DCIdx;
             }
@@ -376,182 +387,182 @@ public class PGMutagen
         if (ModifiedRecord is Mutagen.Bethesda.Skyrim.Activator)
         {
           OutMod.Activators.Add((Mutagen.Bethesda.Skyrim.Activator)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Activator: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Activator: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Ammunition)
         {
           OutMod.Ammunitions.Add((Ammunition)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Ammunition: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Ammunition: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is AnimatedObject)
         {
           OutMod.AnimatedObjects.Add((AnimatedObject)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Animated Object: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Animated Object: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Armor)
         {
           OutMod.Armors.Add((Armor)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Armor: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Armor: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is ArmorAddon)
         {
           OutMod.ArmorAddons.Add((ArmorAddon)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Armor Addon: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Armor Addon: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is ArtObject)
         {
           OutMod.ArtObjects.Add((ArtObject)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Art Object: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Art Object: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is BodyPartData)
         {
           OutMod.BodyParts.Add((BodyPartData)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Body Part Data: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Body Part Data: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Book)
         {
           OutMod.Books.Add((Book)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Book: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Book: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is CameraShot)
         {
           OutMod.CameraShots.Add((CameraShot)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Camera Shot: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Camera Shot: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Climate)
         {
           OutMod.Climates.Add((Climate)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Climate: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Climate: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Container)
         {
           OutMod.Containers.Add((Container)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Container: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Container: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Door)
         {
           OutMod.Doors.Add((Door)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Door: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Door: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Explosion)
         {
           OutMod.Explosions.Add((Explosion)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Explosion: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Explosion: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Flora)
         {
           OutMod.Florae.Add((Flora)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Flora: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Flora: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Furniture)
         {
           OutMod.Furniture.Add((Furniture)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Furniture: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Furniture: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Grass)
         {
           OutMod.Grasses.Add((Grass)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Grass: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Grass: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Hazard)
         {
           OutMod.Hazards.Add((Hazard)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Hazard: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Hazard: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is HeadPart)
         {
           OutMod.HeadParts.Add((HeadPart)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Head Part: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Head Part: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is IdleMarker)
         {
           OutMod.IdleMarkers.Add((IdleMarker)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Idle Marker: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Idle Marker: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Impact)
         {
           OutMod.Impacts.Add((Impact)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Impact: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Impact: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Ingestible)
         {
           OutMod.Ingestibles.Add((Ingestible)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Ingestible: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Ingestible: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Ingredient)
         {
           OutMod.Ingredients.Add((Ingredient)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Ingredient: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Ingredient: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Key)
         {
           OutMod.Keys.Add((Key)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Key: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Key: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is LeveledNpc)
         {
           OutMod.LeveledNpcs.Add((LeveledNpc)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Leveled NPC: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Leveled NPC: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Light)
         {
           OutMod.Lights.Add((Light)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Light: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Light: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is MaterialObject)
         {
           OutMod.MaterialObjects.Add((MaterialObject)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Material Object: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Material Object: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is MiscItem)
         {
           OutMod.MiscItems.Add((MiscItem)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Misc Item: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Misc Item: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is MoveableStatic)
         {
           OutMod.MoveableStatics.Add((MoveableStatic)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Moveable Static: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Moveable Static: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Projectile)
         {
           OutMod.Projectiles.Add((Projectile)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Projectile: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Projectile: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Scroll)
         {
           OutMod.Scrolls.Add((Scroll)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Scroll: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Scroll: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is SoulGem)
         {
           OutMod.SoulGems.Add((SoulGem)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Soul Gem: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Soul Gem: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Static)
         {
           OutMod.Statics.Add((Static)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Static: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Static: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is TalkingActivator)
         {
           OutMod.TalkingActivators.Add((TalkingActivator)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Talking Activator: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Talking Activator: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Tree)
         {
           OutMod.Trees.Add((Tree)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Tree: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Tree: " + GetRecordDesc(ModifiedRecord), 0);
         }
         else if (ModifiedRecord is Weapon)
         {
           OutMod.Weapons.Add((Weapon)ModifiedRecord);
-          MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Adding Weapon: " + GetRecordDesc(ModifiedRecord), 0);
+          MessageHandler.Log("[Finalize] Adding Weapon: " + GetRecordDesc(ModifiedRecord), 0);
         }
       }
 
       // Write the output plugin
-      MessageHandler.Log("ParallaxGenMutagenWrapper | Finalize | Writing Output Plugin", 0);
+      MessageHandler.Log("[Finalize] Writing Output Plugin", 0);
       string outputPath = Marshal.PtrToStringUni(outputPathPtr) ?? string.Empty;
       OutMod?.WriteToBinary(Path.Combine(outputPath, OutMod.ModKey.FileName),
           new BinaryWriteParameters()
@@ -565,44 +576,14 @@ public class PGMutagen
     }
   }
 
-  [UnmanagedCallersOnly(EntryPoint = "GetMatchingTXSTObjsLength", CallConvs = new[] { typeof(CallConvCdecl) })]
-  public static unsafe void GetMatchingTXSTObjsLength(
-    [DNNE.C99Type("const wchar_t*")] IntPtr nifNamePtr,
-    [DNNE.C99Type("const wchar_t*")] IntPtr name3DPtr,
-    [DNNE.C99Type("const int")] int index3D,
-    [DNNE.C99Type("int*")] int* length)
-  {
-    try
-    {
-      *length = 0;
-      if (TXSTRefs is null)
-      {
-        throw new Exception("PopulateObjs must be called before GetMatchingTXSTObjsLength");
-      }
-
-      string nifName = Marshal.PtrToStringUni(nifNamePtr) ?? string.Empty;
-      string name3D = Marshal.PtrToStringUni(name3DPtr) ?? string.Empty;
-      var key = new Tuple<string, string, int>(nifName, name3D, index3D);
-
-      if (TXSTRefs.ContainsKey(key))
-      {
-        *length = TXSTRefs[key].Count;
-      }
-    }
-    catch (Exception ex)
-    {
-      ExceptionHandler.SetLastException(ex);
-      *length = 0;
-    }
-  }
-
   [UnmanagedCallersOnly(EntryPoint = "GetMatchingTXSTObjs", CallConvs = [typeof(CallConvCdecl)])]
   public static unsafe void GetMatchingTXSTObjs(
     [DNNE.C99Type("const wchar_t*")] IntPtr nifNamePtr,
     [DNNE.C99Type("const wchar_t*")] IntPtr name3DPtr,
     [DNNE.C99Type("const int")] int index3D,
     [DNNE.C99Type("int*")] int* TXSTHandles,
-    [DNNE.C99Type("int*")] int* AltTexHandles)
+    [DNNE.C99Type("int*")] int* AltTexHandles,
+    [DNNE.C99Type("int*")] int* length)
   {
     try
     {
@@ -611,13 +592,31 @@ public class PGMutagen
         throw new Exception("PopulateObjs must be called before GetMatchingTXSTObjs");
       }
 
+      if (length is not null)
+      {
+        *length = 0;
+      }
+
       string nifName = Marshal.PtrToStringUni(nifNamePtr) ?? string.Empty;
       string name3D = Marshal.PtrToStringUni(name3DPtr) ?? string.Empty;
       var key = new Tuple<string, string, int>(nifName, name3D, index3D);
 
+      // Log input params
+      MessageHandler.Log("[GetMatchingTXSTObjs] Getting Matching TXST Objects for: " + key.ToString(), 0);
+
       if (TXSTRefs.ContainsKey(key))
       {
         var txstList = TXSTRefs[key];
+        if (length is not null)
+        {
+          *length = txstList.Count;
+          MessageHandler.Log("[GetMatchingTXSTObjs] Found " + txstList.Count + " Matching TXST Objects", 0);
+        }
+
+        if (TXSTHandles is null || AltTexHandles is null)
+        {
+          return;
+        }
 
         // Manually copy the elements from the list to the pointer
         for (int i = 0; i < txstList.Count; i++)
@@ -625,13 +624,17 @@ public class PGMutagen
           TXSTHandles[i] = txstList[i].Item1;
           AltTexHandles[i] = txstList[i].Item2;
 
-          MessageHandler.Log("ParallaxGenMutagenWrapper | GetMatchingTXSTObjs | Found Matching TXST: " + key.ToString() + " -> " + GetRecordDesc(TXSTObjs[txstList[i].Item1]), 0);
+          MessageHandler.Log("[GetMatchingTXSTObjs] Found Matching TXST: " + key.ToString() + " -> " + GetRecordDesc(TXSTObjs[txstList[i].Item1]), 0);
         }
       }
     }
     catch (Exception ex)
     {
       ExceptionHandler.SetLastException(ex);
+      if (length is not null)
+      {
+        *length = 0;
+      }
     }
   }
 
@@ -647,40 +650,59 @@ public class PGMutagen
         throw new Exception("Invalid TXST index or not populated");
       }
 
+      // print txst Index
+      MessageHandler.Log("[GetTXSTSlots] [TXST Index: " + txstIndex + "]", 0);
+
       var txstObj = TXSTObjs[txstIndex];
 
       // Populate the slotsArray with string pointers
       if (!txstObj.Diffuse.IsNullOrEmpty())
       {
-        slotsArray[0] = Marshal.StringToHGlobalUni(AddPrefixIfNotExists("textures\\", txstObj.Diffuse).ToLower());
+        var Diffuse = AddPrefixIfNotExists("textures\\", txstObj.Diffuse).ToLower();
+        MessageHandler.Log("[GetTXSTSlots] [TXST Index: " + txstIndex + "] Diffuse: " + Diffuse, 0);
+        slotsArray[0] = Marshal.StringToHGlobalUni(Diffuse);
       }
       if (!txstObj.NormalOrGloss.IsNullOrEmpty())
       {
-        slotsArray[1] = Marshal.StringToHGlobalUni(AddPrefixIfNotExists("textures\\", txstObj.NormalOrGloss).ToLower());
+        var NormalOrGloss = AddPrefixIfNotExists("textures\\", txstObj.NormalOrGloss).ToLower();
+        MessageHandler.Log("[GetTXSTSlots] [TXST Index: " + txstIndex + "] NormalOrGloss: " + NormalOrGloss, 0);
+        slotsArray[1] = Marshal.StringToHGlobalUni(NormalOrGloss);
       }
       if (!txstObj.GlowOrDetailMap.IsNullOrEmpty())
       {
-        slotsArray[2] = Marshal.StringToHGlobalUni(AddPrefixIfNotExists("textures\\", txstObj.GlowOrDetailMap).ToLower());
+        var GlowOrDetailMap = AddPrefixIfNotExists("textures\\", txstObj.GlowOrDetailMap).ToLower();
+        MessageHandler.Log("[GetTXSTSlots] [TXST Index: " + txstIndex + "] GlowOrDetailMap: " + GlowOrDetailMap, 0);
+        slotsArray[2] = Marshal.StringToHGlobalUni(GlowOrDetailMap);
       }
       if (!txstObj.Height.IsNullOrEmpty())
       {
-        slotsArray[3] = Marshal.StringToHGlobalUni(AddPrefixIfNotExists("textures\\", txstObj.Height).ToLower());
+        var Height = AddPrefixIfNotExists("textures\\", txstObj.Height).ToLower();
+        MessageHandler.Log("[GetTXSTSlots] [TXST Index: " + txstIndex + "] Height: " + Height, 0);
+        slotsArray[3] = Marshal.StringToHGlobalUni(Height);
       }
       if (!txstObj.Environment.IsNullOrEmpty())
       {
-        slotsArray[4] = Marshal.StringToHGlobalUni(AddPrefixIfNotExists("textures\\", txstObj.Environment).ToLower());
+        var Environment = AddPrefixIfNotExists("textures\\", txstObj.Environment).ToLower();
+        MessageHandler.Log("[GetTXSTSlots] [TXST Index: " + txstIndex + "] Environment: " + Environment, 0);
+        slotsArray[4] = Marshal.StringToHGlobalUni(Environment);
       }
       if (!txstObj.EnvironmentMaskOrSubsurfaceTint.IsNullOrEmpty())
       {
-        slotsArray[5] = Marshal.StringToHGlobalUni(AddPrefixIfNotExists("textures\\", txstObj.EnvironmentMaskOrSubsurfaceTint).ToLower());
+        var EnvironmentMaskOrSubsurfaceTint = AddPrefixIfNotExists("textures\\", txstObj.EnvironmentMaskOrSubsurfaceTint).ToLower();
+        MessageHandler.Log("[GetTXSTSlots] [TXST Index: " + txstIndex + "] EnvironmentMaskOrSubsurfaceTint: " + EnvironmentMaskOrSubsurfaceTint, 0);
+        slotsArray[5] = Marshal.StringToHGlobalUni(EnvironmentMaskOrSubsurfaceTint);
       }
       if (!txstObj.Multilayer.IsNullOrEmpty())
       {
-        slotsArray[6] = Marshal.StringToHGlobalUni(AddPrefixIfNotExists("textures\\", txstObj.Multilayer).ToLower());
+        var Multilayer = AddPrefixIfNotExists("textures\\", txstObj.Multilayer).ToLower();
+        MessageHandler.Log("[GetTXSTSlots] [TXST Index: " + txstIndex + "] Multilayer: " + Multilayer, 0);
+        slotsArray[6] = Marshal.StringToHGlobalUni(Multilayer);
       }
       if (!txstObj.BacklightMaskOrSpecular.IsNullOrEmpty())
       {
-        slotsArray[7] = Marshal.StringToHGlobalUni(AddPrefixIfNotExists("textures\\", txstObj.BacklightMaskOrSpecular).ToLower());
+        var BacklightMaskOrSpecular = AddPrefixIfNotExists("textures\\", txstObj.BacklightMaskOrSpecular).ToLower();
+        MessageHandler.Log("[GetTXSTSlots] [TXST Index: " + txstIndex + "] BacklightMaskOrSpecular: " + BacklightMaskOrSpecular, 0);
+        slotsArray[7] = Marshal.StringToHGlobalUni(BacklightMaskOrSpecular);
       }
       slotsArray[8] = IntPtr.Zero;
     }
@@ -708,10 +730,12 @@ public class PGMutagen
         throw new Exception("Initialize must be called before CreateTXSTPatch");
       }
 
+      // print txstIndex
+      MessageHandler.Log("[CreateTXSTPatch] [TXST Index: " + txstIndex + "]", 0);
+
       var origTXSTObj = TXSTObjs[txstIndex];
 
       // Create a new TXST record
-      MessageHandler.Log("ParallaxGenMutagenWrapper | CreateTXSTPatch | Creating New TXST Patch: " + GetRecordDesc(origTXSTObj), 0);
       var newTXSTObj = OutMod.TextureSets.GetOrAddAsOverride(origTXSTObj);
 
       // TODO maybe there's a way to not have to have a value for every empty value? (check old slots?)
@@ -719,42 +743,58 @@ public class PGMutagen
       string? NewDiffuse = Marshal.PtrToStringUni(slots[0]);
       if (NewDiffuse is not null)
       {
-        newTXSTObj.Diffuse = RemovePrefixIfExists("textures\\", NewDiffuse);
+        var Diffuse = RemovePrefixIfExists("textures\\", NewDiffuse);
+        MessageHandler.Log("[CreateTXSTPatch] [TXST Index: " + txstIndex + "] Diffuse: " + Diffuse, 0);
+        newTXSTObj.Diffuse = Diffuse;
       }
       string? NewNormalOrGloss = Marshal.PtrToStringUni(slots[1]);
       if (NewNormalOrGloss is not null)
       {
-        newTXSTObj.NormalOrGloss = RemovePrefixIfExists("textures\\", NewNormalOrGloss);
+        var NormalOrGloss = RemovePrefixIfExists("textures\\", NewNormalOrGloss);
+        MessageHandler.Log("[CreateTXSTPatch] [TXST Index: " + txstIndex + "] NormalOrGloss: " + NormalOrGloss, 0);
+        newTXSTObj.NormalOrGloss = NormalOrGloss;
       }
       string? NewGlowOrDetailMap = Marshal.PtrToStringUni(slots[2]);
       if (NewGlowOrDetailMap is not null)
       {
-        newTXSTObj.GlowOrDetailMap = RemovePrefixIfExists("textures\\", NewGlowOrDetailMap);
+        var GlowOrDetailMap = RemovePrefixIfExists("textures\\", NewGlowOrDetailMap);
+        MessageHandler.Log("[CreateTXSTPatch] [TXST Index: " + txstIndex + "] GlowOrDetailMap: " + GlowOrDetailMap, 0);
+        newTXSTObj.GlowOrDetailMap = GlowOrDetailMap;
       }
       string? NewHeight = Marshal.PtrToStringUni(slots[3]);
       if (NewHeight is not null)
       {
-        newTXSTObj.Height = RemovePrefixIfExists("textures\\", NewHeight);
+        var Height = RemovePrefixIfExists("textures\\", NewHeight);
+        MessageHandler.Log("[CreateTXSTPatch] [TXST Index: " + txstIndex + "] Height: " + Height, 0);
+        newTXSTObj.Height = Height;
       }
       string? NewEnvironment = Marshal.PtrToStringUni(slots[4]);
       if (NewEnvironment is not null)
       {
-        newTXSTObj.Environment = RemovePrefixIfExists("textures\\", NewEnvironment);
+        var Environment = RemovePrefixIfExists("textures\\", NewEnvironment);
+        MessageHandler.Log("[CreateTXSTPatch] [TXST Index: " + txstIndex + "] Environment: " + Environment, 0);
+        newTXSTObj.Environment = Environment;
       }
       string? NewEnvironmentMaskOrSubsurfaceTint = Marshal.PtrToStringUni(slots[5]);
       if (NewEnvironmentMaskOrSubsurfaceTint is not null)
       {
-        newTXSTObj.EnvironmentMaskOrSubsurfaceTint = RemovePrefixIfExists("textures\\", NewEnvironmentMaskOrSubsurfaceTint);
+        var EnvironmentMaskOrSubsurfaceTint = RemovePrefixIfExists("textures\\", NewEnvironmentMaskOrSubsurfaceTint);
+        MessageHandler.Log("[CreateTXSTPatch] [TXST Index: " + txstIndex + "] EnvironmentMaskOrSubsurfaceTint: " + EnvironmentMaskOrSubsurfaceTint, 0);
+        newTXSTObj.EnvironmentMaskOrSubsurfaceTint = EnvironmentMaskOrSubsurfaceTint;
       }
       string? NewMultilayer = Marshal.PtrToStringUni(slots[6]);
       if (NewMultilayer is not null)
       {
-        newTXSTObj.Multilayer = RemovePrefixIfExists("textures\\", NewMultilayer);
+        var Multilayer = RemovePrefixIfExists("textures\\", NewMultilayer);
+        MessageHandler.Log("[CreateTXSTPatch] [TXST Index: " + txstIndex + "] Multilayer: " + Multilayer, 0);
+        newTXSTObj.Multilayer = Multilayer;
       }
       string? NewBacklightMaskOrSpecular = Marshal.PtrToStringUni(slots[7]);
       if (NewBacklightMaskOrSpecular is not null)
       {
-        newTXSTObj.BacklightMaskOrSpecular = RemovePrefixIfExists("textures\\", NewBacklightMaskOrSpecular);
+        var BacklightMaskOrSpecular = RemovePrefixIfExists("textures\\", NewBacklightMaskOrSpecular);
+        MessageHandler.Log("[CreateTXSTPatch] [TXST Index: " + txstIndex + "] BacklightMaskOrSpecular: " + BacklightMaskOrSpecular, 0);
+        newTXSTObj.BacklightMaskOrSpecular = BacklightMaskOrSpecular;
       }
     }
     catch (Exception ex)
@@ -775,52 +815,69 @@ public class PGMutagen
 
       // Create a new TXST record
       var newTXSTObj = OutMod.TextureSets.AddNew();
-      MessageHandler.Log("ParallaxGenMutagenWrapper | CreateNewTXSTPatch | Creating New TXST Patch", 0);
+      MessageHandler.Log("[CreateNewTXSTPatch] [Alt Tex Index: " + AltTexHandle + "]", 0);
 
       // Define slot actions for assigning texture set slots
       string? NewDiffuse = Marshal.PtrToStringUni(slots[0]);
       if (!NewDiffuse.IsNullOrEmpty())
       {
-        newTXSTObj.Diffuse = RemovePrefixIfExists("textures\\", NewDiffuse);
+        var Diffuse = RemovePrefixIfExists("textures\\", NewDiffuse);
+        MessageHandler.Log("[CreateNewTXSTPatch] [Alt Tex Index: " + AltTexHandle + "] Diffuse: " + Diffuse, 0);
+        newTXSTObj.Diffuse = Diffuse;
       }
       string? NewNormalOrGloss = Marshal.PtrToStringUni(slots[1]);
       if (!NewNormalOrGloss.IsNullOrEmpty())
       {
-        newTXSTObj.NormalOrGloss = RemovePrefixIfExists("textures\\", NewNormalOrGloss);
+        var NormalOrGloss = RemovePrefixIfExists("textures\\", NewNormalOrGloss);
+        MessageHandler.Log("[CreateNewTXSTPatch] [Alt Tex Index: " + AltTexHandle + "] NormalOrGloss: " + NormalOrGloss, 0);
+        newTXSTObj.NormalOrGloss = NormalOrGloss;
       }
       string? NewGlowOrDetailMap = Marshal.PtrToStringUni(slots[2]);
       if (!NewGlowOrDetailMap.IsNullOrEmpty())
       {
-        newTXSTObj.GlowOrDetailMap = RemovePrefixIfExists("textures\\", NewGlowOrDetailMap);
+        var GlowOrDetailMap = RemovePrefixIfExists("textures\\", NewGlowOrDetailMap);
+        MessageHandler.Log("[CreateNewTXSTPatch] [Alt Tex Index: " + AltTexHandle + "] GlowOrDetailMap: " + GlowOrDetailMap, 0);
+        newTXSTObj.GlowOrDetailMap = GlowOrDetailMap;
       }
       string? NewHeight = Marshal.PtrToStringUni(slots[3]);
       if (!NewHeight.IsNullOrEmpty())
       {
-        newTXSTObj.Height = RemovePrefixIfExists("textures\\", NewHeight);
+        var Height = RemovePrefixIfExists("textures\\", NewHeight);
+        MessageHandler.Log("[CreateNewTXSTPatch] [Alt Tex Index: " + AltTexHandle + "] Height: " + Height, 0);
+        newTXSTObj.Height = Height;
       }
       string? NewEnvironment = Marshal.PtrToStringUni(slots[4]);
       if (!NewEnvironment.IsNullOrEmpty())
       {
-        newTXSTObj.Environment = RemovePrefixIfExists("textures\\", NewEnvironment);
+        var Environment = RemovePrefixIfExists("textures\\", NewEnvironment);
+        MessageHandler.Log("[CreateNewTXSTPatch] [Alt Tex Index: " + AltTexHandle + "] Environment: " + Environment, 0);
+        newTXSTObj.Environment = Environment;
       }
       string? NewEnvironmentMaskOrSubsurfaceTint = Marshal.PtrToStringUni(slots[5]);
       if (!NewEnvironmentMaskOrSubsurfaceTint.IsNullOrEmpty())
       {
-        newTXSTObj.EnvironmentMaskOrSubsurfaceTint = RemovePrefixIfExists("textures\\", NewEnvironmentMaskOrSubsurfaceTint);
+        var EnvironmentMaskOrSubsurfaceTint = RemovePrefixIfExists("textures\\", NewEnvironmentMaskOrSubsurfaceTint);
+        MessageHandler.Log("[CreateNewTXSTPatch] [Alt Tex Index: " + AltTexHandle + "] EnvironmentMaskOrSubsurfaceTint: " + EnvironmentMaskOrSubsurfaceTint, 0);
+        newTXSTObj.EnvironmentMaskOrSubsurfaceTint = EnvironmentMaskOrSubsurfaceTint;
       }
       string? NewMultilayer = Marshal.PtrToStringUni(slots[6]);
       if (!NewMultilayer.IsNullOrEmpty())
       {
-        newTXSTObj.Multilayer = RemovePrefixIfExists("textures\\", NewMultilayer);
+        var Multilayer = RemovePrefixIfExists("textures\\", NewMultilayer);
+        MessageHandler.Log("[CreateNewTXSTPatch] [Alt Tex Index: " + AltTexHandle + "] Multilayer: " + Multilayer, 0);
+        newTXSTObj.Multilayer = Multilayer;
       }
       string? NewBacklightMaskOrSpecular = Marshal.PtrToStringUni(slots[7]);
       if (!NewBacklightMaskOrSpecular.IsNullOrEmpty())
       {
-        newTXSTObj.BacklightMaskOrSpecular = RemovePrefixIfExists("textures\\", NewBacklightMaskOrSpecular);
+        var BacklightMaskOrSpecular = RemovePrefixIfExists("textures\\", NewBacklightMaskOrSpecular);
+        MessageHandler.Log("[CreateNewTXSTPatch] [Alt Tex Index: " + AltTexHandle + "] BacklightMaskOrSpecular: " + BacklightMaskOrSpecular, 0);
+        newTXSTObj.BacklightMaskOrSpecular = BacklightMaskOrSpecular;
       }
 
       TXSTObjs.Add(newTXSTObj);
       *ResultTXSTId = TXSTObjs.Count - 1;
+      MessageHandler.Log("[CreateNewTXSTPatch] [Alt Tex Index: " + AltTexHandle + "] Created TXST with ID: " + *ResultTXSTId, 0);
 
       SetModelAltTexManage(AltTexHandle, *ResultTXSTId);
     }
@@ -834,6 +891,8 @@ public class PGMutagen
   {
     try
     {
+      MessageHandler.Log("[SetModelAltTexManage] [Alt Tex Index: " + AltTexHandle + "] [TXST Index: " + TXSTHandle + "]", 0);
+
       var newTXSTObj = TXSTObjs[TXSTHandle];
 
       var oldAltTex = AltTexRefs[AltTexHandle];
@@ -846,6 +905,7 @@ public class PGMutagen
         if (modelRec.AlternateTextures is null)
         {
           // This shouldn't happen, but it's here just in case
+          MessageHandler.Log("[SetModelAltTexManage] [Alt Tex Index: " + AltTexHandle + "] [TXST Index: " + TXSTHandle + "] No Alternate Textures Found (shouldn't happen)", 0);
           continue;
         }
 
@@ -854,6 +914,8 @@ public class PGMutagen
           if (alternateTexture.Name == oldAltTex.Name && alternateTexture.Index == oldAltTex.Index && alternateTexture.NewTexture.FormKey.ID == oldAltTex.NewTexture.FormKey.ID)
           {
             // Found the one to update
+            var key = new Tuple<string, string, int>(modelRec.File, alternateTexture.Name, alternateTexture.Index);
+            MessageHandler.Log("[SetModelAltTexManage] [Alt Tex Index: " + AltTexHandle + "] [TXST Index: " + TXSTHandle + "] Found Matching Alt Texture: " + key.ToString(), 0);
             ModifiedModeledRecords.Add(ModeledRecordId);
             alternateTexture.NewTexture.SetTo(newTXSTObj);
             return;
@@ -870,6 +932,7 @@ public class PGMutagen
   [UnmanagedCallersOnly(EntryPoint = "SetModelAltTex", CallConvs = [typeof(CallConvCdecl)])]
   public static void SetModelAltTex([DNNE.C99Type("const int")] int AltTexHandle, [DNNE.C99Type("const int")] int TXSTHandle)
   {
+    MessageHandler.Log("[SetModelAltTex] [Alt Tex Index: " + AltTexHandle + "] [TXST Index: " + TXSTHandle + "]", 0);
     SetModelAltTexManage(AltTexHandle, TXSTHandle);
   }
 
@@ -878,6 +941,8 @@ public class PGMutagen
   {
     try
     {
+      MessageHandler.Log("[Set3DIndex] [Alt Tex Index: " + AltTexHandle + "] [New Index: " + NewIndex + "]", 0);
+
       var oldAltTex = AltTexRefs[AltTexHandle];
       var ModeledRecordId = AltTexParents[AltTexHandle];
       var ModeledRecord = ModelCopies[ModeledRecordId];
@@ -888,6 +953,7 @@ public class PGMutagen
         if (modelRec.AlternateTextures is null)
         {
           // This shouldn't happen, but it's here just in case
+          MessageHandler.Log("[Set3DIndex] [Alt Tex Index: " + AltTexHandle + "] [New Index: " + NewIndex + "] No Alternate Textures Found (shouldn't happen)", 0);
           continue;
         }
 
@@ -897,6 +963,8 @@ public class PGMutagen
           if (alternateTexture.Name == oldAltTex.Name && alternateTexture.Index == oldAltTex.Index && alternateTexture.NewTexture == oldAltTex.NewTexture)
           {
             // Found the one to update
+            var key = new Tuple<string, string, int>(modelRec.File, alternateTexture.Name, alternateTexture.Index);
+            MessageHandler.Log("[Set3DIndex] [Alt Tex Index: " + AltTexHandle + "] [New Index: " + NewIndex + "] Found Matching Alt Texture: " + key.ToString(), 0);
             ModifiedModeledRecords.Add(ModeledRecordId);
             alternateTexture.Index = NewIndex;
             foundMatch = true;
@@ -926,9 +994,15 @@ public class PGMutagen
   {
     try
     {
+      MessageHandler.Log("[GetTXSTFormID] [TXST Index: " + TXSTHandle + "]", 0);
+
       var txstObj = TXSTObjs[TXSTHandle];
-      *PluginName = Marshal.StringToHGlobalUni(txstObj.FormKey.ModKey.FileName);
-      *FormID = txstObj.FormKey.ID;
+      var PluginNameStr = txstObj.FormKey.ModKey.FileName;
+      *PluginName = Marshal.StringToHGlobalUni(PluginNameStr);
+      var FormIDStr = txstObj.FormKey.ID;
+      *FormID = FormIDStr;
+
+      MessageHandler.Log("[GetTXSTFormID] [TXST Index: " + TXSTHandle + "] Plugin Name: " + PluginNameStr + " FormID: " + FormIDStr.ToString("X6"), 0);
     }
     catch (Exception ex)
     {
