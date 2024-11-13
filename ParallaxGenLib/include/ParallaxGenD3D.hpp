@@ -14,9 +14,9 @@
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenTask.hpp"
 
-#define NUM_GPU_THREADS 16
-#define GPU_BUFFER_SIZE_MULTIPLE 16
-#define MAX_CHANNEL_VALUE 255
+constexpr unsigned NUM_GPU_THREADS = 16;
+constexpr unsigned GPU_BUFFER_SIZE_MULTIPLE = 16;
+constexpr unsigned MAX_CHANNEL_VALUE = 255;
 
 class ParallaxGenD3D {
 private:
@@ -55,27 +55,39 @@ private:
   std::mutex UpgradeCMMutex;
 
 public:
-  // Constructor
+  /// @brief Constructor
+  /// @param PGD ParallaxGenDirectory, must be populated before calling member functions
+  /// @param OutputDir absolute path of output directory
+  /// @param ExePath absolute path of executable directory
+  /// @param UseGPU if the GPU should be used, currently only findCMMaps has a corresponding CPU implementation
   ParallaxGenD3D(ParallaxGenDirectory *PGD, std::filesystem::path OutputDir, std::filesystem::path ExePath,
                  const bool &UseGPU);
 
-  // Initialize GPU (also compiles shaders)
+  /// @brief Initialize GPU (also compiles shaders)
   void initGPU();
 
-  // Check methods
-  // files found in the bsa excludes are never CM maps, used for vanilla env masks
+  /// @brief Find complex material maps and re-assign the type in the used ParallaxGenDirectory
+  /// @param[in] BSAExcludes never assume files found in these BSAs are complex material maps
+  /// @return result of the operation
   auto findCMMaps(const std::unordered_set<std::wstring>& BSAExcludes) -> ParallaxGenTask::PGResult;
 
-  static auto getNumChannelsByFormat(const DXGI_FORMAT &Format) -> int;
-
-  // Attempt to upgrade vanilla parallax to complex material
+  /// @brief Create a complex material map from the given textures
+  /// @param ParallaxMap relative path to the height map in the data directory
+  /// @param EnvMap relative path to the env map mask in the data directory
+  /// @return DirectX scratch image, format DXGI_FORMAT_BC3_UNORM on success, otherwise empty ScratchImage
   [[nodiscard]] auto upgradeToComplexMaterial(const std::filesystem::path &ParallaxMap,
                                               const std::filesystem::path &EnvMap) -> DirectX::ScratchImage;
 
-  // Checks if the aspect ratio of two DDS files match
+
+  /// @brief Checks if the aspect ratio of two DDS files match
+  /// @param[in] DDSPath1 relative path of the first file in the data directory
+  /// @param[in] DDSPath2 relative path of the second file in the data directory
+  /// @return if the aspect ratio matches
   auto checkIfAspectRatioMatches(const std::filesystem::path &DDSPath1, const std::filesystem::path &DDSPath2) -> bool;
 
-  // Gets the error message from an HRESULT for logging
+  /// @brief  Gets the error message from an HRESULT for logging
+  /// @param HR the HRESULT to check
+  /// @return error message
   static auto getHRESULTErrorMessage(HRESULT HR) -> std::string;
 
 private:
