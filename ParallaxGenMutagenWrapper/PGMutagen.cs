@@ -80,10 +80,9 @@ public class PGMutagen
   private static SkyrimMod? OutMod;
   private static IGameEnvironment<ISkyrimMod, ISkyrimModGetter>? Env;
   private static List<ITextureSetGetter> TXSTObjs = [];
-  private static List<IAlternateTextureGetter> AltTexRefs = [];
+  private static List<Tuple<IAlternateTextureGetter, int>> AltTexRefs = [];
   private static List<IMajorRecord> ModelCopies = [];
   private static Dictionary<Tuple<string, string, int>, List<Tuple<int, int>>>? TXSTRefs;
-  private static Dictionary<int, int> AltTexParents = [];
   private static HashSet<int> ModifiedModeledRecords = [];
 
   private static IEnumerable<IMajorRecordGetter> EnumerateModelRecords()
@@ -284,7 +283,7 @@ public class PGMutagen
         }
 
         bool CopiedRecord = false;
-        var DCIdx = ModelCopies.Count - 1;
+        var DCIdx = -1;
         foreach (var modelRec in ModelRecs)
         {
           if (modelRec.AlternateTextures is null)
@@ -301,13 +300,19 @@ public class PGMutagen
             {
               var DeepCopy = txstRefObj.DeepCopy();
               ModelCopies.Add(DeepCopy);
+              DCIdx = ModelCopies.Count - 1;
+              CopiedRecord = true;
             }
             catch (Exception)
             {
               MessageHandler.Log("Failed to copy record: " + GetRecordDesc(txstRefObj), 4);
               break;
             }
-            CopiedRecord = true;
+          }
+
+          if (DCIdx < 0)
+          {
+            throw new Exception("DCIdx is negative: this shouldn't happen");
           }
 
           // find lowercase nifname
@@ -324,9 +329,9 @@ public class PGMutagen
           foreach (var alternateTexture in modelRec.AlternateTextures)
           {
             // Add to global
-            AltTexRefs.Add(alternateTexture);
+            var AltTexEntry = new Tuple<IAlternateTextureGetter, int>(alternateTexture, DCIdx);
+            AltTexRefs.Add(AltTexEntry);
             var AltTexId = AltTexRefs.Count - 1;
-            AltTexParents[AltTexId] = DCIdx;
 
             string name3D = alternateTexture.Name;
             int index3D = alternateTexture.Index;
@@ -893,9 +898,9 @@ public class PGMutagen
       MessageHandler.Log("[SetModelAltTexManage] [Alt Tex Index: " + AltTexHandle + "] [TXST Index: " + TXSTHandle + "]", 0);
 
       var newTXSTObj = TXSTObjs[TXSTHandle];
-      var oldAltTex = AltTexRefs[AltTexHandle];
+      var oldAltTex = AltTexRefs[AltTexHandle].Item1;
+      var ModeledRecordId = AltTexRefs[AltTexHandle].Item2;
 
-      var ModeledRecordId = AltTexParents[AltTexHandle];
       var ModeledRecord = ModelCopies[ModeledRecordId];
 
       // loop through alternate textures to find the one to replace
@@ -942,8 +947,9 @@ public class PGMutagen
     {
       MessageHandler.Log("[Set3DIndex] [Alt Tex Index: " + AltTexHandle + "] [New Index: " + NewIndex + "]", 0);
 
-      var oldAltTex = AltTexRefs[AltTexHandle];
-      var ModeledRecordId = AltTexParents[AltTexHandle];
+      var oldAltTex = AltTexRefs[AltTexHandle].Item1;
+      var ModeledRecordId = AltTexRefs[AltTexHandle].Item2;
+
       var ModeledRecord = ModelCopies[ModeledRecordId];
 
       // loop through alternate textures to find the one to replace
