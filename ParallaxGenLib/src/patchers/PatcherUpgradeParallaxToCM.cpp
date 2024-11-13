@@ -6,6 +6,7 @@
 #include "patchers/PatcherShader.hpp"
 
 #include <filesystem>
+#include <mutex>
 #include <utility>
 
 using namespace std;
@@ -26,6 +27,8 @@ PatcherUpgradeParallaxToCM::PatcherUpgradeParallaxToCM(std::filesystem::path NIF
 
 auto PatcherUpgradeParallaxToCM::transform(const PatcherShader::PatcherMatch &FromMatch)
     -> PatcherShader::PatcherMatch {
+  lock_guard<mutex> Lock(UpgradeCMMutex);
+
   const auto HeightMap = FromMatch.MatchedPath;
 
   // Get texture base (remove _p.dds)

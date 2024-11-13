@@ -2,13 +2,16 @@
 
 #include "NIFUtil.hpp"
 #include "patchers/PatcherShaderTransform.hpp"
+#include <mutex>
 
 /**
  * @class PatcherUpgradeParallaxToCM
  * @brief Transform patcher to upgrade Parallax to CM
  */
-class PatcherUpgradeParallaxToCM : public PatcherShaderTransform
-{
+class PatcherUpgradeParallaxToCM : public PatcherShaderTransform {
+private:
+  std::mutex UpgradeCMMutex; /** < Mutex for the upgrade to CM */
+
 public:
   /**
    * @brief Get the Factory object for Parallax > CM transform
