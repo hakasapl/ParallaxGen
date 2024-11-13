@@ -326,6 +326,7 @@ public class PGMutagen
             // Add to global
             AltTexRefs.Add(alternateTexture);
             var AltTexId = AltTexRefs.Count - 1;
+            AltTexParents[AltTexId] = DCIdx;
 
             string name3D = alternateTexture.Name;
             int index3D = alternateTexture.Index;
@@ -357,8 +358,6 @@ public class PGMutagen
               }
               TXSTRefs[key].Add(new Tuple<int, int>(newTXSTIndex, AltTexId));
               MessageHandler.Log("[PopulateObjs] Adding Alt Tex Reference: " + key.ToString() + " -> " + GetRecordDesc(newTXSTObj), 0);
-
-              AltTexParents[AltTexId] = DCIdx;
             }
           }
         }
@@ -894,8 +893,8 @@ public class PGMutagen
       MessageHandler.Log("[SetModelAltTexManage] [Alt Tex Index: " + AltTexHandle + "] [TXST Index: " + TXSTHandle + "]", 0);
 
       var newTXSTObj = TXSTObjs[TXSTHandle];
-
       var oldAltTex = AltTexRefs[AltTexHandle];
+
       var ModeledRecordId = AltTexParents[AltTexHandle];
       var ModeledRecord = ModelCopies[ModeledRecordId];
 
