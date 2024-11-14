@@ -1,6 +1,7 @@
 #include "ParallaxGen.hpp"
 
 #include <DirectXTex.h>
+#include <NifFile.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio.hpp>
@@ -18,7 +19,6 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
-
 
 #include <d3d11.h>
 
@@ -264,8 +264,9 @@ auto ParallaxGen::processNIF(
   // Patch each shape in NIF
   size_t NumShapes = 0;
   int OldShapeIndex = 0;
-  int NewShapeIndex = 0;
   bool OneShapeSuccess = false;
+  unordered_map<uint32_t, wstring> ShapeBlocks;
+  unordered_set<int> DeletedIndex3Ds;
   for (NiShape *NIFShape : NIF.GetShapes()) {
     // get shape name and blockid
     const auto ShapeBlockID = NIF.GetBlockID(NIFShape);
@@ -291,8 +292,8 @@ auto ParallaxGen::processNIF(
       if (PatchPlugin) {
         // Process plugin
         array<wstring, NUM_TEXTURE_SLOTS> NewSlots;
-        ParallaxGenPlugin::processShape(ShaderApplied, NIFFile.wstring(), ShapeName, OldShapeIndex, NewShapeIndex,
-                                        PatcherObjects, ModPriority, NewSlots);
+        ParallaxGenPlugin::processShape(ShaderApplied, NIFFile.wstring(), ShapeName, OldShapeIndex, PatcherObjects,
+                                        ModPriority, NewSlots);
       }
     }
 
@@ -300,8 +301,10 @@ auto ParallaxGen::processNIF(
       OneShapeSuccess = true;
     }
 
-    if (!ShapeDeleted) {
-      NewShapeIndex++;
+    if (ShapeDeleted) {
+      DeletedIndex3Ds.insert(OldShapeIndex);
+    } else {
+      ShapeBlocks.emplace(ShapeBlockID, ShapeName);
     }
 
     OldShapeIndex++;
@@ -315,6 +318,10 @@ auto ParallaxGen::processNIF(
 
   // Save patched NIF if it was modified
   if (NIFModified && !Dry) {
+    // Sort blocks and set plugin indices
+    const auto NewSortOrder = sortBlocks(NIF);
+    ParallaxGenPlugin::set3DIndices(NIFFile, NewSortOrder, ShapeBlocks, DeletedIndex3Ds);
+
     // Calculate CRC32 hash before
     boost::crc_32_type CRCBeforeResult{};
     CRCBeforeResult.process_bytes(NIFFileData.data(), NIFFileData.size());
@@ -524,6 +531,39 @@ void ParallaxGen::threadSafeJSONUpdate(const std::function<void(nlohmann::json &
                                        nlohmann::json &DiffJSON) {
   const std::lock_guard<std::mutex> Lock(JSONUpdateMutex);
   Operation(DiffJSON);
+}
+
+auto ParallaxGen::sortBlocks(NifFile &NIF) -> vector<uint32_t> {
+  // This is an approximate replica of nifly::NifFile::PrettySortBlocks()
+  nifly::NifFile::SortState SortState{};
+  SortState.newIndices.resize(NIF.GetHeader().GetNumBlocks());
+  for (size_t I = 0; I < SortState.newIndices.size(); I++) {
+    SortState.newIndices[I] = static_cast<uint32_t>(I);
+  }
+
+  if (NIF.HasUnknown()) {
+    return SortState.newIndices;
+  }
+
+  for (auto &Node : NIF.GetNodes()) {
+    auto *ParentNode = NIF.GetParentNode(Node);
+    if (ParentNode == nullptr) {
+      // No parent, node is at the root level
+      NIF.SetSortIndices(NIF.GetBlockID(Node), SortState);
+    }
+  }
+
+  for (size_t I = 0; I < SortState.newIndices.size(); I++) {
+    auto Index = static_cast<uint32_t>(I);
+    if (!SortState.visitedIndices.contains(Index)) {
+      SortState.newIndices[I] = SortState.newIndex++;
+      SortState.visitedIndices.insert(Index);
+    }
+  }
+
+  NIF.GetHeader().SetBlockOrder(SortState.newIndices);
+
+  return SortState.newIndices;
 }
 
 void ParallaxGen::addFileToZip(mz_zip_archive &Zip, const filesystem::path &FilePath,
