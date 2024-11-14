@@ -262,11 +262,6 @@ auto ParallaxGen::processNIF(
     }
   }
 
-  if (boost::icontains(NIFFile.wstring(), "glaciercaveentrance01")) {
-    // LOD meshes are not supported
-    Logger::trace(L"Rejecting: LOD mesh");
-  }
-
   // Patch each shape in NIF
   size_t NumShapes = 0;
   int OldShapeIndex = 0;
