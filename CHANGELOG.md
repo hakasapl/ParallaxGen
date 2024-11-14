@@ -16,6 +16,7 @@
 - meta.ini is not deleted when deleting previous output
 - Fixed plugin patching bug that would result in some alternature texture records referencing the wrong TXST record
 - Fixed NIF block sorting breaking 3d index in plugins
+- ParallaxGen.esp will be flagged as light if possible
 
 ## [0.6.0] - 2024-10-06
 
