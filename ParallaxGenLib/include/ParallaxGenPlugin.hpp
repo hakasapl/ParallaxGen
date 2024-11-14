@@ -93,9 +93,8 @@ public:
                            const std::unordered_map<std::wstring, int> *ModPriority,
                            std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots);
 
-  static void set3DIndices(const std::wstring &NIFPath, const std::vector<uint32_t> &SortOrder,
-                           const std::unordered_map<uint32_t, std::wstring> &ShapeBlocks,
-                           const std::unordered_set<int> &DeletedIndex3Ds);
+  static void set3DIndices(const std::wstring &NIFPath,
+                           const std::vector<std::tuple<nifly::NiShape *, int, int>> &ShapeTracker);
 
   static void savePlugin(const std::filesystem::path &OutputDir);
 };
