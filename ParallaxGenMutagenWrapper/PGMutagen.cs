@@ -345,9 +345,8 @@ public class PGMutagen
             if (newTXSTIndex < 0)
             {
               var CurHashCode = newTXST.GetHashCode();
-              if (!TXSTErrorTracker.Contains(CurHashCode))
+              if (TXSTErrorTracker.Add(CurHashCode))
               {
-                TXSTErrorTracker.Add(CurHashCode);
                 MessageHandler.Log("Referenced TXST record in " + GetRecordDesc(txstRefObj) + " / " + key.ToString() + " does not exist", 3);
               }
               continue;
@@ -897,35 +896,16 @@ public class PGMutagen
     {
       MessageHandler.Log("[SetModelAltTexManage] [Alt Tex Index: " + AltTexHandle + "] [TXST Index: " + TXSTHandle + "]", 0);
 
-      var newTXSTObj = TXSTObjs[TXSTHandle];
-      var oldAltTex = AltTexRefs[AltTexHandle].Item1;
-      var ModeledRecordId = AltTexRefs[AltTexHandle].Item2;
+      var AltTexObj = GetAltTexFromHandle(AltTexHandle);
 
-      var ModeledRecord = ModelCopies[ModeledRecordId];
-
-      // loop through alternate textures to find the one to replace
-      foreach (var modelRec in GetModelElems(ModeledRecord))
+      if (AltTexObj.Item1 is null)
       {
-        if (modelRec.AlternateTextures is null)
-        {
-          // This shouldn't happen, but it's here just in case
-          MessageHandler.Log("[SetModelAltTexManage] [Alt Tex Index: " + AltTexHandle + "] [TXST Index: " + TXSTHandle + "] No Alternate Textures Found (shouldn't happen)", 0);
-          continue;
-        }
-
-        foreach (var alternateTexture in modelRec.AlternateTextures)
-        {
-          if (alternateTexture.Name == oldAltTex.Name && alternateTexture.Index == oldAltTex.Index && alternateTexture.NewTexture.FormKey.ID == oldAltTex.NewTexture.FormKey.ID)
-          {
-            // Found the one to update
-            var key = new Tuple<string, string, int>(modelRec.File, alternateTexture.Name, alternateTexture.Index);
-            MessageHandler.Log("[SetModelAltTexManage] [Alt Tex Index: " + AltTexHandle + "] [TXST Index: " + TXSTHandle + "] Found Matching Alt Texture: " + key.ToString(), 0);
-            ModifiedModeledRecords.Add(ModeledRecordId);
-            alternateTexture.NewTexture.SetTo(newTXSTObj);
-            return;
-          }
-        }
+        MessageHandler.Log("[SetModelAltTexManage] [Alt Tex Index: " + AltTexHandle + "] Alt Texture Not Found", 4);
+        return;
       }
+
+      AltTexObj.Item1.NewTexture.SetTo(TXSTObjs[TXSTHandle]);
+      ModifiedModeledRecords.Add(AltTexObj.Item2);
     }
     catch (Exception ex)
     {
@@ -947,46 +927,16 @@ public class PGMutagen
     {
       MessageHandler.Log("[Set3DIndex] [Alt Tex Index: " + AltTexHandle + "] [New Index: " + NewIndex + "]", 0);
 
-      var oldAltTex = AltTexRefs[AltTexHandle].Item1;
-      var ModeledRecordId = AltTexRefs[AltTexHandle].Item2;
+      var AltTexObj = GetAltTexFromHandle(AltTexHandle);
 
-      var ModeledRecord = ModelCopies[ModeledRecordId];
-
-      // loop through alternate textures to find the one to replace
-      foreach (var modelRec in GetModelElems(ModeledRecord))
+      if (AltTexObj.Item1 is null)
       {
-        if (modelRec.AlternateTextures is null)
-        {
-          // This shouldn't happen, but it's here just in case
-          MessageHandler.Log("[Set3DIndex] [Alt Tex Index: " + AltTexHandle + "] [New Index: " + NewIndex + "] No Alternate Textures Found (shouldn't happen)", 0);
-          continue;
-        }
-
-        bool foundMatch = false;
-        foreach (var alternateTexture in modelRec.AlternateTextures)
-        {
-          if (alternateTexture.Name == oldAltTex.Name && alternateTexture.Index == oldAltTex.Index && alternateTexture.NewTexture == oldAltTex.NewTexture)
-          {
-            // Found the one to update
-            var key = new Tuple<string, string, int>(modelRec.File, alternateTexture.Name, alternateTexture.Index);
-            MessageHandler.Log("[Set3DIndex] [Alt Tex Index: " + AltTexHandle + "] [New Index: " + NewIndex + "] Found Matching Alt Texture: " + key.ToString(), 0);
-            ModifiedModeledRecords.Add(ModeledRecordId);
-            alternateTexture.Index = NewIndex;
-            foundMatch = true;
-          }
-
-          if (foundMatch)
-          {
-            // After finding a match decrement all indices by 1
-            alternateTexture.Index--;
-          }
-        }
-
-        if (foundMatch)
-        {
-          return;
-        }
+        MessageHandler.Log("[Set3DIndex] [Alt Tex Index: " + AltTexHandle + "] Alt Texture Not Found", 4);
+        return;
       }
+
+      AltTexObj.Item1.Index = NewIndex;
+      ModifiedModeledRecords.Add(AltTexObj.Item2);
     }
     catch (Exception ex)
     {
@@ -1016,6 +966,34 @@ public class PGMutagen
   }
 
   // Helpers
+
+  private static (AlternateTexture?, int) GetAltTexFromHandle(int AltTexHandle)
+  {
+    var oldAltTex = AltTexRefs[AltTexHandle].Item1;
+    var ModeledRecordId = AltTexRefs[AltTexHandle].Item2;
+
+    var ModeledRecord = ModelCopies[ModeledRecordId];
+
+    // loop through alternate textures to find the one to replace
+    foreach (var modelRec in GetModelElems(ModeledRecord))
+    {
+      if (modelRec.AlternateTextures is null)
+      {
+        continue;
+      }
+
+      foreach (var alternateTexture in modelRec.AlternateTextures)
+      {
+        if (alternateTexture.Name == oldAltTex.Name && alternateTexture.Index == oldAltTex.Index && alternateTexture.NewTexture.FormKey.ID.ToString() == oldAltTex.NewTexture.FormKey.ID.ToString())
+        {
+          // Found the one to update
+          return (alternateTexture, ModeledRecordId);
+        }
+      }
+    }
+
+    return (null, -1);
+  }
 
   private static string GetRecordDesc(IMajorRecordGetter rec)
   {

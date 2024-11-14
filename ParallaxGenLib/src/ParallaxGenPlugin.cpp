@@ -453,7 +453,7 @@ void ParallaxGenPlugin::set3DIndices(const wstring &NIFPath,
         continue;
       }
 
-      Logger::trace(L"Setting 3D index for TXST {} to {}", TXSTIndex, NewIndex3D);
+      Logger::trace(L"Setting 3D index for AltTex {} to {}", AltTexIndex, NewIndex3D);
       libSet3DIndex(AltTexIndex, NewIndex3D);
     }
   }
