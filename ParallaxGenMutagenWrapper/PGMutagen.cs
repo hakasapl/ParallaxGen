@@ -14,6 +14,8 @@ using Mutagen.Bethesda.Plugins;
 using Mutagen.Bethesda.Plugins.Binary.Parameters;
 using Mutagen.Bethesda.Plugins.Records;
 using Noggog;
+using Mutagen.Bethesda.Plugins.Utility;
+using Mutagen.Bethesda.Plugins.Analysis;
 
 public static class ExceptionHandler
 {
@@ -565,6 +567,12 @@ public class PGMutagen
           OutMod.Weapons.Add((Weapon)ModifiedRecord);
           MessageHandler.Log("[Finalize] Adding Weapon: " + GetRecordDesc(ModifiedRecord), 0);
         }
+      }
+
+      if (RecordCompactionCompatibilityDetection.CouldBeSmallMasterCompatible(OutMod)) {
+        // Can be light
+        MessageHandler.Log("[Finalize] Output Plugin can be compacted to a small master", 0);
+        ModCompaction.CompactToSmallMaster(OutMod);
       }
 
       // Write the output plugin

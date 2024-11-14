@@ -15,7 +15,7 @@
     <DefineConstants>$(DefineConstants);DEBUG</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="DNNE" Version="2.0.6" />
-    <PackageReference Include="Mutagen.Bethesda" Version="0.46.1" />
+    <PackageReference Include="DNNE" Version="2.0.7" />
+    <PackageReference Include="Mutagen.Bethesda" Version="0.47.4" />
   </ItemGroup>
 </Project>
