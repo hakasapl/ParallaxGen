@@ -14,6 +14,8 @@
 - If user does not have .NET framework an error is posted now
 - PBR ignore Skin Tint and Face Tint types now
 - meta.ini is not deleted when deleting previous output
+- Fixed plugin patching bug that would result in some alternature texture records referencing the wrong TXST record
+- Fixed NIF block sorting breaking 3d index in plugins
 
 ## [0.6.0] - 2024-10-06
 

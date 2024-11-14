@@ -19,7 +19,8 @@ using namespace std;
 namespace {
 void dnne_failure(enum failure_type type, int error_code) {
   if (type == failure_type::failure_load_runtime) {
-    if (error_code == 0x80008096) { // FrameworkMissingFailure from https://github.com/dotnet/runtime/blob/main/src/native/corehost/error_codes.h
+    if (error_code == 0x80008096) { // FrameworkMissingFailure from
+                                    // https://github.com/dotnet/runtime/blob/main/src/native/corehost/error_codes.h
       spdlog::critical("The required .NET runtime is missing");
     } else {
       spdlog::critical("Could not load .NET runtime, error code {:#X}", error_code);
@@ -126,13 +127,13 @@ auto ParallaxGenPlugin::libGetMatchingTXSTObjs(const wstring &NIFName, const wst
   lock_guard<mutex> Lock(LibMutex);
 
   int Length = 0;
-  GetMatchingTXSTObjsLength(NIFName.c_str(), Name3D.c_str(), Index3D, &Length);
+  GetMatchingTXSTObjs(NIFName.c_str(), Name3D.c_str(), Index3D, nullptr, nullptr, &Length);
   libLogMessageIfExists();
   libThrowExceptionIfExists();
 
   vector<int> TXSTIdArray(Length);
   vector<int> AltTexIdArray(Length);
-  GetMatchingTXSTObjs(NIFName.c_str(), Name3D.c_str(), Index3D, TXSTIdArray.data(), AltTexIdArray.data());
+  GetMatchingTXSTObjs(NIFName.c_str(), Name3D.c_str(), Index3D, TXSTIdArray.data(), AltTexIdArray.data(), nullptr);
   libLogMessageIfExists();
   libThrowExceptionIfExists();
 
@@ -249,6 +250,8 @@ unordered_map<int, NIFUtil::ShapeShader> ParallaxGenPlugin::TXSTWarningMap; // N
 
 ParallaxGenDirectory *ParallaxGenPlugin::PGD;
 
+mutex ParallaxGenPlugin::ProcessShapeMutex;
+
 void ParallaxGenPlugin::loadStatics(ParallaxGenDirectory *PGD) { ParallaxGenPlugin::PGD = PGD; }
 
 void ParallaxGenPlugin::initialize(const BethesdaGame &Game) {
@@ -267,16 +270,18 @@ void ParallaxGenPlugin::initialize(const BethesdaGame &Game) {
 void ParallaxGenPlugin::populateObjs() { libPopulateObjs(); }
 
 void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, const wstring &NIFPath,
-                                     const wstring &Name3D, const int &Index3DOld, const int &Index3DNew,
+                                     const wstring &Name3D, const int &Index3D,
                                      const PatcherUtil::PatcherObjectSet &Patchers,
                                      const unordered_map<wstring, int> *ModPriority,
                                      std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots) {
   if (AppliedShader == NIFUtil::ShapeShader::NONE) {
-    spdlog::trace(L"Plugin Patching | {} | {} | {} | Skipping: No shader applied", NIFPath, Name3D, Index3DOld);
+    spdlog::trace(L"Plugin Patching | {} | {} | {} | Skipping: No shader applied", NIFPath, Name3D, Index3D);
     return;
   }
 
-  auto Matches = libGetMatchingTXSTObjs(NIFPath, Name3D, Index3DOld);
+  lock_guard<mutex> Lock(ProcessShapeMutex);
+
+  const auto Matches = libGetMatchingTXSTObjs(NIFPath, Name3D, Index3D);
 
   // loop through matches
   for (const auto &[TXSTIndex, AltTexIndex] : Matches) {
@@ -291,16 +296,15 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
         if (TXSTModMap[TXSTIndex].find(AppliedShader) == TXSTModMap[TXSTIndex].end()) {
           // TXST was patched, but not for the current shader. We need to make a new TXST record
           NewTXST = true;
-          spdlog::trace(L"Plugin Patching | {} | {} | {} | New TXST record needed", NIFPath, Name3D, Index3DOld);
+          spdlog::trace(L"Plugin Patching | {} | {} | {} | New TXST record needed", NIFPath, Name3D, Index3D);
         } else {
           // TXST was patched, and for the current shader. We need to determine if AltTex is set correctly
           spdlog::trace(L"Plugin Patching | {} | {} | {} | TXST record already patched correctly", NIFPath, Name3D,
-                        Index3DOld);
+                        Index3D);
           TXSTId = TXSTModMap[TXSTIndex][AppliedShader];
           if (TXSTId != TXSTIndex) {
             // We need to set it
-            spdlog::trace(L"Plugin Patching | {} | {} | {} | Setting alternate texture ID", NIFPath, Name3D,
-                          Index3DOld);
+            spdlog::trace(L"Plugin Patching | {} | {} | {} | Setting alternate texture ID", NIFPath, Name3D, Index3D);
             libSetModelAltTex(AltTexIndex, TXSTId);
           }
           continue;
@@ -403,7 +407,7 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
     if (!FoundDiff) {
       // No need to patch
       spdlog::trace(L"Plugin Patching | {} | {} | {} | Not patching because nothing to change", NIFPath, Name3D,
-                    Index3DOld);
+                    Index3D);
       continue;
     }
 
@@ -411,7 +415,7 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
     if (NewTXST) {
       // Create a new TXST record
       spdlog::trace(L"Plugin Patching | {} | {} | {} | Creating a new TXST record and patching", NIFPath, Name3D,
-                    Index3DOld);
+                    Index3D);
       TXSTId = libCreateNewTXSTPatch(AltTexIndex, NewSlots);
       {
         lock_guard<mutex> Lock(TXSTModMapMutex);
@@ -419,19 +423,72 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
       }
     } else {
       // Update the existing TXST record
-      spdlog::trace(L"Plugin Patching | {} | {} | {} | Patching an existing TXST record", NIFPath, Name3D, Index3DOld);
+      spdlog::trace(L"Plugin Patching | {} | {} | {} | Patching an existing TXST record", NIFPath, Name3D, Index3D);
       libCreateTXSTPatch(TXSTIndex, NewSlots);
       {
         lock_guard<mutex> Lock(TXSTModMapMutex);
         TXSTModMap[TXSTIndex][AppliedShader] = TXSTIndex;
       }
     }
+  }
+}
 
-    // Check if 3d index needs to be patched
-    if (Index3DNew != Index3DOld) {
-      spdlog::trace(L"Plugin Patching | {} | {} | {} | Setting 3D index due to shape deletion", NIFPath, Name3D,
-                    Index3DOld);
-      libSet3DIndex(AltTexIndex, Index3DNew);
+void ParallaxGenPlugin::set3DIndices(const wstring &NIFPath, const vector<uint32_t> &SortOrder,
+                                     const unordered_map<uint32_t, wstring> &ShapeBlocks,
+                                     const unordered_set<int> &DeletedIndex3Ds) {
+  lock_guard<mutex> Lock(ProcessShapeMutex);
+
+  Logger::Prefix Prefix(L"set3DIndices");
+
+  // Build new shape vector
+  // 1. Index3D without considering deletions
+  // 2. Index3D with deletions
+  // 3. Original block id
+  vector<tuple<int, int, uint32_t, wstring>> OldShape3DIndex(ShapeBlocks.size());
+  int I = 0;
+  int IDel = 0;
+  for (const auto &OldIndex : SortOrder) {
+    if (!ShapeBlocks.contains(OldIndex)) {
+      // current block id is not a shape
+      continue;
+    }
+
+    // skip any deleted indices
+    while (DeletedIndex3Ds.contains(IDel)) {
+      IDel++;
+    }
+
+    OldShape3DIndex.emplace_back(I, IDel, OldIndex, ShapeBlocks.at(OldIndex));
+    I++;
+    IDel++;
+  }
+
+  // Sort vector by old index
+  auto NewShape3DIndex = OldShape3DIndex;
+  sort(NewShape3DIndex.begin(), NewShape3DIndex.end(),
+       [](const tuple<int, int, uint32_t, wstring> &A, const tuple<int, int, uint32_t, wstring> &B) { return get<2>(A) < get<2>(B); });
+
+  // Create map
+  unordered_map<int, pair<int, wstring>> Index3DUpdateMap;
+  for (int I = 0; I < NewShape3DIndex.size(); ++I) {
+    Logger::trace(L"Mapping old blockid shape {} to new blockid shape {}", get<2>(OldShape3DIndex[I]), get<2>(NewShape3DIndex[I]));
+    Index3DUpdateMap[get<1>(OldShape3DIndex[I])] = {get<0>(NewShape3DIndex[I]), get<3>(NewShape3DIndex[I])};
+  }
+
+  // Loop through map
+  for (const auto &[OldIndex, NewIndex] : Index3DUpdateMap) {
+    // find matches
+    const auto Matches = libGetMatchingTXSTObjs(NIFPath, NewIndex.second, OldIndex);
+
+    // Set indices
+    for (const auto &[TXSTIndex, AltTexIndex] : Matches) {
+      if (NewIndex.first == OldIndex) {
+        // No change
+        continue;
+      }
+
+      Logger::trace(L"Setting 3D index for TXST {} to {}", TXSTIndex, NewIndex.first);
+      libSet3DIndex(AltTexIndex, NewIndex.first);
     }
   }
 }

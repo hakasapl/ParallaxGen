@@ -1,6 +1,7 @@
 #pragma once
 
 #include <NifFile.hpp>
+#include <cstdint>
 #include <filesystem>
 #include <miniz.h>
 #include <mutex>
@@ -26,7 +27,7 @@ private:
   ParallaxGenD3D *PGD3D;
 
   // sort blocks enabled, optimize disabled (for now)
-  nifly::NifSaveOptions NIFSaveOptions = {false, true};
+  nifly::NifSaveOptions NIFSaveOptions = {false, false};
 
   struct ShapeKey {
     std::wstring NIFPath;
@@ -79,6 +80,8 @@ public:
   [[nodiscard]] static auto getDiffJSONName() -> std::filesystem::path;
 
 private:
+  static auto sortBlocks(nifly::NifFile &NIF) -> std::vector<uint32_t>;
+
   // thread safe JSON update
   std::mutex JSONUpdateMutex;
   void threadSafeJSONUpdate(const std::function<void(nlohmann::json &)> &Operation, nlohmann::json &DiffJSON);

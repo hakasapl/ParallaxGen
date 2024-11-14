@@ -70,6 +70,8 @@ private:
 
   static ParallaxGenDirectory *PGD;
 
+  static std::mutex ProcessShapeMutex;
+
 public:
   static void loadStatics(ParallaxGenDirectory *PGD);
 
@@ -86,10 +88,14 @@ public:
   /// @param[in] Patchers patchers for the given nif
   /// @param[out] NewSlots textures that were assigned to the texture set slots
   static void processShape(const NIFUtil::ShapeShader &AppliedShader, const std::wstring &NIFPath,
-                           const std::wstring &Name3D, const int &Index3DOld, const int &Index3DNew,
+                           const std::wstring &Name3D, const int &Index3D,
                            const PatcherUtil::PatcherObjectSet &Patchers,
                            const std::unordered_map<std::wstring, int> *ModPriority,
                            std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots);
+
+  static void set3DIndices(const std::wstring &NIFPath, const std::vector<uint32_t> &SortOrder,
+                           const std::unordered_map<uint32_t, std::wstring> &ShapeBlocks,
+                           const std::unordered_set<int> &DeletedIndex3Ds);
 
   static void savePlugin(const std::filesystem::path &OutputDir);
 };

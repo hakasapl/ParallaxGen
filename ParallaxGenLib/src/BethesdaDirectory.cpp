@@ -92,7 +92,10 @@ auto BethesdaDirectory::checkGlob(const wstring &Str, const vector<wstring> &Glo
 
 void BethesdaDirectory::populateFileMap(bool IncludeBSAs) {
   // clear map before populating
-  FileMap.clear();
+  {
+    lock_guard<mutex> Lock(FileMapMutex);
+    FileMap.clear();
+  }
 
   if (IncludeBSAs) {
     // add BSA files to file map
@@ -210,7 +213,7 @@ auto BethesdaDirectory::clearCache() -> void {
   FileCache.clear();
 }
 
-auto BethesdaDirectory::isLooseFile(const filesystem::path &RelPath) const -> bool {
+auto BethesdaDirectory::isLooseFile(const filesystem::path &RelPath) -> bool {
   if (FileMap.empty()) {
     throw runtime_error("File map was not populated");
   }
@@ -218,7 +221,7 @@ auto BethesdaDirectory::isLooseFile(const filesystem::path &RelPath) const -> bo
   return !File.Path.empty() && File.BSAFile == nullptr;
 }
 
-auto BethesdaDirectory::isBSAFile(const filesystem::path &RelPath) const -> bool {
+auto BethesdaDirectory::isBSAFile(const filesystem::path &RelPath) -> bool {
   if (FileMap.empty()) {
     throw runtime_error("File map was not populated");
   }
@@ -227,7 +230,7 @@ auto BethesdaDirectory::isBSAFile(const filesystem::path &RelPath) const -> bool
   return !File.Path.empty() && File.BSAFile != nullptr;
 }
 
-auto BethesdaDirectory::isFile(const filesystem::path &RelPath) const -> bool {
+auto BethesdaDirectory::isFile(const filesystem::path &RelPath) -> bool {
   if (FileMap.empty()) {
     throw runtime_error("File map was not populated");
   }
@@ -236,7 +239,7 @@ auto BethesdaDirectory::isFile(const filesystem::path &RelPath) const -> bool {
   return !File.Path.empty();
 }
 
-auto BethesdaDirectory::isGenerated(const filesystem::path &RelPath) const -> bool {
+auto BethesdaDirectory::isGenerated(const filesystem::path &RelPath) -> bool {
   if (FileMap.empty()) {
     throw runtime_error("File map was not populated");
   }
@@ -245,7 +248,7 @@ auto BethesdaDirectory::isGenerated(const filesystem::path &RelPath) const -> bo
   return !File.Path.empty() && File.Generated;
 }
 
-auto BethesdaDirectory::isPrefix(const filesystem::path &RelPath) const -> bool {
+auto BethesdaDirectory::isPrefix(const filesystem::path &RelPath) -> bool {
   if (FileMap.empty()) {
     throw runtime_error("File map was not populated");
   }
@@ -259,7 +262,7 @@ auto BethesdaDirectory::isPrefix(const filesystem::path &RelPath) const -> bool 
          (It != FileMap.begin() && boost::istarts_with(prev(It)->first.wstring(), RelPath.wstring()));
 }
 
-auto BethesdaDirectory::getLooseFileFullPath(const filesystem::path &RelPath) const -> filesystem::path {
+auto BethesdaDirectory::getLooseFileFullPath(const filesystem::path &RelPath) -> filesystem::path {
   if (FileMap.empty()) {
     throw runtime_error("File map was not populated");
   }
@@ -651,7 +654,9 @@ auto BethesdaDirectory::isPathAscii(const filesystem::path &Path) -> bool {
   return ranges::all_of(Path.wstring(), [](wchar_t WC) { return WC <= ASCII_UPPER_BOUND; });
 }
 
-auto BethesdaDirectory::getFileFromMap(const filesystem::path &FilePath) const -> BethesdaDirectory::BethesdaFile {
+auto BethesdaDirectory::getFileFromMap(const filesystem::path &FilePath) -> BethesdaDirectory::BethesdaFile {
+  lock_guard<mutex> Lock(FileMapMutex);
+
   const filesystem::path LowerPath = getPathLower(FilePath);
 
   if (FileMap.find(LowerPath) == FileMap.end()) {
@@ -663,6 +668,8 @@ auto BethesdaDirectory::getFileFromMap(const filesystem::path &FilePath) const -
 
 void BethesdaDirectory::updateFileMap(const filesystem::path &FilePath,
                                       shared_ptr<BethesdaDirectory::BSAFile> BSAFile, const wstring &Mod, const bool &Generated) {
+  lock_guard<mutex> Lock(FileMapMutex);
+
   const filesystem::path LowerPath = getPathLower(FilePath);
 
   const BethesdaFile NewBFile = {FilePath, std::move(BSAFile), Mod, Generated};
