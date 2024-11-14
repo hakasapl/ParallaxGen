@@ -433,62 +433,28 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
   }
 }
 
-void ParallaxGenPlugin::set3DIndices(const wstring &NIFPath, const vector<uint32_t> &SortOrder,
-                                     const unordered_map<uint32_t, wstring> &ShapeBlocks,
-                                     const unordered_set<int> &DeletedIndex3Ds) {
+void ParallaxGenPlugin::set3DIndices(const wstring &NIFPath,
+                                     const vector<tuple<nifly::NiShape *, int, int>> &ShapeTracker) {
   lock_guard<mutex> Lock(ProcessShapeMutex);
 
   Logger::Prefix Prefix(L"set3DIndices");
 
-  // Build new shape vector
-  // 1. Index3D without considering deletions
-  // 2. Index3D with deletions
-  // 3. Original block id
-  vector<tuple<int, int, uint32_t, wstring>> OldShape3DIndex(ShapeBlocks.size());
-  int I = 0;
-  int IDel = 0;
-  for (const auto &OldIndex : SortOrder) {
-    if (!ShapeBlocks.contains(OldIndex)) {
-      // current block id is not a shape
-      continue;
-    }
+  // Loop through shape tracker
+  for (const auto &[Shape, OldIndex3D, NewIndex3D] : ShapeTracker) {
+    const auto ShapeName = ParallaxGenUtil::strToWstr(Shape->name.get());
 
-    // skip any deleted indices
-    while (DeletedIndex3Ds.contains(IDel)) {
-      IDel++;
-    }
-
-    OldShape3DIndex.emplace_back(I, IDel, OldIndex, ShapeBlocks.at(OldIndex));
-    I++;
-    IDel++;
-  }
-
-  // Sort vector by old index
-  auto NewShape3DIndex = OldShape3DIndex;
-  sort(NewShape3DIndex.begin(), NewShape3DIndex.end(),
-       [](const tuple<int, int, uint32_t, wstring> &A, const tuple<int, int, uint32_t, wstring> &B) { return get<2>(A) < get<2>(B); });
-
-  // Create map
-  unordered_map<int, pair<int, wstring>> Index3DUpdateMap;
-  for (int I = 0; I < NewShape3DIndex.size(); ++I) {
-    Logger::trace(L"Mapping old blockid shape {} to new blockid shape {}", get<2>(OldShape3DIndex[I]), get<2>(NewShape3DIndex[I]));
-    Index3DUpdateMap[get<1>(OldShape3DIndex[I])] = {get<0>(NewShape3DIndex[I]), get<3>(NewShape3DIndex[I])};
-  }
-
-  // Loop through map
-  for (const auto &[OldIndex, NewIndex] : Index3DUpdateMap) {
     // find matches
-    const auto Matches = libGetMatchingTXSTObjs(NIFPath, NewIndex.second, OldIndex);
+    const auto Matches = libGetMatchingTXSTObjs(NIFPath, ShapeName, OldIndex3D);
 
     // Set indices
     for (const auto &[TXSTIndex, AltTexIndex] : Matches) {
-      if (NewIndex.first == OldIndex) {
+      if (OldIndex3D == NewIndex3D) {
         // No change
         continue;
       }
 
-      Logger::trace(L"Setting 3D index for TXST {} to {}", TXSTIndex, NewIndex.first);
-      libSet3DIndex(AltTexIndex, NewIndex.first);
+      Logger::trace(L"Setting 3D index for TXST {} to {}", TXSTIndex, NewIndex3D);
+      libSet3DIndex(AltTexIndex, NewIndex3D);
     }
   }
 }

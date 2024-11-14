@@ -1,6 +1,7 @@
 #include "ParallaxGen.hpp"
 
 #include <DirectXTex.h>
+#include <Geometry.hpp>
 #include <NifFile.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/predicate.hpp>
@@ -261,12 +262,16 @@ auto ParallaxGen::processNIF(
     }
   }
 
+  if (boost::icontains(NIFFile.wstring(), "glaciercaveentrance01")) {
+    // LOD meshes are not supported
+    Logger::trace(L"Rejecting: LOD mesh");
+  }
+
   // Patch each shape in NIF
   size_t NumShapes = 0;
   int OldShapeIndex = 0;
   bool OneShapeSuccess = false;
-  unordered_map<uint32_t, wstring> ShapeBlocks;
-  unordered_set<int> DeletedIndex3Ds;
+  vector<tuple<NiShape *, int, int>> ShapeTracker;
   for (NiShape *NIFShape : NIF.GetShapes()) {
     // get shape name and blockid
     const auto ShapeBlockID = NIF.GetBlockID(NIFShape);
@@ -301,10 +306,8 @@ auto ParallaxGen::processNIF(
       OneShapeSuccess = true;
     }
 
-    if (ShapeDeleted) {
-      DeletedIndex3Ds.insert(OldShapeIndex);
-    } else {
-      ShapeBlocks.emplace(ShapeBlockID, ShapeName);
+    if (!ShapeDeleted) {
+      ShapeTracker.emplace_back(NIFShape, OldShapeIndex, -1);
     }
 
     OldShapeIndex++;
@@ -319,8 +322,26 @@ auto ParallaxGen::processNIF(
   // Save patched NIF if it was modified
   if (NIFModified && !Dry) {
     // Sort blocks and set plugin indices
-    const auto NewSortOrder = sortBlocks(NIF);
-    ParallaxGenPlugin::set3DIndices(NIFFile, NewSortOrder, ShapeBlocks, DeletedIndex3Ds);
+    NIF.PrettySortBlocks();
+
+    for (auto &Shape : ShapeTracker) {
+      // Find new block id
+      const auto NewBlockID = NIF.GetBlockID(get<0>(Shape));
+      get<2>(Shape) = static_cast<int>(NewBlockID);
+    }
+
+    // Sort ShapeTracker by new block id
+    sort(ShapeTracker.begin(), ShapeTracker.end(),
+         [](const auto &A, const auto &B) { return get<2>(A) < get<2>(B); });
+
+    // Find new 3d index for each shape
+    for (int I = 0; I < ShapeTracker.size(); I++) {
+      // get new plugin index
+      get<2>(ShapeTracker[I]) = I;
+    }
+
+    // Set 3D indices
+    ParallaxGenPlugin::set3DIndices(NIFFile.wstring(), ShapeTracker);
 
     // Calculate CRC32 hash before
     boost::crc_32_type CRCBeforeResult{};
@@ -531,39 +552,6 @@ void ParallaxGen::threadSafeJSONUpdate(const std::function<void(nlohmann::json &
                                        nlohmann::json &DiffJSON) {
   const std::lock_guard<std::mutex> Lock(JSONUpdateMutex);
   Operation(DiffJSON);
-}
-
-auto ParallaxGen::sortBlocks(NifFile &NIF) -> vector<uint32_t> {
-  // This is an approximate replica of nifly::NifFile::PrettySortBlocks()
-  nifly::NifFile::SortState SortState{};
-  SortState.newIndices.resize(NIF.GetHeader().GetNumBlocks());
-  for (size_t I = 0; I < SortState.newIndices.size(); I++) {
-    SortState.newIndices[I] = static_cast<uint32_t>(I);
-  }
-
-  if (NIF.HasUnknown()) {
-    return SortState.newIndices;
-  }
-
-  for (auto &Node : NIF.GetNodes()) {
-    auto *ParentNode = NIF.GetParentNode(Node);
-    if (ParentNode == nullptr) {
-      // No parent, node is at the root level
-      NIF.SetSortIndices(NIF.GetBlockID(Node), SortState);
-    }
-  }
-
-  for (size_t I = 0; I < SortState.newIndices.size(); I++) {
-    auto Index = static_cast<uint32_t>(I);
-    if (!SortState.visitedIndices.contains(Index)) {
-      SortState.newIndices[I] = SortState.newIndex++;
-      SortState.visitedIndices.insert(Index);
-    }
-  }
-
-  NIF.GetHeader().SetBlockOrder(SortState.newIndices);
-
-  return SortState.newIndices;
 }
 
 void ParallaxGen::addFileToZip(mz_zip_archive &Zip, const filesystem::path &FilePath,

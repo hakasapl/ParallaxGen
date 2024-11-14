@@ -80,8 +80,6 @@ public:
   [[nodiscard]] static auto getDiffJSONName() -> std::filesystem::path;
 
 private:
-  static auto sortBlocks(nifly::NifFile &NIF) -> std::vector<uint32_t>;
-
   // thread safe JSON update
   std::mutex JSONUpdateMutex;
   void threadSafeJSONUpdate(const std::function<void(nlohmann::json &)> &Operation, nlohmann::json &DiffJSON);
