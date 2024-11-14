@@ -82,6 +82,7 @@ public class PGMutagen
   private static List<ITextureSetGetter> TXSTObjs = [];
   private static List<Tuple<IAlternateTextureGetter, int>> AltTexRefs = [];
   private static List<IMajorRecord> ModelCopies = [];
+  private static List<IMajorRecord> ModelCopiesEditable = [];
   private static Dictionary<Tuple<string, string, int>, List<Tuple<int, int>>>? TXSTRefs;
   private static HashSet<int> ModifiedModeledRecords = [];
 
@@ -300,6 +301,8 @@ public class PGMutagen
             {
               var DeepCopy = txstRefObj.DeepCopy();
               ModelCopies.Add(DeepCopy);
+              var DeepCopyEditable = txstRefObj.DeepCopy();
+              ModelCopiesEditable.Add(DeepCopyEditable);
               DCIdx = ModelCopies.Count - 1;
               CopiedRecord = true;
             }
@@ -386,7 +389,7 @@ public class PGMutagen
       // Add all modified model records to the output mod
       foreach (var recId in ModifiedModeledRecords)
       {
-        var ModifiedRecord = ModelCopies[recId];
+        var ModifiedRecord = ModelCopiesEditable[recId];
         if (ModifiedRecord is Mutagen.Bethesda.Skyrim.Activator)
         {
           OutMod.Activators.Add((Mutagen.Bethesda.Skyrim.Activator)ModifiedRecord);
@@ -975,19 +978,25 @@ public class PGMutagen
     var ModeledRecord = ModelCopies[ModeledRecordId];
 
     // loop through alternate textures to find the one to replace
-    foreach (var modelRec in GetModelElems(ModeledRecord))
+    var modelElems = GetModelElems(ModeledRecord);
+    for (int i = 0; i < modelElems.Count; i++)
     {
+      var modelRec = modelElems[i];
       if (modelRec.AlternateTextures is null)
       {
         continue;
       }
 
-      foreach (var alternateTexture in modelRec.AlternateTextures)
+      for (int j = 0; j < modelRec.AlternateTextures.Count; j++)
       {
-        if (alternateTexture.Name == oldAltTex.Name && alternateTexture.Index == oldAltTex.Index && alternateTexture.NewTexture.FormKey.ID.ToString() == oldAltTex.NewTexture.FormKey.ID.ToString())
+        var alternateTexture = modelRec.AlternateTextures[j];
+        if (alternateTexture.Name == oldAltTex.Name &&
+            alternateTexture.Index == oldAltTex.Index &&
+            alternateTexture.NewTexture.FormKey.ID.ToString() == oldAltTex.NewTexture.FormKey.ID.ToString())
         {
           // Found the one to update
-          return (alternateTexture, ModeledRecordId);
+          var EditableObj = GetModelElems(ModelCopiesEditable[ModeledRecordId])[i].AlternateTextures?[j];
+          return (EditableObj, ModeledRecordId);
         }
       }
     }
