@@ -436,6 +436,10 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
 void ParallaxGenPlugin::set3DIndices(const wstring &NIFPath, const vector<uint32_t> &SortOrder,
                                      const unordered_map<uint32_t, wstring> &ShapeBlocks,
                                      const unordered_set<int> &DeletedIndex3Ds) {
+  lock_guard<mutex> Lock(ProcessShapeMutex);
+
+  Logger::Prefix Prefix(L"set3DIndices");
+
   // Build new shape vector
   // 1. Index3D without considering deletions
   // 2. Index3D with deletions
@@ -483,6 +487,7 @@ void ParallaxGenPlugin::set3DIndices(const wstring &NIFPath, const vector<uint32
         continue;
       }
 
+      Logger::trace(L"Setting 3D index for TXST {} to {}", TXSTIndex, NewIndex.first);
       libSet3DIndex(AltTexIndex, NewIndex.first);
     }
   }
