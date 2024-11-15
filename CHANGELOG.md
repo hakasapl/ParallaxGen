@@ -22,6 +22,7 @@
 - Fixed plugin patching bug that would result in some alternature texture records referencing the wrong TXST record
 - Fixed NIF block sorting breaking 3d index in plugins
 - ParallaxGen.esp will be flagged as light if possible
+- Load order configs in the ParallaxGen folder will no longer do anything - use cfg/user.json instead
 
 ## [0.6.0] - 2024-10-06
 
