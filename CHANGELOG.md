@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.7.0] - UNRELEASED
+## [0.7.0] - 2024-11-15
 
 - Added a launcher GUI
 - All CLI arguments except --autostart and -v/-vv have been removed in favor of the persistent GUI
