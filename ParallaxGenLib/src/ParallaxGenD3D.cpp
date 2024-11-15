@@ -68,6 +68,7 @@ auto ParallaxGenD3D::findCMMaps(const std::unordered_set<std::wstring> &BSAExclu
                                         ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
         } catch (const exception &E) {
           spdlog::error(L"Failed to check if {} is a complex material: {}", EnvMask.Path.wstring(), strToWstr(E.what()));
+          PGResult = ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS;
           continue;
         }
       } else {
