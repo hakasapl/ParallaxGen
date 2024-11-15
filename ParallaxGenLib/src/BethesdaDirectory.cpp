@@ -178,7 +178,7 @@ auto BethesdaDirectory::getFile(const filesystem::path &RelPath, const bool &Cac
       if (Logging) {
         spdlog::error(L"File not found in BSA archive: {}", RelPath.wstring());
       }
-      throw runtime_error("File not found in BSA archive");
+      //throw runtime_error("File not found in BSA archive");
     }
   }
 
