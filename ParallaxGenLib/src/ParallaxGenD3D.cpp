@@ -63,8 +63,13 @@ auto ParallaxGenD3D::findCMMaps(const std::unordered_set<std::wstring> &BSAExclu
 
       bool Result = false;
       if (!BFileInVanillaBSA) {
-        ParallaxGenTask::updatePGResult(PGResult, checkIfCM(EnvMask.Path, Result),
+        try {
+          ParallaxGenTask::updatePGResult(PGResult, checkIfCM(EnvMask.Path, Result),
                                         ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
+        } catch (const exception &E) {
+          spdlog::error(L"Failed to check if {} is a complex material: {}", EnvMask.Path.wstring(), strToWstr(E.what()));
+          continue;
+        }
       } else {
         spdlog::trace(L"Envmask {} is contained in excluded BSA - skipping complex material check",
                       EnvMask.Path.wstring());
