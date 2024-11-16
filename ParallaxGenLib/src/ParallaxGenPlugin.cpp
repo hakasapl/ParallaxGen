@@ -283,6 +283,12 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
 
   const auto Matches = libGetMatchingTXSTObjs(NIFPath, Name3D, Index3D);
 
+  // gather the bases of the shader transforms that have the applied shader as target
+  auto ShaderTransformBases =
+      Patchers.ShaderTransformPatchers
+      | std::views::filter([&AppliedShader](auto const& Entry) { return Entry.second.count(AppliedShader) > 0; })
+      | std::views::transform([](auto const& TransformPatcher) { return TransformPatcher.first; });
+
   // loop through matches
   for (const auto &[TXSTIndex, AltTexIndex] : Matches) {
     int TXSTId = 0;
@@ -378,8 +384,14 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
         const bool bESLFlagged = false;
         const wstring FormIDStr =
             (!bESLFlagged) ? format(L"{}/{:06X}", PluginName, FormID) : format(L"{0}/{1:03X}", PluginName, FormID);
+
+        wstring ShaderStr =
+            ParallaxGenUtil::strToWstr(NIFUtil::getStrFromShader(AppliedShader));
+        for (auto const &ShaderTransformBase : ShaderTransformBases) {
+          ShaderStr += L" or " + ParallaxGenUtil::strToWstr(NIFUtil::getStrFromShader(ShaderTransformBase));
+        }
         spdlog::warn(L"Did not find required {} textures for {}, TXST {} - setting neutral textures",
-                     ParallaxGenUtil::strToWstr(NIFUtil::getStrFromShader(AppliedShader)),
+                    ShaderStr,
                      BaseSlots[static_cast<int>(NIFUtil::TextureSlots::DIFFUSE)], FormIDStr);
       }
 
