@@ -42,7 +42,7 @@
 #include "ParallaxGenUI.hpp"
 
 constexpr unsigned MAX_LOG_SIZE = 5242880;
-constexpr unsigned MAX_LOG_FILES = 100;
+constexpr unsigned MAX_LOG_FILES = 1000;
 
 using namespace std;
 

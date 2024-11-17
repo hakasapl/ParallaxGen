@@ -1,7 +1,11 @@
 # Changelog
 
-## [0.7.1]
+## [0.7.1] - UNRELEASED
 
+- Fixed PBR applying to shapes with facegen RGB tint
+- Fixed exception when file not found in BSA archive for CM check
+- Added workaround for MO2 operator++ crash
+- Max number of logs has been increased from 100 to 1000
 - Fixed warning for missing textures for a texture set when upgrading shaders
 
 ## [0.7.0] - 2024-11-15
@@ -21,6 +25,7 @@
 - Fixed plugin patching bug that would result in some alternature texture records referencing the wrong TXST record
 - Fixed NIF block sorting breaking 3d index in plugins
 - ParallaxGen.esp will be flagged as light if possible
+- Load order configs in the ParallaxGen folder will no longer do anything - use cfg/user.json instead
 
 ## [0.6.0] - 2024-10-06
 
