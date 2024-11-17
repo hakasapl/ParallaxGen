@@ -4,6 +4,8 @@
 
 - Fixed PBR applying to shapes with facegen RGB tint
 - Fixed exception when file not found in BSA archive for CM check
+- Added workaround for MO2 operator++ crash
+- Max number of logs has been increased from 100 to 1000
 
 ## [0.7.0] - 2024-11-15
 

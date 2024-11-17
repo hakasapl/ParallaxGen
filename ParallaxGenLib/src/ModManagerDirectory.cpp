@@ -132,32 +132,36 @@ void ModManagerDirectory::populateModFileMapMO2() {
       continue;
     }
 
-    for (const auto &File :
-         filesystem::recursive_directory_iterator(ModDir, filesystem::directory_options::skip_permission_denied)) {
-      if (!filesystem::is_regular_file(File)) {
-        continue;
+    try {
+      for (const auto &File :
+           filesystem::recursive_directory_iterator(ModDir, filesystem::directory_options::skip_permission_denied)) {
+        if (!filesystem::is_regular_file(File)) {
+          continue;
+        }
+
+        // check if already in map
+        if (ModFileMap.contains(filesystem::relative(File, ModDir))) {
+          continue;
+        }
+
+        // skip meta.ini file
+        if (boost::iequals(File.path().filename().wstring(), L"meta.ini")) {
+          continue;
+        }
+
+        auto RelPath = filesystem::relative(File, ModDir);
+        spdlog::trace(L"ModManagerDirectory | Adding Files to Map : {} -> {}", RelPath.wstring(), Mod);
+
+        filesystem::path RelPathLower = boost::to_lower_copy(RelPath.wstring());
+        // check if already in map
+        if (ModFileMap.contains(RelPathLower)) {
+          continue;
+        }
+
+        ModFileMap[RelPathLower] = Mod;
       }
-
-      // check if already in map
-      if (ModFileMap.contains(filesystem::relative(File, ModDir))) {
-        continue;
-      }
-
-      // skip meta.ini file
-      if (boost::iequals(File.path().filename().wstring(), L"meta.ini")) {
-        continue;
-      }
-
-      auto RelPath = filesystem::relative(File, ModDir);
-      spdlog::trace(L"ModManagerDirectory | Adding Files to Map : {} -> {}", RelPath.wstring(), Mod);
-
-      filesystem::path RelPathLower = boost::to_lower_copy(RelPath.wstring());
-      // check if already in map
-      if (ModFileMap.contains(RelPathLower)) {
-        continue;
-      }
-
-      ModFileMap[RelPathLower] = Mod;
+    } catch (const filesystem::filesystem_error &E) {
+      spdlog::error(L"Error reading mod directory {} (skipping): {}", Mod, ParallaxGenUtil::strToWstr(E.what()));
     }
   }
 }
