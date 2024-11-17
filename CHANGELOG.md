@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.7.1]
+
+- Fixed warning for missing textures for a texture set when upgrading shaders
+
 ## [0.7.0] - 2024-11-15
 
 - Added a launcher GUI
