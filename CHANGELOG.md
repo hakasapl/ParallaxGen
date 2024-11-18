@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.7.1] - UNRELEASED
+## [0.7.1] - 2024-11-18
 
 - Fixed PBR applying to shapes with facegen RGB tint
 - Fixed exception when file not found in BSA archive for CM check
