@@ -21,6 +21,14 @@ auto UTF16toLatin1(const std::wstring &Str) -> std::string {
   return boost::locale::conv::from_utf<wchar_t>(Str, "latin1");
 }
 
+auto Windows1252toUTF16(const std::string &Str) -> std::wstring {
+  return boost::locale::conv::to_utf<wchar_t>(Str, "windows-1252");
+}
+
+auto UTF16toWindows1252(const std::wstring &Str) -> std::string {
+  return boost::locale::conv::from_utf<wchar_t>(Str, "windows-1252");
+}
+
 auto ASCIItoUTF16(const std::string &Str) -> std::wstring {
   return boost::locale::conv::to_utf<wchar_t>(Str, "US-ASCII");
 }

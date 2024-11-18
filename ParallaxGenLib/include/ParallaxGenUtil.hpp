@@ -15,6 +15,9 @@ auto UTF16toUTF8(const std::wstring &Str) -> std::string;
 auto Latin1toUTF16(const std::string &Str) -> std::wstring;
 auto UTF16toLatin1(const std::wstring &Str) -> std::string;
 
+auto Windows1252toUTF16(const std::string &Str) -> std::wstring;
+auto UTF16toWindows1252(const std::wstring &Str) -> std::string;
+
 auto ASCIItoUTF16(const std::string &Str) -> std::wstring;
 auto UTF16toASCII(const std::wstring &Str) -> std::string;
 

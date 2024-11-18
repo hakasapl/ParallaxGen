@@ -157,9 +157,8 @@ auto BethesdaDirectory::getFile(const filesystem::path &RelPath, const bool &Cac
     const bsa::tes4::version BSAVersion = BSAStruct->Version;
     const bsa::tes4::archive BSAObj = BSAStruct->Archive;
 
-    // TODO UNICODE Latin1 is currently a best guess since we don't know the encoding of the string coming from the library
-    string ParentPath = UTF16toLatin1(RelPath.parent_path().wstring());
-    string Filename = UTF16toLatin1(RelPath.filename().wstring());
+    string ParentPath = UTF16toWindows1252(RelPath.parent_path().wstring());
+    string Filename = UTF16toWindows1252(RelPath.filename().wstring());
 
     const auto File = BSAObj[ParentPath][Filename];
     if (File) {
@@ -442,8 +441,7 @@ void BethesdaDirectory::addBSAToFileMap(const wstring &BSAName) {
     // get file entry from pointer
     try {
       // get folder name within the BSA vfs
-      // TODO UNICODE Latin1 is currently a best guess since we don't know the encoding
-      const filesystem::path FolderName = Latin1toUTF16(string(FileEntry.first.name()));
+      const filesystem::path FolderName = Windows1252toUTF16(string(FileEntry.first.name()));
 
       // .second stores the files in the folder
       const auto FileName = FileEntry.second;
@@ -451,7 +449,7 @@ void BethesdaDirectory::addBSAToFileMap(const wstring &BSAName) {
       // loop through files in folder
       for (const auto &Entry : FileName) {
         // get name of file
-        const string_view CurEntry = Entry.first.name();
+        const wstring CurEntry = Windows1252toUTF16(string(Entry.first.name()));
         const filesystem::path CurPath = FolderName / CurEntry;
 
         // chekc if we should ignore this file
