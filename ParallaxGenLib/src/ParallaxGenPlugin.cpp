@@ -82,7 +82,7 @@ void ParallaxGenPlugin::libThrowExceptionIfExists() {
   wstring MessageOut(Message);
   LocalFree(static_cast<HGLOBAL>(Message)); // Only free if memory was allocated.
 
-  throw runtime_error("ParallaxGenMutagenWrapper.dll: " + ParallaxGenUtil::wstrToStr(MessageOut));
+  throw runtime_error("ParallaxGenMutagenWrapper.dll: " + ParallaxGenUtil::UTF16toASCII(MessageOut));
 }
 
 void ParallaxGenPlugin::libInitialize(const int &GameType, const wstring &DataPath, const wstring &OutputPlugin,
@@ -331,7 +331,7 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
     // create a list of mods and the corresponding matches
     vector<PatcherUtil::ShaderPatcherMatch> Matches;
     for (const auto &[Shader, Patcher] : Patchers.ShaderPatchers) {
-      Logger::Prefix PrefixPatches(ParallaxGenUtil::strToWstr(Patcher->getPatcherName()));
+      Logger::Prefix PrefixPatches(ParallaxGenUtil::UTF8toUTF16(Patcher->getPatcherName()));
 
       // Check if shader should be applied
       vector<PatcherShader::PatcherMatch> CurMatches;
@@ -386,9 +386,9 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
             (!bESLFlagged) ? format(L"{}/{:06X}", PluginName, FormID) : format(L"{0}/{1:03X}", PluginName, FormID);
 
         wstring ShaderStr =
-            ParallaxGenUtil::strToWstr(NIFUtil::getStrFromShader(AppliedShader));
+            ParallaxGenUtil::UTF8toUTF16(NIFUtil::getStrFromShader(AppliedShader));
         for (auto const &ShaderTransformBase : ShaderTransformBases) {
-          ShaderStr += L" or " + ParallaxGenUtil::strToWstr(NIFUtil::getStrFromShader(ShaderTransformBase));
+          ShaderStr += L" or " + ParallaxGenUtil::UTF8toUTF16(NIFUtil::getStrFromShader(ShaderTransformBase));
         }
         spdlog::warn(L"Did not find required {} textures for {}, TXST {} - setting neutral textures",
                     ShaderStr,
@@ -453,7 +453,8 @@ void ParallaxGenPlugin::set3DIndices(const wstring &NIFPath,
 
   // Loop through shape tracker
   for (const auto &[Shape, OldIndex3D, NewIndex3D] : ShapeTracker) {
-    const auto ShapeName = ParallaxGenUtil::strToWstr(Shape->name.get());
+      // TODO: nifly encoding
+    const auto ShapeName = ParallaxGenUtil::Latin1toUTF16(Shape->name.get());
 
     // find matches
     const auto Matches = libGetMatchingTXSTObjs(NIFPath, ShapeName, OldIndex3D);

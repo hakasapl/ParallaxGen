@@ -96,7 +96,7 @@ auto ParallaxGenUI::selectModOrder(
 
     vector<wstring> ShaderStrs;
     for (const auto &Shader : get<0>(Conflicts.at(Mod))) {
-      ShaderStrs.insert(ShaderStrs.begin(), ParallaxGenUtil::strToWstr(NIFUtil::getStrFromShader(Shader)));
+      ShaderStrs.insert(ShaderStrs.begin(), ParallaxGenUtil::UTF8toUTF16(NIFUtil::getStrFromShader(Shader)));
     }
 
     auto ShaderStr = boost::join(ShaderStrs, L",");

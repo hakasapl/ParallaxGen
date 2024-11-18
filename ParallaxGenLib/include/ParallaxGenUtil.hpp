@@ -9,8 +9,15 @@
 namespace ParallaxGenUtil {
 
 // narrow and wide string conversion functions
-auto strToWstr(const std::string &Str) -> std::wstring;
-auto wstrToStr(const std::wstring &Str) -> std::string;
+auto UTF8toUTF16(const std::string &Str) -> std::wstring;
+auto UTF16toUTF8(const std::wstring &Str) -> std::string;
+
+auto Latin1toUTF16(const std::string &Str) -> std::wstring;
+auto UTF16toLatin1(const std::wstring &Str) -> std::string;
+
+auto ASCIItoUTF16(const std::string &Str) -> std::wstring;
+auto UTF16toASCII(const std::wstring &Str) -> std::string;
+
 
 // Get the file bytes of a file
 auto getFileBytes(const std::filesystem::path &FilePath) -> std::vector<std::byte>;

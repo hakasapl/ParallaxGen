@@ -4,6 +4,7 @@
 #include <spdlog/spdlog.h>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/locale.hpp>
 #include <fstream>
 #include <iostream>
 #include <wingdi.h>
@@ -12,7 +13,24 @@
 using namespace std;
 namespace ParallaxGenUtil {
 
-auto strToWstr(const string &Str) -> wstring {
+auto Latin1toUTF16(const std::string &Str) -> std::wstring {
+  return boost::locale::conv::to_utf<wchar_t>(Str, "latin1");
+}
+
+auto UTF16toLatin1(const std::wstring &Str) -> std::string {
+  return boost::locale::conv::from_utf<wchar_t>(Str, "latin1");
+}
+
+auto ASCIItoUTF16(const std::string &Str) -> std::wstring {
+  return boost::locale::conv::to_utf<wchar_t>(Str, "US-ASCII");
+}
+
+auto UTF16toASCII(const std::wstring &Str) -> std::string {
+  return boost::locale::conv::from_utf<wchar_t>(Str, "US-ASCII");
+}
+
+
+auto UTF8toUTF16(const string &Str) -> wstring {
   // Just return empty string if empty
   if (Str.empty()) {
     return {};
@@ -26,7 +44,7 @@ auto strToWstr(const string &Str) -> wstring {
   return WStr;
 }
 
-auto wstrToStr(const wstring &WStr) -> string {
+auto UTF16toUTF8(const wstring &WStr) -> string {
   // Just return empty string if empty
   if (WStr.empty()) {
     return {};

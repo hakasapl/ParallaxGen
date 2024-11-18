@@ -8,6 +8,7 @@
     "boost-iostreams",
     "boost-stacktrace",
     "boost-thread",
+    "boost-locale",
     "cli11",
     {
       "name": "directxtex",

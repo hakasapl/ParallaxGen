@@ -68,7 +68,7 @@ private:
   std::filesystem::path DataDir;                         /**< Stores the path to the game data directory */
   std::filesystem::path GeneratedDir;                    /**< Stores the path to the generated directory */
   std::map<std::filesystem::path, BethesdaFile> FileMap; /** < Stores the file map for every file found in the load
-                                                            order. Key is a lowercase path, value is a BethesdaFile */
+                                                            order. Key is a lowercase path, value is a BethesdaFile*/
   std::mutex FileMapMutex;                               /** < Mutex for the file map */
   std::vector<ModFile> ModFiles;  /** < Stores files in mod staging directory */
 

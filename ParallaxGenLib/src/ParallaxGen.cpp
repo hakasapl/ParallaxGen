@@ -75,7 +75,7 @@ void ParallaxGen::patchMeshes(const PatcherUtil::PatcherSet &Patchers, const uno
         try {
           Result = processNIF(Patchers, ModPriority, Mesh, &DiffJSON, PatchPlugin);
         } catch (const exception &E) {
-          spdlog::error(L"Exception in thread patching NIF {}: {}", Mesh.wstring(), strToWstr(E.what()));
+          spdlog::error(L"Exception in thread patching NIF {}: {}", Mesh.wstring(), ASCIItoUTF16(E.what()));
           Result = ParallaxGenTask::PGResult::FAILURE;
         }
 
@@ -132,7 +132,7 @@ auto ParallaxGen::findModConflicts(const PatcherUtil::PatcherSet &Patchers, cons
         try {
           Result = processNIF(Patchers, nullptr, Mesh, nullptr, PatchPlugin, true, &ConflictMods, &ConflictModsMutex);
         } catch (const exception &E) {
-          spdlog::error(L"Exception in thread finding mod conflicts {}: {}", Mesh.wstring(), strToWstr(E.what()));
+          spdlog::error(L"Exception in thread finding mod conflicts {}: {}", Mesh.wstring(), ASCIItoUTF16(E.what()));
           Result = ParallaxGenTask::PGResult::FAILURE;
         }
 
@@ -241,7 +241,7 @@ auto ParallaxGen::processNIF(
   try {
     NIF = NIFUtil::loadNIFFromBytes(NIFFileData);
   } catch (const exception &E) {
-    Logger::error(L"NIF Rejected: Unable to load NIF: {}", strToWstr(E.what()));
+    Logger::error(L"NIF Rejected: Unable to load NIF: {}", ASCIItoUTF16(E.what()));
     Result = ParallaxGenTask::PGResult::FAILURE;
     return Result;
   }
@@ -270,7 +270,8 @@ auto ParallaxGen::processNIF(
   for (NiShape *NIFShape : NIF.GetShapes()) {
     // get shape name and blockid
     const auto ShapeBlockID = NIF.GetBlockID(NIFShape);
-    const auto ShapeName = strToWstr(NIFShape->name.get());
+    // TODO UNICODE find out whitch encoding nifly uses
+    const auto ShapeName = Latin1toUTF16(NIFShape->name.get());
     const auto ShapeIDStr = to_wstring(ShapeBlockID) + L" / " + ShapeName;
     Logger::Prefix PrefixShape(ShapeIDStr);
 
@@ -365,7 +366,7 @@ auto ParallaxGen::processNIF(
 
     // Add to diff JSON
     if (DiffJSON != nullptr) {
-      auto JSONKey = wstrToStr(NIFFile.wstring());
+      auto JSONKey = UTF16toUTF8(NIFFile.wstring());
       threadSafeJSONUpdate(
           [&](nlohmann::json &JSON) {
             JSON[JSONKey]["crc32original"] = CRCBefore;
@@ -448,7 +449,8 @@ auto ParallaxGen::processShape(
   unordered_set<wstring> ModSet;
   if (!CacheExists) {
     for (const auto &[Shader, Patcher] : Patchers.ShaderPatchers) {
-      Logger::Prefix PrefixPatches(strToWstr(Patcher->getPatcherName()));
+        // note: name is defined in source code in UTF8-encoded files
+      Logger::Prefix PrefixPatches(UTF8toUTF16(Patcher->getPatcherName()));
 
       // Check if shader should be applied
       vector<PatcherShader::PatcherMatch> CurMatches;
@@ -562,7 +564,8 @@ void ParallaxGen::addFileToZip(mz_zip_archive &Zip, const filesystem::path &File
   // get relative path
   const filesystem::path ZipRelativePath = FilePath.lexically_relative(OutputDir);
 
-  const string ZipFilePath = wstrToStr(ZipRelativePath.wstring());
+  // TODO UNICODE which encoding should be used here for the file path
+  const string ZipFilePath = UTF16toASCII(ZipRelativePath.wstring());
 
   // add file to Zip
   if (mz_zip_writer_add_mem(&Zip, ZipFilePath.c_str(), Buffer.data(), Buffer.size(), MZ_NO_COMPRESSION) == 0) {
@@ -584,7 +587,8 @@ void ParallaxGen::zipDirectory(const filesystem::path &DirPath, const filesystem
   }
 
   // initialize file
-  const string ZipPathString = wstrToStr(ZipPath);
+  // TODO UNICODE which encoding should be used here for the file path
+  const string ZipPathString = UTF16toASCII(ZipPath);
   if (mz_zip_writer_init_file(&Zip, ZipPathString.c_str(), 0) == 0) {
     spdlog::critical(L"Error creating Zip file: {}", ZipPath.wstring());
     exit(1);

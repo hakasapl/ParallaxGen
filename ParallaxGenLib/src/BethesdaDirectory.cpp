@@ -157,8 +157,9 @@ auto BethesdaDirectory::getFile(const filesystem::path &RelPath, const bool &Cac
     const bsa::tes4::version BSAVersion = BSAStruct->Version;
     const bsa::tes4::archive BSAObj = BSAStruct->Archive;
 
-    string ParentPath = wstrToStr(RelPath.parent_path().wstring());
-    string Filename = wstrToStr(RelPath.filename().wstring());
+    // TODO UNICODE Latin1 is currently a best guess since we don't know the encoding of the string coming from the library
+    string ParentPath = UTF16toLatin1(RelPath.parent_path().wstring());
+    string Filename = UTF16toLatin1(RelPath.filename().wstring());
 
     const auto File = BSAObj[ParentPath][Filename];
     if (File) {
@@ -168,7 +169,7 @@ auto BethesdaDirectory::getFile(const filesystem::path &RelPath, const bool &Cac
         File->write(AOS, BSAVersion);
       } catch (const std::exception &E) {
         if (Logging) {
-          spdlog::error(L"Failed to read file {}: {}", RelPath.wstring(), strToWstr(E.what()));
+          spdlog::error(L"Failed to read file {}: {}", RelPath.wstring(), ASCIItoUTF16(E.what()));
         }
       }
 
@@ -370,7 +371,7 @@ void BethesdaDirectory::addBSAFilesToMap() {
       addBSAToFileMap(BSAName);
     } catch (const std::exception &E) {
       if (Logging) {
-        spdlog::error(L"Failed to add BSA file {} to map (Skipping): {}", BSAName, strToWstr(E.what()));
+        spdlog::error(L"Failed to add BSA file {} to map (Skipping): {}", BSAName, ASCIItoUTF16(E.what()));
       }
       continue;
     }
@@ -406,7 +407,7 @@ void BethesdaDirectory::addLooseFilesToMap() {
       }
     } catch (const std::exception &E) {
       if (Logging) {
-        spdlog::error(L"Failed to load file from iterator (Skipping): {}", strToWstr(E.what()));
+        spdlog::error(L"Failed to load file from iterator (Skipping): {}", ASCIItoUTF16(E.what()));
       }
       continue;
     }
@@ -441,7 +442,8 @@ void BethesdaDirectory::addBSAToFileMap(const wstring &BSAName) {
     // get file entry from pointer
     try {
       // get folder name within the BSA vfs
-      const filesystem::path FolderName = FileEntry.first.name();
+      // TODO UNICODE Latin1 is currently a best guess since we don't know the encoding
+      const filesystem::path FolderName = Latin1toUTF16(string(FileEntry.first.name()));
 
       // .second stores the files in the folder
       const auto FileName = FileEntry.second;
@@ -470,7 +472,7 @@ void BethesdaDirectory::addBSAToFileMap(const wstring &BSAName) {
       }
     } catch (const std::exception &E) {
       if (Logging) {
-        spdlog::error(L"Failed to get file pointer from BSA, skipping {}: {}", BSAName, strToWstr(E.what()));
+        spdlog::error(L"Failed to get file pointer from BSA, skipping {}: {}", BSAName, ASCIItoUTF16(E.what()));
       }
       continue;
     }
@@ -510,6 +512,7 @@ auto BethesdaDirectory::getBSALoadOrder() const -> vector<wstring> {
 }
 
 auto BethesdaDirectory::getPathLower(const filesystem::path &Path) -> filesystem::path {
+    // TODO UNICODE lower path
   return {boost::to_lower_copy(Path.wstring())};
 }
 
@@ -536,10 +539,10 @@ auto BethesdaDirectory::getBSAFilesFromINIs() const -> vector<wstring> {
     // loop through each ini file
     wstring INIVal;
     for (const auto &INIPath : INIFileOrder) {
-      wstring CurVal = readINIValue(INIPath, L"Archive", strToWstr(Field), Logging, FirstINIRead);
+      wstring CurVal = readINIValue(INIPath, L"Archive", ASCIItoUTF16(Field), Logging, FirstINIRead);
 
       if (Logging) {
-        spdlog::trace(L"Found ini key pair from INI {}: {}: {}", INIPath.wstring(), strToWstr(Field), CurVal);
+        spdlog::trace(L"Found ini key pair from INI {}: {}: {}", INIPath.wstring(), ASCIItoUTF16(Field), CurVal);
       }
 
       if (CurVal.empty()) {
@@ -556,7 +559,7 @@ auto BethesdaDirectory::getBSAFilesFromINIs() const -> vector<wstring> {
     }
 
     if (Logging) {
-      spdlog::trace(L"Found BSA files from INI field {}: {}", strToWstr(Field), INIVal);
+      spdlog::trace(L"Found BSA files from INI field {}: {}", ASCIItoUTF16(Field), INIVal);
     }
 
     // split into components
@@ -603,6 +606,7 @@ auto BethesdaDirectory::findBSAFilesFromPluginName(const vector<wstring> &BSAFil
     spdlog::trace(L"Finding BSA files that correspond to plugin {}", PluginPrefix);
   }
 
+  // TODO UNICODE unicode to lower
   vector<wstring> BSAFilesFound;
   const wstring PluginPrefixLower = boost::to_lower_copy(PluginPrefix);
 
@@ -737,7 +741,7 @@ auto BethesdaDirectory::readINIValue(const filesystem::path &INIPath, const wstr
     return L"";
   }
 
-  wifstream F(INIPath);
+  ifstream F(INIPath);
   if (!F.is_open()) {
     if (Logging && FirstINIRead) {
       spdlog::warn(L"Unable to open INI (ignoring): {}", INIPath.wstring());
@@ -745,8 +749,8 @@ auto BethesdaDirectory::readINIValue(const filesystem::path &INIPath, const wstr
     return L"";
   }
 
-  wstring CurLine;
-  wstring CurSection;
+  string CurLine;
+  string CurSection;
   bool FoundSection = false;
 
   while (getline(F, CurLine)) {
@@ -780,12 +784,12 @@ auto BethesdaDirectory::readINIValue(const filesystem::path &INIPath, const wstr
     const size_t Pos = CurLine.find('=');
     if (Pos != std::string::npos) {
       // found key value pair
-      wstring CurKey = CurLine.substr(0, Pos);
+      string CurKey = CurLine.substr(0, Pos);
       boost::trim(CurKey);
       if (boost::iequals(CurKey, Key)) {
-        wstring CurValue = CurLine.substr(Pos + 1);
+        string CurValue = CurLine.substr(Pos + 1);
         boost::trim(CurValue);
-        return CurValue;
+        return ParallaxGenUtil::UTF8toUTF16(CurValue);
       }
     }
   }

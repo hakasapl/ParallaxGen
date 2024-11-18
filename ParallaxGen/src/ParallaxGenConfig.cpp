@@ -128,17 +128,18 @@ void ParallaxGenConfig::loadConfig() {
 }
 
 auto ParallaxGenConfig::addConfigJSON(const nlohmann::json &J) -> void {
+    // TODO UNIFORM check if to_lower_copy can handle UTF8
   // "dyncubemap_blocklist" field
   if (J.contains("dyncubemap_blocklist")) {
     for (const auto &Item : J["dyncubemap_blocklist"]) {
-      DynCubemapBlocklist.insert(strToWstr(boost::to_lower_copy(Item.get<string>())));
+      DynCubemapBlocklist.insert(UTF8toUTF16(boost::to_lower_copy(Item.get<string>())));
     }
   }
 
   // "nif_blocklist" field
   if (J.contains("nif_blocklist")) {
     for (const auto &Item : J["nif_blocklist"]) {
-      NIFBlocklist.insert(strToWstr(boost::to_lower_copy(Item.get<string>())));
+      NIFBlocklist.insert(UTF8toUTF16(boost::to_lower_copy(Item.get<string>())));
     }
   }
 
@@ -152,7 +153,7 @@ auto ParallaxGenConfig::addConfigJSON(const nlohmann::json &J) -> void {
   // "vanilla_bsas" field
   if (J.contains("vanilla_bsas")) {
     for (const auto &Item : J["vanilla_bsas"]) {
-      VanillaBSAList.insert(strToWstr(boost::to_lower_copy(Item.get<string>())));
+      VanillaBSAList.insert(UTF8toUTF16(boost::to_lower_copy(Item.get<string>())));
     }
   }
 
@@ -162,7 +163,7 @@ auto ParallaxGenConfig::addConfigJSON(const nlohmann::json &J) -> void {
 
     ModOrder.clear();
     for (const auto &Item : J["mod_order"]) {
-      auto Mod = strToWstr(Item.get<string>());
+      auto Mod = UTF8toUTF16(Item.get<string>());
       ModOrder.push_back(Mod);
       ModPriority[Mod] = static_cast<int>(ModOrder.size() - 1);
     }
@@ -179,7 +180,7 @@ auto ParallaxGenConfig::addConfigJSON(const nlohmann::json &J) -> void {
     // "modmanager"
     ParamJ["modmanager"]["type"].get_to<ModManagerDirectory::ModManagerType>(Params.ModManager.Type);
     ParamJ["modmanager"]["mo2instancedir"].get_to<filesystem::path>(Params.ModManager.MO2InstanceDir);
-    Params.ModManager.MO2Profile = strToWstr(ParamJ["modmanager"]["mo2profile"].get<string>());
+    Params.ModManager.MO2Profile = UTF8toUTF16(ParamJ["modmanager"]["mo2profile"].get<string>());
 
     // "output"
     ParamJ["output"]["dir"].get_to<filesystem::path>(Params.Output.Dir);
@@ -224,7 +225,7 @@ auto ParallaxGenConfig::parseJSON(const std::filesystem::path &JSONFile, const v
   try {
     J = nlohmann::json::parse(Bytes);
   } catch (const nlohmann::json::parse_error &E) {
-    spdlog::error(L"Error parsing JSON file {}: {}", JSONFile.wstring(), strToWstr(E.what()));
+    spdlog::error(L"Error parsing JSON file {}: {}", JSONFile.wstring(), ASCIItoUTF16(E.what()));
     J = {};
     return false;
   }
@@ -237,7 +238,7 @@ auto ParallaxGenConfig::validateJSON(const std::filesystem::path &JSONFile, cons
   try {
     Validator.validate(J);
   } catch (const std::exception &E) {
-    spdlog::error(L"Invalid JSON file {}: {}", JSONFile.wstring(), strToWstr(E.what()));
+    spdlog::error(L"Invalid JSON file {}: {}", JSONFile.wstring(), ASCIItoUTF16(E.what()));
     return false;
   }
 
@@ -374,23 +375,23 @@ void ParallaxGenConfig::saveUserConfig() {
   vector<string> ModOrderNarrowStr;
   ModOrderNarrowStr.reserve(ModOrder.size());
   for (const auto &Mod : ModOrder) {
-    ModOrderNarrowStr.push_back(wstrToStr(Mod));
+    ModOrderNarrowStr.push_back(UTF16toUTF8(Mod));
   }
   J["mod_order"] = ModOrderNarrowStr;
 
   // Params
 
   // "game"
-  J["params"]["game"]["dir"] = wstrToStr(Params.Game.Dir.wstring());
+  J["params"]["game"]["dir"] = UTF16toUTF8(Params.Game.Dir.wstring());
   J["params"]["game"]["type"] = Params.Game.Type;
 
   // "modmanager"
   J["params"]["modmanager"]["type"] = Params.ModManager.Type;
-  J["params"]["modmanager"]["mo2instancedir"] = wstrToStr(Params.ModManager.MO2InstanceDir.wstring());
-  J["params"]["modmanager"]["mo2profile"] = wstrToStr(Params.ModManager.MO2Profile);
+  J["params"]["modmanager"]["mo2instancedir"] = UTF16toUTF8(Params.ModManager.MO2InstanceDir.wstring());
+  J["params"]["modmanager"]["mo2profile"] = UTF16toUTF8(Params.ModManager.MO2Profile);
 
   // "output"
-  J["params"]["output"]["dir"] = wstrToStr(Params.Output.Dir.wstring());
+  J["params"]["output"]["dir"] = UTF16toUTF8(Params.Output.Dir.wstring());
   J["params"]["output"]["zip"] = Params.Output.Zip;
 
   // "processing"
@@ -424,15 +425,15 @@ void ParallaxGenConfig::saveUserConfig() {
     OutFile << J.dump(2) << endl;
     OutFile.close();
   } catch (const exception &E) {
-    spdlog::error(L"Failed to save user config: {}", strToWstr(E.what()));
+    spdlog::error("Failed to save user config: {}", E.what());
   }
 }
 
 auto ParallaxGenConfig::PGParams::getString() const -> wstring {
   wstring OutStr;
   OutStr += L"GameDir: " + Game.Dir.wstring() + L"\n";
-  OutStr += L"GameType: " + strToWstr(BethesdaGame::getStrFromGameType(Game.Type)) + L"\n";
-  OutStr += L"ModManagerType: " + strToWstr(ModManagerDirectory::getStrFromModManagerType(ModManager.Type)) + L"\n";
+  OutStr += L"GameType: " + UTF8toUTF16(BethesdaGame::getStrFromGameType(Game.Type)) + L"\n";
+  OutStr += L"ModManagerType: " + UTF8toUTF16(ModManagerDirectory::getStrFromModManagerType(ModManager.Type)) + L"\n";
   OutStr += L"MO2InstanceDir: " + ModManager.MO2InstanceDir.wstring() + L"\n";
   OutStr += L"MO2Profile: " + ModManager.MO2Profile + L"\n";
   OutStr += L"OutputDir: " + Output.Dir.wstring() + L"\n";

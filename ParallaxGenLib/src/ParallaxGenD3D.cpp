@@ -67,7 +67,7 @@ auto ParallaxGenD3D::findCMMaps(const std::unordered_set<std::wstring> &BSAExclu
           ParallaxGenTask::updatePGResult(PGResult, checkIfCM(EnvMask.Path, Result),
                                         ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
         } catch (const exception &E) {
-          spdlog::error(L"Failed to check if {} is a complex material: {}", EnvMask.Path.wstring(), strToWstr(E.what()));
+          spdlog::error(L"Failed to check if {} is a complex material: {}", EnvMask.Path.wstring(), ASCIItoUTF16(E.what()));
           PGResult = ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS;
           continue;
         }
@@ -398,10 +398,11 @@ auto ParallaxGenD3D::compileShader(const std::filesystem::path &Filename,
   if (FAILED(HR)) {
     if (PtrErrorBlob != nullptr) {
       spdlog::critical(L"Failed to compile shader {}: {}, {}", Filename.wstring(),
-                       strToWstr(getHRESULTErrorMessage(HR)), static_cast<wchar_t *>(PtrErrorBlob->GetBufferPointer()));
+                       ASCIItoUTF16(getHRESULTErrorMessage(HR)), static_cast<wchar_t *>(PtrErrorBlob->GetBufferPointer()));
       PtrErrorBlob.Reset();
     } else {
-      spdlog::critical(L"Failed to compile shader {}: {}", Filename.wstring(), strToWstr(getHRESULTErrorMessage(HR)));
+      spdlog::critical(L"Failed to compile shader {}: {}", Filename.wstring(),
+                       ASCIItoUTF16(getHRESULTErrorMessage(HR)));
     }
 
     exit(1);
@@ -1039,7 +1040,7 @@ auto ParallaxGenD3D::getDDS(const filesystem::path &DDSPath,
   }
 
   if (FAILED(HR)) {
-    spdlog::error(L"Failed to load DDS file from {}: {}", DDSPath.wstring(), strToWstr(getHRESULTErrorMessage(HR)));
+    spdlog::error(L"Failed to load DDS file from {}: {}", DDSPath.wstring(), ASCIItoUTF16(getHRESULTErrorMessage(HR)));
     return ParallaxGenTask::PGResult::FAILURE;
   }
 
@@ -1082,7 +1083,7 @@ auto ParallaxGenD3D::getDDSMetadata(const filesystem::path &DDSPath,
 
   if (FAILED(HR)) {
     spdlog::error(L"Failed to load DDS file metadata from {}: {}", DDSPath.wstring(),
-                  strToWstr(getHRESULTErrorMessage(HR)));
+                  ASCIItoUTF16(getHRESULTErrorMessage(HR)));
     return ParallaxGenTask::PGResult::FAILURE;
   }
 
