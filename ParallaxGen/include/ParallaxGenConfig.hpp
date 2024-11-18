@@ -96,6 +96,8 @@ private:
 
   nlohmann::json_schema::json_validator Validator; /** Stores the validator JSON object */
 
+  nlohmann::json UserConfig; /** Stores the user config JSON object */
+
 public:
   /**
    * @brief Construct a new Parallax Gen Config object
@@ -110,6 +112,13 @@ public:
    * @return nlohmann::json config validation object
    */
   static auto getConfigValidation() -> nlohmann::json;
+
+  /**
+   * @brief Get the Default Config File object
+   *
+   * @return std::filesystem::path Path to default config file
+   */
+  [[nodiscard]] auto getDefaultConfigFile() const -> std::filesystem::path;
 
   /**
    * @brief Get the User Config File object
@@ -245,5 +254,5 @@ private:
   /**
    * @brief Saves user config to the user json file
    */
-  void saveUserConfig() const;
+  void saveUserConfig();
 };

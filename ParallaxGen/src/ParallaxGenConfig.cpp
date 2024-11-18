@@ -75,6 +75,12 @@ auto ParallaxGenConfig::getConfigValidation() -> nlohmann::json {
   return PGConfigSchema;
 }
 
+auto ParallaxGenConfig::getDefaultConfigFile() const -> filesystem::path {
+  // Get default config file
+  static const filesystem::path DefaultConfigFile = ExePath / "cfg" / "default.json";
+  return DefaultConfigFile;
+}
+
 auto ParallaxGenConfig::getUserConfigFile() const -> filesystem::path {
   // Get user config file
   static const filesystem::path UserConfigFile = ExePath / "cfg" / "user.json";
@@ -92,26 +98,28 @@ void ParallaxGenConfig::loadConfig() {
 
   size_t NumConfigs = 0;
 
-  filesystem::path DefConfPath = ExePath / "cfg";
+  static const vector<filesystem::path> ConfigsToRead = {getDefaultConfigFile(), getUserConfigFile()};
   // Loop through all files in DefConfPath recursively directoryiterator
-  for (const auto &Entry : filesystem::recursive_directory_iterator(DefConfPath)) {
-    if (filesystem::is_regular_file(Entry) && Entry.path().filename().extension() == ".json") {
-      spdlog::debug(L"Loading ParallaxGen Config: {}", Entry.path().wstring());
+  for (const auto &Entry : ConfigsToRead) {
+    spdlog::debug(L"Loading ParallaxGen Config: {}", Entry.wstring());
 
-      nlohmann::json J;
-      if (!parseJSON(Entry.path(), getFileBytes(Entry.path()), J)) {
-        continue;
-      }
+    nlohmann::json J;
+    if (!parseJSON(Entry, getFileBytes(Entry), J)) {
+      continue;
+    }
 
-      if (!validateJSON(Entry.path(), J)) {
-        continue;
-      }
+    if (!validateJSON(Entry, J)) {
+      continue;
+    }
 
-      if (!J.empty()) {
-        replaceForwardSlashes(J);
-        addConfigJSON(J);
-        NumConfigs++;
-      }
+    if (!J.empty()) {
+      replaceForwardSlashes(J);
+      addConfigJSON(J);
+      NumConfigs++;
+    }
+
+    if (Entry == getUserConfigFile()) {
+      UserConfig = J;
     }
   }
 
@@ -359,16 +367,9 @@ auto ParallaxGenConfig::validateParams(const PGParams &Params, vector<string> &E
   return Errors.empty();
 }
 
-void ParallaxGenConfig::saveUserConfig() const {
+void ParallaxGenConfig::saveUserConfig() {
   // build output json
-  nlohmann::json J;
-
-  // Placeholders for future fields
-  // TODO
-  J["dyncubemap_blocklist"] = nlohmann::json::array();
-  J["nif_blocklist"] = nlohmann::json::array();
-  J["texture_maps"] = nlohmann::json::object();
-  J["vanilla_bsas"] = nlohmann::json::array();
+  nlohmann::json J = UserConfig;
 
   vector<string> ModOrderNarrowStr;
   ModOrderNarrowStr.reserve(ModOrder.size());
@@ -413,6 +414,9 @@ void ParallaxGenConfig::saveUserConfig() const {
 
   // "postpatcher"
   J["params"]["postpatcher"]["optimizemeshes"] = Params.PostPatcher.OptimizeMeshes;
+
+  // Update UserConfig var
+  UserConfig = J;
 
   // write to file
   try {
