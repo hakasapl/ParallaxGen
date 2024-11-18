@@ -7,6 +7,7 @@
 - Added workaround for MO2 operator++ crash
 - Max number of logs has been increased from 100 to 1000
 - Fixed warning for missing textures for a texture set when upgrading shaders
+- User.json custom entries are no longer deleted
 
 ## [0.7.0] - 2024-11-15
 
