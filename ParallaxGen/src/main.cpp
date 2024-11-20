@@ -335,9 +335,8 @@ void initLogger(const filesystem::path &LOGPATH, const ParallaxGenCLIArgs &Args)
   Sinks.push_back(ConsoleSink);
 
   // Rotating file sink
-  // TODO UNIFORM check the logger sink
-  auto FileSink = make_shared<spdlog::sinks::rotating_file_sink_mt>(LOGPATH.string(), MAX_LOG_SIZE, MAX_LOG_FILES);
-  Sinks.push_back(FileSink); // TODO wide string support here
+  auto FileSink = make_shared<spdlog::sinks::rotating_file_sink_mt>(LOGPATH.wstring(), MAX_LOG_SIZE, MAX_LOG_FILES);
+  Sinks.push_back(FileSink);
   auto Logger = make_shared<spdlog::logger>("ParallaxGen", Sinks.begin(), Sinks.end());
 
   // register logger parameters

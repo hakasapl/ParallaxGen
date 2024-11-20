@@ -157,8 +157,8 @@ auto BethesdaDirectory::getFile(const filesystem::path &RelPath, const bool &Cac
     const bsa::tes4::version BSAVersion = BSAStruct->Version;
     const bsa::tes4::archive BSAObj = BSAStruct->Archive;
 
-    string ParentPath = UTF16toWindows1252(RelPath.parent_path().wstring());
-    string Filename = UTF16toWindows1252(RelPath.filename().wstring());
+    string ParentPath = UTF16toASCII(RelPath.parent_path().wstring());
+    string Filename = UTF16toASCII(RelPath.filename().wstring());
 
     const auto File = BSAObj[ParentPath][Filename];
     if (File) {
@@ -440,16 +440,28 @@ void BethesdaDirectory::addBSAToFileMap(const wstring &BSAName) {
   for (auto &FileEntry : BSAObj) {
     // get file entry from pointer
     try {
-      // get folder name within the BSA vfs
-      const filesystem::path FolderName = Windows1252toUTF16(string(FileEntry.first.name()));
-
       // .second stores the files in the folder
       const auto FileName = FileEntry.second;
 
       // loop through files in folder
       for (const auto &Entry : FileName) {
+
+        if (!ContainsOnlyAscii(string(FileEntry.first.name())) || 
+            !ContainsOnlyAscii(string(Entry.first.name())))
+        {
+          spdlog::warn(
+              L"File {}\\{} in BSA {} contains non-ascii characters which is buggy by Skyrim - skipping",
+                       Windows1252toUTF16(string(FileEntry.first.name())),
+                       Windows1252toUTF16(string(Entry.first.name())), BSAName);
+
+          continue;
+        }
+
+        // get folder name within the BSA vfs
+        const filesystem::path FolderName = ASCIItoUTF16(string(FileEntry.first.name()));
+
         // get name of file
-        const wstring CurEntry = Windows1252toUTF16(string(Entry.first.name()));
+        const wstring CurEntry = ASCIItoUTF16(string(Entry.first.name()));
         const filesystem::path CurPath = FolderName / CurEntry;
 
         // chekc if we should ignore this file

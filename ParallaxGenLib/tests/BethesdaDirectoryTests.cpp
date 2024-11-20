@@ -2,6 +2,7 @@
 #include "BethesdaDirectory.hpp"
 #include "CommonTests.hpp"
 #include "ParallaxGenPlugin.hpp"
+#include "ParallaxGenUtil.hpp"
 
 #include <gtest/gtest.h>
 
@@ -194,6 +195,9 @@ TEST_P(BethesdaDirectoryTest, Files) {
   // all files
   BD->populateFileMap(true);
   auto &FileMap = BD->getFileMap();
+
+  // Sycerscote.bsa
+  EXPECT_FALSE(BD->isFile(L"meshes\\syerscote\\goldpot01Ã,Â°.nif"));
 
   // Skyrim - Textures5.bsa from env
   EXPECT_TRUE(BD->isFile(Bridge01Path));

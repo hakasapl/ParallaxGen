@@ -13,6 +13,8 @@
 using namespace std;
 namespace ParallaxGenUtil {
 
+constexpr unsigned ASCII_UPPER_BOUND = 127;
+
 auto Latin1toUTF16(const std::string &Str) -> std::wstring {
   return boost::locale::conv::to_utf<wchar_t>(Str, "latin1");
 }
@@ -64,6 +66,10 @@ auto UTF16toUTF8(const wstring &WStr) -> string {
   WideCharToMultiByte(CP_UTF8, 0, WStr.data(), (int)WStr.size(), Str.data(), SizeNeeded, nullptr, nullptr);
 
   return Str;
+}
+
+auto ContainsOnlyAscii(const std::string &Str) -> bool {
+  return std::ranges::all_of(Str, [](wchar_t WC) { return WC <= ASCII_UPPER_BOUND; });
 }
 
 auto getFileBytes(const filesystem::path &FilePath) -> vector<std::byte> {
