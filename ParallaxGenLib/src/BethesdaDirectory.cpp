@@ -381,7 +381,7 @@ void BethesdaDirectory::addBSAToFileMap(const wstring &BSAName) {
             !ContainsOnlyAscii(string(Entry.first.name())))
         {
           spdlog::warn(
-              L"File {}\\{} in BSA {} contains non-ascii characters which is buggy by Skyrim - skipping",
+              L"File {}\\{} in BSA {} contains non-ascii characters which is not handled correctly by Skyrim - skipping",
                        Windows1252toUTF16(string(FileEntry.first.name())),
                        Windows1252toUTF16(string(Entry.first.name())), BSAName);
 
