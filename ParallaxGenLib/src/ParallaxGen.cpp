@@ -270,8 +270,7 @@ auto ParallaxGen::processNIF(
   for (NiShape *NIFShape : NIF.GetShapes()) {
     // get shape name and blockid
     const auto ShapeBlockID = NIF.GetBlockID(NIFShape);
-    // TODO UNICODE find out whitch encoding nifly uses
-    const auto ShapeName = Latin1toUTF16(NIFShape->name.get());
+    const auto ShapeName = ASCIItoUTF16(NIFShape->name.get());
     const auto ShapeIDStr = to_wstring(ShapeBlockID) + L" / " + ShapeName;
     Logger::Prefix PrefixShape(ShapeIDStr);
 

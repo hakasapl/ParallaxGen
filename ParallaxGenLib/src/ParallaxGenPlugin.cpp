@@ -453,8 +453,7 @@ void ParallaxGenPlugin::set3DIndices(const wstring &NIFPath,
 
   // Loop through shape tracker
   for (const auto &[Shape, OldIndex3D, NewIndex3D] : ShapeTracker) {
-      // TODO: nifly encoding
-    const auto ShapeName = ParallaxGenUtil::Latin1toUTF16(Shape->name.get());
+    const auto ShapeName = ParallaxGenUtil::ASCIItoUTF16(Shape->name.get());
 
     // find matches
     const auto Matches = libGetMatchingTXSTObjs(NIFPath, ShapeName, OldIndex3D);

@@ -287,8 +287,7 @@ auto NIFUtil::configureShaderFlag(nifly::BSShaderProperty *NIFShaderBSLSP,
 // Texture slot helpers
 auto NIFUtil::setTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, const TextureSlots &Slot,
                              const std::wstring &TexturePath, bool &Changed) -> void {
-    // TODO UNICODE nifly encoding
-  auto TexturePathStr = ParallaxGenUtil::UTF16toLatin1(TexturePath);
+  auto TexturePathStr = ParallaxGenUtil::UTF16toASCII(TexturePath);
   setTextureSlot(NIF, NIFShape, Slot, TexturePathStr, Changed);
 }
 
@@ -328,8 +327,7 @@ auto NIFUtil::getTextureSlots(nifly::NifFile *NIF, nifly::NiShape *NIFShape) -> 
       continue;
     }
 
-    // TODO UNICODE which encoding does nifly use?
-    OutSlots[I] = ParallaxGenUtil::Latin1toUTF16(Texture);
+    OutSlots[I] = ParallaxGenUtil::ASCIItoUTF16(Texture);
   }
 
   return OutSlots;

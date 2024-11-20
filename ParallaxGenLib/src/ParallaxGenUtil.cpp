@@ -15,14 +15,6 @@ namespace ParallaxGenUtil {
 
 constexpr unsigned ASCII_UPPER_BOUND = 127;
 
-auto Latin1toUTF16(const std::string &Str) -> std::wstring {
-  return boost::locale::conv::to_utf<wchar_t>(Str, "latin1");
-}
-
-auto UTF16toLatin1(const std::wstring &Str) -> std::string {
-  return boost::locale::conv::from_utf<wchar_t>(Str, "latin1");
-}
-
 auto Windows1252toUTF16(const std::string &Str) -> std::wstring {
   return boost::locale::conv::to_utf<wchar_t>(Str, "windows-1252");
 }

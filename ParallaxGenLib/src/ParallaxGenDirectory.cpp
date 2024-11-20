@@ -366,9 +366,8 @@ auto ParallaxGenDirectory::mapTexturesFromNIF(const filesystem::path &NIFPath,
       }
 
       // Log finding
-      // TODO UNICODE encoding of nifly?
       spdlog::trace(L"Mapping Textures | Slot Found | NIF: {} | Texture: {} | Slot: {} | Type: {}", NIFPath.wstring(),
-                    Latin1toUTF16(Texture), Slot, UTF8toUTF16(NIFUtil::getStrFromTexType(TextureType)));
+                    ASCIItoUTF16(Texture), Slot, UTF8toUTF16(NIFUtil::getStrFromTexType(TextureType)));
 
       // Update unconfirmed textures map
       updateUnconfirmedTexturesMap(Texture, static_cast<NIFUtil::TextureSlots>(Slot), TextureType, UnconfirmedTextures);
