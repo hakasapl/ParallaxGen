@@ -101,6 +101,11 @@ void ParallaxGenConfig::loadConfig() {
   static const vector<filesystem::path> ConfigsToRead = {getDefaultConfigFile(), getUserConfigFile()};
   // Loop through all files in DefConfPath recursively directoryiterator
   for (const auto &Entry : ConfigsToRead) {
+    if (!filesystem::exists(Entry)) {
+      // don't load a config that doesn't exist
+      continue;
+    }
+
     spdlog::debug(L"Loading ParallaxGen Config: {}", Entry.wstring());
 
     nlohmann::json J;
