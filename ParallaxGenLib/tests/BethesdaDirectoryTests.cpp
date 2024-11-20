@@ -46,7 +46,7 @@ TEST_P(BethesdaDirectoryTest, Path) {
   EXPECT_FALSE(BD->isPathAscii({"textures\\texture�~"}));
   EXPECT_TRUE(BD->isPathAscii({"textures\\texture~"}));
 
-  EXPECT_TRUE(BD->getPathLower({L"Textures\\Texture"}) == L"textures\\texture");
+  EXPECT_TRUE(BD->getAsciiPathLower({L"Textures\\Texture"}) == L"textures\\texture");
 
   EXPECT_TRUE(BD->pathEqualityIgnoreCase({L"Textures\\Texture"}, {L"textures\\texture"}));
   EXPECT_FALSE(BD->pathEqualityIgnoreCase({L"Textures\\Texture1"}, {L"textures\\texture2"}));
@@ -103,7 +103,7 @@ TEST_P(BethesdaDirectoryTest, FindFiles) {
   for (auto &File : Files) {
     ASSERT_TRUE(BD->isFile(File)) << File;
     if (!FileMap.contains(File)) {
-      ASSERT_TRUE(FileMap.contains(BD->getPathLower(File))); // if path has upper characters it must still be in the file map
+      ASSERT_TRUE(FileMap.contains(BD->getAsciiPathLower(File))); // if path has upper characters it must still be in the file map
     }
   }
 
@@ -292,7 +292,7 @@ TEST_P(BethesdaDirectoryTest, Files) {
   //  Skyrim - Textures5.bsa from env
   const std::filesystem::path Bridge01PathUpper{L"TEXTURES\\LANDSCAPE\\ROADS\\bridge01.dds"};
   EXPECT_THROW(FileMap.at(Bridge01PathUpper), out_of_range);
-  auto Bridge01PathLower = BD->getPathLower(Bridge01Path);
+  auto Bridge01PathLower = BD->getAsciiPathLower(Bridge01Path);
   EXPECT_TRUE(FileMap.at(Bridge01PathLower).Path == Bridge01PathLower); // original path from BSA is lower case
 
   // file is same with and without cache

@@ -255,12 +255,12 @@ public:
   [[nodiscard]] auto isFileInBSA(const std::filesystem::path& File, const std::unordered_set<std::wstring>& BSAFiles) -> bool;
 
   /**
-   * @brief Get the lowercase path of a path
+   * @brief Get the lowercase path of a path using the "C" locale, i.e. only ASCII characters are converted
    *
    * @param Path Path to be made lowercase
    * @return std::filesystem::path lowercase path of the input
    */
-  static auto getPathLower(const std::filesystem::path &Path) -> std::filesystem::path;
+  static auto getAsciiPathLower(const std::filesystem::path &Path) -> std::filesystem::path;
 
   /**
    * @brief Check if two paths are equal, ignoring case

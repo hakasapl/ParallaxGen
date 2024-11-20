@@ -118,7 +118,7 @@ auto BethesdaDirectory::getFile(const filesystem::path &RelPath, const bool &Cac
     throw runtime_error("File not found in file map");
   }
 
-  auto LowerRelPath = getPathLower(RelPath);
+  auto LowerRelPath = getAsciiPathLower(RelPath);
   if (!CacheFile) {
     const lock_guard<mutex> Lock(FileCacheMutex);
 
@@ -389,6 +389,11 @@ void BethesdaDirectory::addLooseFilesToMap() {
         const filesystem::path &FilePath = Entry.path();
         const filesystem::path RelativePath = FilePath.lexically_relative(DataDir);
 
+        if (!isPathAscii(RelativePath))
+        {
+            spdlog::warn(L"File {} contains non-ascii characters which is buggy by Skyrim - skipping", RelativePath.wstring());
+        }
+
         // check type of file, skip BSAs and ESPs
         if (!isFileAllowed(FilePath)) {
           continue;
@@ -521,13 +526,15 @@ auto BethesdaDirectory::getBSALoadOrder() const -> vector<wstring> {
   return OutBSAOrder;
 }
 
-auto BethesdaDirectory::getPathLower(const filesystem::path &Path) -> filesystem::path {
-    // TODO UNICODE lower path
-  return {boost::to_lower_copy(Path.wstring())};
+auto BethesdaDirectory::getAsciiPathLower(const filesystem::path &Path) -> filesystem::path {
+  if (!isPathAscii(Path)) {
+    spdlog::warn(L"Trying to convert unicode path {} to lower case but only ASCII characters are converted", Path.wstring());
+  }
+  return {boost::to_lower_copy(Path.wstring(), std::locale::classic())};
 }
 
 auto BethesdaDirectory::pathEqualityIgnoreCase(const filesystem::path &Path1, const filesystem::path &Path2) -> bool {
-  return getPathLower(Path1) == getPathLower(Path2);
+  return getAsciiPathLower(Path1) == getAsciiPathLower(Path2);
 }
 
 auto BethesdaDirectory::getBSAFilesFromINIs() const -> vector<wstring> {
@@ -671,7 +678,7 @@ auto BethesdaDirectory::isPathAscii(const filesystem::path &Path) -> bool {
 auto BethesdaDirectory::getFileFromMap(const filesystem::path &FilePath) -> BethesdaDirectory::BethesdaFile {
   lock_guard<mutex> Lock(FileMapMutex);
 
-  const filesystem::path LowerPath = getPathLower(FilePath);
+  const filesystem::path LowerPath = getAsciiPathLower(FilePath);
 
   if (FileMap.find(LowerPath) == FileMap.end()) {
     return BethesdaFile{filesystem::path(), nullptr};
@@ -684,7 +691,7 @@ void BethesdaDirectory::updateFileMap(const filesystem::path &FilePath,
                                       shared_ptr<BethesdaDirectory::BSAFile> BSAFile, const wstring &Mod, const bool &Generated) {
   lock_guard<mutex> Lock(FileMapMutex);
 
-  const filesystem::path LowerPath = getPathLower(FilePath);
+  const filesystem::path LowerPath = getAsciiPathLower(FilePath);
 
   const BethesdaFile NewBFile = {FilePath, std::move(BSAFile), Mod, Generated};
 
