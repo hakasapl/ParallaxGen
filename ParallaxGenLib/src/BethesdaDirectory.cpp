@@ -376,7 +376,7 @@ void BethesdaDirectory::addBSAToFileMap(const wstring &BSAName) {
       // loop through files in folder
       for (const auto &Entry : FileName) {
 
-        if (!ContainsOnlyAscii(string(FileEntry.first.name())) || 
+        if (!ContainsOnlyAscii(string(FileEntry.first.name())) ||
             !ContainsOnlyAscii(string(Entry.first.name())))
         {
           spdlog::warn(
