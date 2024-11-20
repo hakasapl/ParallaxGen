@@ -248,7 +248,7 @@ TEST_P(BethesdaDirectoryTest, LoadOrder) {
   auto &Params = GetParam();
 
   auto LoadOrder = BD->getBSALoadOrder();
-  EXPECT_TRUE(LoadOrder.size() == 6);
+  EXPECT_TRUE(LoadOrder.size() == 7);
 
   EXPECT_TRUE(std::find(LoadOrder.begin(), LoadOrder.end(), L"Skyrim - Meshes1.bsa") != LoadOrder.end());
   EXPECT_TRUE(std::find(LoadOrder.begin(), LoadOrder.end(), L"Skyrim - Textures5.bsa") != LoadOrder.end());

@@ -316,7 +316,7 @@ void BethesdaDirectory::addLooseFilesToMap() {
 
         if (!isPathAscii(RelativePath))
         {
-            spdlog::warn(L"File {} contains non-ascii characters which is buggy in Skyrim - skipping", RelativePath.wstring());
+            spdlog::warn(L"File {} contains non-ascii characters - skipping", RelativePath.wstring());
             continue;
         }
 
