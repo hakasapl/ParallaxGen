@@ -215,22 +215,6 @@ public:
   [[nodiscard]] auto getLooseFileFullPath(const std::filesystem::path &RelPath) -> std::filesystem::path;
 
   /**
-   * @brief Find files in the load order
-   *
-   * @param Lower If true, returns lowercase paths
-   * @param GlobListAllow List of globs to allow, ignored if empty
-   * @param GlobListDeny List of globs to deny, ignored if empty
-   * @param ArchiveListDeny List of BSA files to ignore files from, ignored if
-   * empty
-   * @return std::vector<std::filesystem::path> vector of files that match the
-   * criteria
-   */
-  [[nodiscard]] auto findFiles(const bool &Lower = false, const std::vector<std::wstring> &GlobListAllow = {},
-                               const std::vector<std::wstring> &GlobListDeny = {},
-                               const std::vector<std::wstring> &ArchiveListDeny = {}, const bool &LogFindings = false,
-                               const bool &AllowWString = false) const -> std::vector<std::filesystem::path>;
-
-  /**
    * @brief Get the load order of BSAs
    *
    * @return std::vector<std::wstring> Names of BSA files ordered by load order.
