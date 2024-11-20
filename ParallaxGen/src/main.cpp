@@ -375,6 +375,8 @@ auto main(int ArgC, char **ArgV) -> int {
     return 1;
   }
 
+  SetConsoleOutputCP(CP_UTF8);
+
   // Find location of ParallaxGen.exe
   const filesystem::path ExePath = getExecutablePath().parent_path();
 
