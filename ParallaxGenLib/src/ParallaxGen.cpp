@@ -557,17 +557,13 @@ void ParallaxGen::addFileToZip(mz_zip_archive &Zip, const filesystem::path &File
     return;
   }
 
-  // open file stream
   vector<std::byte> Buffer = getFileBytes(FilePath);
 
-  // get relative path
-  const filesystem::path ZipRelativePath = FilePath.lexically_relative(OutputDir);
-
-  // TODO UNICODE which encoding should be used here for the file path
-  const string ZipFilePath = UTF16toASCII(ZipRelativePath.wstring());
+  const filesystem::path RelativePath = FilePath.lexically_relative(OutputDir);
+  const string RelativeFilePathAscii = UTF16toASCII(RelativePath.wstring());
 
   // add file to Zip
-  if (mz_zip_writer_add_mem(&Zip, ZipFilePath.c_str(), Buffer.data(), Buffer.size(), MZ_NO_COMPRESSION) == 0) {
+  if (mz_zip_writer_add_mem(&Zip, RelativeFilePathAscii.c_str(), Buffer.data(), Buffer.size(), MZ_NO_COMPRESSION) == 0) {
     spdlog::error(L"Error adding file to zip: {}", FilePath.wstring());
     exit(1);
   }
