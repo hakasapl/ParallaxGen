@@ -553,7 +553,7 @@ auto BethesdaDirectory::findBSAFilesFromPluginName(const vector<wstring> &BSAFil
   {
     spdlog::warn(L"Plugin {} contains unsupported non-ASCI characters", PluginPrefix);
   }
-  
+
   vector<wstring> BSAFilesFound;
   const wstring PluginPrefixLower = boost::to_lower_copy(PluginPrefix);
 
@@ -561,7 +561,6 @@ auto BethesdaDirectory::findBSAFilesFromPluginName(const vector<wstring> &BSAFil
     if (!ParallaxGenUtil::ContainsOnlyAscii(BSA)) {
       spdlog::warn(L"BSA {} contains unsupported non-ASCII characters", BSA);
     }
-  
     const wstring BSALower = boost::to_lower_copy(BSA);
     if (BSALower.starts_with(PluginPrefixLower)) {
       if (BSALower == PluginPrefixLower + L".bsa") {
