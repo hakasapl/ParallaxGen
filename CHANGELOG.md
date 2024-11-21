@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.7.2] - UNRELEASED
+
+- Fixed exceptions when plugin patching is not enabled
+
 ## [0.7.1] - 2024-11-18
 
 - Fixed PBR applying to shapes with facegen RGB tint

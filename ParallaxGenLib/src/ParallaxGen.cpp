@@ -335,8 +335,9 @@ auto ParallaxGen::processNIF(
       get<2>(ShapeTracker[I]) = I;
     }
 
-    // Set 3D indices
-    ParallaxGenPlugin::set3DIndices(NIFFile.wstring(), ShapeTracker);
+    if (PatchPlugin) {
+      ParallaxGenPlugin::set3DIndices(NIFFile.wstring(), ShapeTracker);
+    }
 
     // Calculate CRC32 hash before
     boost::crc_32_type CRCBeforeResult{};
