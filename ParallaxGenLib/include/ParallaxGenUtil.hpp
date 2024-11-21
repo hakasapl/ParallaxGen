@@ -22,6 +22,7 @@ auto ASCIItoUTF16(const std::string &Str) -> std::wstring;
 auto UTF16toASCII(const std::wstring &Str) -> std::string;
 
 auto ContainsOnlyAscii(const std::string &Str) -> bool;
+auto ContainsOnlyAscii(const std::wstring &Str) -> bool;
 
 // Get the file bytes of a file
 auto getFileBytes(const std::filesystem::path &FilePath) -> std::vector<std::byte>;

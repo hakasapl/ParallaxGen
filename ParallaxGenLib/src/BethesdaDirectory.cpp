@@ -549,11 +549,19 @@ auto BethesdaDirectory::findBSAFilesFromPluginName(const vector<wstring> &BSAFil
     spdlog::trace(L"Finding BSA files that correspond to plugin {}", PluginPrefix);
   }
 
-  // TODO UNICODE unicode to lower
+  if (!ParallaxGenUtil::ContainsOnlyAscii(PluginPrefix))
+  {
+    spdlog::warn(L"Plugin {} contains unsupported non-ASCI characters", PluginPrefix);
+  }
+  
   vector<wstring> BSAFilesFound;
   const wstring PluginPrefixLower = boost::to_lower_copy(PluginPrefix);
 
   for (wstring BSA : BSAFileList) {
+    if (!ParallaxGenUtil::ContainsOnlyAscii(BSA)) {
+      spdlog::warn(L"BSA {} contains unsupported non-ASCII characters", BSA);
+    }
+  
     const wstring BSALower = boost::to_lower_copy(BSA);
     if (BSALower.starts_with(PluginPrefixLower)) {
       if (BSALower == PluginPrefixLower + L".bsa") {

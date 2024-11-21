@@ -61,6 +61,10 @@ auto UTF16toUTF8(const wstring &WStr) -> string {
 }
 
 auto ContainsOnlyAscii(const std::string &Str) -> bool {
+  return std::ranges::all_of(Str, [](char WC) { return WC <= ASCII_UPPER_BOUND; });
+}
+
+auto ContainsOnlyAscii(const std::wstring &Str) -> bool {
   return std::ranges::all_of(Str, [](wchar_t WC) { return WC <= ASCII_UPPER_BOUND; });
 }
 
