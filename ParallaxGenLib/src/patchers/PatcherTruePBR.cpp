@@ -102,7 +102,6 @@ void PatcherTruePBR::loadStatics(const std::vector<std::filesystem::path> &PBRJS
       RevDiffuse = NIFUtil::getTexBase(RevDiffuse);
       reverse(RevDiffuse.begin(), RevDiffuse.end());
 
-      // TODO UNICODE unicode to_lower_copy
       getTruePBRDiffuseInverse()[boost::to_lower_copy(RevDiffuse)].push_back(Config.first);
     }
 
