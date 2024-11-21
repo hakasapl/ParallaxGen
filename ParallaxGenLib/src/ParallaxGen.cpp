@@ -582,8 +582,7 @@ void ParallaxGen::zipDirectory(const filesystem::path &DirPath, const filesystem
   }
 
   // initialize file
-  // TODO UNICODE which encoding should be used here for the file path
-  const string ZipPathString = UTF16toASCII(ZipPath);
+  const string ZipPathString = UTF16toUTF8(ZipPath);
   if (mz_zip_writer_init_file(&Zip, ZipPathString.c_str(), 0) == 0) {
     spdlog::critical(L"Error creating Zip file: {}", ZipPath.wstring());
     exit(1);

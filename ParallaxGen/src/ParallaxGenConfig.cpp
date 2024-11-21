@@ -179,7 +179,7 @@ auto ParallaxGenConfig::addConfigJSON(const nlohmann::json &J) -> void {
     const auto &ParamJ = J["params"];
 
     // "game"
-    ParamJ["game"]["dir"].get_to<filesystem::path>(Params.Game.Dir);
+    Params.Game.Dir = UTF8toUTF16(ParamJ["game"]["dir"].get<string>());
     ParamJ["game"]["type"].get_to<BethesdaGame::GameType>(Params.Game.Type);
 
     // "modmanager"
@@ -188,7 +188,7 @@ auto ParallaxGenConfig::addConfigJSON(const nlohmann::json &J) -> void {
     Params.ModManager.MO2Profile = UTF8toUTF16(ParamJ["modmanager"]["mo2profile"].get<string>());
 
     // "output"
-    ParamJ["output"]["dir"].get_to<filesystem::path>(Params.Output.Dir);
+    Params.Output.Dir = UTF8toUTF16(ParamJ["output"]["dir"].get<string>());
     ParamJ["output"]["zip"].get_to<bool>(Params.Output.Zip);
 
     // "processing"
