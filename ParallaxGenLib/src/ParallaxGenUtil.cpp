@@ -31,6 +31,10 @@ auto UTF16toASCII(const std::wstring &Str) -> std::string {
   return boost::locale::conv::from_utf<wchar_t>(Str, "US-ASCII");
 }
 
+auto ToLowerASCII(const std::wstring& Str) -> std::wstring
+{
+  return boost::to_lower_copy(Str, std::locale::classic());
+}
 
 auto UTF8toUTF16(const string &Str) -> wstring {
   // Just return empty string if empty

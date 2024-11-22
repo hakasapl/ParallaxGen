@@ -43,8 +43,7 @@ auto ModManagerDirectory::getModFileMap() const -> const unordered_map<filesyste
 }
 
 auto ModManagerDirectory::getMod(const filesystem::path &RelPath) const -> wstring {
-    // TODO UNICODE handle unicode lower case
-  auto RelPathLower = filesystem::path(boost::to_lower_copy(RelPath.wstring()));
+  auto RelPathLower = filesystem::path(ParallaxGenUtil::ToLowerASCII(RelPath.wstring()));
   if (ModFileMap.contains(RelPathLower)) {
     return ModFileMap.at(RelPathLower);
   }
@@ -53,13 +52,12 @@ auto ModManagerDirectory::getMod(const filesystem::path &RelPath) const -> wstri
 }
 
 void ModManagerDirectory::populateModFileMapVortex() {
-    // TODO UNICODE test if unicode characters are supported correctly
   // required file is vortex.deployment.json in the data folder
   spdlog::info("Populating mods from Vortex");
 
   if (!filesystem::exists(RequiredFile)) {
     throw runtime_error("Vortex deployment file does not exist: " +
-                        ParallaxGenUtil::UTF16toASCII(RequiredFile.wstring()));
+                        ParallaxGenUtil::UTF16toUTF8(RequiredFile.wstring()));
   }
 
   ifstream VortexDepFileF(RequiredFile);
@@ -67,17 +65,17 @@ void ModManagerDirectory::populateModFileMapVortex() {
   VortexDepFileF.close();
 
   // Populate staging dir
-  StagingDir = VortexDeployment["stagingPath"].get<string>();
+  StagingDir = ParallaxGenUtil::UTF8toUTF16(VortexDeployment["stagingPath"].get<string>());
 
   // Check that files field exists
   if (!VortexDeployment.contains("files")) {
     throw runtime_error("Vortex deployment file does not contain 'files' field: " +
-                        ParallaxGenUtil::UTF16toASCII(RequiredFile.wstring()));
+                        ParallaxGenUtil::UTF16toUTF8(RequiredFile.wstring()));
   }
 
   // loop through files
   for (const auto &File : VortexDeployment["files"]) {
-    auto RelPath = filesystem::path(File["relPath"].get<string>());
+    auto RelPath = filesystem::path(ParallaxGenUtil::UTF8toUTF16(File["relPath"].get<string>()));
     auto ModName = ParallaxGenUtil::UTF8toUTF16(File["source"].get<string>());
 
     // filter out modname suffix
@@ -88,7 +86,12 @@ void ModManagerDirectory::populateModFileMapVortex() {
 
     // Update file map
     spdlog::trace(L"ModManagerDirectory | Adding Files to Map : {} -> {}", RelPath.wstring(), ModName);
-    ModFileMap[boost::to_lower_copy(RelPath.wstring())] = ModName;
+
+    if (!ParallaxGenUtil::ContainsOnlyAscii(RelPath.wstring())) {
+      spdlog::debug(L"Path {} from {} contains non-ASCII characters", RelPath.wstring(), RequiredFile.wstring());
+    }
+
+    ModFileMap[ParallaxGenUtil::ToLowerASCII(RelPath.wstring())] = ModName;
   }
 }
 
@@ -99,7 +102,7 @@ void ModManagerDirectory::populateModFileMapMO2() {
 
   if (!filesystem::exists(RequiredFile)) {
     throw runtime_error("Mod Organizer 2 modlist.txt file does not exist: " +
-                        ParallaxGenUtil::UTF16toASCII(RequiredFile.wstring()));
+                        ParallaxGenUtil::UTF16toUTF8(RequiredFile.wstring()));
   }
 
   ifstream ModListFileF(RequiredFile);
@@ -157,8 +160,11 @@ void ModManagerDirectory::populateModFileMapMO2() {
         auto RelPath = filesystem::relative(File, ModDir);
         spdlog::trace(L"ModManagerDirectory | Adding Files to Map : {} -> {}", RelPath.wstring(), Mod);
 
-        // TODO UNICODE to lower copy of UTF16
-        filesystem::path RelPathLower = boost::to_lower_copy(RelPath.wstring());
+        if (!ParallaxGenUtil::ContainsOnlyAscii(RelPath.wstring())) {
+          spdlog::debug(L"Path {} in directory {} contains non-ASCII characters", RelPath.wstring(), ModDir.wstring());
+        }
+
+        filesystem::path RelPathLower = ParallaxGenUtil::ToLowerASCII(RelPath.wstring());
         // check if already in map
         if (ModFileMap.contains(RelPathLower)) {
           continue;

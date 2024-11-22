@@ -20,6 +20,8 @@ auto UTF16toASCII(const std::wstring &Str) -> std::string;
 auto ContainsOnlyAscii(const std::string &Str) -> bool;
 auto ContainsOnlyAscii(const std::wstring &Str) -> bool;
 
+auto ToLowerASCII(const std::wstring &Str) -> std::wstring;
+
 // Get the file bytes of a file
 auto getFileBytes(const std::filesystem::path &FilePath) -> std::vector<std::byte>;
 
