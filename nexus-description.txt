@@ -5,6 +5,7 @@
 [list]
 [*][size=3]Make sure [url=https://aka.ms/vs/17/release/vc_redist.x64.exe]Microsoft Visual C++ Redistributable x64[/url] is installed[/size]
 [*][size=3]Make sure .NET 8 runtime is installed, you can get it here [url=https://dotnet.microsoft.com/en-us/download/dotnet/8.0]Download .NET 8.0[/url][/size]
+[*][size=3]Mod manager that creates [i]plugin.txt[/i] and [i]loadorder.txt[/i], known to work: [url=https://www.nexusmods.com/about/vortex/]Vortex[/url] and [url=https://www.modorganizer.org/]Mod Organizer 2[/url][/size]
 [/list]
 
 [b][size=6][center][color=#6aa84f]Overview[/color][/center][/size][/b]
