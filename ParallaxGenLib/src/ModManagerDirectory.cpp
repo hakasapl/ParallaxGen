@@ -43,7 +43,7 @@ auto ModManagerDirectory::getModFileMap() const -> const unordered_map<filesyste
 }
 
 auto ModManagerDirectory::getMod(const filesystem::path &RelPath) const -> wstring {
-  auto RelPathLower = filesystem::path(boost::to_lower_copy(RelPath.wstring()));
+  auto RelPathLower = filesystem::path(ParallaxGenUtil::ToLowerASCII(RelPath.wstring()));
   if (ModFileMap.contains(RelPathLower)) {
     return ModFileMap.at(RelPathLower);
   }
@@ -56,7 +56,8 @@ void ModManagerDirectory::populateModFileMapVortex() {
   spdlog::info("Populating mods from Vortex");
 
   if (!filesystem::exists(RequiredFile)) {
-    throw runtime_error("Vortex deployment file does not exist: " + RequiredFile.string());
+    throw runtime_error("Vortex deployment file does not exist: " +
+                        ParallaxGenUtil::UTF16toUTF8(RequiredFile.wstring()));
   }
 
   ifstream VortexDepFileF(RequiredFile);
@@ -64,17 +65,18 @@ void ModManagerDirectory::populateModFileMapVortex() {
   VortexDepFileF.close();
 
   // Populate staging dir
-  StagingDir = VortexDeployment["stagingPath"].get<string>();
+  StagingDir = ParallaxGenUtil::UTF8toUTF16(VortexDeployment["stagingPath"].get<string>());
 
   // Check that files field exists
   if (!VortexDeployment.contains("files")) {
-    throw runtime_error("Vortex deployment file does not contain 'files' field: " + RequiredFile.string());
+    throw runtime_error("Vortex deployment file does not contain 'files' field: " +
+                        ParallaxGenUtil::UTF16toUTF8(RequiredFile.wstring()));
   }
 
   // loop through files
   for (const auto &File : VortexDeployment["files"]) {
-    auto RelPath = filesystem::path(File["relPath"].get<string>());
-    auto ModName = ParallaxGenUtil::strToWstr(File["source"].get<string>());
+    auto RelPath = filesystem::path(ParallaxGenUtil::UTF8toUTF16(File["relPath"].get<string>()));
+    auto ModName = ParallaxGenUtil::UTF8toUTF16(File["source"].get<string>());
 
     // filter out modname suffix
     const static wregex VortexSuffixRe(L"-[0-9]+-.*");
@@ -84,7 +86,12 @@ void ModManagerDirectory::populateModFileMapVortex() {
 
     // Update file map
     spdlog::trace(L"ModManagerDirectory | Adding Files to Map : {} -> {}", RelPath.wstring(), ModName);
-    ModFileMap[boost::to_lower_copy(RelPath.wstring())] = ModName;
+
+    if (!ParallaxGenUtil::ContainsOnlyAscii(RelPath.wstring())) {
+      spdlog::debug(L"Path {} from {} contains non-ASCII characters", RelPath.wstring(), RequiredFile.wstring());
+    }
+
+    ModFileMap[ParallaxGenUtil::ToLowerASCII(RelPath.wstring())] = ModName;
   }
 }
 
@@ -94,7 +101,8 @@ void ModManagerDirectory::populateModFileMapMO2() {
   spdlog::info("Populating mods from Mod Organizer 2");
 
   if (!filesystem::exists(RequiredFile)) {
-    throw runtime_error("Mod Organizer 2 modlist.txt file does not exist: " + RequiredFile.string());
+    throw runtime_error("Mod Organizer 2 modlist.txt file does not exist: " +
+                        ParallaxGenUtil::UTF16toUTF8(RequiredFile.wstring()));
   }
 
   ifstream ModListFileF(RequiredFile);
@@ -102,7 +110,7 @@ void ModManagerDirectory::populateModFileMapMO2() {
   // loop through modlist.txt
   string ModStr;
   while (getline(ModListFileF, ModStr)) {
-    wstring Mod = ParallaxGenUtil::strToWstr(ModStr);
+    wstring Mod = ParallaxGenUtil::UTF8toUTF16(ModStr);
     if (Mod.empty()) {
       // skip empty lines
       continue;
@@ -152,7 +160,11 @@ void ModManagerDirectory::populateModFileMapMO2() {
         auto RelPath = filesystem::relative(File, ModDir);
         spdlog::trace(L"ModManagerDirectory | Adding Files to Map : {} -> {}", RelPath.wstring(), Mod);
 
-        filesystem::path RelPathLower = boost::to_lower_copy(RelPath.wstring());
+        if (!ParallaxGenUtil::ContainsOnlyAscii(RelPath.wstring())) {
+          spdlog::debug(L"Path {} in directory {} contains non-ASCII characters", RelPath.wstring(), ModDir.wstring());
+        }
+
+        filesystem::path RelPathLower = ParallaxGenUtil::ToLowerASCII(RelPath.wstring());
         // check if already in map
         if (ModFileMap.contains(RelPathLower)) {
           continue;
@@ -161,7 +173,7 @@ void ModManagerDirectory::populateModFileMapMO2() {
         ModFileMap[RelPathLower] = Mod;
       }
     } catch (const filesystem::filesystem_error &E) {
-      spdlog::error(L"Error reading mod directory {} (skipping): {}", Mod, ParallaxGenUtil::strToWstr(E.what()));
+      spdlog::error(L"Error reading mod directory {} (skipping): {}", Mod, ParallaxGenUtil::ASCIItoUTF16(E.what()));
     }
   }
 }

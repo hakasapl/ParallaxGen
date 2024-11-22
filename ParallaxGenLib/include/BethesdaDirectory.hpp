@@ -68,7 +68,7 @@ private:
   std::filesystem::path DataDir;                         /**< Stores the path to the game data directory */
   std::filesystem::path GeneratedDir;                    /**< Stores the path to the generated directory */
   std::map<std::filesystem::path, BethesdaFile> FileMap; /** < Stores the file map for every file found in the load
-                                                            order. Key is a lowercase path, value is a BethesdaFile */
+                                                            order. Key is a lowercase path, value is a BethesdaFile*/
   std::mutex FileMapMutex;                               /** < Mutex for the file map */
   std::vector<ModFile> ModFiles;  /** < Stores files in mod staging directory */
 
@@ -215,22 +215,6 @@ public:
   [[nodiscard]] auto getLooseFileFullPath(const std::filesystem::path &RelPath) -> std::filesystem::path;
 
   /**
-   * @brief Find files in the load order
-   *
-   * @param Lower If true, returns lowercase paths
-   * @param GlobListAllow List of globs to allow, ignored if empty
-   * @param GlobListDeny List of globs to deny, ignored if empty
-   * @param ArchiveListDeny List of BSA files to ignore files from, ignored if
-   * empty
-   * @return std::vector<std::filesystem::path> vector of files that match the
-   * criteria
-   */
-  [[nodiscard]] auto findFiles(const bool &Lower = false, const std::vector<std::wstring> &GlobListAllow = {},
-                               const std::vector<std::wstring> &GlobListDeny = {},
-                               const std::vector<std::wstring> &ArchiveListDeny = {}, const bool &LogFindings = false,
-                               const bool &AllowWString = false) const -> std::vector<std::filesystem::path>;
-
-  /**
    * @brief Get the load order of BSAs
    *
    * @return std::vector<std::wstring> Names of BSA files ordered by load order.
@@ -255,12 +239,12 @@ public:
   [[nodiscard]] auto isFileInBSA(const std::filesystem::path& File, const std::unordered_set<std::wstring>& BSAFiles) -> bool;
 
   /**
-   * @brief Get the lowercase path of a path
+   * @brief Get the lowercase path of a path using the "C" locale, i.e. only ASCII characters are converted
    *
    * @param Path Path to be made lowercase
    * @return std::filesystem::path lowercase path of the input
    */
-  static auto getPathLower(const std::filesystem::path &Path) -> std::filesystem::path;
+  static auto getAsciiPathLower(const std::filesystem::path &Path) -> std::filesystem::path;
 
   /**
    * @brief Check if two paths are equal, ignoring case

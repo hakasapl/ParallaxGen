@@ -287,7 +287,7 @@ auto NIFUtil::configureShaderFlag(nifly::BSShaderProperty *NIFShaderBSLSP,
 // Texture slot helpers
 auto NIFUtil::setTextureSlot(nifly::NifFile *NIF, nifly::NiShape *NIFShape, const TextureSlots &Slot,
                              const std::wstring &TexturePath, bool &Changed) -> void {
-  auto TexturePathStr = ParallaxGenUtil::wstrToStr(TexturePath);
+  auto TexturePathStr = ParallaxGenUtil::UTF16toASCII(TexturePath);
   setTextureSlot(NIF, NIFShape, Slot, TexturePathStr, Changed);
 }
 
@@ -327,7 +327,7 @@ auto NIFUtil::getTextureSlots(nifly::NifFile *NIF, nifly::NiShape *NIFShape) -> 
       continue;
     }
 
-    OutSlots[I] = ParallaxGenUtil::strToWstr(Texture);
+    OutSlots[I] = ParallaxGenUtil::ASCIItoUTF16(Texture);
   }
 
   return OutSlots;

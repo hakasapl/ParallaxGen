@@ -31,6 +31,7 @@
 #include "ParallaxGenD3D.hpp"
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenPlugin.hpp"
+#include "ParallaxGenUtil.hpp"
 #include "ParallaxGenWarnings.hpp"
 #include "patchers/PatcherComplexMaterial.hpp"
 #include "patchers/PatcherShader.hpp"
@@ -301,8 +302,8 @@ void exitBlocking() {
 }
 
 auto getExecutablePath() -> filesystem::path {
-  char Buffer[MAX_PATH];                                   // NOLINT
-  if (GetModuleFileName(nullptr, Buffer, MAX_PATH) == 0) { // NOLINT
+  wchar_t Buffer[MAX_PATH];                                   // NOLINT
+  if (GetModuleFileNameW(nullptr, Buffer, MAX_PATH) == 0) { // NOLINT
     cerr << "Error getting executable path: " << GetLastError() << "\n";
     exit(1);
   }
@@ -334,8 +335,8 @@ void initLogger(const filesystem::path &LOGPATH, const ParallaxGenCLIArgs &Args)
   Sinks.push_back(ConsoleSink);
 
   // Rotating file sink
-  auto FileSink = make_shared<spdlog::sinks::rotating_file_sink_mt>(LOGPATH.string(), MAX_LOG_SIZE, MAX_LOG_FILES);
-  Sinks.push_back(FileSink); // TODO wide string support here
+  auto FileSink = make_shared<spdlog::sinks::rotating_file_sink_mt>(LOGPATH.wstring(), MAX_LOG_SIZE, MAX_LOG_FILES);
+  Sinks.push_back(FileSink);
   auto Logger = make_shared<spdlog::logger>("ParallaxGen", Sinks.begin(), Sinks.end());
 
   // register logger parameters
@@ -373,6 +374,8 @@ auto main(int ArgC, char **ArgV) -> int {
     cerr << "Failed to register exitBlocking function\n";
     return 1;
   }
+
+  SetConsoleOutputCP(CP_UTF8);
 
   // Find location of ParallaxGen.exe
   const filesystem::path ExePath = getExecutablePath().parent_path();

@@ -2,6 +2,7 @@
 
 ## [0.7.2] - UNRELEASED
 
+- Fixed unicode character handling
 - Fixed exceptions when plugin patching is not enabled
 
 ## [0.7.1] - 2024-11-18

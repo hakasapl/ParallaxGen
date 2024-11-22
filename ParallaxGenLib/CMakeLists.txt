@@ -54,7 +54,7 @@ add_library(ParallaxGenLib SHARED ${SOURCES} ${HEADERS})
 # Add Packages
 find_package(spdlog REQUIRED CONFIG)
 find_package(bsa REQUIRED CONFIG)
-find_package(Boost REQUIRED COMPONENTS filesystem stacktrace_windbg thread)
+find_package(Boost REQUIRED COMPONENTS filesystem stacktrace_windbg thread locale)
 find_package(directxtk REQUIRED)
 find_package(directxtex REQUIRED CONFIG)
 find_package(miniz REQUIRED CONFIG)

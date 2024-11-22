@@ -2,6 +2,7 @@
 #include "BethesdaDirectory.hpp"
 #include "CommonTests.hpp"
 #include "ParallaxGenPlugin.hpp"
+#include "ParallaxGenUtil.hpp"
 
 #include <gtest/gtest.h>
 
@@ -45,7 +46,7 @@ TEST_P(BethesdaDirectoryTest, Path) {
   EXPECT_FALSE(BD->isPathAscii({"textures\\texture�~"}));
   EXPECT_TRUE(BD->isPathAscii({"textures\\texture~"}));
 
-  EXPECT_TRUE(BD->getPathLower({L"Textures\\Texture"}) == L"textures\\texture");
+  EXPECT_TRUE(BD->getAsciiPathLower({L"Textures\\Texture"}) == L"textures\\texture");
 
   EXPECT_TRUE(BD->pathEqualityIgnoreCase({L"Textures\\Texture"}, {L"textures\\texture"}));
   EXPECT_FALSE(BD->pathEqualityIgnoreCase({L"Textures\\Texture1"}, {L"textures\\texture2"}));
@@ -89,66 +90,6 @@ TEST_P(BethesdaDirectoryTest, Glob) {
     EXPECT_TRUE(BD->checkGlob(L"meshes/submeshes/cameras/camera1.nif", GlobListCfgSL));
     EXPECT_TRUE(BD->checkGlob(L"meshes/Cameras/camera1.nif", GlobListCfgSL));
 }
-
-TEST_P(BethesdaDirectoryTest, FindFiles) {
-  BD->populateFileMap(true);
-
-  // find all meshes and make sure they are contained in the file map
-  std::vector<wstring> GlobListCfg{L"meshes\\*"};
-  auto Files = BD->findFiles(false, GlobListCfg);
-  auto &FileMap = BD->getFileMap();
-
-  EXPECT_FALSE(Files.empty());
-  for (auto &File : Files) {
-    ASSERT_TRUE(BD->isFile(File)) << File;
-    if (!FileMap.contains(File)) {
-      ASSERT_TRUE(FileMap.contains(BD->getPathLower(File))); // if path has upper characters it must still be in the file map
-    }
-  }
-
-  // make sure file from BSA is found
-  EXPECT_TRUE(std::find(Files.begin(), Files.end(), L"meshes\\landscape\\bridges\\bridge01.nif") != Files.end());
-
-  // find loose file, default filenames
-  Files = BD->findFiles(false, {L"textures\\smim\\clutter\\common\\*"});
-  EXPECT_FALSE(Files.empty());
-  const auto ClutterCommonTextures = std::vector<std::filesystem::path>{L"textures\\smim\\clutter\\common\\Stump_Bottom_for_Furniture.dds",
-                                                                        L"textures\\smim\\clutter\\common\\Stump_Bottom_for_Furniture_n.dds",
-                                                                        L"textures\\smim\\clutter\\common\\Stump_Bottom_for_Furniture_p.dds"};
-  EXPECT_TRUE(Files == ClutterCommonTextures);
-
-  // find loose files, lower filenames
-  Files = BD->findFiles(true, {L"textures\\smim\\clutter\\common\\*"});
-  EXPECT_FALSE(Files.empty());
-  const auto ClutterCommonTexturesL = std::vector<std::filesystem::path>{L"textures\\smim\\clutter\\common\\stump_bottom_for_furniture.dds",
-                                                                         L"textures\\smim\\clutter\\common\\stump_bottom_for_furniture_n.dds",
-                                                                         L"textures\\smim\\clutter\\common\\stump_bottom_for_furniture_p.dds"};
-  EXPECT_TRUE(Files == ClutterCommonTexturesL);
-
-  // test file exclusion
-  Files = BD->findFiles(false, { L"meshes\\*" } , {L"meshes\\landscape\\*"});
-  EXPECT_TRUE(std::find(Files.begin(), Files.end(), L"meshes\\landscape\\bridges\\bridge01.nif") == Files.end());
-
-  Files = BD->findFiles(false, {L"meshes\\*"}, {L"meshes\\landscape\\bridge*.nif"});
-  EXPECT_TRUE(std::find(Files.begin(), Files.end(), L"meshes\\landscape\\bridges\\bridge01.nif") == Files.end());
-
-  Files = BD->findFiles(false, {L"meshes\\*"}, {L"meshes\\furniture\\*"});
-  EXPECT_TRUE(std::find(Files.begin(), Files.end(), L"meshes\\landscape\\bridges\\bridge01.nif") != Files.end());
-
-  // test archive exclusion
-  Files = BD->findFiles(false, {L"meshes\\*"}, {L"meshes\\furniture\\*"}, {L"Skyrim - Meshes1.bsa"});
-  EXPECT_TRUE(std::find(Files.begin(), Files.end(), L"meshes\\landscape\\bridges\\bridge01.nif") == Files.end());
-
-  Files = BD->findFiles(false, {L"meshes\\*"}, {L"meshes\\furniture\\*"}, {L"skyrim - meshes1.bsa"});
-  EXPECT_TRUE(std::find(Files.begin(), Files.end(), L"meshes\\landscape\\bridges\\bridge01.nif") == Files.end());
-
-  // corner cases
-  Files = BD->findFiles(false, {L"meshes\\*"}, {L"meshes\\*"});
-  EXPECT_TRUE(Files.empty());
-
-  Files = BD->findFiles(false, {L"*"}, {L"*"});
-  EXPECT_TRUE(Files.empty());
-};
 
 TEST_P(BethesdaDirectoryTest, Files) {
   const std::filesystem::path Bridge01Path{"textures\\landscape\\roads\\bridge01.dds"};
@@ -194,6 +135,9 @@ TEST_P(BethesdaDirectoryTest, Files) {
   // all files
   BD->populateFileMap(true);
   auto &FileMap = BD->getFileMap();
+
+  // Sycerscote.bsa
+  EXPECT_FALSE(BD->isFile(L"meshes\\syerscote\\goldpot01Ã,Â°.nif"));
 
   // Skyrim - Textures5.bsa from env
   EXPECT_TRUE(BD->isFile(Bridge01Path));
@@ -288,7 +232,7 @@ TEST_P(BethesdaDirectoryTest, Files) {
   //  Skyrim - Textures5.bsa from env
   const std::filesystem::path Bridge01PathUpper{L"TEXTURES\\LANDSCAPE\\ROADS\\bridge01.dds"};
   EXPECT_THROW(FileMap.at(Bridge01PathUpper), out_of_range);
-  auto Bridge01PathLower = BD->getPathLower(Bridge01Path);
+  auto Bridge01PathLower = BD->getAsciiPathLower(Bridge01Path);
   EXPECT_TRUE(FileMap.at(Bridge01PathLower).Path == Bridge01PathLower); // original path from BSA is lower case
 
   // file is same with and without cache
@@ -304,7 +248,7 @@ TEST_P(BethesdaDirectoryTest, LoadOrder) {
   auto &Params = GetParam();
 
   auto LoadOrder = BD->getBSALoadOrder();
-  EXPECT_TRUE(LoadOrder.size() == 6);
+  EXPECT_TRUE(LoadOrder.size() == 7);
 
   EXPECT_TRUE(std::find(LoadOrder.begin(), LoadOrder.end(), L"Skyrim - Meshes1.bsa") != LoadOrder.end());
   EXPECT_TRUE(std::find(LoadOrder.begin(), LoadOrder.end(), L"Skyrim - Textures5.bsa") != LoadOrder.end());

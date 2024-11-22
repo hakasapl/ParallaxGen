@@ -67,7 +67,7 @@ auto PatcherUpgradeParallaxToCM::transform(const PatcherShader::PatcherMatch &Fr
                                               NewComplexMap.GetMetadata(), DirectX::DDS_FLAGS_NONE, OutputPath.c_str());
     if (FAILED(HR)) {
       Logger::error(L"Unable to save complex material {}: {}", OutputPath.wstring(),
-                    ParallaxGenUtil::strToWstr(ParallaxGenD3D::getHRESULTErrorMessage(HR)));
+                    ParallaxGenUtil::ASCIItoUTF16(ParallaxGenD3D::getHRESULTErrorMessage(HR)));
       return FromMatch;
     }
 

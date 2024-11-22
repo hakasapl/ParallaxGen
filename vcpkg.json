@@ -1,38 +1,97 @@
 {
   "dependencies": [
-    "boost-algorithm",
-    "boost-asio",
-    "boost-container",
-    "boost-crc",
-    "boost-filesystem",
-    "boost-iostreams",
-    "boost-stacktrace",
-    "boost-thread",
-    "cli11",
+    {
+      "name": "boost-algorithm",
+      "version>=": "1.85.0#1"
+    },
+    {
+      "name": "boost-asio",
+      "version>=": "1.85.0#2"
+    },
+    {
+      "name": "boost-container",
+      "version>=": "1.85.0#1"
+    },
+    {
+      "name": "boost-crc",
+      "version>=": "1.85.0#1"
+    },
+    {
+      "name": "boost-filesystem",
+      "version>=": "1.85.0#2"
+    },
+    {
+      "name": "boost-iostreams",
+      "version>=": "1.85.0#1"
+    },
+    {
+      "name": "boost-stacktrace",
+      "version>=": "1.85.0#2"
+    },
+    {
+      "name": "boost-thread",
+      "version>=": "1.85.0#1"
+    },
+    {
+      "name": "boost-locale",
+      "version>=": "1.85.0#2"
+    },
+    {
+      "name": "cli11",
+      "version>=": "2.4.2"
+    },
     {
       "name": "directxtex",
+      "version>=": "2024-06-04",
       "features": [
         "dx11"
       ]
     },
-    "directxtk",
-    "gtest",
-    "json-schema-validator",
-    "miniz",
-    "nlohmann-json",
+    {
+      "name": "directxtk",
+      "version>=": "2024-06-04"
+    },
+    {
+      "name": "gtest",
+      "version>=": "1.14.0#1"
+    },
+    {
+      "name": "json-schema-validator",
+      "version>=": "2.3.0#2"
+    },
+    {
+      "name": "miniz",
+      "version>=": "3.0.2"
+    },
+    {
+      "name": "nlohmann-json",
+      "version>=": "3.11.3#1"
+    },
     {
       "name": "rsm-bsa",
+      "version>=": "4.1.0",
       "features": [
         "xmem"
       ]
     },
     {
       "name": "spdlog",
+      "version>=": "1.15.0#1",
       "features": [
         "wchar"
       ]
     },
-    "zlib",
-    "wxwidgets"
+    {
+      "name": "zlib",
+      "version>=": "1.3.1"
+    },
+    {
+      "name": "zstd",
+      "version>=": "1.5.6"
+    },
+    {
+      "name": "wxwidgets",
+      "version>=": "3.2.5#3"
+    }
   ]
 }

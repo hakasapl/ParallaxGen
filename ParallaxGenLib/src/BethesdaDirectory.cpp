@@ -118,7 +118,7 @@ auto BethesdaDirectory::getFile(const filesystem::path &RelPath, const bool &Cac
     throw runtime_error("File not found in file map");
   }
 
-  auto LowerRelPath = getPathLower(RelPath);
+  auto LowerRelPath = getAsciiPathLower(RelPath);
   if (!CacheFile) {
     const lock_guard<mutex> Lock(FileCacheMutex);
 
@@ -157,8 +157,8 @@ auto BethesdaDirectory::getFile(const filesystem::path &RelPath, const bool &Cac
     const bsa::tes4::version BSAVersion = BSAStruct->Version;
     const bsa::tes4::archive BSAObj = BSAStruct->Archive;
 
-    string ParentPath = wstrToStr(RelPath.parent_path().wstring());
-    string Filename = wstrToStr(RelPath.filename().wstring());
+    string ParentPath = UTF16toASCII(RelPath.parent_path().wstring());
+    string Filename = UTF16toASCII(RelPath.filename().wstring());
 
     const auto File = BSAObj[ParentPath][Filename];
     if (File) {
@@ -168,7 +168,7 @@ auto BethesdaDirectory::getFile(const filesystem::path &RelPath, const bool &Cac
         File->write(AOS, BSAVersion);
       } catch (const std::exception &E) {
         if (Logging) {
-          spdlog::error(L"Failed to read file {}: {}", RelPath.wstring(), strToWstr(E.what()));
+          spdlog::error(L"Failed to read file {}: {}", RelPath.wstring(), ASCIItoUTF16(E.what()));
         }
       }
 
@@ -280,81 +280,6 @@ auto BethesdaDirectory::getDataPath() const -> filesystem::path { return DataDir
 
 auto BethesdaDirectory::getGeneratedPath() const -> filesystem::path { return GeneratedDir; }
 
-auto BethesdaDirectory::findFiles(const bool &Lower, const vector<wstring> &GlobListAllow,
-                                  const vector<wstring> &GlobListDeny, const vector<wstring> &ArchiveListDeny,
-                                  const bool &LogFindings, const bool &AllowWString) const -> vector<filesystem::path> {
-  if (FileMap.empty()) {
-    throw runtime_error("File map was not populated");
-  }
-
-  // find all keys in FileMap that match pattern
-  vector<filesystem::path> FoundFiles;
-
-  // Create LPCWSTR vectors from wstrings
-  const vector<LPCWSTR> GlobListAllowCstr = convertWStringToLPCWSTRVector(GlobListAllow);
-  const vector<LPCWSTR> GlobListDenyCstr = convertWStringToLPCWSTRVector(GlobListDeny);
-  const vector<LPCWSTR> ArchiveListDenyCstr = convertWStringToLPCWSTRVector(ArchiveListDeny);
-
-  LPCWSTR LastWinningGlobAllow = L"";
-  LPCWSTR LastWinningGlobDeny = L"";
-  LPCWSTR LastWinningGlobArchiveDeny = L"";
-
-  // loop through filemap and match keys
-  for (const auto &[key, value] : FileMap) {
-    const filesystem::path CurFilePath = value.Path;
-
-    // Check globs
-    const wstring KeyWStr = key.wstring();
-    LPCWSTR KeyCstr = KeyWStr.c_str();
-
-    // Check allowlist
-    if (!GlobListAllowCstr.empty() && !checkGlob(KeyCstr, LastWinningGlobAllow, GlobListAllowCstr)) {
-      continue;
-    }
-
-    // Check denylist
-    if (!GlobListDenyCstr.empty() && checkGlob(KeyCstr, LastWinningGlobDeny, GlobListDenyCstr)) {
-      continue;
-    }
-
-    // Verify BSA blocklist
-    if (value.BSAFile != nullptr) {
-      // Get BSA file
-      const wstring BSAFileWstr = value.BSAFile->Path.filename().wstring();
-      LPCWSTR BSAFile = BSAFileWstr.c_str();
-
-      if (checkGlob(BSAFile, LastWinningGlobArchiveDeny, ArchiveListDenyCstr)) {
-        continue;
-      }
-    }
-
-    // Check encoding
-    if (!AllowWString && !isPathAscii(key)) {
-      if (Logging) {
-        spdlog::warn(L"Skipping file with non-ASCII characters: {}", key.wstring());
-      }
-      continue;
-    }
-
-    // If not allowed, skip
-    if (Logging) {
-      spdlog::trace(L"Matched file by glob: {}", CurFilePath.wstring());
-    }
-
-    if (LogFindings) {
-      spdlog::debug(L"Found File: {}", CurFilePath.wstring());
-    }
-
-    if (Lower) {
-      FoundFiles.push_back(key);
-    } else {
-      FoundFiles.push_back(CurFilePath);
-    }
-  }
-
-  return FoundFiles;
-}
-
 void BethesdaDirectory::addBSAFilesToMap() {
   if (Logging) {
     spdlog::info("Adding BSA files to file map.");
@@ -370,7 +295,7 @@ void BethesdaDirectory::addBSAFilesToMap() {
       addBSAToFileMap(BSAName);
     } catch (const std::exception &E) {
       if (Logging) {
-        spdlog::error(L"Failed to add BSA file {} to map (Skipping): {}", BSAName, strToWstr(E.what()));
+        spdlog::error(L"Failed to add BSA file {} to map (Skipping): {}", BSAName, ASCIItoUTF16(E.what()));
       }
       continue;
     }
@@ -389,6 +314,12 @@ void BethesdaDirectory::addLooseFilesToMap() {
         const filesystem::path &FilePath = Entry.path();
         const filesystem::path RelativePath = FilePath.lexically_relative(DataDir);
 
+        if (!isPathAscii(RelativePath))
+        {
+            spdlog::warn(L"File {} contains non-ascii characters - skipping", RelativePath.wstring());
+            continue;
+        }
+
         // check type of file, skip BSAs and ESPs
         if (!isFileAllowed(FilePath)) {
           continue;
@@ -406,7 +337,7 @@ void BethesdaDirectory::addLooseFilesToMap() {
       }
     } catch (const std::exception &E) {
       if (Logging) {
-        spdlog::error(L"Failed to load file from iterator (Skipping): {}", strToWstr(E.what()));
+        spdlog::error(L"Failed to load file from iterator (Skipping): {}", ASCIItoUTF16(E.what()));
       }
       continue;
     }
@@ -440,16 +371,28 @@ void BethesdaDirectory::addBSAToFileMap(const wstring &BSAName) {
   for (auto &FileEntry : BSAObj) {
     // get file entry from pointer
     try {
-      // get folder name within the BSA vfs
-      const filesystem::path FolderName = FileEntry.first.name();
-
       // .second stores the files in the folder
       const auto FileName = FileEntry.second;
 
       // loop through files in folder
       for (const auto &Entry : FileName) {
+
+        if (!ContainsOnlyAscii(string(FileEntry.first.name())) ||
+            !ContainsOnlyAscii(string(Entry.first.name())))
+        {
+          spdlog::warn(
+              L"File {}\\{} in BSA {} contains non-ascii characters which is not handled correctly by Skyrim - skipping",
+                       Windows1252toUTF16(string(FileEntry.first.name())),
+                       Windows1252toUTF16(string(Entry.first.name())), BSAName);
+
+          continue;
+        }
+
+        // get folder name within the BSA vfs
+        const filesystem::path FolderName = ASCIItoUTF16(string(FileEntry.first.name()));
+
         // get name of file
-        const string_view CurEntry = Entry.first.name();
+        const wstring CurEntry = ASCIItoUTF16(string(Entry.first.name()));
         const filesystem::path CurPath = FolderName / CurEntry;
 
         // chekc if we should ignore this file
@@ -470,7 +413,7 @@ void BethesdaDirectory::addBSAToFileMap(const wstring &BSAName) {
       }
     } catch (const std::exception &E) {
       if (Logging) {
-        spdlog::error(L"Failed to get file pointer from BSA, skipping {}: {}", BSAName, strToWstr(E.what()));
+        spdlog::error(L"Failed to get file pointer from BSA, skipping {}: {}", BSAName, ASCIItoUTF16(E.what()));
       }
       continue;
     }
@@ -509,12 +452,15 @@ auto BethesdaDirectory::getBSALoadOrder() const -> vector<wstring> {
   return OutBSAOrder;
 }
 
-auto BethesdaDirectory::getPathLower(const filesystem::path &Path) -> filesystem::path {
-  return {boost::to_lower_copy(Path.wstring())};
+auto BethesdaDirectory::getAsciiPathLower(const filesystem::path &Path) -> filesystem::path {
+  if (!isPathAscii(Path)) {
+    spdlog::warn(L"Trying to convert unicode path {} to lower case but only ASCII characters are converted", Path.wstring());
+  }
+  return {boost::to_lower_copy(Path.wstring(), std::locale::classic())};
 }
 
 auto BethesdaDirectory::pathEqualityIgnoreCase(const filesystem::path &Path1, const filesystem::path &Path2) -> bool {
-  return getPathLower(Path1) == getPathLower(Path2);
+  return getAsciiPathLower(Path1) == getAsciiPathLower(Path2);
 }
 
 auto BethesdaDirectory::getBSAFilesFromINIs() const -> vector<wstring> {
@@ -536,10 +482,10 @@ auto BethesdaDirectory::getBSAFilesFromINIs() const -> vector<wstring> {
     // loop through each ini file
     wstring INIVal;
     for (const auto &INIPath : INIFileOrder) {
-      wstring CurVal = readINIValue(INIPath, L"Archive", strToWstr(Field), Logging, FirstINIRead);
+      wstring CurVal = readINIValue(INIPath, L"Archive", ASCIItoUTF16(Field), Logging, FirstINIRead);
 
       if (Logging) {
-        spdlog::trace(L"Found ini key pair from INI {}: {}: {}", INIPath.wstring(), strToWstr(Field), CurVal);
+        spdlog::trace(L"Found ini key pair from INI {}: {}: {}", INIPath.wstring(), ASCIItoUTF16(Field), CurVal);
       }
 
       if (CurVal.empty()) {
@@ -556,7 +502,7 @@ auto BethesdaDirectory::getBSAFilesFromINIs() const -> vector<wstring> {
     }
 
     if (Logging) {
-      spdlog::trace(L"Found BSA files from INI field {}: {}", strToWstr(Field), INIVal);
+      spdlog::trace(L"Found BSA files from INI field {}: {}", ASCIItoUTF16(Field), INIVal);
     }
 
     // split into components
@@ -603,10 +549,18 @@ auto BethesdaDirectory::findBSAFilesFromPluginName(const vector<wstring> &BSAFil
     spdlog::trace(L"Finding BSA files that correspond to plugin {}", PluginPrefix);
   }
 
+  if (!ParallaxGenUtil::ContainsOnlyAscii(PluginPrefix))
+  {
+    spdlog::warn(L"Plugin {} contains unsupported non-ASCI characters", PluginPrefix);
+  }
+
   vector<wstring> BSAFilesFound;
   const wstring PluginPrefixLower = boost::to_lower_copy(PluginPrefix);
 
   for (wstring BSA : BSAFileList) {
+    if (!ParallaxGenUtil::ContainsOnlyAscii(BSA)) {
+      spdlog::warn(L"BSA {} contains unsupported non-ASCII characters", BSA);
+    }
     const wstring BSALower = boost::to_lower_copy(BSA);
     if (BSALower.starts_with(PluginPrefixLower)) {
       if (BSALower == PluginPrefixLower + L".bsa") {
@@ -657,7 +611,7 @@ auto BethesdaDirectory::isPathAscii(const filesystem::path &Path) -> bool {
 auto BethesdaDirectory::getFileFromMap(const filesystem::path &FilePath) -> BethesdaDirectory::BethesdaFile {
   lock_guard<mutex> Lock(FileMapMutex);
 
-  const filesystem::path LowerPath = getPathLower(FilePath);
+  const filesystem::path LowerPath = getAsciiPathLower(FilePath);
 
   if (FileMap.find(LowerPath) == FileMap.end()) {
     return BethesdaFile{filesystem::path(), nullptr};
@@ -670,7 +624,7 @@ void BethesdaDirectory::updateFileMap(const filesystem::path &FilePath,
                                       shared_ptr<BethesdaDirectory::BSAFile> BSAFile, const wstring &Mod, const bool &Generated) {
   lock_guard<mutex> Lock(FileMapMutex);
 
-  const filesystem::path LowerPath = getPathLower(FilePath);
+  const filesystem::path LowerPath = getAsciiPathLower(FilePath);
 
   const BethesdaFile NewBFile = {FilePath, std::move(BSAFile), Mod, Generated};
 
@@ -737,7 +691,7 @@ auto BethesdaDirectory::readINIValue(const filesystem::path &INIPath, const wstr
     return L"";
   }
 
-  wifstream F(INIPath);
+  ifstream F(INIPath);
   if (!F.is_open()) {
     if (Logging && FirstINIRead) {
       spdlog::warn(L"Unable to open INI (ignoring): {}", INIPath.wstring());
@@ -745,8 +699,8 @@ auto BethesdaDirectory::readINIValue(const filesystem::path &INIPath, const wstr
     return L"";
   }
 
-  wstring CurLine;
-  wstring CurSection;
+  string CurLine;
+  string CurSection;
   bool FoundSection = false;
 
   while (getline(F, CurLine)) {
@@ -780,12 +734,12 @@ auto BethesdaDirectory::readINIValue(const filesystem::path &INIPath, const wstr
     const size_t Pos = CurLine.find('=');
     if (Pos != std::string::npos) {
       // found key value pair
-      wstring CurKey = CurLine.substr(0, Pos);
+      string CurKey = CurLine.substr(0, Pos);
       boost::trim(CurKey);
       if (boost::iequals(CurKey, Key)) {
-        wstring CurValue = CurLine.substr(Pos + 1);
+        string CurValue = CurLine.substr(Pos + 1);
         boost::trim(CurValue);
-        return CurValue;
+        return ParallaxGenUtil::UTF8toUTF16(CurValue);
       }
     }
   }

@@ -1,7 +1,7 @@
 {
   "default-registry": {
     "kind": "git",
-    "baseline": "3f530d4827b064f5894e94a8946473d40999826e",
+    "baseline": "0857a4b08c14030bbe41e80accb2b1fddb047a74",
     "repository": "https://github.com/microsoft/vcpkg"
   },
   "registries": [
@@ -10,5 +10,8 @@
       "location": "https://github.com/microsoft/vcpkg-ce-catalog/archive/refs/heads/main.zip",
       "name": "microsoft"
     }
+  ],
+  "overlay-triplets": [
+    "./triplets"
   ]
 }

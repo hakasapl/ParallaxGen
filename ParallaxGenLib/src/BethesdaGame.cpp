@@ -1,4 +1,5 @@
 #include "BethesdaGame.hpp"
+#include "ParallaxGenUtil.hpp"
 
 #include <spdlog/spdlog.h>
 
@@ -253,6 +254,8 @@ auto BethesdaGame::getGameRegistryPath(const GameType &Type) -> std::string {
 auto BethesdaGame::getGameDataPath() const -> filesystem::path { return GameDataPath; }
 
 auto BethesdaGame::findGamePathFromSteam(const GameType &Type) -> filesystem::path {
+  // TODO UNICODE get file path as UNICODE
+
   // Find the game path from the registry
   // If the game is not found, return an empty string
 
@@ -297,11 +300,11 @@ auto BethesdaGame::getActivePlugins(const bool &TrimExtension) const -> vector<w
   vector<wstring> OutputLO;
 
   // Build set of plugins that are actually active
-  unordered_map<wstring, bool> ActivePlugins;
+  unordered_map<string, bool> ActivePlugins;
 
   // Get the plugins file
   const filesystem::path PluginsFile = getPluginsFile();
-  wifstream PluginsFileHandle(PluginsFile, 1);
+  ifstream PluginsFileHandle(PluginsFile, 1);
   if (!PluginsFileHandle.is_open()) {
     if (Logging) {
       spdlog::critical("Unable to open plugins.txt");
@@ -312,14 +315,14 @@ auto BethesdaGame::getActivePlugins(const bool &TrimExtension) const -> vector<w
   }
 
   // loop through each line of loadorder.txt
-  wstring Line;
+  string Line;
   while (getline(PluginsFileHandle, Line)) {
     // Ignore lines that start with '#', which are comment lines
     if (Line.empty() || Line[0] == '#') {
       continue;
     }
 
-    if (Line.starts_with(L"*")) {
+    if (Line.starts_with("*")) {
       // this is an active plugin
       Line = Line.substr(1);
       ActivePlugins[Line] = true;
@@ -334,7 +337,7 @@ auto BethesdaGame::getActivePlugins(const bool &TrimExtension) const -> vector<w
 
   // Get the loadorder file
   const filesystem::path LoadOrderFile = getLoadOrderFile();
-  wifstream LoadOrderFileHandle(LoadOrderFile, 1);
+  ifstream LoadOrderFileHandle(LoadOrderFile, 1);
   if (!LoadOrderFileHandle.is_open()) {
     if (Logging) {
       spdlog::critical("Unable to open loadorder.txt");
@@ -362,7 +365,7 @@ auto BethesdaGame::getActivePlugins(const bool &TrimExtension) const -> vector<w
     }
 
     // Add to output list
-    OutputLO.push_back(Line);
+    OutputLO.push_back(ParallaxGenUtil::UTF8toUTF16(Line));
   }
 
   // close file handle

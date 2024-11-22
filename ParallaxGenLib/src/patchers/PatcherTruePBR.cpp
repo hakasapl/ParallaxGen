@@ -63,7 +63,7 @@ void PatcherTruePBR::loadStatics(const std::vector<std::filesystem::path> &PBRJS
           Element["match_diffuse"] = Element["texture"];
         }
 
-        Element["json"] = Config.string();
+        Element["json"] = ParallaxGenUtil::UTF16toUTF8(Config.wstring());
 
         // loop through filename Fields
         for (const auto &Field : getTruePBRConfigFilenameFields()) {
@@ -72,12 +72,12 @@ void PatcherTruePBR::loadStatics(const std::vector<std::filesystem::path> &PBRJS
           }
         }
 
-        Logger::trace(L"TruePBR Config {} Loaded: {}", ConfigOrder, ParallaxGenUtil::strToWstr(Element.dump()));
+        Logger::trace(L"TruePBR Config {} Loaded: {}", ConfigOrder, ParallaxGenUtil::UTF8toUTF16(Element.dump()));
         getTruePBRConfigs()[ConfigOrder++] = Element;
       }
     } catch (nlohmann::json::parse_error &E) {
       Logger::error(L"Unable to parse TruePBR Config file {}: {}", Config.wstring(),
-                    ParallaxGenUtil::strToWstr(E.what()));
+                    ParallaxGenUtil::ASCIItoUTF16(E.what()));
       continue;
     }
   }
@@ -88,7 +88,7 @@ void PatcherTruePBR::loadStatics(const std::vector<std::filesystem::path> &PBRJS
   for (const auto &Config : getTruePBRConfigs()) {
     // "match_normal" attribute
     if (Config.second.contains("match_normal")) {
-      auto RevNormal = ParallaxGenUtil::strToWstr(Config.second["match_normal"].get<string>());
+      auto RevNormal = ParallaxGenUtil::UTF8toUTF16(Config.second["match_normal"].get<string>());
       RevNormal = NIFUtil::getTexBase(RevNormal);
       reverse(RevNormal.begin(), RevNormal.end());
 
@@ -98,7 +98,7 @@ void PatcherTruePBR::loadStatics(const std::vector<std::filesystem::path> &PBRJS
 
     // "match_diffuse" attribute
     if (Config.second.contains("match_diffuse")) {
-      auto RevDiffuse = ParallaxGenUtil::strToWstr(Config.second["match_diffuse"].get<string>());
+      auto RevDiffuse = ParallaxGenUtil::UTF8toUTF16(Config.second["match_diffuse"].get<string>());
       RevDiffuse = NIFUtil::getTexBase(RevDiffuse);
       reverse(RevDiffuse.begin(), RevDiffuse.end());
 
@@ -195,7 +195,7 @@ auto PatcherTruePBR::shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOT
   unordered_map<wstring, unordered_set<NIFUtil::TextureSlots>> TruePBRMatchedFrom;
   for (const auto &[Sequence, Data] : TruePBRData) {
     // get current JSON
-    auto MatchedPath = ParallaxGenUtil::strToWstr(get<0>(Data)["json"].get<string>());
+    auto MatchedPath = ParallaxGenUtil::UTF8toUTF16(get<0>(Data)["json"].get<string>());
 
     // Add to output
     if (TruePBROutputData.find(MatchedPath) == TruePBROutputData.end()) {
@@ -316,7 +316,7 @@ auto PatcherTruePBR::getPathContainsMatch(std::map<size_t, std::tuple<nlohmann::
   size_t NumMatches = 0;
   for (const auto &Config : getPathLookupJSONs()) {
     // Check if in cache
-    auto CacheKey = make_tuple(ParallaxGenUtil::strToWstr(Config.second["path_contains"].get<string>()), Diffuse);
+    auto CacheKey = make_tuple(ParallaxGenUtil::UTF8toUTF16(Config.second["path_contains"].get<string>()), Diffuse);
 
     bool PathMatch = false;
     if (Cache.find(CacheKey) == Cache.end()) {
@@ -362,13 +362,13 @@ auto PatcherTruePBR::insertTruePBRData(std::map<size_t, std::tuple<nlohmann::jso
   auto MatchedFieldBase = NIFUtil::getTexBase(MatchedFieldStr);
   TexPath.erase(TexPath.length() - MatchedFieldBase.length(), MatchedFieldBase.length());
 
-  auto MatchedField = ParallaxGenUtil::strToWstr(MatchedFieldStr);
+  auto MatchedField = ParallaxGenUtil::UTF8toUTF16(MatchedFieldStr);
 
   // "rename" attribute
   if (CurCfg.contains("rename")) {
     auto RenameField = CurCfg["rename"].get<string>();
     if (!boost::iequals(RenameField, MatchedField)) {
-      MatchedField = ParallaxGenUtil::strToWstr(RenameField);
+      MatchedField = ParallaxGenUtil::UTF8toUTF16(RenameField);
     }
   }
 
@@ -654,7 +654,7 @@ auto PatcherTruePBR::applyOnePatchSlots(const std::array<std::wstring, NUM_TEXTU
 
   // "cubemap" attribute
   if (TruePBRData.contains("cubemap") && !flag(TruePBRData, "lock_cubemap")) {
-    auto NewCubemap = ParallaxGenUtil::strToWstr(TruePBRData["cubemap"].get<string>());
+    auto NewCubemap = ParallaxGenUtil::UTF8toUTF16(TruePBRData["cubemap"].get<string>());
     NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::CUBEMAP)] = NewCubemap;
   } else {
     NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::CUBEMAP)] = L"";
@@ -695,7 +695,7 @@ auto PatcherTruePBR::applyOnePatchSlots(const std::array<std::wstring, NUM_TEXTU
     string SlotName = "slot" + to_string(I + 1);
     if (TruePBRData.contains(SlotName)) {
       string NewSlot = TruePBRData[SlotName].get<string>();
-      NewSlots[I] = ParallaxGenUtil::strToWstr(NewSlot);
+      NewSlots[I] = ParallaxGenUtil::UTF8toUTF16(NewSlot);
     }
   }
 

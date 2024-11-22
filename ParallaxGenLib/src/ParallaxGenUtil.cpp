@@ -4,6 +4,7 @@
 #include <spdlog/spdlog.h>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/locale.hpp>
 #include <fstream>
 #include <iostream>
 #include <wingdi.h>
@@ -12,7 +13,30 @@
 using namespace std;
 namespace ParallaxGenUtil {
 
-auto strToWstr(const string &Str) -> wstring {
+constexpr unsigned ASCII_UPPER_BOUND = 127;
+
+auto Windows1252toUTF16(const std::string &Str) -> std::wstring {
+  return boost::locale::conv::to_utf<wchar_t>(Str, "windows-1252");
+}
+
+auto UTF16toWindows1252(const std::wstring &Str) -> std::string {
+  return boost::locale::conv::from_utf<wchar_t>(Str, "windows-1252");
+}
+
+auto ASCIItoUTF16(const std::string &Str) -> std::wstring {
+  return boost::locale::conv::to_utf<wchar_t>(Str, "US-ASCII");
+}
+
+auto UTF16toASCII(const std::wstring &Str) -> std::string {
+  return boost::locale::conv::from_utf<wchar_t>(Str, "US-ASCII");
+}
+
+auto ToLowerASCII(const std::wstring& Str) -> std::wstring
+{
+  return boost::to_lower_copy(Str, std::locale::classic());
+}
+
+auto UTF8toUTF16(const string &Str) -> wstring {
   // Just return empty string if empty
   if (Str.empty()) {
     return {};
@@ -26,7 +50,7 @@ auto strToWstr(const string &Str) -> wstring {
   return WStr;
 }
 
-auto wstrToStr(const wstring &WStr) -> string {
+auto UTF16toUTF8(const wstring &WStr) -> string {
   // Just return empty string if empty
   if (WStr.empty()) {
     return {};
@@ -38,6 +62,14 @@ auto wstrToStr(const wstring &WStr) -> string {
   WideCharToMultiByte(CP_UTF8, 0, WStr.data(), (int)WStr.size(), Str.data(), SizeNeeded, nullptr, nullptr);
 
   return Str;
+}
+
+auto ContainsOnlyAscii(const std::string &Str) -> bool {
+  return std::ranges::all_of(Str, [](char WC) { return WC <= ASCII_UPPER_BOUND; });
+}
+
+auto ContainsOnlyAscii(const std::wstring &Str) -> bool {
+  return std::ranges::all_of(Str, [](wchar_t WC) { return WC <= ASCII_UPPER_BOUND; });
 }
 
 auto getFileBytes(const filesystem::path &FilePath) -> vector<std::byte> {
