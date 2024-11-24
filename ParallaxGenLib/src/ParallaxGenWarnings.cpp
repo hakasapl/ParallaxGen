@@ -70,7 +70,7 @@ void ParallaxGenWarnings::printWarnings() {
 
   if (!MismatchWarnDebugTracker.empty())
   {
-    spdlog::debug("Potential texture mismatches, textu");
+    spdlog::debug("Potential texture mismatches:");
   }
   for (auto MatchedMod : MismatchWarnDebugTracker)
   {
