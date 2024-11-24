@@ -25,8 +25,7 @@ private:
   // Trackers for warnings
   static std::map<std::wstring, std::set<std::wstring>> MismatchWarnTracker;  // matched mod to set of base mods
   static std::mutex MismatchWarnTrackerMutex; /** Mutex for MismatchWarnTracker */
-  static std::unordered_set<std::pair<std::wstring, std::wstring>, PairHash>
-      MismatchWarnDebugTracker;                    /** Keeps tabs on DEBUG mismatch messages to avoid duplicates */
+  static std::map<std::wstring, std::set<std::pair<std::wstring,std::wstring>>> MismatchWarnDebugTracker;
   static std::mutex MismatchWarnDebugTrackerMutex; /** Mutex for MismatchWarnDebugTracker */
 
   static std::unordered_set<std::pair<std::wstring, std::wstring>, PairHash>
@@ -46,7 +45,7 @@ public:
   static void init(ParallaxGenDirectory *PGD, const std::unordered_map<std::wstring, int> *ModPriority);
 
   /**
-   * @brief Posts warning about a mismatch between diffuse/normal and a matched path. Will not repost the same warning.
+   * @brief store warning about a mismatch between diffuse/normal and a matched path. Will not repost the same warning.
    *
    * @param MatchedPath Path that was matched (for example _m or _p file)
    * @param BaseTex diffuse/normal that it was matched from

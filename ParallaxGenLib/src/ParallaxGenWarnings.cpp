@@ -10,7 +10,8 @@ const std::unordered_map<std::wstring, int> *ParallaxGenWarnings::ModPriority = 
 
 map<wstring, set<wstring>> ParallaxGenWarnings::MismatchWarnTracker;
 mutex ParallaxGenWarnings::MismatchWarnTrackerMutex;
-unordered_set<pair<wstring, wstring>, ParallaxGenWarnings::PairHash> ParallaxGenWarnings::MismatchWarnDebugTracker;
+
+std::map<std::wstring, std::set<std::pair<std::wstring,std::wstring>>> ParallaxGenWarnings::MismatchWarnDebugTracker;
 mutex ParallaxGenWarnings::MismatchWarnDebugTrackerMutex;
 
 unordered_set<pair<wstring, wstring>, ParallaxGenWarnings::PairHash> ParallaxGenWarnings::MeshWarnTracker;
@@ -44,20 +45,7 @@ void ParallaxGenWarnings::mismatchWarn(const wstring &MatchedPath, const wstring
     return;
   }
 
-  // Issue debug log
-  {
-    auto KeyDebug = make_pair(MatchedPath, BaseTex);
-    const lock_guard<mutex> Lock(MismatchWarnDebugTrackerMutex);
-    if (MismatchWarnDebugTracker.find(KeyDebug) != MismatchWarnDebugTracker.end()) {
-      return;
-    }
-
-    MismatchWarnDebugTracker.insert(KeyDebug);
-
-    spdlog::debug(L"[Potential Texture Mismatch] Matched path {} from mod {} does not come from the same diffuse or normal {} from mod {}",
-                  MatchedPath, MatchedPathMod, BaseTex, BaseTexMod);
-  }
-
+   MismatchWarnDebugTracker[MatchedPathMod].insert(std::make_pair(MatchedPath,BaseTex));
    MismatchWarnTracker[MatchedPathMod].insert(BaseTexMod);
 }
 
@@ -78,6 +66,21 @@ void ParallaxGenWarnings::printWarnings() {
   }
   if (!MismatchWarnTracker.empty()) {
     spdlog::warn("************************************************************");
+  }
+
+  if (!MismatchWarnDebugTracker.empty())
+  {
+    spdlog::debug("Potential texture mismatches, textu");
+  }
+  for (auto MatchedMod : MismatchWarnDebugTracker)
+  {
+    spdlog::debug(L"Mod \"{}\":", MatchedMod.first);
+
+    for (auto TexturePair : MatchedMod.second) {
+      auto BaseTexMod = PGD->getMod(TexturePair.second);
+      spdlog::debug(L"  - {} used with {} from \"{}\"",
+                    TexturePair.first, TexturePair.second, BaseTexMod);
+    }
   }
 }
 
