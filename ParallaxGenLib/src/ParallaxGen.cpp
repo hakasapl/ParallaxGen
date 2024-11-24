@@ -92,6 +92,8 @@ void ParallaxGen::patchMeshes(const PatcherUtil::PatcherSet &Patchers, const uno
     }
   }
 
+  ParallaxGenWarnings::printWarnings();
+
   // Write DiffJSON file
   spdlog::info("Saving diff JSON file...");
   const filesystem::path DiffJSONPath = OutputDir / getDiffJSONName();

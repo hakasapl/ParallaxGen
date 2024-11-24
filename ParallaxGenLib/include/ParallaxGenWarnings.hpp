@@ -2,6 +2,7 @@
 
 #include <mutex>
 #include <unordered_set>
+#include <map>
 
 #include "ParallaxGenDirectory.hpp"
 
@@ -22,8 +23,7 @@ private:
   };
 
   // Trackers for warnings
-  static std::unordered_set<std::pair<std::wstring, std::wstring>, PairHash>
-      MismatchWarnTracker;                    /** Keeps tabs on WARN mismatch messages to avoid duplicates */
+  static std::map<std::wstring, std::set<std::wstring>> MismatchWarnTracker;  // matched mod to set of base mods
   static std::mutex MismatchWarnTrackerMutex; /** Mutex for MismatchWarnTracker */
   static std::unordered_set<std::pair<std::wstring, std::wstring>, PairHash>
       MismatchWarnDebugTracker;                    /** Keeps tabs on DEBUG mismatch messages to avoid duplicates */
@@ -60,4 +60,7 @@ public:
    * @param NIFPath NIF that it was patched on
    */
   static void meshWarn(const std::wstring &MatchedPath, const std::wstring &NIFPath);
+
+  /// @brief print a summary of the already gathered warnings
+  static void printWarnings();
 };
