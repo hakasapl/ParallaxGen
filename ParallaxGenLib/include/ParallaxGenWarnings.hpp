@@ -23,9 +23,9 @@ private:
   };
 
   // Trackers for warnings
-  static std::map<std::wstring, std::set<std::wstring>> MismatchWarnTracker;  // matched mod to set of base mods
+  static std::unordered_map<std::wstring, std::unordered_set<std::wstring>> MismatchWarnTracker;  // matched mod to set of base mods
   static std::mutex MismatchWarnTrackerMutex; /** Mutex for MismatchWarnTracker */
-  static std::map<std::wstring, std::set<std::pair<std::wstring,std::wstring>>> MismatchWarnDebugTracker;
+  static std::unordered_map<std::wstring, std::unordered_set<std::pair<std::wstring,std::wstring>, PairHash>> MismatchWarnDebugTracker;
   static std::mutex MismatchWarnDebugTrackerMutex; /** Mutex for MismatchWarnDebugTracker */
 
   static std::unordered_set<std::pair<std::wstring, std::wstring>, PairHash>

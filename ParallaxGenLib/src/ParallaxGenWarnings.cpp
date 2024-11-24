@@ -8,10 +8,11 @@ using namespace std;
 ParallaxGenDirectory *ParallaxGenWarnings::PGD = nullptr;
 const std::unordered_map<std::wstring, int> *ParallaxGenWarnings::ModPriority = nullptr;
 
-map<wstring, set<wstring>> ParallaxGenWarnings::MismatchWarnTracker;
+unordered_map<wstring, unordered_set<wstring>> ParallaxGenWarnings::MismatchWarnTracker;
 mutex ParallaxGenWarnings::MismatchWarnTrackerMutex;
 
-std::map<std::wstring, std::set<std::pair<std::wstring,std::wstring>>> ParallaxGenWarnings::MismatchWarnDebugTracker;
+unordered_map<std::wstring, unordered_set<pair<wstring, wstring>, ParallaxGenWarnings::PairHash>>
+    ParallaxGenWarnings::MismatchWarnDebugTracker;
 mutex ParallaxGenWarnings::MismatchWarnDebugTrackerMutex;
 
 unordered_set<pair<wstring, wstring>, ParallaxGenWarnings::PairHash> ParallaxGenWarnings::MeshWarnTracker;
