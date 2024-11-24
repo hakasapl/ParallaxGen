@@ -51,8 +51,7 @@ void ParallaxGenWarnings::mismatchWarn(const wstring &MatchedPath, const wstring
 
 void ParallaxGenWarnings::printWarnings() {
   if (!MismatchWarnTracker.empty()) {
-    spdlog::warn("");
-    spdlog::warn("Potential Texture mismatches were found, there may be visual issues, Please verify each warning if "
+    spdlog::warn("Potential Texture mismatches were found, there may be visual issues, Please verify for each warning if "
                  "this is intended, address them and re-run ParallaxGen if needed.");
     spdlog::warn("See https://github.com/hakasapl/ParallaxGen/wiki/FAQ for further information");
     spdlog::warn("************************************************************");
