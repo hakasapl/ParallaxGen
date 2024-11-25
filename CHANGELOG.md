@@ -4,6 +4,7 @@
 
 - Fixed unicode character handling
 - Fixed exceptions when plugin patching is not enabled
+- Improved warning output for texture mismatches
 
 ## [0.7.1] - 2024-11-18
 
