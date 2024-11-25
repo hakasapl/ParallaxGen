@@ -182,13 +182,13 @@ auto PatcherTruePBR::shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOT
 
   map<size_t, tuple<nlohmann::json, wstring>> TruePBRData;
   // "match_normal" attribute: Binary search for normal map
-  getSlotMatch(TruePBRData, SearchPrefixes[1], getTruePBRNormalInverse(), L"match_normal", getNIFPath().wstring());
+  getSlotMatch(TruePBRData, SearchPrefixes[1], getTruePBRNormalInverse(), L"match_normal", getNIFPath().wstring(), OldSlots);
 
   // "match_diffuse" attribute: Binary search for diffuse map
-  getSlotMatch(TruePBRData, SearchPrefixes[0], getTruePBRDiffuseInverse(), L"match_diffuse", getNIFPath().wstring());
+  getSlotMatch(TruePBRData, SearchPrefixes[0], getTruePBRDiffuseInverse(), L"match_diffuse", getNIFPath().wstring(), OldSlots);
 
   // "path_contains" attribute: Linear search for path_contains
-  getPathContainsMatch(TruePBRData, SearchPrefixes[0], getNIFPath().wstring());
+  getPathContainsMatch(TruePBRData, SearchPrefixes[0], getNIFPath().wstring(), OldSlots);
 
   // Split data into individual JSONs
   unordered_map<wstring, map<size_t, tuple<nlohmann::json, wstring>>> TruePBROutputData;
@@ -247,7 +247,7 @@ auto PatcherTruePBR::shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOT
 
 auto PatcherTruePBR::getSlotMatch(map<size_t, tuple<nlohmann::json, wstring>> &TruePBRData, const wstring &TexName,
                                   const map<wstring, vector<size_t>> &Lookup, const wstring &SlotLabel,
-                                  const wstring &NIFPath) -> void {
+                                  const wstring &NIFPath, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots) -> void {
   // binary search for map
   auto MapReverse = boost::to_lower_copy(TexName);
   reverse(MapReverse.begin(), MapReverse.end());
@@ -303,12 +303,12 @@ auto PatcherTruePBR::getSlotMatch(map<size_t, tuple<nlohmann::json, wstring>> &T
 
   // Loop through all matches
   for (const auto &Cfg : Cfgs) {
-    insertTruePBRData(TruePBRData, TexName, Cfg, NIFPath);
+    insertTruePBRData(TruePBRData, TexName, Cfg, NIFPath, OldSlots);
   }
 }
 
 auto PatcherTruePBR::getPathContainsMatch(std::map<size_t, std::tuple<nlohmann::json, std::wstring>> &TruePBRData,
-                                          const std::wstring &Diffuse, const wstring &NIFPath) -> void {
+                                          const std::wstring &Diffuse, const wstring &NIFPath, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots) -> void {
   // "patch_contains" attribute: Linear search for path_contains
   auto &Cache = getPathLookupCache();
 
@@ -327,7 +327,7 @@ auto PatcherTruePBR::getPathContainsMatch(std::map<size_t, std::tuple<nlohmann::
     PathMatch = Cache[CacheKey];
     if (PathMatch) {
       NumMatches++;
-      insertTruePBRData(TruePBRData, Diffuse, Config.first, NIFPath);
+      insertTruePBRData(TruePBRData, Diffuse, Config.first, NIFPath, OldSlots);
     }
   }
 
@@ -340,7 +340,7 @@ auto PatcherTruePBR::getPathContainsMatch(std::map<size_t, std::tuple<nlohmann::
 }
 
 auto PatcherTruePBR::insertTruePBRData(std::map<size_t, std::tuple<nlohmann::json, std::wstring>> &TruePBRData,
-                                       const wstring &TexName, size_t Cfg, const wstring &NIFPath) -> void {
+                                       const wstring &TexName, size_t Cfg, const wstring &NIFPath, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots) -> void {
   const auto CurCfg = getTruePBRConfigs()[Cfg];
 
   // Check if we should skip this due to nif filter (this is expsenive, so we do it last)
@@ -378,9 +378,15 @@ auto PatcherTruePBR::insertTruePBRData(std::map<size_t, std::tuple<nlohmann::jso
   wstring MatchedPath = boost::to_lower_copy(TexPath + MatchedField);
   bool EnableTruePBR = (!CurCfg.contains("pbr") || CurCfg["pbr"]) && !MatchedPath.empty();
   if (!CurCfg.contains("delete") || !CurCfg["delete"].get<bool>()) {
-    if (EnableTruePBR && !getPGD()->isPrefix(MatchedPath)) {
-      Logger::trace(L"Config {} PBR JSON Rejected: Path {} is not a prefix", Cfg, MatchedPath);
-      return;
+    const auto NewTempSlots = applyOnePatchSlots(OldSlots, CurCfg, MatchedPath);
+
+    // check each slot to make sure it exists
+    for (size_t I = 0; I < NUM_TEXTURE_SLOTS; I++) {
+      if (!NewTempSlots[I].empty() && !getPGD()->isFile(NewTempSlots[I])) {
+        // Slot does not exist
+        Logger::trace(L"Config {} PBR JSON Rejected: Result texture slot {} does not exist", Cfg, NewTempSlots[I]);
+        return;
+      }
     }
   }
 
