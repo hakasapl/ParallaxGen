@@ -4,6 +4,7 @@
 
 - Fixed unicode character handling
 - Fixed exceptions when plugin patching is not enabled
+- PBR prefix check accounts for slot commands now too
 
 ## [0.7.1] - 2024-11-18
 
