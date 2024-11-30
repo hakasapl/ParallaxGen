@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Geometry.hpp>
 #include <NifFile.hpp>
 #include <filesystem>
 #include <map>
@@ -255,7 +256,7 @@ private:
    */
   static auto getSlotMatch(std::map<size_t, std::tuple<nlohmann::json, std::wstring>> &TruePBRData,
                            const std::wstring &TexName, const std::map<std::wstring, std::vector<size_t>> &Lookup,
-                           const std::wstring &SlotLabel, const std::wstring &NIFPath) -> void;
+                           const std::wstring &SlotLabel, const std::wstring &NIFPath, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots) -> void;
 
   /**
    * @brief Get path contains match for diffuse
@@ -265,7 +266,7 @@ private:
    * @param NIFPath NIF path to use
    */
   static auto getPathContainsMatch(std::map<size_t, std::tuple<nlohmann::json, std::wstring>> &TruePBRData,
-                                   const std::wstring &Diffuse, const std::wstring &NIFPath) -> void;
+                                   const std::wstring &Diffuse, const std::wstring &NIFPath, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots) -> void;
 
   /**
    * @brief Inserts truepbr data if criteria is met
@@ -276,5 +277,5 @@ private:
    * @param NIFPath NIF path to use
    */
   static auto insertTruePBRData(std::map<size_t, std::tuple<nlohmann::json, std::wstring>> &TruePBRData,
-                                const std::wstring &TexName, size_t Cfg, const std::wstring &NIFPath) -> void;
+                                const std::wstring &TexName, size_t Cfg, const std::wstring &NIFPath, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots) -> void;
 };
