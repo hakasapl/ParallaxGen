@@ -8,9 +8,11 @@ using namespace std;
 ParallaxGenDirectory *ParallaxGenWarnings::PGD = nullptr;
 const std::unordered_map<std::wstring, int> *ParallaxGenWarnings::ModPriority = nullptr;
 
-unordered_set<pair<wstring, wstring>, ParallaxGenWarnings::PairHash> ParallaxGenWarnings::MismatchWarnTracker;
+unordered_map<wstring, unordered_set<wstring>> ParallaxGenWarnings::MismatchWarnTracker;
 mutex ParallaxGenWarnings::MismatchWarnTrackerMutex;
-unordered_set<pair<wstring, wstring>, ParallaxGenWarnings::PairHash> ParallaxGenWarnings::MismatchWarnDebugTracker;
+
+unordered_map<std::wstring, unordered_set<pair<wstring, wstring>, ParallaxGenWarnings::PairHash>>
+    ParallaxGenWarnings::MismatchWarnDebugTracker;
 mutex ParallaxGenWarnings::MismatchWarnDebugTrackerMutex;
 
 unordered_set<pair<wstring, wstring>, ParallaxGenWarnings::PairHash> ParallaxGenWarnings::MeshWarnTracker;
@@ -33,6 +35,9 @@ void ParallaxGenWarnings::mismatchWarn(const wstring &MatchedPath, const wstring
   auto MatchedPathMod = PGD->getMod(MatchedPath);
   auto BaseTexMod = PGD->getMod(BaseTex);
 
+  if (BaseTexMod.empty())
+    BaseTexMod = L"Vanilla Game";
+
   if (MatchedPathMod.empty() || BaseTexMod.empty()) {
     return;
   }
@@ -41,37 +46,42 @@ void ParallaxGenWarnings::mismatchWarn(const wstring &MatchedPath, const wstring
     return;
   }
 
-  auto Key = make_pair(MatchedPathMod, BaseTexMod);
+   MismatchWarnDebugTracker[MatchedPathMod].insert(std::make_pair(MatchedPath,BaseTex));
+   MismatchWarnTracker[MatchedPathMod].insert(BaseTexMod);
+}
 
-  // Issue debug log
-  {
-    auto KeyDebug = make_pair(MatchedPath, BaseTex);
-    const lock_guard<mutex> Lock(MismatchWarnDebugTrackerMutex);
-    if (MismatchWarnDebugTracker.find(KeyDebug) != MismatchWarnDebugTracker.end()) {
-      return;
+void ParallaxGenWarnings::printWarnings() {
+  if (!MismatchWarnTracker.empty()) {
+    spdlog::warn("Potential Texture mismatches were found, there may be visual issues, Please verify for each warning if "
+                 "this is intended, address them and re-run ParallaxGen if needed.");
+    spdlog::warn("See https://github.com/hakasapl/ParallaxGen/wiki/FAQ for further information");
+    spdlog::warn("************************************************************");
+  }
+  for (auto MatchedMod : MismatchWarnTracker) {
+    spdlog::warn(L"\"{}\" assets are used with:", MatchedMod.first);
+    for (auto BaseMod : MatchedMod.second) {
+      spdlog::warn(L"  - diffuse/normal textures from \"{}\"", BaseMod);
     }
-
-    MismatchWarnDebugTracker.insert(KeyDebug);
-
-    spdlog::debug(L"[Potential Texture Mismatch] Matched path {} from mod {} does not come from the same diffuse or normal {} from mod {}",
-                  MatchedPath, MatchedPathMod, BaseTex, BaseTexMod);
+    spdlog::warn("");
+  }
+  if (!MismatchWarnTracker.empty()) {
+    spdlog::warn("************************************************************");
   }
 
-  // check if mod warning was already issued
+  if (!MismatchWarnDebugTracker.empty())
   {
-    const lock_guard<mutex> Lock(MismatchWarnTrackerMutex);
-    if (MismatchWarnTracker.find(Key) != MismatchWarnTracker.end()) {
-      return;
-    }
-
-    // add to tracker if not
-    MismatchWarnTracker.insert(Key);
+    spdlog::debug("Potential texture mismatches:");
   }
+  for (auto MatchedMod : MismatchWarnDebugTracker)
+  {
+    spdlog::debug(L"Mod \"{}\":", MatchedMod.first);
 
-  // log warning
-  spdlog::warn(L"[Potential Texture Mismatch] Mod \"{}\" assets were used with diffuse or normal from mod \"{}\". Please verify that "
-               L"this is intended.",
-               MatchedPathMod, BaseTexMod);
+    for (auto TexturePair : MatchedMod.second) {
+      auto BaseTexMod = PGD->getMod(TexturePair.second);
+      spdlog::debug(L"  - {} used with {} from \"{}\"",
+                    TexturePair.first, TexturePair.second, BaseTexMod);
+    }
+  }
 }
 
 void ParallaxGenWarnings::meshWarn(const wstring &MatchedPath, const wstring &NIFPath) {
