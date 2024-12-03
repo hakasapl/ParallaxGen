@@ -2,6 +2,8 @@
 
 #include <boost/algorithm/string/join.hpp>
 
+#include "ModManagerDirectory.hpp"
+
 using namespace std;
 
 // class LauncherWindow
@@ -419,9 +421,11 @@ void LauncherWindow::onMO2InstanceLocationChange([[maybe_unused]] wxCommandEvent
   // Clear existing items
   MO2ProfileChoice->Clear();
 
+  // Get profiles
+  const auto Profiles = ModManagerDirectory::getMO2ProfilesFromInstanceDir(MO2InstanceLocationTextbox->GetValue().ToStdWstring());
+
   // check if the "profiles" folder exists
-  filesystem::path ProfilesDir = MO2InstanceLocationTextbox->GetValue().ToStdWstring() + L"/profiles";
-  if (!filesystem::exists(ProfilesDir)) {
+  if (Profiles.empty()) {
     // set instance directory text to red
     MO2InstanceLocationTextbox->SetForegroundColour(*wxRED);
     return;
@@ -431,10 +435,8 @@ void LauncherWindow::onMO2InstanceLocationChange([[maybe_unused]] wxCommandEvent
   MO2InstanceLocationTextbox->SetForegroundColour(*wxBLACK);
 
   // Find all directories within "profiles"
-  for (const auto &Entry : filesystem::directory_iterator(ProfilesDir)) {
-    if (Entry.is_directory()) {
-      MO2ProfileChoice->Append(Entry.path().filename().wstring());
-    }
+  for (const auto &Profile : Profiles) {
+    MO2ProfileChoice->Append(Profile);
   }
 
   // Optionally, select the first item

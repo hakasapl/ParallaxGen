@@ -8,6 +8,7 @@
 - Improved warning output for texture mismatches
 - Fixed case where multiple PBR entries did not apply together
 - Fixed PBR slot check to check at the end of applying all entries for the match
+- MO2 selection will respect custom paths for mods and profiles folder now
 
 ## [0.7.1] - 2024-11-18
 

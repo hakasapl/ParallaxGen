@@ -202,14 +202,10 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   if (Params.ModManager.Type == ModManagerDirectory::ModManagerType::ModOrganizer2 &&
       !Params.ModManager.MO2InstanceDir.empty() && !Params.ModManager.MO2Profile.empty()) {
     // MO2
-    auto MO2StagingFolder = Params.ModManager.MO2InstanceDir / "mods";
-    auto MO2ModlistTXT = Params.ModManager.MO2InstanceDir / "profiles" / Params.ModManager.MO2Profile / "modlist.txt";
-    MMD.populateInfo(MO2ModlistTXT, MO2StagingFolder);
-    MMD.populateModFileMap();
+    MMD.populateModFileMapMO2(Params.ModManager.MO2InstanceDir, Params.ModManager.MO2Profile);
   } else if (Params.ModManager.Type == ModManagerDirectory::ModManagerType::Vortex) {
     // Vortex
-    MMD.populateInfo(BG.getGameDataPath() / "vortex.deployment.json");
-    MMD.populateModFileMap();
+    MMD.populateModFileMapVortex(BG.getGameDataPath());
   }
 
   PGD.populateFileMap(Params.Processing.BSA);
