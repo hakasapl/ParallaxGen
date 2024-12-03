@@ -404,7 +404,7 @@ auto PatcherTruePBR::insertTruePBRData(std::map<size_t, std::tuple<nlohmann::jso
 auto PatcherTruePBR::applyPatch(nifly::NiShape &NIFShape, const PatcherMatch &Match, bool &NIFModified,
                                 bool &ShapeDeleted) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
   auto NewSlots = NIFUtil::getTextureSlots(getNIF(), &NIFShape);
-  
+
   if (Match.MatchedPath == getNIFPath().wstring() || getPGD()->getTextureType(Match.MatchedPath) == NIFUtil::TextureType::RMAOS) {
     // already has PBR, just add PBR prefix to the slots if not already there
     for (size_t I = 0; I < NUM_TEXTURE_SLOTS; I++) {
