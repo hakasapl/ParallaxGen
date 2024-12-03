@@ -6,6 +6,8 @@
 - Fixed exceptions when plugin patching is not enabled
 - PBR prefix check accounts for slot commands now too
 - Improved warning output for texture mismatches
+- Fixed case where multiple PBR entries did not apply together
+- Fixed PBR slot check to check at the end of applying all entries for the match
 
 ## [0.7.1] - 2024-11-18
 

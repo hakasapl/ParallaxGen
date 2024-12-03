@@ -217,6 +217,22 @@ auto PatcherTruePBR::shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOT
     Match.MatchedPath = JSON;
     Match.MatchedFrom = TruePBRMatchedFrom[JSON];
     Match.ExtraData = make_shared<decltype(JSONData)>(JSONData);
+
+    // check paths
+    bool Valid = true;
+    const auto NewSlots = applyPatchSlots(OldSlots, Match);
+    for (size_t I = 0; I < NUM_TEXTURE_SLOTS; I++) {
+      if (!NewSlots[I].empty() && !getPGD()->isFile(NewSlots[I])) {
+        // Slot does not exist
+        Logger::trace(L"PBR JSON Match: Result texture slot {} does not exist", NewSlots[I]);
+        Valid = false;
+      }
+    }
+
+    if (!Valid) {
+      continue;
+    }
+
     Matches.push_back(Match);
   }
 
@@ -377,20 +393,6 @@ auto PatcherTruePBR::insertTruePBRData(std::map<size_t, std::tuple<nlohmann::jso
   // Check if named_field is a directory
   wstring MatchedPath = boost::to_lower_copy(TexPath + MatchedField);
   bool EnableTruePBR = (!CurCfg.contains("pbr") || CurCfg["pbr"]) && !MatchedPath.empty();
-  if (!CurCfg.contains("delete") || !CurCfg["delete"].get<bool>()) {
-    const auto NewTempSlots = applyOnePatchSlots(OldSlots, CurCfg, MatchedPath);
-
-    // check each slot to make sure it exists
-    for (size_t I = 0; I < NUM_TEXTURE_SLOTS; I++) {
-      if (!NewTempSlots[I].empty() && !getPGD()->isFile(NewTempSlots[I])) {
-        // Slot does not exist
-        Logger::trace(L"Config {} PBR JSON Rejected: Result texture slot {} does not exist", Cfg, NewTempSlots[I]);
-        return;
-      }
-    }
-  }
-
-  // If no pbr clear MatchedPath
   if (!EnableTruePBR) {
     MatchedPath = L"";
   }
@@ -401,12 +403,12 @@ auto PatcherTruePBR::insertTruePBRData(std::map<size_t, std::tuple<nlohmann::jso
 
 auto PatcherTruePBR::applyPatch(nifly::NiShape &NIFShape, const PatcherMatch &Match, bool &NIFModified,
                                 bool &ShapeDeleted) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
+  auto NewSlots = NIFUtil::getTextureSlots(getNIF(), &NIFShape);
+  
   if (Match.MatchedPath == getNIFPath().wstring() || getPGD()->getTextureType(Match.MatchedPath) == NIFUtil::TextureType::RMAOS) {
     // already has PBR, just add PBR prefix to the slots if not already there
-    const auto OldSlots = NIFUtil::getTextureSlots(getNIF(), &NIFShape);
-    auto NewSlots = OldSlots;
     for (size_t I = 0; I < NUM_TEXTURE_SLOTS; I++) {
-      if (boost::istarts_with(OldSlots[I], "textures\\") && !boost::istarts_with(OldSlots[I], "textures\\pbr\\")) {
+      if (boost::istarts_with(NewSlots[I], "textures\\") && !boost::istarts_with(NewSlots[I], "textures\\pbr\\")) {
         NewSlots[I].replace(0, TEXTURE_STR_LENGTH, L"textures\\pbr\\");
       }
     }
@@ -416,7 +418,6 @@ auto PatcherTruePBR::applyPatch(nifly::NiShape &NIFShape, const PatcherMatch &Ma
 
   // get extra data from match
   auto ExtraData = static_pointer_cast<map<size_t, tuple<nlohmann::json, wstring>>>(Match.ExtraData);
-  std::array<std::wstring, NUM_TEXTURE_SLOTS> NewSlots;
   for (const auto &[Sequence, Data] : *ExtraData) {
     // apply one patch
     auto TruePBRData = get<0>(Data);
@@ -446,7 +447,7 @@ auto PatcherTruePBR::applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_
   for (const auto &[Sequence, Data] : *ExtraData) {
     auto TruePBRData = get<0>(Data);
     auto MatchedPath = get<1>(Data);
-    NewSlots = applyOnePatchSlots(OldSlots, TruePBRData, MatchedPath);
+    applyOnePatchSlots(NewSlots, TruePBRData, MatchedPath);
   }
 
   return NewSlots;
@@ -616,26 +617,22 @@ void PatcherTruePBR::applyOnePatch(NiShape *NIFShape, nlohmann::json &TruePBRDat
   }
 }
 
-auto PatcherTruePBR::applyOnePatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
-                                        const nlohmann::json &TruePBRData, const std::wstring &MatchedPath)
-    -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
-  // TODO don't duplicate this code
+void PatcherTruePBR::applyOnePatchSlots(std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots,
+                                        const nlohmann::json &TruePBRData, const std::wstring &MatchedPath) {
   if (MatchedPath.empty()) {
-    return OldSlots;
+    return;
   }
-
-  array<wstring, NUM_TEXTURE_SLOTS> NewSlots = OldSlots;
 
   // "lock_diffuse" attribute
   if (!flag(TruePBRData, "lock_diffuse")) {
     auto NewDiffuse = MatchedPath + L".dds";
-    NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::DIFFUSE)] = NewDiffuse;
+    Slots[static_cast<size_t>(NIFUtil::TextureSlots::DIFFUSE)] = NewDiffuse;
   }
 
   // "lock_normal" attribute
   if (!flag(TruePBRData, "lock_normal")) {
     auto NewNormal = MatchedPath + L"_n.dds";
-    NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::NORMAL)] = NewNormal;
+    Slots[static_cast<size_t>(NIFUtil::TextureSlots::NORMAL)] = NewNormal;
   }
 
   // "emissive" attribute
@@ -645,7 +642,7 @@ auto PatcherTruePBR::applyOnePatchSlots(const std::array<std::wstring, NUM_TEXTU
       NewGlow = MatchedPath + L"_g.dds";
     }
 
-    NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::GLOW)] = NewGlow;
+    Slots[static_cast<size_t>(NIFUtil::TextureSlots::GLOW)] = NewGlow;
   }
 
   // "parallax" attribute
@@ -655,21 +652,21 @@ auto PatcherTruePBR::applyOnePatchSlots(const std::array<std::wstring, NUM_TEXTU
       NewParallax = MatchedPath + L"_p.dds";
     }
 
-    NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::PARALLAX)] = NewParallax;
+    Slots[static_cast<size_t>(NIFUtil::TextureSlots::PARALLAX)] = NewParallax;
   }
 
   // "cubemap" attribute
   if (TruePBRData.contains("cubemap") && !flag(TruePBRData, "lock_cubemap")) {
     auto NewCubemap = ParallaxGenUtil::UTF8toUTF16(TruePBRData["cubemap"].get<string>());
-    NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::CUBEMAP)] = NewCubemap;
+    Slots[static_cast<size_t>(NIFUtil::TextureSlots::CUBEMAP)] = NewCubemap;
   } else {
-    NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::CUBEMAP)] = L"";
+    Slots[static_cast<size_t>(NIFUtil::TextureSlots::CUBEMAP)] = L"";
   }
 
   // "lock_rmaos" attribute
   if (!flag(TruePBRData, "lock_rmaos")) {
     auto NewRMAOS = MatchedPath + L"_rmaos.dds";
-    NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::ENVMASK)] = NewRMAOS;
+    Slots[static_cast<size_t>(NIFUtil::TextureSlots::ENVMASK)] = NewRMAOS;
   }
 
   // "lock_cnr" attribute
@@ -680,7 +677,7 @@ auto PatcherTruePBR::applyOnePatchSlots(const std::array<std::wstring, NUM_TEXTU
       NewCNR = MatchedPath + L"_cnr.dds";
     }
 
-    NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::MULTILAYER)] = NewCNR;
+    Slots[static_cast<size_t>(NIFUtil::TextureSlots::MULTILAYER)] = NewCNR;
   }
 
   // "lock_subsurface" attribute
@@ -693,7 +690,7 @@ auto PatcherTruePBR::applyOnePatchSlots(const std::array<std::wstring, NUM_TEXTU
       NewSubsurface = MatchedPath + L"_s.dds";
     }
 
-    NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::BACKLIGHT)] = NewSubsurface;
+    Slots[static_cast<size_t>(NIFUtil::TextureSlots::BACKLIGHT)] = NewSubsurface;
   }
 
   // "SlotX" attributes
@@ -701,18 +698,16 @@ auto PatcherTruePBR::applyOnePatchSlots(const std::array<std::wstring, NUM_TEXTU
     string SlotName = "slot" + to_string(I + 1);
     if (TruePBRData.contains(SlotName)) {
       string NewSlot = TruePBRData[SlotName].get<string>();
-      NewSlots[I] = ParallaxGenUtil::UTF8toUTF16(NewSlot);
+      Slots[I] = ParallaxGenUtil::UTF8toUTF16(NewSlot);
     }
   }
-
-  return NewSlots;
 }
 
 void PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader,
                                           BSLightingShaderProperty *NIFShaderBSLSP, nlohmann::json &TruePBRData,
                                           const wstring &MatchedPath, bool &NIFModified,
                                           std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots) const {
-  NewSlots = applyOnePatchSlots(NIFUtil::getTextureSlots(getNIF(), NIFShape), TruePBRData, MatchedPath);
+  applyOnePatchSlots(NewSlots, TruePBRData, MatchedPath);
   NIFUtil::setTextureSlots(getNIF(), NIFShape, NewSlots, NIFModified);
 
   // "emissive" attribute
