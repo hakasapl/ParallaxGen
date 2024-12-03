@@ -16,8 +16,8 @@ public:
 
 private:
   std::unordered_map<std::filesystem::path, std::wstring> ModFileMap;
-
   std::unordered_set<std::wstring> AllMods;
+  std::vector<std::wstring> InferredOrder;
 
   ModManagerType MMType;
 
@@ -26,6 +26,7 @@ public:
 
   [[nodiscard]] auto getModFileMap() const -> const std::unordered_map<std::filesystem::path, std::wstring> &;
   [[nodiscard]] auto getMod(const std::filesystem::path &RelPath) const -> std::wstring;
+  [[nodiscard]] auto getInferredOrder() const -> const std::vector<std::wstring> &;
 
   static auto getMO2ProfilesFromInstanceDir(const std::filesystem::path &InstanceDir) -> std::vector<std::wstring>;
 

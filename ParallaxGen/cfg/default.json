@@ -39,6 +39,7 @@
     "modmanager": {
       "mo2instancedir": "",
       "mo2profile": "Default",
+      "mo2useorder": false,
       "type": 0
     },
     "output": {

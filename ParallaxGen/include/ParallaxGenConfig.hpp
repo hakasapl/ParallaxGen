@@ -35,6 +35,7 @@ public:
       ModManagerDirectory::ModManagerType Type = ModManagerDirectory::ModManagerType::None;
       std::filesystem::path MO2InstanceDir;
       std::wstring MO2Profile = L"Default";
+      bool MO2UseOrder = false;
     } ModManager;
 
     // Output

@@ -179,39 +179,80 @@ auto ParallaxGenConfig::addConfigJSON(const nlohmann::json &J) -> void {
     const auto &ParamJ = J["params"];
 
     // "game"
-    Params.Game.Dir = UTF8toUTF16(ParamJ["game"]["dir"].get<string>());
-    ParamJ["game"]["type"].get_to<BethesdaGame::GameType>(Params.Game.Type);
+    if (ParamJ.contains("game") && ParamJ["game"].contains("dir")) {
+      Params.Game.Dir = UTF8toUTF16(ParamJ["game"]["dir"].get<string>());
+    }
+    if (ParamJ.contains("game") && ParamJ["game"].contains("type")) {
+      ParamJ["game"]["type"].get_to<BethesdaGame::GameType>(Params.Game.Type);
+    }
 
     // "modmanager"
-    ParamJ["modmanager"]["type"].get_to<ModManagerDirectory::ModManagerType>(Params.ModManager.Type);
-    ParamJ["modmanager"]["mo2instancedir"].get_to<filesystem::path>(Params.ModManager.MO2InstanceDir);
-    Params.ModManager.MO2Profile = UTF8toUTF16(ParamJ["modmanager"]["mo2profile"].get<string>());
+    if (ParamJ.contains("modmanager") && ParamJ["modmanager"].contains("type")) {
+      ParamJ["modmanager"]["type"].get_to<ModManagerDirectory::ModManagerType>(Params.ModManager.Type);
+    }
+    if (ParamJ.contains("modmanager") && ParamJ["modmanager"].contains("mo2instancedir")) {
+      ParamJ["modmanager"]["mo2instancedir"].get_to<filesystem::path>(Params.ModManager.MO2InstanceDir);
+    }
+    if (ParamJ.contains("modmanager") && ParamJ["modmanager"].contains("mo2profile")) {
+      Params.ModManager.MO2Profile = UTF8toUTF16(ParamJ["modmanager"]["mo2profile"].get<string>());
+    }
+    if (ParamJ.contains("modmanager") && ParamJ["modmanager"].contains("mo2useorder")) {
+      ParamJ["modmanager"]["mo2useorder"].get_to<bool>(Params.ModManager.MO2UseOrder);
+    }
 
     // "output"
-    Params.Output.Dir = UTF8toUTF16(ParamJ["output"]["dir"].get<string>());
-    ParamJ["output"]["zip"].get_to<bool>(Params.Output.Zip);
+    if (ParamJ.contains("output") && ParamJ["output"].contains("dir")) {
+      Params.Output.Dir = UTF8toUTF16(ParamJ["output"]["dir"].get<string>());
+    }
+    if (ParamJ.contains("output") && ParamJ["output"].contains("zip")) {
+      ParamJ["output"]["zip"].get_to<bool>(Params.Output.Zip);
+    }
 
     // "processing"
-    ParamJ["processing"]["multithread"].get_to<bool>(Params.Processing.Multithread);
-    ParamJ["processing"]["highmem"].get_to<bool>(Params.Processing.HighMem);
-    ParamJ["processing"]["gpuacceleration"].get_to<bool>(Params.Processing.GPUAcceleration);
-    ParamJ["processing"]["bsa"].get_to<bool>(Params.Processing.BSA);
-    ParamJ["processing"]["pluginpatching"].get_to<bool>(Params.Processing.PluginPatching);
-    ParamJ["processing"]["mapfrommeshes"].get_to<bool>(Params.Processing.MapFromMeshes);
+    if (ParamJ.contains("processing") && ParamJ["processing"].contains("multithread")) {
+      ParamJ["processing"]["multithread"].get_to<bool>(Params.Processing.Multithread);
+    }
+    if (ParamJ.contains("processing") && ParamJ["processing"].contains("highmem")) {
+      ParamJ["processing"]["highmem"].get_to<bool>(Params.Processing.HighMem);
+    }
+    if (ParamJ.contains("processing") && ParamJ["processing"].contains("gpuacceleration")) {
+      ParamJ["processing"]["gpuacceleration"].get_to<bool>(Params.Processing.GPUAcceleration);
+    }
+    if (ParamJ.contains("processing") && ParamJ["processing"].contains("bsa")) {
+      ParamJ["processing"]["bsa"].get_to<bool>(Params.Processing.BSA);
+    }
+    if (ParamJ.contains("processing") && ParamJ["processing"].contains("pluginpatching")) {
+      ParamJ["processing"]["pluginpatching"].get_to<bool>(Params.Processing.PluginPatching);
+    }
+    if (ParamJ.contains("processing") && ParamJ["processing"].contains("mapfrommeshes")) {
+      ParamJ["processing"]["mapfrommeshes"].get_to<bool>(Params.Processing.MapFromMeshes);
+    }
 
     // "prepatcher"
-    ParamJ["prepatcher"]["disablemlp"].get_to<bool>(Params.PrePatcher.DisableMLP);
+    if (ParamJ.contains("prepatcher") && ParamJ["prepatcher"].contains("disablemlp")) {
+      ParamJ["prepatcher"]["disablemlp"].get_to<bool>(Params.PrePatcher.DisableMLP);
+    }
 
     // "shaderpatcher"
-    ParamJ["shaderpatcher"]["parallax"].get_to<bool>(Params.ShaderPatcher.Parallax);
-    ParamJ["shaderpatcher"]["complexmaterial"].get_to<bool>(Params.ShaderPatcher.ComplexMaterial);
-    ParamJ["shaderpatcher"]["truepbr"].get_to<bool>(Params.ShaderPatcher.TruePBR);
+    if (ParamJ.contains("shaderpatcher") && ParamJ["shaderpatcher"].contains("parallax")) {
+      ParamJ["shaderpatcher"]["parallax"].get_to<bool>(Params.ShaderPatcher.Parallax);
+    }
+    if (ParamJ.contains("shaderpatcher") && ParamJ["shaderpatcher"].contains("complexmaterial")) {
+      ParamJ["shaderpatcher"]["complexmaterial"].get_to<bool>(Params.ShaderPatcher.ComplexMaterial);
+    }
+    if (ParamJ.contains("shaderpatcher") && ParamJ["shaderpatcher"].contains("truepbr")) {
+      ParamJ["shaderpatcher"]["truepbr"].get_to<bool>(Params.ShaderPatcher.TruePBR);
+    }
 
     // "shadertransforms"
-    ParamJ["shadertransforms"]["parallaxtocm"].get_to<bool>(Params.ShaderTransforms.ParallaxToCM);
+    if (ParamJ.contains("shadertransforms") && ParamJ["shadertransforms"].contains("parallaxtocm")) {
+      ParamJ["shadertransforms"]["parallaxtocm"].get_to<bool>(Params.ShaderTransforms.ParallaxToCM);
+    }
 
     // "postpatcher"
-    ParamJ["postpatcher"]["optimizemeshes"].get_to<bool>(Params.PostPatcher.OptimizeMeshes);
+    if (ParamJ.contains("postpatcher") && ParamJ["postpatcher"].contains("optimizemeshes")) {
+      ParamJ["postpatcher"]["optimizemeshes"].get_to<bool>(Params.PostPatcher.OptimizeMeshes);
+    }
 
     // Fill in empty values with defaults if needed
     if (Params.Game.Dir.empty()) {
@@ -394,6 +435,7 @@ void ParallaxGenConfig::saveUserConfig() {
   J["params"]["modmanager"]["type"] = Params.ModManager.Type;
   J["params"]["modmanager"]["mo2instancedir"] = UTF16toUTF8(Params.ModManager.MO2InstanceDir.wstring());
   J["params"]["modmanager"]["mo2profile"] = UTF16toUTF8(Params.ModManager.MO2Profile);
+  J["params"]["modmanager"]["mo2useorder"] = Params.ModManager.MO2UseOrder;
 
   // "output"
   J["params"]["output"]["dir"] = UTF16toUTF8(Params.Output.Dir.wstring());

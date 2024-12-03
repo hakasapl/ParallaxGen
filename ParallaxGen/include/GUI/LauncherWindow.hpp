@@ -58,6 +58,7 @@ private:
   std::unordered_map<ModManagerDirectory::ModManagerType, wxRadioButton *> ModManagerRadios;
   wxTextCtrl *MO2InstanceLocationTextbox;
   wxChoice *MO2ProfileChoice;
+  wxCheckBox *MO2UseOrderCheckbox;
 
   // Output
   wxTextCtrl *OutputLocationTextbox;

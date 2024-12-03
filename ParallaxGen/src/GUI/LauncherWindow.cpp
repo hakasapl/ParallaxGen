@@ -98,11 +98,16 @@ LauncherWindow::LauncherWindow(const ParallaxGenConfig::PGParams &Params)
   MO2ProfileChoice = new wxChoice(this, wxID_ANY);                     // NOLINT(cppcoreguidelines-owning-memory)
   MO2ProfileChoice->SetToolTip("MO2 profile to read from");
 
+  // Checkbox to use MO2 order
+  MO2UseOrderCheckbox = new wxCheckBox(this, wxID_ANY, "Use MO2 Loose File Order"); // NOLINT(cppcoreguidelines-owning-memory)
+  MO2UseOrderCheckbox->SetToolTip("Use the order set in MO2's left pane instead of manually defining an order");
+
   // Add the label and dropdown to MO2 options sizer
   MO2OptionsSizer->Add(MO2InstanceLocationLabel, 0, wxLEFT | wxRIGHT | wxTOP, 5);
   MO2OptionsSizer->Add(MO2InstanceLocationSizer, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 0);
   MO2OptionsSizer->Add(MO2ProfileLabel, 0, wxLEFT | wxRIGHT | wxTOP, 5);
   MO2OptionsSizer->Add(MO2ProfileChoice, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 5);
+  MO2OptionsSizer->Add(MO2UseOrderCheckbox, 0, wxLEFT | wxRIGHT | wxBOTTOM, 5);
 
   // Add MO2 options to leftSizer but hide it initially
   ModManagerSizer->Add(MO2OptionsSizer, 0, wxEXPAND | wxALL, 5);
@@ -298,6 +303,7 @@ void LauncherWindow::onInitDialog(wxInitDialogEvent &Event) {
   if (MO2ProfileChoice->FindString(InitParams.ModManager.MO2Profile) != wxNOT_FOUND) {
     MO2ProfileChoice->SetStringSelection(InitParams.ModManager.MO2Profile);
   }
+  MO2UseOrderCheckbox->SetValue(InitParams.ModManager.MO2UseOrder);
 
   // Output
   OutputLocationTextbox->SetValue(InitParams.Output.Dir.wstring());
@@ -353,6 +359,7 @@ auto LauncherWindow::getParams() -> ParallaxGenConfig::PGParams {
   }
   Params.ModManager.MO2InstanceDir = MO2InstanceLocationTextbox->GetValue().ToStdWstring();
   Params.ModManager.MO2Profile = MO2ProfileChoice->GetStringSelection().ToStdWstring();
+  Params.ModManager.MO2UseOrder = MO2UseOrderCheckbox->GetValue();
 
   // Output
   Params.Output.Dir = OutputLocationTextbox->GetValue().ToStdWstring();

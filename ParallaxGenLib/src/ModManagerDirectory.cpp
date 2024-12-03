@@ -143,6 +143,7 @@ void ModManagerDirectory::populateModFileMapMO2(const filesystem::path &Instance
     // loop through all files in mod
     Mod.erase(0, 1); // remove +
     AllMods.insert(Mod);
+    InferredOrder.insert(InferredOrder.begin(), Mod);
 
     const auto CurModDir = ModDir / Mod;
     if (!filesystem::exists(CurModDir)) {
@@ -254,4 +255,8 @@ auto ModManagerDirectory::getMO2ProfilesFromInstanceDir(const filesystem::path &
   }
 
   return Profiles;
+}
+
+auto ModManagerDirectory::getInferredOrder() const -> const vector<wstring> & {
+  return InferredOrder;
 }

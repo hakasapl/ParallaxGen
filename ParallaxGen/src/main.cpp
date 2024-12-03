@@ -239,20 +239,27 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   }
 
   if (Params.ModManager.Type != ModManagerDirectory::ModManagerType::None) {
-    // Find conflicts
-    const auto ModConflicts =
-        PG.findModConflicts(Patchers, Params.Processing.Multithread, Params.Processing.PluginPatching);
-    const auto ExistingOrder = PGC.getModOrder();
+    // Check if MO2 is used and MO2 use order is checked
+    if (Params.ModManager.Type == ModManagerDirectory::ModManagerType::ModOrganizer2 && Params.ModManager.MO2UseOrder) {
+      // Get mod order from MO2
+      const auto &ModOrder = MMD.getInferredOrder();
+      PGC.setModOrder(ModOrder);
+    } else {
+      // Find conflicts
+      const auto ModConflicts =
+          PG.findModConflicts(Patchers, Params.Processing.Multithread, Params.Processing.PluginPatching);
+      const auto ExistingOrder = PGC.getModOrder();
 
-    if (!ModConflicts.empty()) {
-      // pause timer for UI
-      TimeTaken += chrono::duration_cast<chrono::seconds>(chrono::high_resolution_clock::now() - StartTime).count();
+      if (!ModConflicts.empty()) {
+        // pause timer for UI
+        TimeTaken += chrono::duration_cast<chrono::seconds>(chrono::high_resolution_clock::now() - StartTime).count();
 
-      // Select mod order
-      auto SelectedOrder = ParallaxGenUI::selectModOrder(ModConflicts, ExistingOrder);
-      StartTime = chrono::high_resolution_clock::now();
+        // Select mod order
+        auto SelectedOrder = ParallaxGenUI::selectModOrder(ModConflicts, ExistingOrder);
+        StartTime = chrono::high_resolution_clock::now();
 
-      PGC.setModOrder(SelectedOrder);
+        PGC.setModOrder(SelectedOrder);
+      }
     }
   }
 
