@@ -10,6 +10,8 @@
 - Fixed PBR slot check to check at the end of applying all entries for the match
 - MO2 selection will respect custom paths for mods and profiles folder now
 - If using MO2 you now have the option to use the MO2 left pane (loose file) order for PG order
+- Added a "save config" button to the launcher GUI
+- When PBR is the only shader patcher selected "map textures from meshes" will be automatically unselected
 
 ## [0.7.1] - 2024-11-18
 

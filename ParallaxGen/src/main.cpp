@@ -131,8 +131,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   // Show launcher UI
   if (!Args.Autostart) {
-    Params = ParallaxGenUI::showLauncher(Params);
-    PGC.setParams(Params);
+    Params = ParallaxGenUI::showLauncher(PGC);
   }
 
   // Print configuration parameters

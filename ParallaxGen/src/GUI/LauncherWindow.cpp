@@ -7,10 +7,9 @@
 using namespace std;
 
 // class LauncherWindow
-LauncherWindow::LauncherWindow(const ParallaxGenConfig::PGParams &Params)
+LauncherWindow::LauncherWindow(ParallaxGenConfig &PGC)
     : wxDialog(nullptr, wxID_ANY, "ParallaxGen Options", wxDefaultPosition, wxSize(600, 800),
-               wxDEFAULT_DIALOG_STYLE | wxSTAY_ON_TOP),
-      InitParams(Params) {
+               wxDEFAULT_DIALOG_STYLE | wxSTAY_ON_TOP), PGC(PGC) {
   // Main sizer
   auto *MainSizer = new wxBoxSizer(wxHORIZONTAL); // NOLINT(cppcoreguidelines-owning-memory)
 
@@ -32,6 +31,7 @@ LauncherWindow::LauncherWindow(const ParallaxGenConfig::PGParams &Params)
   auto *GameLocationLabel = new wxStaticText(this, wxID_ANY, "Location"); // NOLINT(cppcoreguidelines-owning-memory)
   GameLocationTextbox = new wxTextCtrl(this, wxID_ANY);                   // NOLINT(cppcoreguidelines-owning-memory)
   GameLocationTextbox->SetToolTip("Path to the game folder (NOT the data folder)");
+  GameLocationTextbox->Bind(wxEVT_TEXT, &LauncherWindow::onGameLocationChange, this);
   auto *GameLocationBrowseButton = new wxButton(this, wxID_ANY, "Browse");
   GameLocationBrowseButton->Bind(wxEVT_BUTTON, &LauncherWindow::onBrowseGameLocation, this);
 
@@ -50,7 +50,7 @@ LauncherWindow::LauncherWindow(const ParallaxGenConfig::PGParams &Params)
   for (const auto &GameType : BethesdaGame::getGameTypes()) {
     auto *Radio = new wxRadioButton(this, wxID_ANY, BethesdaGame::getStrFromGameType(GameType), wxDefaultPosition,
                                     wxDefaultSize, IsFirst ? wxRB_GROUP : 0);
-    Radio->Bind(wxEVT_RADIOBUTTON, &LauncherWindow::onGameTypeChanged, this);
+    Radio->Bind(wxEVT_RADIOBUTTON, &LauncherWindow::onGameTypeChange, this);
     IsFirst = false;
     GameTypeRadios[GameType] = Radio;
     GameSizer->Add(Radio, 0, wxALL, 5);
@@ -71,7 +71,7 @@ LauncherWindow::LauncherWindow(const ParallaxGenConfig::PGParams &Params)
     IsFirst = false;
     ModManagerRadios[MMType] = Radio;
     ModManagerSizer->Add(Radio, 0, wxALL, 5);
-    Radio->Bind(wxEVT_RADIOBUTTON, &LauncherWindow::updateModManagerOptions, this);
+    Radio->Bind(wxEVT_RADIOBUTTON, &LauncherWindow::onModManagerChange, this);
   }
 
   LeftSizer->Add(ModManagerSizer, 0, wxEXPAND | wxALL, 5);
@@ -97,10 +97,12 @@ LauncherWindow::LauncherWindow(const ParallaxGenConfig::PGParams &Params)
   auto *MO2ProfileLabel = new wxStaticText(this, wxID_ANY, "Profile"); // NOLINT(cppcoreguidelines-owning-memory)
   MO2ProfileChoice = new wxChoice(this, wxID_ANY);                     // NOLINT(cppcoreguidelines-owning-memory)
   MO2ProfileChoice->SetToolTip("MO2 profile to read from");
+  MO2ProfileChoice->Bind(wxEVT_CHOICE, &LauncherWindow::onMO2ProfileChange, this);
 
   // Checkbox to use MO2 order
   MO2UseOrderCheckbox = new wxCheckBox(this, wxID_ANY, "Use MO2 Loose File Order"); // NOLINT(cppcoreguidelines-owning-memory)
   MO2UseOrderCheckbox->SetToolTip("Use the order set in MO2's left pane instead of manually defining an order");
+  MO2UseOrderCheckbox->Bind(wxEVT_CHECKBOX, &LauncherWindow::onMO2UseOrderChange, this);
 
   // Add the label and dropdown to MO2 options sizer
   MO2OptionsSizer->Add(MO2InstanceLocationLabel, 0, wxLEFT | wxRIGHT | wxTOP, 5);
@@ -111,10 +113,6 @@ LauncherWindow::LauncherWindow(const ParallaxGenConfig::PGParams &Params)
 
   // Add MO2 options to leftSizer but hide it initially
   ModManagerSizer->Add(MO2OptionsSizer, 0, wxEXPAND | wxALL, 5);
-  if (Params.ModManager.Type != ModManagerDirectory::ModManagerType::ModOrganizer2) {
-    // Hide initially if MO2 is not selected
-    MO2OptionsSizer->Show(false);
-  }
 
   //
   // Output
@@ -126,6 +124,8 @@ LauncherWindow::LauncherWindow(const ParallaxGenConfig::PGParams &Params)
   OutputLocationTextbox->SetToolTip(
       "Path to the output folder - This folder should be used EXCLUSIVELY for ParallaxGen. Don't set it to your data "
       "directory or any other folder that contains mods.");
+  OutputLocationTextbox->Bind(wxEVT_TEXT, &LauncherWindow::onOutputLocationChange, this);
+
   auto *OutputLocationBrowseButton = new wxButton(this, wxID_ANY, "Browse");
   OutputLocationBrowseButton->Bind(wxEVT_BUTTON, &LauncherWindow::onBrowseOutputLocation, this);
 
@@ -137,6 +137,8 @@ LauncherWindow::LauncherWindow(const ParallaxGenConfig::PGParams &Params)
   OutputSizer->Add(OutputLocationSizer, 0, wxEXPAND);
 
   OutputZipCheckbox = new wxCheckBox(this, wxID_ANY, "Zip Output"); // NOLINT(cppcoreguidelines-owning-memory)
+  OutputZipCheckbox->SetToolTip("Zip the output folder after processing");
+
   OutputSizer->Add(OutputZipCheckbox, 0, wxALL, 5);
   LeftSizer->Add(OutputSizer, 0, wxEXPAND | wxALL, 5);
 
@@ -148,7 +150,7 @@ LauncherWindow::LauncherWindow(const ParallaxGenConfig::PGParams &Params)
   AdvancedButton->Bind(wxEVT_BUTTON, &LauncherWindow::onToggleAdvanced, this);
 
   // Processing Options (hidden by default)
-  AdvancedOptionsSizer = new wxBoxSizer(wxVERTICAL); // NOLINT(cppcoreguidelines-owning-memory)
+  AdvancedOptionsSizer = new wxBoxSizer(wxVERTICAL); // NOLINT(cppcoreguidelines-owning-memory, cppcoreguidelines-prefer-member-initializer)
 
   //
   // Processing
@@ -159,32 +161,38 @@ LauncherWindow::LauncherWindow(const ParallaxGenConfig::PGParams &Params)
       new wxCheckBox(this, wxID_ANY, "Plugin Patching");
   ProcessingPluginPatchingCheckbox->SetToolTip(
       "Creates a 'ParallaxGen.esp' plugin in the output that patches TXST records according to how NIFs were patched");
+  ProcessingPluginPatchingCheckbox->Bind(wxEVT_CHECKBOX, &LauncherWindow::onProcessingPluginPatchingChange, this);
   ProcessingOptionsSizer->Add(ProcessingPluginPatchingCheckbox, 0, wxALL, 5);
 
   ProcessingMultithreadingCheckbox = // NOLINT(cppcoreguidelines-owning-memory)
       new wxCheckBox(this, wxID_ANY, "Multithreading");
   ProcessingMultithreadingCheckbox->SetToolTip("Speeds up runtime at the cost of using more resources");
+  ProcessingMultithreadingCheckbox->Bind(wxEVT_CHECKBOX, &LauncherWindow::onProcessingMultithreadingChange, this);
   ProcessingOptionsSizer->Add(ProcessingMultithreadingCheckbox, 0, wxALL, 5);
 
   ProcessingHighMemCheckbox = // NOLINT(cppcoreguidelines-owning-memory)
       new wxCheckBox(this, wxID_ANY, "High Memory Usage");
   ProcessingHighMemCheckbox->SetToolTip(
       "Uses more memory to speed up processing. You need to have enough RAM to be able to load ALL your NIFs at once.");
+  ProcessingHighMemCheckbox->Bind(wxEVT_CHECKBOX, &LauncherWindow::onProcessingHighMemChange, this);
   ProcessingOptionsSizer->Add(ProcessingHighMemCheckbox, 0, wxALL, 5);
 
   ProcessingGPUAccelerationCheckbox = // NOLINT(cppcoreguidelines-owning-memory)
       new wxCheckBox(this, wxID_ANY, "GPU Acceleration");
   ProcessingGPUAccelerationCheckbox->SetToolTip("Uses the GPU to speed up processing some DDS related tasks");
+  ProcessingGPUAccelerationCheckbox->Bind(wxEVT_CHECKBOX, &LauncherWindow::onProcessingGPUAccelerationChange, this);
   ProcessingOptionsSizer->Add(ProcessingGPUAccelerationCheckbox, 0, wxALL, 5);
 
   ProcessingMapFromMeshesCheckbox = // NOLINT(cppcoreguidelines-owning-memory)
       new wxCheckBox(this, wxID_ANY, "Map Textures From Meshes");
   ProcessingMapFromMeshesCheckbox->SetToolTip("Attempts to map textures from meshes instead of relying entirely on the "
                                               "DDS suffixes (slower, but more accurate)");
+  ProcessingMapFromMeshesCheckbox->Bind(wxEVT_CHECKBOX, &LauncherWindow::onProcessingMapFromMeshesChange, this);
   ProcessingOptionsSizer->Add(ProcessingMapFromMeshesCheckbox, 0, wxALL, 5);
 
   ProcessingBSACheckbox = new wxCheckBox(this, wxID_ANY, "Read BSAs"); // NOLINT(cppcoreguidelines-owning-memory)
   ProcessingBSACheckbox->SetToolTip("Read meshes/textures from BSAs in addition to loose files");
+  ProcessingBSACheckbox->Bind(wxEVT_CHECKBOX, &LauncherWindow::onProcessingBSAChange, this);
   ProcessingOptionsSizer->Add(ProcessingBSACheckbox, 0, wxALL, 5);
 
   AdvancedOptionsSizer->Add(ProcessingOptionsSizer, 0, wxEXPAND | wxALL, 5);
@@ -204,6 +212,7 @@ LauncherWindow::LauncherWindow(const ParallaxGenConfig::PGParams &Params)
   PrePatcherDisableMLPCheckbox = // NOLINT(cppcoreguidelines-owning-memory)
       new wxCheckBox(this, wxID_ANY, "Disable Multi-Layer Parallax");
   PrePatcherDisableMLPCheckbox->SetToolTip("Disables Multi-Layer Parallax in all meshes (Usually not recommended)");
+  PrePatcherDisableMLPCheckbox->Bind(wxEVT_CHECKBOX, &LauncherWindow::onPrePatcherDisableMLPChange, this);
   PrePatcherSizer->Add(PrePatcherDisableMLPCheckbox, 0, wxALL, 5);
 
   RightSizer->Add(PrePatcherSizer, 0, wxEXPAND | wxALL, 5);
@@ -214,13 +223,16 @@ LauncherWindow::LauncherWindow(const ParallaxGenConfig::PGParams &Params)
   auto *ShaderPatcherSizer = new wxStaticBoxSizer(wxVERTICAL, this, "Shader Patchers");
 
   ShaderPatcherParallaxCheckbox = new wxCheckBox(this, wxID_ANY, "Parallax"); // NOLINT(cppcoreguidelines-owning-memory)
+  ShaderPatcherParallaxCheckbox->Bind(wxEVT_CHECKBOX, &LauncherWindow::onShaderPatcherParallaxChange, this);
   ShaderPatcherSizer->Add(ShaderPatcherParallaxCheckbox, 0, wxALL, 5);
 
   ShaderPatcherComplexMaterialCheckbox = // NOLINT(cppcoreguidelines-owning-memory)
       new wxCheckBox(this, wxID_ANY, "Complex Material");
+  ShaderPatcherComplexMaterialCheckbox->Bind(wxEVT_CHECKBOX, &LauncherWindow::onShaderPatcherComplexMaterialChange, this);
   ShaderPatcherSizer->Add(ShaderPatcherComplexMaterialCheckbox, 0, wxALL, 5);
 
   ShaderPatcherTruePBRCheckbox = new wxCheckBox(this, wxID_ANY, "True PBR"); // NOLINT(cppcoreguidelines-owning-memory)
+  ShaderPatcherTruePBRCheckbox->Bind(wxEVT_CHECKBOX, &LauncherWindow::onShaderPatcherTruePBRChange, this);
   ShaderPatcherSizer->Add(ShaderPatcherTruePBRCheckbox, 0, wxALL, 5);
 
   RightSizer->Add(ShaderPatcherSizer, 0, wxEXPAND | wxALL, 5);
@@ -235,7 +247,7 @@ LauncherWindow::LauncherWindow(const ParallaxGenConfig::PGParams &Params)
   ShaderTransformParallaxToCMCheckbox->SetToolTip(
       "Upgrages any parallax textures and meshes to complex material by moving the height map to the alpha channel of "
       "the environment mask (highly recommended)");
-  ShaderTransformParallaxToCMCheckbox->Bind(wxEVT_CHECKBOX, &LauncherWindow::onUpdateDeps, this);
+  ShaderTransformParallaxToCMCheckbox->Bind(wxEVT_CHECKBOX, &LauncherWindow::onShaderTransformParallaxToCMChange, this);
   ShaderTransformSizer->Add(ShaderTransformParallaxToCMCheckbox, 0, wxALL, 5);
 
   RightSizer->Add(ShaderTransformSizer, 0, wxEXPAND | wxALL, 5);
@@ -248,16 +260,26 @@ LauncherWindow::LauncherWindow(const ParallaxGenConfig::PGParams &Params)
   PostPatcherOptimizeMeshesCheckbox = // NOLINT(cppcoreguidelines-owning-memory)
       new wxCheckBox(this, wxID_ANY, "Optimize Meshes (Experimental)");
   PostPatcherOptimizeMeshesCheckbox->SetToolTip("Experimental - sometimes results in invisible meshes");
+  PostPatcherOptimizeMeshesCheckbox->Bind(wxEVT_CHECKBOX, &LauncherWindow::onPostPatcherOptimizeMeshesChange, this);
   PostPatcherSizer->Add(PostPatcherOptimizeMeshesCheckbox, 0, wxALL, 5);
 
   RightSizer->Add(PostPatcherSizer, 0, wxEXPAND | wxALL, 5);
+
+  // Save config button
+  SaveConfigButton = new wxButton(this, wxID_ANY, "Save Config"); // NOLINT(cppcoreguidelines-owning-memory)
+  wxFont SaveConfigButtonFont = SaveConfigButton->GetFont();
+  SaveConfigButtonFont.SetPointSize(12); // Set font size to 12
+  SaveConfigButton->SetFont(SaveConfigButtonFont);
+  SaveConfigButton->Bind(wxEVT_BUTTON, &LauncherWindow::onSaveConfigButtonPressed, this);
+
+  RightSizer->Add(SaveConfigButton, 0, wxEXPAND | wxALL, 5);
 
   // Start Patching button on the right side
   OKButton = new wxButton(this, wxID_OK, "Start Patching"); // NOLINT(cppcoreguidelines-owning-memory)
 
   // Set font size for the "start patching" button
   wxFont OKButtonFont = OKButton->GetFont();
-  OKButtonFont.SetPointSize(12); // Set font size to 12 (or any size you prefer)
+  OKButtonFont.SetPointSize(12); // Set font size to 12
   OKButton->SetFont(OKButtonFont);
   OKButton->Bind(wxEVT_BUTTON, &LauncherWindow::onOkButtonPressed, this);
   Bind(wxEVT_CLOSE_WINDOW, &LauncherWindow::onClose, this);
@@ -276,6 +298,7 @@ LauncherWindow::LauncherWindow(const ParallaxGenConfig::PGParams &Params)
 
 void LauncherWindow::onInitDialog(wxInitDialogEvent &Event) {
   // This is where we populate existing params
+  const auto InitParams = PGC.getParams();
 
   // Game
   GameLocationTextbox->SetValue(InitParams.Game.Dir.wstring());
@@ -289,6 +312,13 @@ void LauncherWindow::onInitDialog(wxInitDialogEvent &Event) {
   for (const auto &MMType : ModManagerDirectory::getModManagerTypes()) {
     if (MMType == InitParams.ModManager.Type) {
       ModManagerRadios[MMType]->SetValue(true);
+
+      // Show MO2 options only if MO2 is selected
+      if (MMType == ModManagerDirectory::ModManagerType::ModOrganizer2) {
+        MO2OptionsSizer->Show(true);
+      } else {
+        MO2OptionsSizer->Show(false);
+      }
     }
   }
 
@@ -336,6 +366,107 @@ void LauncherWindow::onInitDialog(wxInitDialogEvent &Event) {
 
   // Call the base class's event handler if needed
   Event.Skip();
+}
+
+// Component event handlers
+
+void LauncherWindow::onGameLocationChange([[maybe_unused]] wxCommandEvent &Event) {
+  updateDisabledElements();
+}
+
+void LauncherWindow::onGameTypeChange([[maybe_unused]] wxCommandEvent &Event) {
+  const auto InitParams = PGC.getParams();
+
+  // update the game location textbox from bethesdagame
+  for (const auto &GameType : BethesdaGame::getGameTypes()) {
+    if (GameTypeRadios[GameType]->GetValue()) {
+      if (InitParams.Game.Type == GameType) {
+        GameLocationTextbox->SetValue(InitParams.Game.Dir.wstring());
+        return;
+      }
+
+      GameLocationTextbox->SetValue(BethesdaGame::findGamePathFromSteam(GameType).wstring());
+      return;
+    }
+  }
+
+  updateDisabledElements();
+}
+
+void LauncherWindow::onModManagerChange([[maybe_unused]] wxCommandEvent &Event) {
+  // Show MO2 options only if the MO2 radio button is selected
+  bool IsMO2Selected = (Event.GetEventObject() == ModManagerRadios[ModManagerDirectory::ModManagerType::ModOrganizer2]);
+  MO2OptionsSizer->Show(IsMO2Selected);
+  Layout(); // Refresh layout to apply visibility changes
+  Fit();
+
+  updateDisabledElements();
+}
+
+void LauncherWindow::onMO2ProfileChange([[maybe_unused]] wxCommandEvent &Event) {
+  // Update the MO2 profile
+  updateDisabledElements();
+}
+
+void LauncherWindow::onMO2UseOrderChange([[maybe_unused]] wxCommandEvent &Event) {
+  // Update the MO2 use order
+  updateDisabledElements();
+}
+
+void LauncherWindow::onOutputLocationChange([[maybe_unused]] wxCommandEvent &Event) {
+  updateDisabledElements();
+}
+
+void LauncherWindow::onOutputZipChange([[maybe_unused]] wxCommandEvent &Event) {
+  updateDisabledElements();
+}
+
+void LauncherWindow::onProcessingPluginPatchingChange([[maybe_unused]] wxCommandEvent &Event) {
+  updateDisabledElements();
+}
+
+void LauncherWindow::onProcessingMultithreadingChange([[maybe_unused]] wxCommandEvent &Event) {
+  updateDisabledElements();
+}
+
+void LauncherWindow::onProcessingHighMemChange([[maybe_unused]] wxCommandEvent &Event) {
+  updateDisabledElements();
+}
+
+void LauncherWindow::onProcessingGPUAccelerationChange([[maybe_unused]] wxCommandEvent &Event) {
+  updateDisabledElements();
+}
+
+void LauncherWindow::onProcessingMapFromMeshesChange([[maybe_unused]] wxCommandEvent &Event) {
+  updateDisabledElements();
+}
+
+void LauncherWindow::onProcessingBSAChange([[maybe_unused]] wxCommandEvent &Event) {
+  updateDisabledElements();
+}
+
+void LauncherWindow::onPrePatcherDisableMLPChange([[maybe_unused]] wxCommandEvent &Event) {
+  updateDisabledElements();
+}
+
+void LauncherWindow::onShaderPatcherParallaxChange([[maybe_unused]] wxCommandEvent &Event) {
+  updateDisabledElements();
+}
+
+void LauncherWindow::onShaderPatcherComplexMaterialChange([[maybe_unused]] wxCommandEvent &Event) {
+  updateDisabledElements();
+}
+
+void LauncherWindow::onShaderPatcherTruePBRChange([[maybe_unused]] wxCommandEvent &Event) {
+  updateDisabledElements();
+}
+
+void LauncherWindow::onShaderTransformParallaxToCMChange([[maybe_unused]] wxCommandEvent &Event) {
+  updateDisabledElements();
+}
+
+void LauncherWindow::onPostPatcherOptimizeMeshesChange([[maybe_unused]] wxCommandEvent &Event) {
+  updateDisabledElements();
 }
 
 auto LauncherWindow::getParams() -> ParallaxGenConfig::PGParams {
@@ -398,14 +529,6 @@ void LauncherWindow::onToggleAdvanced([[maybe_unused]] wxCommandEvent &Event) {
   Fit();
 }
 
-void LauncherWindow::updateModManagerOptions(wxCommandEvent &Event) {
-  // Show MO2 options only if the MO2 radio button is selected
-  bool IsMO2Selected = (Event.GetEventObject() == ModManagerRadios[ModManagerDirectory::ModManagerType::ModOrganizer2]);
-  MO2OptionsSizer->Show(IsMO2Selected);
-  Layout(); // Refresh layout to apply visibility changes
-  Fit();
-}
-
 void LauncherWindow::onBrowseGameLocation([[maybe_unused]] wxCommandEvent &Event) {
   wxDirDialog Dialog(this, "Select Game Location", GameLocationTextbox->GetValue());
   if (Dialog.ShowModal() == wxID_OK) {
@@ -459,28 +582,10 @@ void LauncherWindow::onBrowseOutputLocation([[maybe_unused]] wxCommandEvent &Eve
   }
 }
 
-void LauncherWindow::onGameTypeChanged([[maybe_unused]] wxCommandEvent &Event) {
-  // update the game location textbox from bethesdagame
-  for (const auto &GameType : BethesdaGame::getGameTypes()) {
-    if (GameTypeRadios[GameType]->GetValue()) {
-      if (InitParams.Game.Type == GameType) {
-        GameLocationTextbox->SetValue(InitParams.Game.Dir.wstring());
-        return;
-      }
-
-      GameLocationTextbox->SetValue(BethesdaGame::findGamePathFromSteam(GameType).wstring());
-      return;
-    }
-  }
-}
-
-void LauncherWindow::onUpdateDeps([[maybe_unused]] wxCommandEvent &Event) {
-  updateDisabledElements();
-}
-
 void LauncherWindow::updateDisabledElements() {
   const auto CurParams = getParams();
 
+  // Upgrade parallax to CM rules
   if (CurParams.ShaderTransforms.ParallaxToCM) {
     // disable and check vanilla parallax patcher
     ShaderPatcherParallaxCheckbox->SetValue(true);
@@ -498,9 +603,36 @@ void LauncherWindow::updateDisabledElements() {
     ShaderPatcherComplexMaterialCheckbox->Enable(true);
     ProcessingGPUAccelerationCheckbox->Enable(true);
   }
+
+  // PBR rules
+  if (CurParams.ShaderPatcher.TruePBR && !CurParams.ShaderPatcher.Parallax && !CurParams.ShaderPatcher.ComplexMaterial) {
+    // disable map from meshes
+    ProcessingMapFromMeshesCheckbox->SetValue(false);
+    ProcessingMapFromMeshesCheckbox->Enable(false);
+  } else {
+    ProcessingMapFromMeshesCheckbox->Enable(true);
+    ProcessingMapFromMeshesCheckbox->SetValue(true);
+  }
+
+  // save button
+  SaveConfigButton->Enable(CurParams != PGC.getParams());
 }
 
 void LauncherWindow::onOkButtonPressed([[maybe_unused]] wxCommandEvent &Event) {
+  saveConfig();
+
+  // All validation passed, proceed with OK actions
+  EndModal(wxID_OK);
+}
+
+void LauncherWindow::onSaveConfigButtonPressed([[maybe_unused]] wxCommandEvent &Event) {
+  saveConfig();
+
+  // Disable button
+  SaveConfigButton->Enable(false);
+}
+
+void LauncherWindow::saveConfig() {
   vector<string> Errors;
   const auto Params = getParams();
 
@@ -511,8 +643,7 @@ void LauncherWindow::onOkButtonPressed([[maybe_unused]] wxCommandEvent &Event) {
     return;
   }
 
-  // All validation passed, proceed with OK actions
-  EndModal(wxID_OK);
+  PGC.setParams(Params);
 }
 
 void LauncherWindow::onClose( // NOLINT(readability-convert-member-functions-to-static)

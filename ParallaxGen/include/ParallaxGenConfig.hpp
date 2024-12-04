@@ -28,6 +28,8 @@ public:
     struct Game {
       std::filesystem::path Dir;
       BethesdaGame::GameType Type = BethesdaGame::GameType::SKYRIM_SE;
+
+      auto operator==(const Game &Other) const -> bool { return Dir == Other.Dir && Type == Other.Type; }
     } Game;
 
     // Mod Manager
@@ -36,12 +38,19 @@ public:
       std::filesystem::path MO2InstanceDir;
       std::wstring MO2Profile = L"Default";
       bool MO2UseOrder = false;
+
+      auto operator==(const ModManager &Other) const -> bool {
+        return Type == Other.Type && MO2InstanceDir == Other.MO2InstanceDir && MO2Profile == Other.MO2Profile &&
+               MO2UseOrder == Other.MO2UseOrder;
+      }
     } ModManager;
 
     // Output
     struct Output {
       std::filesystem::path Dir;
       bool Zip = true;
+
+      auto operator==(const Output &Other) const -> bool { return Dir == Other.Dir && Zip == Other.Zip; }
     } Output;
 
     // Processing
@@ -52,11 +61,19 @@ public:
       bool BSA = true;
       bool PluginPatching = true;
       bool MapFromMeshes = true;
+
+      auto operator==(const Processing &Other) const -> bool {
+        return Multithread == Other.Multithread && HighMem == Other.HighMem &&
+               GPUAcceleration == Other.GPUAcceleration && BSA == Other.BSA && PluginPatching == Other.PluginPatching &&
+               MapFromMeshes == Other.MapFromMeshes;
+      }
     } Processing;
 
     // Pre-Patchers
     struct PrePatcher {
       bool DisableMLP = false;
+
+      auto operator==(const PrePatcher &Other) const -> bool { return DisableMLP == Other.DisableMLP; }
     } PrePatcher;
 
     // Shader Patchers
@@ -64,19 +81,36 @@ public:
       bool Parallax = true;
       bool ComplexMaterial = true;
       bool TruePBR = true;
+
+      auto operator==(const ShaderPatcher &Other) const -> bool {
+        return Parallax == Other.Parallax && ComplexMaterial == Other.ComplexMaterial && TruePBR == Other.TruePBR;
+      }
     } ShaderPatcher;
 
     // Shader Transforms
     struct ShaderTransforms {
       bool ParallaxToCM = false;
+
+      auto operator==(const ShaderTransforms &Other) const -> bool { return ParallaxToCM == Other.ParallaxToCM; }
     } ShaderTransforms;
 
     // Post-Patchers
     struct PostPatcher {
       bool OptimizeMeshes = false;
+
+      auto operator==(const PostPatcher &Other) const -> bool { return OptimizeMeshes == Other.OptimizeMeshes; }
     } PostPatcher;
 
     [[nodiscard]] auto getString() const -> std::wstring;
+
+    auto operator==(const PGParams &Other) const -> bool {
+      return Autostart == Other.Autostart && Game == Other.Game && ModManager == Other.ModManager &&
+             Output == Other.Output && Processing == Other.Processing && PrePatcher == Other.PrePatcher &&
+             ShaderPatcher == Other.ShaderPatcher && ShaderTransforms == Other.ShaderTransforms &&
+             PostPatcher == Other.PostPatcher;
+    }
+
+    auto operator!=(const PGParams &Other) const -> bool { return !(*this == Other); }
   };
 
 private:
