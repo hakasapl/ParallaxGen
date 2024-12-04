@@ -45,6 +45,12 @@ auto ParallaxGenDirectory::findFiles() -> void {
   for (const auto &[Path, File] : FileMap) {
     const auto &FirstPath = Path.begin()->wstring();
     if (boost::iequals(FirstPath, "textures") && boost::iequals(Path.extension().wstring(), L".dds")) {
+      if (!isPathAscii(Path)) {
+        // Skip non-ascii paths
+        spdlog::warn(L"Texture {} contains non-ascii characters which are not allowed - skipping", Path.wstring());
+        continue;
+      }
+
       // Found a DDS
       spdlog::trace(L"Finding Files | Found DDS | {}", Path.wstring());
       UnconfirmedTextures[Path] = {};
@@ -68,12 +74,16 @@ auto ParallaxGenDirectory::findFiles() -> void {
   spdlog::info("Finding files done");
 }
 
-auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
-                                    const unordered_map<filesystem::path, NIFUtil::TextureType> &ManualTextureMaps,
-                                    const std::unordered_set<std::wstring> &ParallaxBSAExcludes,
+auto ParallaxGenDirectory::mapFiles(const vector<wstring> &NIFBlocklist, const vector<wstring> &NIFAllowlist,
+                                    const vector<pair<wstring, NIFUtil::TextureType>> &ManualTextureMaps,
+                                    const vector<wstring> &ParallaxBSAExcludes,
                                     const bool &MapFromMeshes, const bool &Multithreading,
                                     const bool &CacheNIFs) -> void {
   findFiles();
+
+  // Helpers
+  const unordered_map<wstring, NIFUtil::TextureType> ManualTextureMapsMap(ManualTextureMaps.begin(),
+                                                                         ManualTextureMaps.end());
 
   spdlog::info("Starting building texture map");
 
@@ -90,7 +100,14 @@ auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
 
   // Loop through each mesh to confirm textures
   for (const auto &Mesh : UnconfirmedMeshes) {
-    if (checkGlobMatchInSet(Mesh.wstring(), NIFBlocklist)) {
+    if (!NIFAllowlist.empty() && !checkGlobMatchInVector(Mesh.wstring(), NIFAllowlist)) {
+      // Skip mesh because it is not on allowlist
+      spdlog::trace(L"Loading NIFs | Skipping Mesh due to Allowlist | Mesh: {}", Mesh.wstring());
+      TaskTracker.completeJob(ParallaxGenTask::PGResult::SUCCESS);
+      continue;
+    }
+
+    if (!NIFBlocklist.empty() && checkGlobMatchInVector(Mesh.wstring(), NIFBlocklist)) {
       // Skip mesh because it is on blocklist
       spdlog::trace(L"Loading NIFs | Skipping Mesh due to Blocklist | Mesh: {}", Mesh.wstring());
       TaskTracker.completeJob(ParallaxGenTask::PGResult::SUCCESS);
@@ -164,9 +181,9 @@ auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
       WinningType = get<1>(DefProperty);
     }
 
-    if (ManualTextureMaps.find(Texture) != ManualTextureMaps.end()) {
+    if (ManualTextureMapsMap.find(Texture.wstring()) != ManualTextureMapsMap.end()) {
       // Manual texture map found, override
-      WinningType = ManualTextureMaps.at(Texture);
+      WinningType = ManualTextureMapsMap.at(Texture.wstring());
       WinningSlot = NIFUtil::getSlotFromTexType(WinningType);
     }
 
@@ -193,7 +210,7 @@ auto ParallaxGenDirectory::mapFiles(const unordered_set<wstring> &NIFBlocklist,
   spdlog::info("Mapping textures done");
 }
 
-auto ParallaxGenDirectory::checkGlobMatchInSet(const wstring &Check, const unordered_set<std::wstring> &List) -> bool {
+auto ParallaxGenDirectory::checkGlobMatchInVector(const wstring &Check, const vector<std::wstring> &List) -> bool {
   // convert wstring to LPCWSTR
   LPCWSTR CheckCstr = Check.c_str();
 

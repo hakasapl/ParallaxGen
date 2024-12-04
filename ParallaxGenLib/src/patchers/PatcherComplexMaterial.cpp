@@ -9,11 +9,11 @@
 using namespace std;
 
 // Statics
-std::unordered_set<wstring> PatcherComplexMaterial::DynCubemapBlocklist;
+std::vector<wstring> PatcherComplexMaterial::DynCubemapBlocklist;
 bool PatcherComplexMaterial::DisableMLP;
 
 auto PatcherComplexMaterial::loadStatics(const bool &DisableMLP,
-                                         const std::unordered_set<std::wstring> &DynCubemapBlocklist) -> void {
+                                         const std::vector<std::wstring> &DynCubemapBlocklist) -> void {
   PatcherComplexMaterial::DynCubemapBlocklist = DynCubemapBlocklist;
   PatcherComplexMaterial::DisableMLP = DisableMLP;
 }
@@ -150,8 +150,8 @@ auto PatcherComplexMaterial::applyPatchSlots(const std::array<std::wstring, NUM_
   NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::PARALLAX)] = L"";
   NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::ENVMASK)] = MatchedPath;
 
-  bool EnableDynCubemaps = !(ParallaxGenDirectory::checkGlobMatchInSet(getNIFPath().wstring(), DynCubemapBlocklist) ||
-                             ParallaxGenDirectory::checkGlobMatchInSet(MatchedPath, DynCubemapBlocklist));
+  bool EnableDynCubemaps = !(ParallaxGenDirectory::checkGlobMatchInVector(getNIFPath().wstring(), DynCubemapBlocklist) ||
+                             ParallaxGenDirectory::checkGlobMatchInVector(MatchedPath, DynCubemapBlocklist));
   if (EnableDynCubemaps) {
     NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::CUBEMAP)] = L"textures\\cubemaps\\dynamic1pxcubemap_black.dds";
   }

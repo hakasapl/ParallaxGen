@@ -35,9 +35,9 @@ protected:
 };
 
 TEST_P(ParallaxGenD3DTest, TextureTests) {
-    const unordered_set<wstring> BSAExcludes{L"Skyrim - Textures5.bsa"};
+    const vector<wstring> BSAExcludes{L"Skyrim - Textures5.bsa"};
     PGD->populateFileMap(false); // includeBSAs = false, only loose files
-    PGD->mapFiles({}, {}, BSAExcludes, true); // MapFromMeshes = false, map only based on texture name for quick test runs and less dependency to PGD in this test
+    PGD->mapFiles({}, {}, {}, BSAExcludes, true); // MapFromMeshes = false, map only based on texture name for quick test runs and less dependency to PGD in this test
 
     EXPECT_THROW(PGD3D->findCMMaps(BSAExcludes), runtime_error);
     EXPECT_THROW(PGD3D->upgradeToComplexMaterial("", ""), runtime_error);

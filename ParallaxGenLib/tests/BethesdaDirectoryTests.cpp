@@ -94,11 +94,11 @@ TEST_P(BethesdaDirectoryTest, Glob) {
 TEST_P(BethesdaDirectoryTest, Files) {
   const std::filesystem::path Bridge01Path{"textures\\landscape\\roads\\bridge01.dds"};
 
-  const std::unordered_set<wstring> LoadOrderBSAs{L"Skyrim - Textures5.bsa", L"Skyrim - Misc.bsa",
+  const std::vector<wstring> LoadOrderBSAs{L"Skyrim - Textures5.bsa", L"Skyrim - Misc.bsa",
                                                   L"unofficial skyrim special edition patch - textures.bsa",
                                                   L"Skyrim - Meshes1.bsa"};
 
-  const std::unordered_set<wstring> NotLoadOrderBSAs{L"Skyrim - Textures0.bsa"};
+  const std::vector<wstring> NotLoadOrderBSAs{L"Skyrim - Textures0.bsa"};
 
   // functions throw exceptions if called before populating
   EXPECT_THROW(BD->isBSAFile(Bridge01Path), runtime_error);

@@ -57,9 +57,9 @@ public:
   /// @param MapFromMeshes The texture type is deducted from the shader/texture set it is assigned to, if false use only file suffix to determine type
   /// @param Multithreading Speedup mapping by multithreading
   /// @param CacheNIFs Faster but higher memory consumption
-  auto mapFiles(const std::unordered_set<std::wstring> &NIFBlocklist,
-                const std::unordered_map<std::filesystem::path, NIFUtil::TextureType> &ManualTextureMaps,
-                const std::unordered_set<std::wstring> &ParallaxBSAExcludes,
+  auto mapFiles(const std::vector<std::wstring> &NIFBlocklist, const std::vector<std::wstring> &NIFAllowlist,
+                const std::vector<std::pair<std::wstring, NIFUtil::TextureType>> &ManualTextureMaps,
+                const std::vector<std::wstring> &ParallaxBSAExcludes,
                 const bool &MapFromMeshes = true, const bool &Multithreading = true, const bool &CacheNIFs = false) -> void;
 
 private:
@@ -77,7 +77,7 @@ private:
   auto addMesh(const std::filesystem::path &Path) -> void;
 
 public:
-  static auto checkGlobMatchInSet(const std::wstring &Check, const std::unordered_set<std::wstring> &List) -> bool;
+  static auto checkGlobMatchInVector(const std::wstring &Check, const std::vector<std::wstring> &List) -> bool;
 
   /// @brief Get the texture map for a given texture slot
   ///

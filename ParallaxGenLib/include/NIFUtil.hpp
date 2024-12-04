@@ -81,6 +81,8 @@ struct PGTextureHasher {
   }
 };
 
+auto getTexTypesStr() -> std::vector<std::string>;
+
 /// @brief get the texture type that is assigned per default to a texture slot
 /// @param[in] Slot
 /// @return texture type

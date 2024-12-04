@@ -120,6 +120,12 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   // Alpha message
   spdlog::warn("ParallaxGen is currently in ALPHA. Please file detailed bug reports on nexus or github.");
 
+  // Create cfg directory if it does not exist
+  const filesystem::path CfgDir = ExePath / "cfg";
+  if (!filesystem::exists(CfgDir)) {
+    filesystem::create_directories(CfgDir);
+  }
+
   // Initialize ParallaxGenConfig
   auto PGC = ParallaxGenConfig(ExePath);
   PGC.loadConfig();
@@ -132,6 +138,16 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   // Show launcher UI
   if (!Args.Autostart) {
     Params = ParallaxGenUI::showLauncher(PGC);
+  }
+
+  // Validate config
+  vector<string> Errors;
+  if (!ParallaxGenConfig::validateParams(Params, Errors)) {
+    for (const auto &Error : Errors) {
+      spdlog::error("{}", Error);
+    }
+    spdlog::critical("Validation errors were found. Exiting.");
+    exit(1);
   }
 
   // Print configuration parameters
@@ -209,15 +225,14 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   PGD.populateFileMap(Params.Processing.BSA);
 
-  auto VanillaBSAList = PGC.getVanillaBSAList();
-
   // Map files
-  PGD.mapFiles(PGC.getNIFBlocklist(), PGC.getManualTextureMaps(), VanillaBSAList, Params.Processing.MapFromMeshes,
-               Params.Processing.Multithread, Params.Processing.HighMem);
+  PGD.mapFiles(Params.MeshRules.BlockList, Params.MeshRules.AllowList, Params.TextureRules.TextureMaps,
+               Params.TextureRules.VanillaBSAList, Params.Processing.MapFromMeshes, Params.Processing.Multithread,
+               Params.Processing.HighMem);
 
   // Find CM maps
   spdlog::info("Finding complex material env maps");
-  PGD3D.findCMMaps(VanillaBSAList);
+  PGD3D.findCMMaps(Params.TextureRules.VanillaBSAList);
   spdlog::info("Done finding complex material env maps");
 
   // Create patcher factory
@@ -227,14 +242,16 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   }
   if (Params.ShaderPatcher.ComplexMaterial) {
     Patchers.ShaderPatchers.emplace(PatcherComplexMaterial::getShaderType(), PatcherComplexMaterial::getFactory());
-    PatcherComplexMaterial::loadStatics(Params.PrePatcher.DisableMLP, PGC.getDynCubemapBlocklist());
+    PatcherComplexMaterial::loadStatics(Params.PrePatcher.DisableMLP,
+                                        Params.ShaderPatcher.ShaderPatcherComplexMaterial.ListsDyncubemapBlocklist);
   }
   if (Params.ShaderPatcher.TruePBR) {
-   Patchers.ShaderPatchers.emplace(PatcherTruePBR::getShaderType(), PatcherTruePBR::getFactory());
-   PatcherTruePBR::loadStatics(PGD.getPBRJSONs());
+    Patchers.ShaderPatchers.emplace(PatcherTruePBR::getShaderType(), PatcherTruePBR::getFactory());
+    PatcherTruePBR::loadStatics(PGD.getPBRJSONs());
   }
   if (Params.ShaderTransforms.ParallaxToCM) {
-    Patchers.ShaderTransformPatchers[PatcherUpgradeParallaxToCM::getFromShader()].emplace(PatcherUpgradeParallaxToCM::getToShader(), PatcherUpgradeParallaxToCM::getFactory());
+    Patchers.ShaderTransformPatchers[PatcherUpgradeParallaxToCM::getFromShader()].emplace(
+        PatcherUpgradeParallaxToCM::getToShader(), PatcherUpgradeParallaxToCM::getFactory());
   }
 
   if (Params.ModManager.Type != ModManagerDirectory::ModManagerType::None) {
@@ -304,7 +321,7 @@ void exitBlocking() {
 }
 
 auto getExecutablePath() -> filesystem::path {
-  wchar_t Buffer[MAX_PATH];                                   // NOLINT
+  wchar_t Buffer[MAX_PATH];                                 // NOLINT
   if (GetModuleFileNameW(nullptr, Buffer, MAX_PATH) == 0) { // NOLINT
     cerr << "Error getting executable path: " << GetLastError() << "\n";
     exit(1);
@@ -365,11 +382,11 @@ void initLogger(const filesystem::path &LOGPATH, const ParallaxGenCLIArgs &Args)
 }
 
 auto main(int ArgC, char **ArgV) -> int {
-  // Block until enter only in debug mode
-  #ifdef _DEBUG
+// Block until enter only in debug mode
+#ifdef _DEBUG
   cout << "Press ENTER to start (DEBUG mode)...";
   cin.get();
-  #endif
+#endif
 
   // This is what keeps the console window open after the program exits until user input
   if (atexit(exitBlocking) != 0) {

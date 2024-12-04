@@ -236,7 +236,7 @@ public:
   /*
   * @brief Checks if the given file is included in any of the given BSA files
   */
-  [[nodiscard]] auto isFileInBSA(const std::filesystem::path& File, const std::unordered_set<std::wstring>& BSAFiles) -> bool;
+  [[nodiscard]] auto isFileInBSA(const std::filesystem::path& File, const std::vector<std::wstring>& BSAFiles) -> bool;
 
   /**
    * @brief Get the lowercase path of a path using the "C" locale, i.e. only ASCII characters are converted

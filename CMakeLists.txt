@@ -71,10 +71,8 @@ add_subdirectory(ParallaxGenLib)
 # Install Global Things
 # Copy Folders
 file(COPY ${CMAKE_SOURCE_DIR}/ParallaxGen/assets DESTINATION ${CMAKE_BINARY_DIR}/)
-file(COPY ${CMAKE_SOURCE_DIR}/ParallaxGen/cfg DESTINATION ${CMAKE_BINARY_DIR}/)
 file(COPY ${CMAKE_SOURCE_DIR}/ParallaxGenLib/shaders DESTINATION ${CMAKE_BINARY_DIR}/)
 
 # Copy assets to install
 install(DIRECTORY ${CMAKE_BINARY_DIR}/assets DESTINATION . )
-install(DIRECTORY ${CMAKE_BINARY_DIR}/cfg DESTINATION . )
 install(DIRECTORY ${CMAKE_BINARY_DIR}/shaders DESTINATION . )

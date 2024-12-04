@@ -69,7 +69,7 @@ public:
   /// @brief Find complex material maps and re-assign the type in the used ParallaxGenDirectory
   /// @param[in] BSAExcludes never assume files found in these BSAs are complex material maps
   /// @return result of the operation
-  auto findCMMaps(const std::unordered_set<std::wstring>& BSAExcludes) -> ParallaxGenTask::PGResult;
+  auto findCMMaps(const std::vector<std::wstring>& BSAExcludes) -> ParallaxGenTask::PGResult;
 
   /// @brief Create a complex material map from the given textures
   /// @param ParallaxMap relative path to the height map in the data directory

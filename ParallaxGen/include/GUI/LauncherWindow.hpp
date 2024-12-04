@@ -3,6 +3,7 @@
 #include <wx/arrstr.h>
 #include <wx/dnd.h>
 #include <wx/dragimag.h>
+#include <wx/event.h>
 #include <wx/listbox.h>
 #include <wx/listctrl.h>
 #include <wx/msw/textctrl.h>
@@ -45,6 +46,11 @@ private:
    * @param Event wxWidgets event object
    */
   void onInitDialog(wxInitDialogEvent &Event);
+
+  /**
+   * @brief Loads config from PGC
+   */
+  void loadConfig();
 
   //
   // UI Param Elements
@@ -108,6 +114,9 @@ private:
   wxCheckBox *ShaderPatcherComplexMaterialCheckbox;
   void onShaderPatcherComplexMaterialChange(wxCommandEvent &Event);
 
+  wxListCtrl *ShaderPatcherComplexMaterialDynCubemapBlocklist;
+  void onShaderPatcherComplexMaterialDynCubemapBlocklistChange(wxListEvent &Event);
+
   wxCheckBox *ShaderPatcherTruePBRCheckbox;
   void onShaderPatcherTruePBRChange(wxCommandEvent &Event);
 
@@ -119,10 +128,29 @@ private:
   wxCheckBox *PostPatcherOptimizeMeshesCheckbox;
   void onPostPatcherOptimizeMeshesChange(wxCommandEvent &Event);
 
+  // Mesh Rules
+  wxListCtrl *MeshRulesAllowList;
+  void onMeshRulesAllowListChange(wxListEvent &Event);
+
+  wxListCtrl *MeshRulesBlockList;
+  void onMeshRulesBlockListChange(wxListEvent &Event);
+
+  // Texture Rules
+  wxListCtrl *TextureRulesMaps;
+  void onTextureRulesMapsChange(wxListEvent &Event);
+  void onTextureRulesMapsChangeStart(wxMouseEvent &Event);
+
+  wxListCtrl *TextureRulesVanillaBSAList;
+  void onTextureRulesVanillaBSAListChange(wxListEvent &Event);
+
   //
   // UI Controls
   //
   wxStaticBoxSizer *MO2OptionsSizer; /** Stores the MO2-specific options since these are only sometimes shown */
+  wxStaticBoxSizer *ProcessingOptionsSizer; /** Stores the processing options */
+  wxStaticBoxSizer *ShaderPatcherComplexMaterialOptionsSizer; /** Stores the complex material options */
+
+  wxComboBox *TextureMapTypeCombo; /** Stores the texture map type combo box */
 
   /**
    * @brief Event handler responsible for showing the brose dialog when the user clicks on the browse button - for game
@@ -164,11 +192,28 @@ private:
    */
   void onToggleAdvanced(wxCommandEvent &Event);
 
+  /**
+   * @brief Event handler responsible for deleting/adding items based on list edits
+   *
+   * @param Event wxWidgets event object
+   */
+  void onListEdit(wxListEvent& Event);
+
+  /**
+   * @brief Event handler responsible for activating list items on double click or enter
+   *
+   * @param Event wxWidgets event object
+   */
+  void onListItemActivated(wxListEvent& Event);
+
+  auto getColumnAtPosition(const wxPoint& Pos, long Item) -> int;
+
   //
   // Validation
   //
   wxButton *OKButton; /** Stores the OKButton as a member var in case it needs to be disabled/enabled */
   wxButton *SaveConfigButton; /** Stores the SaveConfigButton as a member var in case it needs to be disabled/enabled */
+  wxButton *LoadConfigButton;
 
   /**
    * @brief Event handler that triggers when the user presses "Start Patching" - performs validation
@@ -185,6 +230,13 @@ private:
   void onSaveConfigButtonPressed(wxCommandEvent &Event);
 
   /**
+   * @brief Event handler that triggers when the user presses the "Load Config" button
+   *
+   * @param Event wxWidgets event object
+   */
+  void onLoadConfigButtonPressed(wxCommandEvent &Event);
+
+  /**
    * @brief Event handler that triggers when the user presses the X on the dialog window, which closes the application
    *
    * @param Event wxWidgets event object
@@ -194,5 +246,5 @@ private:
   /**
    * @brief Saves current values to the config
    */
-  void saveConfig();
+  auto saveConfig() -> bool;
 };

@@ -34,23 +34,23 @@ protected:
 };
 
 TEST_P(ParallaxGenDirectoryTest, Initialization) {
-    EXPECT_THROW(PGD->mapFiles({}, {}, {}), runtime_error);
+    EXPECT_THROW(PGD->mapFiles({}, {}, {}, {}), runtime_error);
 }
 
 // TODO: run with different permutations of the parameters of MultiThreading/HighMem
 TEST_P(ParallaxGenDirectoryTest, MapFiles) {
-  std::unordered_set<std::wstring> ParallaxBSAExcludes{L"Skyrim - Textures5.bsa", L"ccBGSSSE037-Curios.bsa",
+  std::vector<std::wstring> ParallaxBSAExcludes{L"Skyrim - Textures5.bsa", L"ccBGSSSE037-Curios.bsa",
                                                        L"unofficial skyrim special edition patch - textures.bsa",
                                                        L"unofficial skyrim special edition patch.bsa"};
 
-  std::unordered_set<std::wstring> NifBlockList{L"*\\cameras\\*", L"*\\dyndolod\\*", L"*\\lod\\*", L"*\\magic\\*",
+  std::vector<std::wstring> NifBlockList{L"*\\cameras\\*", L"*\\dyndolod\\*", L"*\\lod\\*", L"*\\magic\\*",
                                                 L"*\\markers\\*", L"*\\mps\\*",      L"*\\sky\\*"};
 
   // only loose files
   bool IncludeBSAs = false;
   PGD->populateFileMap(IncludeBSAs);
 
-  PGD->mapFiles(NifBlockList, {}, ParallaxBSAExcludes);
+  PGD->mapFiles(NifBlockList, {}, {}, ParallaxBSAExcludes);
   // check that texture from  Skyrim - Textures5.bsa is not mapped
   auto &TextureMapDiffuseLoose = PGD->getTextureMapConst(NIFUtil::TextureSlots::DIFFUSE);
   EXPECT_TRUE(TextureMapDiffuseLoose.find(L"textures\\landscape\\roads\\bridge01") == TextureMapDiffuseLoose.end());
@@ -63,7 +63,7 @@ TEST_P(ParallaxGenDirectoryTest, MapFiles) {
   bool MultiThreading = true;
   bool HighMem = true;
   bool MapFromMeshes = true;
-  PGD->mapFiles(NifBlockList, {}, ParallaxBSAExcludes, MapFromMeshes, MultiThreading, HighMem);
+  PGD->mapFiles(NifBlockList, {}, {}, ParallaxBSAExcludes, MapFromMeshes, MultiThreading, HighMem);
 
   // load all NIFs
   const auto &Meshes = PGD->getMeshes();
@@ -224,8 +224,8 @@ TEST_P(ParallaxGenDirectoryTest, Meshes) {
   // all files
   PGD->populateFileMap(true);
 
-  std::unordered_set<std::wstring> BSAExcludes{L"Skyrim - Textures5.bsa"};
-  PGD->mapFiles({}, {}, BSAExcludes);
+  std::vector<std::wstring> BSAExcludes{L"Skyrim - Textures5.bsa"};
+  PGD->mapFiles({}, {}, {}, BSAExcludes);
 
   const auto &Meshes = PGD->getMeshes();
   EXPECT_TRUE(!Meshes.empty());
