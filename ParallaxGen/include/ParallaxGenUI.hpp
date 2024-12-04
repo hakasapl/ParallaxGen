@@ -33,7 +33,7 @@ public:
    * @param OldParams Params to show in the UI
    * @return ParallaxGenConfig::PGParams Params set by the user
    */
-  static auto showLauncher(const ParallaxGenConfig::PGParams &OldParams) -> ParallaxGenConfig::PGParams;
+  static auto showLauncher(ParallaxGenConfig &PGC) -> ParallaxGenConfig::PGParams;
 
   /**
    * @brief Shows the mod selection dialog to the user (Hangs thread until user presses okay)

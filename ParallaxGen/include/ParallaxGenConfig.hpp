@@ -28,6 +28,8 @@ public:
     struct Game {
       std::filesystem::path Dir;
       BethesdaGame::GameType Type = BethesdaGame::GameType::SKYRIM_SE;
+
+      auto operator==(const Game &Other) const -> bool { return Dir == Other.Dir && Type == Other.Type; }
     } Game;
 
     // Mod Manager
@@ -35,12 +37,20 @@ public:
       ModManagerDirectory::ModManagerType Type = ModManagerDirectory::ModManagerType::None;
       std::filesystem::path MO2InstanceDir;
       std::wstring MO2Profile = L"Default";
+      bool MO2UseOrder = false;
+
+      auto operator==(const ModManager &Other) const -> bool {
+        return Type == Other.Type && MO2InstanceDir == Other.MO2InstanceDir && MO2Profile == Other.MO2Profile &&
+               MO2UseOrder == Other.MO2UseOrder;
+      }
     } ModManager;
 
     // Output
     struct Output {
       std::filesystem::path Dir;
       bool Zip = true;
+
+      auto operator==(const Output &Other) const -> bool { return Dir == Other.Dir && Zip == Other.Zip; }
     } Output;
 
     // Processing
@@ -51,42 +61,90 @@ public:
       bool BSA = true;
       bool PluginPatching = true;
       bool MapFromMeshes = true;
+
+      auto operator==(const Processing &Other) const -> bool {
+        return Multithread == Other.Multithread && HighMem == Other.HighMem &&
+               GPUAcceleration == Other.GPUAcceleration && BSA == Other.BSA && PluginPatching == Other.PluginPatching &&
+               MapFromMeshes == Other.MapFromMeshes;
+      }
     } Processing;
 
     // Pre-Patchers
     struct PrePatcher {
       bool DisableMLP = false;
+
+      auto operator==(const PrePatcher &Other) const -> bool { return DisableMLP == Other.DisableMLP; }
     } PrePatcher;
 
     // Shader Patchers
     struct ShaderPatcher {
       bool Parallax = true;
       bool ComplexMaterial = true;
+
+      struct ShaderPatcherComplexMaterial {
+        std::vector<std::wstring> ListsDyncubemapBlocklist;
+
+        auto operator==(const ShaderPatcherComplexMaterial &Other) const -> bool {
+          return ListsDyncubemapBlocklist == Other.ListsDyncubemapBlocklist;
+        }
+      } ShaderPatcherComplexMaterial;
+
       bool TruePBR = true;
+
+      auto operator==(const ShaderPatcher &Other) const -> bool {
+        return Parallax == Other.Parallax && ComplexMaterial == Other.ComplexMaterial && TruePBR == Other.TruePBR &&
+               ShaderPatcherComplexMaterial == Other.ShaderPatcherComplexMaterial;
+      }
     } ShaderPatcher;
 
     // Shader Transforms
     struct ShaderTransforms {
       bool ParallaxToCM = false;
+
+      auto operator==(const ShaderTransforms &Other) const -> bool { return ParallaxToCM == Other.ParallaxToCM; }
     } ShaderTransforms;
 
     // Post-Patchers
     struct PostPatcher {
       bool OptimizeMeshes = false;
+
+      auto operator==(const PostPatcher &Other) const -> bool { return OptimizeMeshes == Other.OptimizeMeshes; }
     } PostPatcher;
 
+    // Lists
+    struct MeshRules {
+      std::vector<std::wstring> AllowList;
+      std::vector<std::wstring> BlockList;
+
+      auto operator==(const MeshRules &Other) const -> bool {
+        return AllowList == Other.AllowList && BlockList == Other.BlockList;
+      }
+    } MeshRules;
+
+    struct TextureRules {
+      std::vector<std::wstring> VanillaBSAList;
+      std::vector<std::pair<std::wstring, NIFUtil::TextureType>> TextureMaps;
+
+      auto operator==(const TextureRules &Other) const -> bool {
+        return VanillaBSAList == Other.VanillaBSAList && TextureMaps == Other.TextureMaps;
+      }
+    } TextureRules;
+
     [[nodiscard]] auto getString() const -> std::wstring;
+
+    auto operator==(const PGParams &Other) const -> bool {
+      return Autostart == Other.Autostart && Game == Other.Game && ModManager == Other.ModManager &&
+             Output == Other.Output && Processing == Other.Processing && PrePatcher == Other.PrePatcher &&
+             ShaderPatcher == Other.ShaderPatcher && ShaderTransforms == Other.ShaderTransforms &&
+             PostPatcher == Other.PostPatcher && MeshRules == Other.MeshRules && TextureRules == Other.TextureRules;
+    }
+
+    auto operator!=(const PGParams &Other) const -> bool { return !(*this == Other); }
   };
 
 private:
   std::filesystem::path ExePath; /** Stores the ExePath of ParallaxGen.exe */
 
-  // Config Structures
-  std::unordered_set<std::wstring> NIFBlocklist;        /** Stores the nif blocklist configuration */
-  std::unordered_set<std::wstring> DynCubemapBlocklist; /** Stores the dynamic cubemap blocklist configuration */
-  std::unordered_map<std::filesystem::path, NIFUtil::TextureType>
-      ManualTextureMaps;                           /** Stores the manual texture maps configuration */
-  std::unordered_set<std::wstring> VanillaBSAList; /** Stores the vanilla bsa list configuration */
   PGParams Params;                                 /** Stores the configured parameters */
 
   std::mutex ModOrderMutex;           /** Mutex for locking mod order */
@@ -114,13 +172,6 @@ public:
   static auto getConfigValidation() -> nlohmann::json;
 
   /**
-   * @brief Get the Default Config File object
-   *
-   * @return std::filesystem::path Path to default config file
-   */
-  [[nodiscard]] auto getDefaultConfigFile() const -> std::filesystem::path;
-
-  /**
    * @brief Get the User Config File object
    *
    * @return std::filesystem::path Path to user config file
@@ -131,35 +182,6 @@ public:
    * @brief Loads the config files in the `cfg` folder
    */
   void loadConfig();
-
-  /**
-   * @brief Gets the NIF blocklist
-   *
-   * @return const std::unordered_set<std::wstring>& NIF blocklist
-   */
-  [[nodiscard]] auto getNIFBlocklist() const -> const std::unordered_set<std::wstring> &;
-
-  /**
-   * @brief Get the Dyn Cubemap Blocklist object
-   *
-   * @return const std::unordered_set<std::wstring>& DynCubemapBlocklist
-   */
-  [[nodiscard]] auto getDynCubemapBlocklist() const -> const std::unordered_set<std::wstring> &;
-
-  /**
-   * @brief Get the Manual Texture Maps object
-   *
-   * @return const std::unordered_map<std::filesystem::path, NIFUtil::TextureType>& Manual texture maps
-   */
-  [[nodiscard]] auto
-  getManualTextureMaps() const -> const std::unordered_map<std::filesystem::path, NIFUtil::TextureType> &;
-
-  /**
-   * @brief Get the Vanilla BSA List object
-   *
-   * @return const std::unordered_set<std::wstring>& vanilla bsa list
-   */
-  [[nodiscard]] auto getVanillaBSAList() const -> const std::unordered_set<std::wstring> &;
 
   /**
    * @brief Get the Mod Order object
@@ -250,6 +272,8 @@ private:
    * @param JSON JSON object to change
    */
   static void replaceForwardSlashes(nlohmann::json &JSON);
+
+  static auto utf16VectorToUTF8(const std::vector<std::wstring> &Vec) -> std::vector<std::string>;
 
   /**
    * @brief Saves user config to the user json file

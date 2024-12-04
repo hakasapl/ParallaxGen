@@ -16,7 +16,7 @@
  */
 class PatcherComplexMaterial : public PatcherShader {
 private:
-  static std::unordered_set<std::wstring> DynCubemapBlocklist; /** Stores the dynamic cubemap blocklist set */
+  static std::vector<std::wstring> DynCubemapBlocklist; /** Stores the dynamic cubemap blocklist set */
   static bool DisableMLP; /** If true MLP should be replaced with CM */
 
 public:
@@ -33,7 +33,7 @@ public:
    * @param DisableMLP If true MLP should be replaced with CM
    * @param DynCubemapBlocklist Set of blocklisted dynamic cubemaps
    */
-  static void loadStatics(const bool &DisableMLP, const std::unordered_set<std::wstring> &DynCubemapBlocklist);
+  static void loadStatics(const bool &DisableMLP, const std::vector<std::wstring> &DynCubemapBlocklist);
 
   /**
    * @brief Get the shader type for this patcher (CM)

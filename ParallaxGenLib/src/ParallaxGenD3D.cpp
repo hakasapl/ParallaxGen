@@ -45,7 +45,7 @@ ParallaxGenD3D::ParallaxGenD3D(ParallaxGenDirectory *PGD, filesystem::path Outpu
                                const bool &UseGPU)
     : PGD(PGD), OutputDir(std::move(OutputDir)), ExePath(std::move(ExePath)), UseGPU(UseGPU) {}
 
-auto ParallaxGenD3D::findCMMaps(const std::unordered_set<std::wstring> &BSAExcludes) -> ParallaxGenTask::PGResult {
+auto ParallaxGenD3D::findCMMaps(const std::vector<std::wstring> &BSAExcludes) -> ParallaxGenTask::PGResult {
   auto &EnvMasks = PGD->getTextureMap(NIFUtil::TextureSlots::ENVMASK);
 
   ParallaxGenTask::PGResult PGResult = ParallaxGenTask::PGResult::SUCCESS;

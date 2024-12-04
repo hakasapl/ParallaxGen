@@ -120,6 +120,12 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   // Alpha message
   spdlog::warn("ParallaxGen is currently in ALPHA. Please file detailed bug reports on nexus or github.");
 
+  // Create cfg directory if it does not exist
+  const filesystem::path CfgDir = ExePath / "cfg";
+  if (!filesystem::exists(CfgDir)) {
+    filesystem::create_directories(CfgDir);
+  }
+
   // Initialize ParallaxGenConfig
   auto PGC = ParallaxGenConfig(ExePath);
   PGC.loadConfig();
@@ -131,8 +137,17 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   // Show launcher UI
   if (!Args.Autostart) {
-    Params = ParallaxGenUI::showLauncher(Params);
-    PGC.setParams(Params);
+    Params = ParallaxGenUI::showLauncher(PGC);
+  }
+
+  // Validate config
+  vector<string> Errors;
+  if (!ParallaxGenConfig::validateParams(Params, Errors)) {
+    for (const auto &Error : Errors) {
+      spdlog::error("{}", Error);
+    }
+    spdlog::critical("Validation errors were found. Exiting.");
+    exit(1);
   }
 
   // Print configuration parameters
@@ -202,27 +217,22 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   if (Params.ModManager.Type == ModManagerDirectory::ModManagerType::ModOrganizer2 &&
       !Params.ModManager.MO2InstanceDir.empty() && !Params.ModManager.MO2Profile.empty()) {
     // MO2
-    auto MO2StagingFolder = Params.ModManager.MO2InstanceDir / "mods";
-    auto MO2ModlistTXT = Params.ModManager.MO2InstanceDir / "profiles" / Params.ModManager.MO2Profile / "modlist.txt";
-    MMD.populateInfo(MO2ModlistTXT, MO2StagingFolder);
-    MMD.populateModFileMap();
+    MMD.populateModFileMapMO2(Params.ModManager.MO2InstanceDir, Params.ModManager.MO2Profile);
   } else if (Params.ModManager.Type == ModManagerDirectory::ModManagerType::Vortex) {
     // Vortex
-    MMD.populateInfo(BG.getGameDataPath() / "vortex.deployment.json");
-    MMD.populateModFileMap();
+    MMD.populateModFileMapVortex(BG.getGameDataPath());
   }
 
   PGD.populateFileMap(Params.Processing.BSA);
 
-  auto VanillaBSAList = PGC.getVanillaBSAList();
-
   // Map files
-  PGD.mapFiles(PGC.getNIFBlocklist(), PGC.getManualTextureMaps(), VanillaBSAList, Params.Processing.MapFromMeshes,
-               Params.Processing.Multithread, Params.Processing.HighMem);
+  PGD.mapFiles(Params.MeshRules.BlockList, Params.MeshRules.AllowList, Params.TextureRules.TextureMaps,
+               Params.TextureRules.VanillaBSAList, Params.Processing.MapFromMeshes, Params.Processing.Multithread,
+               Params.Processing.HighMem);
 
   // Find CM maps
   spdlog::info("Finding complex material env maps");
-  PGD3D.findCMMaps(VanillaBSAList);
+  PGD3D.findCMMaps(Params.TextureRules.VanillaBSAList);
   spdlog::info("Done finding complex material env maps");
 
   // Create patcher factory
@@ -232,31 +242,40 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   }
   if (Params.ShaderPatcher.ComplexMaterial) {
     Patchers.ShaderPatchers.emplace(PatcherComplexMaterial::getShaderType(), PatcherComplexMaterial::getFactory());
-    PatcherComplexMaterial::loadStatics(Params.PrePatcher.DisableMLP, PGC.getDynCubemapBlocklist());
+    PatcherComplexMaterial::loadStatics(Params.PrePatcher.DisableMLP,
+                                        Params.ShaderPatcher.ShaderPatcherComplexMaterial.ListsDyncubemapBlocklist);
   }
   if (Params.ShaderPatcher.TruePBR) {
-   Patchers.ShaderPatchers.emplace(PatcherTruePBR::getShaderType(), PatcherTruePBR::getFactory());
-   PatcherTruePBR::loadStatics(PGD.getPBRJSONs());
+    Patchers.ShaderPatchers.emplace(PatcherTruePBR::getShaderType(), PatcherTruePBR::getFactory());
+    PatcherTruePBR::loadStatics(PGD.getPBRJSONs());
   }
   if (Params.ShaderTransforms.ParallaxToCM) {
-    Patchers.ShaderTransformPatchers[PatcherUpgradeParallaxToCM::getFromShader()].emplace(PatcherUpgradeParallaxToCM::getToShader(), PatcherUpgradeParallaxToCM::getFactory());
+    Patchers.ShaderTransformPatchers[PatcherUpgradeParallaxToCM::getFromShader()].emplace(
+        PatcherUpgradeParallaxToCM::getToShader(), PatcherUpgradeParallaxToCM::getFactory());
   }
 
   if (Params.ModManager.Type != ModManagerDirectory::ModManagerType::None) {
-    // Find conflicts
-    const auto ModConflicts =
-        PG.findModConflicts(Patchers, Params.Processing.Multithread, Params.Processing.PluginPatching);
-    const auto ExistingOrder = PGC.getModOrder();
+    // Check if MO2 is used and MO2 use order is checked
+    if (Params.ModManager.Type == ModManagerDirectory::ModManagerType::ModOrganizer2 && Params.ModManager.MO2UseOrder) {
+      // Get mod order from MO2
+      const auto &ModOrder = MMD.getInferredOrder();
+      PGC.setModOrder(ModOrder);
+    } else {
+      // Find conflicts
+      const auto ModConflicts =
+          PG.findModConflicts(Patchers, Params.Processing.Multithread, Params.Processing.PluginPatching);
+      const auto ExistingOrder = PGC.getModOrder();
 
-    if (!ModConflicts.empty()) {
-      // pause timer for UI
-      TimeTaken += chrono::duration_cast<chrono::seconds>(chrono::high_resolution_clock::now() - StartTime).count();
+      if (!ModConflicts.empty()) {
+        // pause timer for UI
+        TimeTaken += chrono::duration_cast<chrono::seconds>(chrono::high_resolution_clock::now() - StartTime).count();
 
-      // Select mod order
-      auto SelectedOrder = ParallaxGenUI::selectModOrder(ModConflicts, ExistingOrder);
-      StartTime = chrono::high_resolution_clock::now();
+        // Select mod order
+        auto SelectedOrder = ParallaxGenUI::selectModOrder(ModConflicts, ExistingOrder);
+        StartTime = chrono::high_resolution_clock::now();
 
-      PGC.setModOrder(SelectedOrder);
+        PGC.setModOrder(SelectedOrder);
+      }
     }
   }
 
@@ -302,7 +321,7 @@ void exitBlocking() {
 }
 
 auto getExecutablePath() -> filesystem::path {
-  wchar_t Buffer[MAX_PATH];                                   // NOLINT
+  wchar_t Buffer[MAX_PATH];                                 // NOLINT
   if (GetModuleFileNameW(nullptr, Buffer, MAX_PATH) == 0) { // NOLINT
     cerr << "Error getting executable path: " << GetLastError() << "\n";
     exit(1);
@@ -363,11 +382,11 @@ void initLogger(const filesystem::path &LOGPATH, const ParallaxGenCLIArgs &Args)
 }
 
 auto main(int ArgC, char **ArgV) -> int {
-  // Block until enter only in debug mode
-  #ifdef _DEBUG
+// Block until enter only in debug mode
+#ifdef _DEBUG
   cout << "Press ENTER to start (DEBUG mode)...";
   cin.get();
-  #endif
+#endif
 
   // This is what keeps the console window open after the program exits until user input
   if (atexit(exitBlocking) != 0) {

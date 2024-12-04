@@ -22,12 +22,12 @@ add_compile_definitions(_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR)
 set(PROJECT_NAME "ParallaxGen")
 
 # Initialize Project
-set(PARALLAXGEN_VERSION 0.7.1)
+set(PARALLAXGEN_VERSION 0.7.2)
 project(${PROJECT_NAME} VERSION ${PARALLAXGEN_VERSION})
 add_compile_definitions(PARALLAXGEN_VERSION="${PARALLAXGEN_VERSION}")
 
 # Set test version (set this to 0 for prod releases)
-add_compile_definitions(PARALLAXGEN_TEST_VERSION=0)
+add_compile_definitions(PARALLAXGEN_TEST_VERSION=1)
 
 # Setup Folders
 set(EXTRN_BUILD_DIR ${CMAKE_BINARY_DIR}/external/blds)
@@ -71,10 +71,8 @@ add_subdirectory(ParallaxGenLib)
 # Install Global Things
 # Copy Folders
 file(COPY ${CMAKE_SOURCE_DIR}/ParallaxGen/assets DESTINATION ${CMAKE_BINARY_DIR}/)
-file(COPY ${CMAKE_SOURCE_DIR}/ParallaxGen/cfg DESTINATION ${CMAKE_BINARY_DIR}/)
 file(COPY ${CMAKE_SOURCE_DIR}/ParallaxGenLib/shaders DESTINATION ${CMAKE_BINARY_DIR}/)
 
 # Copy assets to install
 install(DIRECTORY ${CMAKE_BINARY_DIR}/assets DESTINATION . )
-install(DIRECTORY ${CMAKE_BINARY_DIR}/cfg DESTINATION . )
 install(DIRECTORY ${CMAKE_BINARY_DIR}/shaders DESTINATION . )

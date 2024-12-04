@@ -194,9 +194,9 @@ private:
    * @param MatchedPath Matched path (PBR prefix)
    * @return std::array<std::wstring, NUM_TEXTURE_SLOTS> New slots after patch
    */
-  static auto applyOnePatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
+  static void applyOnePatchSlots(std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots,
                                  const nlohmann::json &TruePBRData,
-                                 const std::wstring &MatchedPath) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;
+                                 const std::wstring &MatchedPath);
 
   /**
    * @brief Enables truepbr on a shape (pbr: true in JSON)

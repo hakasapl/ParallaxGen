@@ -16,28 +16,6 @@ using namespace std;
 
 ModManagerDirectory::ModManagerDirectory(const ModManagerType &MMType) : MMType(MMType) {}
 
-void ModManagerDirectory::populateInfo(const filesystem::path &RequiredFile, const filesystem::path &StagingDir) {
-  this->StagingDir = StagingDir;
-  this->RequiredFile = RequiredFile;
-}
-
-void ModManagerDirectory::populateModFileMap() {
-  switch (MMType) {
-  case ModManagerType::ModOrganizer2:
-    populateModFileMapMO2();
-    break;
-  case ModManagerType::Vortex:
-    populateModFileMapVortex();
-    break;
-  default:
-    break;
-  }
-
-  for (const auto &Mod : AllMods) {
-    spdlog::debug(L"ModManagerDirectory Found Mod : {}", Mod);
-  }
-}
-
 auto ModManagerDirectory::getModFileMap() const -> const unordered_map<filesystem::path, wstring> & {
   return ModFileMap;
 }
@@ -51,26 +29,25 @@ auto ModManagerDirectory::getMod(const filesystem::path &RelPath) const -> wstri
   return L"";
 }
 
-void ModManagerDirectory::populateModFileMapVortex() {
+void ModManagerDirectory::populateModFileMapVortex(const filesystem::path &DeploymentDir) {
   // required file is vortex.deployment.json in the data folder
   spdlog::info("Populating mods from Vortex");
 
-  if (!filesystem::exists(RequiredFile)) {
+  const auto DeploymentFile = DeploymentDir / "vortex.deployment.json";
+
+  if (!filesystem::exists(DeploymentFile)) {
     throw runtime_error("Vortex deployment file does not exist: " +
-                        ParallaxGenUtil::UTF16toUTF8(RequiredFile.wstring()));
+                        ParallaxGenUtil::UTF16toUTF8(DeploymentFile.wstring()));
   }
 
-  ifstream VortexDepFileF(RequiredFile);
+  ifstream VortexDepFileF(DeploymentFile);
   nlohmann::json VortexDeployment = nlohmann::json::parse(VortexDepFileF);
   VortexDepFileF.close();
-
-  // Populate staging dir
-  StagingDir = ParallaxGenUtil::UTF8toUTF16(VortexDeployment["stagingPath"].get<string>());
 
   // Check that files field exists
   if (!VortexDeployment.contains("files")) {
     throw runtime_error("Vortex deployment file does not contain 'files' field: " +
-                        ParallaxGenUtil::UTF16toUTF8(RequiredFile.wstring()));
+                        ParallaxGenUtil::UTF16toUTF8(DeploymentFile.wstring()));
   }
 
   // loop through files
@@ -88,24 +65,56 @@ void ModManagerDirectory::populateModFileMapVortex() {
     spdlog::trace(L"ModManagerDirectory | Adding Files to Map : {} -> {}", RelPath.wstring(), ModName);
 
     if (!ParallaxGenUtil::ContainsOnlyAscii(RelPath.wstring())) {
-      spdlog::debug(L"Path {} from {} contains non-ASCII characters", RelPath.wstring(), RequiredFile.wstring());
+      spdlog::debug(L"Path {} from {} contains non-ASCII characters", RelPath.wstring(), DeploymentDir.wstring());
     }
 
     ModFileMap[ParallaxGenUtil::ToLowerASCII(RelPath.wstring())] = ModName;
   }
 }
 
-void ModManagerDirectory::populateModFileMapMO2() {
+void ModManagerDirectory::populateModFileMapMO2(const filesystem::path &InstanceDir, const wstring &Profile) {
   // required file is modlist.txt in the profile folder
 
   spdlog::info("Populating mods from Mod Organizer 2");
 
-  if (!filesystem::exists(RequiredFile)) {
-    throw runtime_error("Mod Organizer 2 modlist.txt file does not exist: " +
-                        ParallaxGenUtil::UTF16toUTF8(RequiredFile.wstring()));
+  // First read modorganizer.ini in the instance folder to get the profiles and mods folders
+  filesystem::path MO2IniFile = InstanceDir / L"modorganizer.ini";
+  if (!filesystem::exists(MO2IniFile)) {
+    throw runtime_error("Mod Organizer 2 ini file does not exist: " + ParallaxGenUtil::UTF16toUTF8(MO2IniFile.wstring()));
   }
 
-  ifstream ModListFileF(RequiredFile);
+  // Find MO2 paths from ModOrganizer.ini
+  filesystem::path ProfileDir;
+  filesystem::path ModDir;
+
+  ifstream MO2IniFileF(MO2IniFile);
+  string MO2IniLine;
+  while(getline(MO2IniFileF, MO2IniLine)) {
+    if (MO2IniLine.starts_with("profiles_directory=")) {
+      ProfileDir = InstanceDir / MO2IniLine.substr(19);
+    } else if (MO2IniLine.starts_with("mod_directory=")) {
+      ModDir = InstanceDir / MO2IniLine.substr(14);
+    }
+  }
+
+  MO2IniFileF.close();
+
+  if (ProfileDir.empty()) {
+    ProfileDir = InstanceDir / "profiles";
+  }
+
+  if (ModDir.empty()) {
+    ModDir = InstanceDir / "mods";
+  }
+
+  // Find location of modlist.txt
+  const auto ModListFile = ProfileDir / Profile / "modlist.txt";
+  if (!filesystem::exists(ModListFile)) {
+    throw runtime_error("Mod Organizer 2 modlist.txt file does not exist: " +
+                        ParallaxGenUtil::UTF16toUTF8(ModListFile.wstring()));
+  }
+
+  ifstream ModListFileF(ModListFile);
 
   // loop through modlist.txt
   string ModStr;
@@ -134,21 +143,18 @@ void ModManagerDirectory::populateModFileMapMO2() {
     // loop through all files in mod
     Mod.erase(0, 1); // remove +
     AllMods.insert(Mod);
-    auto ModDir = StagingDir / Mod;
-    if (!filesystem::exists(ModDir)) {
-      spdlog::warn(L"Mod directory from modlist.txt does not exist: {}", ModDir.wstring());
+    InferredOrder.insert(InferredOrder.begin(), Mod);
+
+    const auto CurModDir = ModDir / Mod;
+    if (!filesystem::exists(CurModDir)) {
+      spdlog::warn(L"Mod directory from modlist.txt does not exist: {}", CurModDir.wstring());
       continue;
     }
 
     try {
       for (const auto &File :
-           filesystem::recursive_directory_iterator(ModDir, filesystem::directory_options::skip_permission_denied)) {
+           filesystem::recursive_directory_iterator(CurModDir, filesystem::directory_options::skip_permission_denied)) {
         if (!filesystem::is_regular_file(File)) {
-          continue;
-        }
-
-        // check if already in map
-        if (ModFileMap.contains(filesystem::relative(File, ModDir))) {
           continue;
         }
 
@@ -157,7 +163,7 @@ void ModManagerDirectory::populateModFileMapMO2() {
           continue;
         }
 
-        auto RelPath = filesystem::relative(File, ModDir);
+        auto RelPath = filesystem::relative(File, CurModDir);
         spdlog::trace(L"ModManagerDirectory | Adding Files to Map : {} -> {}", RelPath.wstring(), Mod);
 
         if (!ParallaxGenUtil::ContainsOnlyAscii(RelPath.wstring())) {
@@ -176,6 +182,8 @@ void ModManagerDirectory::populateModFileMapMO2() {
       spdlog::error(L"Error reading mod directory {} (skipping): {}", Mod, ParallaxGenUtil::ASCIItoUTF16(E.what()));
     }
   }
+
+  ModListFileF.close();
 }
 
 auto ModManagerDirectory::getModManagerTypes() -> vector<ModManagerType> {
@@ -206,4 +214,49 @@ auto ModManagerDirectory::getModManagerTypeFromStr(const string &Type) -> ModMan
   }
 
   return ModManagerStrToTypeMap.at("None");
+}
+
+auto ModManagerDirectory::getMO2ProfilesFromInstanceDir(const filesystem::path &InstanceDir) -> vector<wstring> {
+  // Find profiles folder
+  filesystem::path ProfileDir;
+
+  // First read modorganizer.ini in the instance folder to get the profiles and mods folders
+  filesystem::path MO2IniFile = InstanceDir / L"modorganizer.ini";
+  if (!filesystem::exists(MO2IniFile)) {
+    return {};
+  }
+
+  // Find MO2 paths from ModOrganizer.ini
+  ifstream MO2IniFileF(MO2IniFile);
+
+  string MO2IniLine;
+  while(getline(MO2IniFileF, MO2IniLine)) {
+    if (MO2IniLine.starts_with("profiles_directory=")) {
+      ProfileDir = InstanceDir / MO2IniLine.substr(19);
+    }
+  }
+
+  if (ProfileDir.empty()) {
+    ProfileDir = InstanceDir / "profiles";
+  }
+
+  // check if the "profiles" folder exists
+  if (!filesystem::exists(ProfileDir)) {
+    // set instance directory text to red
+    return {};
+  }
+
+  // Find all directories within "profiles"
+  vector<wstring> Profiles;
+  for (const auto &Entry : filesystem::directory_iterator(ProfileDir)) {
+    if (Entry.is_directory()) {
+      Profiles.push_back(Entry.path().filename().wstring());
+    }
+  }
+
+  return Profiles;
+}
+
+auto ModManagerDirectory::getInferredOrder() const -> const vector<wstring> & {
+  return InferredOrder;
 }

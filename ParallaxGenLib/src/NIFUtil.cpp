@@ -178,6 +178,15 @@ auto NIFUtil::getDefaultsFromSuffix(const std::filesystem::path &Path)
   return {TextureSlots::UNKNOWN, TextureType::UNKNOWN};
 }
 
+auto NIFUtil::getTexTypesStr() -> vector<string> {
+  static const vector<string> TexTypesStr = {
+      "diffuse", "normal", "model space normal", "emissive", "skin tint", "subsurface color", "height", "cubemap",
+      "environment mask", "complex material", "rmaos", "subsurface tint", "inner layer", "coat normal roughness",
+      "backlight", "specular", "subsurface pbr", "unknown"};
+
+  return TexTypesStr;
+}
+
 auto NIFUtil::loadNIFFromBytes(const std::vector<std::byte> &NIFBytes) -> nifly::NifFile {
   // NIF file object
   NifFile NIF;

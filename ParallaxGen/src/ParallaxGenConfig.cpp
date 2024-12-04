@@ -22,6 +22,7 @@
 #include <string>
 
 #include <cstdlib>
+#include <unordered_set>
 
 using namespace std;
 using namespace ParallaxGenUtil;
@@ -35,30 +36,6 @@ auto ParallaxGenConfig::getConfigValidation() -> nlohmann::json {
     "title": "parallaxgen-cfg",
     "type": "object",
     "properties": {
-      "dyncubemap_blocklist": {
-        "type": "array",
-        "items": {
-          "type": "string"
-        }
-      },
-      "nif_blocklist": {
-        "type": "array",
-        "items": {
-          "type": "string"
-        }
-      },
-      "texture_map": {
-        "type": "object",
-        "additionalProperties": {
-          "type": "string"
-        }
-      },
-      "vanilla_bsas" : {
-        "type" : "array",
-        "items": {
-            "type": "string"
-        }
-      },
       "mod_order": {
         "type" : "array",
         "items": {
@@ -73,12 +50,6 @@ auto ParallaxGenConfig::getConfigValidation() -> nlohmann::json {
   )"_json;
 
   return PGConfigSchema;
-}
-
-auto ParallaxGenConfig::getDefaultConfigFile() const -> filesystem::path {
-  // Get default config file
-  static const filesystem::path DefaultConfigFile = ExePath / "cfg" / "default.json";
-  return DefaultConfigFile;
 }
 
 auto ParallaxGenConfig::getUserConfigFile() const -> filesystem::path {
@@ -98,34 +69,67 @@ void ParallaxGenConfig::loadConfig() {
 
   size_t NumConfigs = 0;
 
-  static const vector<filesystem::path> ConfigsToRead = {getDefaultConfigFile(), getUserConfigFile()};
-  // Loop through all files in DefConfPath recursively directoryiterator
-  for (const auto &Entry : ConfigsToRead) {
-    if (!filesystem::exists(Entry)) {
-      // don't load a config that doesn't exist
-      continue;
-    }
-
-    spdlog::debug(L"Loading ParallaxGen Config: {}", Entry.wstring());
+  if (filesystem::exists(getUserConfigFile())) {
+    // don't load a config that doesn't exist
+    spdlog::debug(L"Loading ParallaxGen Config: {}", getUserConfigFile().wstring());
 
     nlohmann::json J;
-    if (!parseJSON(Entry, getFileBytes(Entry), J)) {
-      continue;
+    bool ProcessJSON = true;
+    if (!parseJSON(getUserConfigFile(), getFileBytes(getUserConfigFile()), J)) {
+      ProcessJSON = false;
     }
 
-    if (!validateJSON(Entry, J)) {
-      continue;
+    if (!validateJSON(getUserConfigFile(), J)) {
+      ProcessJSON = false;
     }
 
-    if (!J.empty()) {
-      replaceForwardSlashes(J);
-      addConfigJSON(J);
-      NumConfigs++;
+    if (ProcessJSON) {
+      if (!J.empty()) {
+        replaceForwardSlashes(J);
+        addConfigJSON(J);
+        NumConfigs++;
+      }
+
+      if (getUserConfigFile() == getUserConfigFile()) {
+        UserConfig = J;
+      }
+    }
+  } else {
+    // fill in default values
+    if (Params.Game.Dir.empty()) {
+      Params.Game.Dir = BethesdaGame::findGamePathFromSteam(Params.Game.Type);
     }
 
-    if (Entry == getUserConfigFile()) {
-      UserConfig = J;
+    if (Params.Output.Dir.empty()) {
+      Params.Output.Dir = ExePath / "ParallaxGen_Output";
     }
+
+    static const vector<wstring> DefaultMeshBlocklist = {L"*\\cameras\\*", L"*\\dyndolod\\*", L"*\\lod\\*",
+                                                         L"*\\magic\\*",   L"*\\markers\\*",  L"*\\mps\\*",
+                                                         L"*\\sky\\*"};
+
+    Params.MeshRules.BlockList = DefaultMeshBlocklist;
+
+    static const vector<wstring> DefaultVanillaBSAList = {L"Skyrim - Textures0.bsa",
+                                                          L"Skyrim - Textures1.bsa",
+                                                          L"Skyrim - Textures2.bsa",
+                                                          L"Skyrim - Textures3.bsa",
+                                                          L"Skyrim - Textures4.bsa",
+                                                          L"Skyrim - Textures5.bsa",
+                                                          L"Skyrim - Textures6.bsa",
+                                                          L"Skyrim - Textures7.bsa",
+                                                          L"Skyrim - Textures8.bsa",
+                                                          L"Project Clarity AIO Half Res Packed.bsa",
+                                                          L"Project Clarity AIO Half Res Packed - Textures.bsa",
+                                                          L"Project Clarity AIO Half Res Packed0 - Textures.bsa",
+                                                          L"Project Clarity AIO Half Res Packed1 - Textures.bsa",
+                                                          L"Project Clarity AIO Half Res Packed2 - Textures.bsa",
+                                                          L"Project Clarity AIO Half Res Packed3 - Textures.bsa",
+                                                          L"Project Clarity AIO Half Res Packed4 - Textures.bsa",
+                                                          L"Project Clarity AIO Half Res Packed5 - Textures.bsa",
+                                                          L"Project Clarity AIO Half Res Packed6 - Textures.bsa"};
+
+    Params.TextureRules.VanillaBSAList = DefaultVanillaBSAList;
   }
 
   // Print number of configs loaded
@@ -133,34 +137,7 @@ void ParallaxGenConfig::loadConfig() {
 }
 
 auto ParallaxGenConfig::addConfigJSON(const nlohmann::json &J) -> void {
-    // TODO UNIFORM check if to_lower_copy can handle UTF8
-  // "dyncubemap_blocklist" field
-  if (J.contains("dyncubemap_blocklist")) {
-    for (const auto &Item : J["dyncubemap_blocklist"]) {
-      DynCubemapBlocklist.insert(UTF8toUTF16(boost::to_lower_copy(Item.get<string>())));
-    }
-  }
-
-  // "nif_blocklist" field
-  if (J.contains("nif_blocklist")) {
-    for (const auto &Item : J["nif_blocklist"]) {
-      NIFBlocklist.insert(UTF8toUTF16(boost::to_lower_copy(Item.get<string>())));
-    }
-  }
-
-  // "texture_map" field
-  if (J.contains("texture_maps")) {
-    for (const auto &Item : J["texture_maps"].items()) {
-      ManualTextureMaps[boost::to_lower_copy(Item.key())] = NIFUtil::getTexTypeFromStr(Item.value().get<string>());
-    }
-  }
-
-  // "vanilla_bsas" field
-  if (J.contains("vanilla_bsas")) {
-    for (const auto &Item : J["vanilla_bsas"]) {
-      VanillaBSAList.insert(UTF8toUTF16(boost::to_lower_copy(Item.get<string>())));
-    }
-  }
+  // TODO UNIFORM check if to_lower_copy can handle UTF8
 
   // "mod_order" field
   if (J.contains("mod_order")) {
@@ -179,47 +156,106 @@ auto ParallaxGenConfig::addConfigJSON(const nlohmann::json &J) -> void {
     const auto &ParamJ = J["params"];
 
     // "game"
-    Params.Game.Dir = UTF8toUTF16(ParamJ["game"]["dir"].get<string>());
-    ParamJ["game"]["type"].get_to<BethesdaGame::GameType>(Params.Game.Type);
-
-    // "modmanager"
-    ParamJ["modmanager"]["type"].get_to<ModManagerDirectory::ModManagerType>(Params.ModManager.Type);
-    ParamJ["modmanager"]["mo2instancedir"].get_to<filesystem::path>(Params.ModManager.MO2InstanceDir);
-    Params.ModManager.MO2Profile = UTF8toUTF16(ParamJ["modmanager"]["mo2profile"].get<string>());
-
-    // "output"
-    Params.Output.Dir = UTF8toUTF16(ParamJ["output"]["dir"].get<string>());
-    ParamJ["output"]["zip"].get_to<bool>(Params.Output.Zip);
-
-    // "processing"
-    ParamJ["processing"]["multithread"].get_to<bool>(Params.Processing.Multithread);
-    ParamJ["processing"]["highmem"].get_to<bool>(Params.Processing.HighMem);
-    ParamJ["processing"]["gpuacceleration"].get_to<bool>(Params.Processing.GPUAcceleration);
-    ParamJ["processing"]["bsa"].get_to<bool>(Params.Processing.BSA);
-    ParamJ["processing"]["pluginpatching"].get_to<bool>(Params.Processing.PluginPatching);
-    ParamJ["processing"]["mapfrommeshes"].get_to<bool>(Params.Processing.MapFromMeshes);
-
-    // "prepatcher"
-    ParamJ["prepatcher"]["disablemlp"].get_to<bool>(Params.PrePatcher.DisableMLP);
-
-    // "shaderpatcher"
-    ParamJ["shaderpatcher"]["parallax"].get_to<bool>(Params.ShaderPatcher.Parallax);
-    ParamJ["shaderpatcher"]["complexmaterial"].get_to<bool>(Params.ShaderPatcher.ComplexMaterial);
-    ParamJ["shaderpatcher"]["truepbr"].get_to<bool>(Params.ShaderPatcher.TruePBR);
-
-    // "shadertransforms"
-    ParamJ["shadertransforms"]["parallaxtocm"].get_to<bool>(Params.ShaderTransforms.ParallaxToCM);
-
-    // "postpatcher"
-    ParamJ["postpatcher"]["optimizemeshes"].get_to<bool>(Params.PostPatcher.OptimizeMeshes);
-
-    // Fill in empty values with defaults if needed
-    if (Params.Game.Dir.empty()) {
-      Params.Game.Dir = BethesdaGame::findGamePathFromSteam(Params.Game.Type);
+    if (ParamJ.contains("game") && ParamJ["game"].contains("dir")) {
+      Params.Game.Dir = UTF8toUTF16(ParamJ["game"]["dir"].get<string>());
+    }
+    if (ParamJ.contains("game") && ParamJ["game"].contains("type")) {
+      ParamJ["game"]["type"].get_to<BethesdaGame::GameType>(Params.Game.Type);
     }
 
-    if (Params.Output.Dir.empty()) {
-      Params.Output.Dir = ExePath / "ParallaxGen_Output";
+    // "modmanager"
+    if (ParamJ.contains("modmanager") && ParamJ["modmanager"].contains("type")) {
+      ParamJ["modmanager"]["type"].get_to<ModManagerDirectory::ModManagerType>(Params.ModManager.Type);
+    }
+    if (ParamJ.contains("modmanager") && ParamJ["modmanager"].contains("mo2instancedir")) {
+      ParamJ["modmanager"]["mo2instancedir"].get_to<filesystem::path>(Params.ModManager.MO2InstanceDir);
+    }
+    if (ParamJ.contains("modmanager") && ParamJ["modmanager"].contains("mo2profile")) {
+      Params.ModManager.MO2Profile = UTF8toUTF16(ParamJ["modmanager"]["mo2profile"].get<string>());
+    }
+    if (ParamJ.contains("modmanager") && ParamJ["modmanager"].contains("mo2useorder")) {
+      ParamJ["modmanager"]["mo2useorder"].get_to<bool>(Params.ModManager.MO2UseOrder);
+    }
+
+    // "output"
+    if (ParamJ.contains("output") && ParamJ["output"].contains("dir")) {
+      Params.Output.Dir = UTF8toUTF16(ParamJ["output"]["dir"].get<string>());
+    }
+    if (ParamJ.contains("output") && ParamJ["output"].contains("zip")) {
+      ParamJ["output"]["zip"].get_to<bool>(Params.Output.Zip);
+    }
+
+    // "processing"
+    if (ParamJ.contains("processing") && ParamJ["processing"].contains("multithread")) {
+      ParamJ["processing"]["multithread"].get_to<bool>(Params.Processing.Multithread);
+    }
+    if (ParamJ.contains("processing") && ParamJ["processing"].contains("highmem")) {
+      ParamJ["processing"]["highmem"].get_to<bool>(Params.Processing.HighMem);
+    }
+    if (ParamJ.contains("processing") && ParamJ["processing"].contains("gpuacceleration")) {
+      ParamJ["processing"]["gpuacceleration"].get_to<bool>(Params.Processing.GPUAcceleration);
+    }
+    if (ParamJ.contains("processing") && ParamJ["processing"].contains("bsa")) {
+      ParamJ["processing"]["bsa"].get_to<bool>(Params.Processing.BSA);
+    }
+    if (ParamJ.contains("processing") && ParamJ["processing"].contains("pluginpatching")) {
+      ParamJ["processing"]["pluginpatching"].get_to<bool>(Params.Processing.PluginPatching);
+    }
+    if (ParamJ.contains("processing") && ParamJ["processing"].contains("mapfrommeshes")) {
+      ParamJ["processing"]["mapfrommeshes"].get_to<bool>(Params.Processing.MapFromMeshes);
+    }
+
+    // "prepatcher"
+    if (ParamJ.contains("prepatcher") && ParamJ["prepatcher"].contains("disablemlp")) {
+      ParamJ["prepatcher"]["disablemlp"].get_to<bool>(Params.PrePatcher.DisableMLP);
+    }
+
+    // "shaderpatcher"
+    if (ParamJ.contains("shaderpatcher") && ParamJ["shaderpatcher"].contains("parallax")) {
+      ParamJ["shaderpatcher"]["parallax"].get_to<bool>(Params.ShaderPatcher.Parallax);
+    }
+    if (ParamJ.contains("shaderpatcher") && ParamJ["shaderpatcher"].contains("complexmaterial")) {
+      ParamJ["shaderpatcher"]["complexmaterial"].get_to<bool>(Params.ShaderPatcher.ComplexMaterial);
+    }
+    if (ParamJ.contains("shaderpatcher") && ParamJ["shaderpatcher"].contains("truepbr")) {
+      ParamJ["shaderpatcher"]["truepbr"].get_to<bool>(Params.ShaderPatcher.TruePBR);
+    }
+
+    // "shadertransforms"
+    if (ParamJ.contains("shadertransforms") && ParamJ["shadertransforms"].contains("parallaxtocm")) {
+      ParamJ["shadertransforms"]["parallaxtocm"].get_to<bool>(Params.ShaderTransforms.ParallaxToCM);
+    }
+
+    // "postpatcher"
+    if (ParamJ.contains("postpatcher") && ParamJ["postpatcher"].contains("optimizemeshes")) {
+      ParamJ["postpatcher"]["optimizemeshes"].get_to<bool>(Params.PostPatcher.OptimizeMeshes);
+    }
+
+    // "meshrules"
+    if (ParamJ.contains("meshrules") && ParamJ["meshrules"].contains("allowlist")) {
+      for (const auto &Item : ParamJ["meshrules"]["allowlist"]) {
+        Params.MeshRules.AllowList.push_back(UTF8toUTF16(Item.get<string>()));
+      }
+    }
+
+    if (ParamJ.contains("meshrules") && ParamJ["meshrules"].contains("blocklist")) {
+      for (const auto &Item : ParamJ["meshrules"]["blocklist"]) {
+        Params.MeshRules.BlockList.push_back(UTF8toUTF16(Item.get<string>()));
+      }
+    }
+
+    // "texturerules"
+    if (ParamJ.contains("texturerules") && ParamJ["texturerules"].contains("texturemaps")) {
+      for (const auto &Item : ParamJ["texturerules"]["texturemaps"].items()) {
+        Params.TextureRules.TextureMaps.emplace_back(UTF8toUTF16(Item.key()),
+                                                     NIFUtil::getTexTypeFromStr(Item.value().get<string>()));
+      }
+    }
+
+    if (ParamJ.contains("texturerules") && ParamJ["texturerules"].contains("vanillabsalist")) {
+      for (const auto &Item : ParamJ["texturerules"]["vanillabsalist"]) {
+        Params.TextureRules.VanillaBSAList.push_back(UTF8toUTF16(Item.get<string>()));
+      }
     }
   }
 }
@@ -269,16 +305,6 @@ void ParallaxGenConfig::replaceForwardSlashes(nlohmann::json &JSON) {
   }
 }
 
-auto ParallaxGenConfig::getNIFBlocklist() const -> const unordered_set<wstring> & { return NIFBlocklist; }
-
-auto ParallaxGenConfig::getDynCubemapBlocklist() const -> const unordered_set<wstring> & { return DynCubemapBlocklist; }
-
-auto ParallaxGenConfig::getManualTextureMaps() const -> const unordered_map<filesystem::path, NIFUtil::TextureType> & {
-  return ManualTextureMaps;
-}
-
-auto ParallaxGenConfig::getVanillaBSAList() const -> const std::unordered_set<std::wstring> & { return VanillaBSAList; }
-
 auto ParallaxGenConfig::getModOrder() -> vector<wstring> {
   lock_guard<mutex> Lock(ModOrderMutex);
   return ModOrder;
@@ -318,6 +344,9 @@ void ParallaxGenConfig::setParams(const PGParams &Params) {
 }
 
 auto ParallaxGenConfig::validateParams(const PGParams &Params, vector<string> &Errors) -> bool {
+  // Helpers
+  unordered_set<wstring> CheckSet;
+
   // Game
   if (Params.Game.Dir.empty()) {
     Errors.emplace_back("Game Location is required.");
@@ -342,8 +371,9 @@ auto ParallaxGenConfig::validateParams(const PGParams &Params, vector<string> &E
     }
 
     // Check if the MO2 profile exists
-    filesystem::path ProfilesDir = Params.ModManager.MO2InstanceDir / "profiles" / Params.ModManager.MO2Profile;
-    if (!filesystem::exists(ProfilesDir)) {
+    const auto Profiles =
+      ModManagerDirectory::getMO2ProfilesFromInstanceDir(Params.ModManager.MO2InstanceDir);
+    if (find(Profiles.begin(), Profiles.end(), Params.ModManager.MO2Profile) == Profiles.end()) {
       Errors.emplace_back("MO2 Profile does not exist");
     }
   }
@@ -359,9 +389,18 @@ auto ParallaxGenConfig::validateParams(const PGParams &Params, vector<string> &E
 
   // Shader Patchers
 
+  CheckSet.clear();
+  for (const auto &Item : Params.ShaderPatcher.ShaderPatcherComplexMaterial.ListsDyncubemapBlocklist) {
+    if (!CheckSet.insert(Item).second) {
+      Errors.emplace_back("Duplicate entry in Complex Material Dyncubemap Block List: " + UTF16toUTF8(Item));
+    }
+  }
+
   // Shader Transforms
-  if (Params.ShaderTransforms.ParallaxToCM && (!Params.ShaderPatcher.Parallax || !Params.ShaderPatcher.ComplexMaterial)) {
-    Errors.emplace_back("Upgrade Parallax to Complex Material requires both the Complex Material and Parallax shader patchers");
+  if (Params.ShaderTransforms.ParallaxToCM &&
+      (!Params.ShaderPatcher.Parallax || !Params.ShaderPatcher.ComplexMaterial)) {
+    Errors.emplace_back(
+        "Upgrade Parallax to Complex Material requires both the Complex Material and Parallax shader patchers");
   }
 
   if (Params.ShaderTransforms.ParallaxToCM && !Params.Processing.GPUAcceleration) {
@@ -370,6 +409,53 @@ auto ParallaxGenConfig::validateParams(const PGParams &Params, vector<string> &E
 
   // Post-Patchers
 
+  // Mesh Rules
+  CheckSet.clear();
+  for (const auto &Item : Params.MeshRules.AllowList) {
+    if (Item.empty()) {
+      Errors.emplace_back("Empty entry in Mesh Allow List");
+    }
+
+    if (!CheckSet.insert(Item).second) {
+      Errors.emplace_back("Duplicate entry in Mesh Allow List: " + UTF16toUTF8(Item));
+    }
+  }
+
+  CheckSet.clear();
+  for (const auto &Item : Params.MeshRules.BlockList) {
+    if (Item.empty()) {
+      Errors.emplace_back("Empty entry in Mesh Block List");
+    }
+
+    if (!CheckSet.insert(Item).second) {
+      Errors.emplace_back("Duplicate entry in Mesh Block List: " + UTF16toUTF8(Item));
+    }
+  }
+
+  // Texture Rules
+
+  CheckSet.clear();
+  for (const auto &[Key, Value] : Params.TextureRules.TextureMaps) {
+    if (Key.empty()) {
+      Errors.emplace_back("Empty key in Texture Rules");
+    }
+
+    if (!CheckSet.insert(Key).second) {
+      Errors.emplace_back("Duplicate entry in Texture Rules: " + UTF16toUTF8(Key));
+    }
+  }
+
+  CheckSet.clear();
+  for (const auto &Item : Params.TextureRules.VanillaBSAList) {
+    if (Item.empty()) {
+      Errors.emplace_back("Empty entry in Vanilla BSA List");
+    }
+
+    if (!CheckSet.insert(Item).second) {
+      Errors.emplace_back("Duplicate entry in Vanilla BSA List: " + UTF16toUTF8(Item));
+    }
+  }
+
   return Errors.empty();
 }
 
@@ -377,12 +463,8 @@ void ParallaxGenConfig::saveUserConfig() {
   // build output json
   nlohmann::json J = UserConfig;
 
-  vector<string> ModOrderNarrowStr;
-  ModOrderNarrowStr.reserve(ModOrder.size());
-  for (const auto &Mod : ModOrder) {
-    ModOrderNarrowStr.push_back(UTF16toUTF8(Mod));
-  }
-  J["mod_order"] = ModOrderNarrowStr;
+  // Mod Order
+  J["mod_order"] = utf16VectorToUTF8(ModOrder);
 
   // Params
 
@@ -394,6 +476,7 @@ void ParallaxGenConfig::saveUserConfig() {
   J["params"]["modmanager"]["type"] = Params.ModManager.Type;
   J["params"]["modmanager"]["mo2instancedir"] = UTF16toUTF8(Params.ModManager.MO2InstanceDir.wstring());
   J["params"]["modmanager"]["mo2profile"] = UTF16toUTF8(Params.ModManager.MO2Profile);
+  J["params"]["modmanager"]["mo2useorder"] = Params.ModManager.MO2UseOrder;
 
   // "output"
   J["params"]["output"]["dir"] = UTF16toUTF8(Params.Output.Dir.wstring());
@@ -421,6 +504,16 @@ void ParallaxGenConfig::saveUserConfig() {
   // "postpatcher"
   J["params"]["postpatcher"]["optimizemeshes"] = Params.PostPatcher.OptimizeMeshes;
 
+  // "meshrules"
+  J["params"]["meshrules"]["allowlist"] = utf16VectorToUTF8(Params.MeshRules.AllowList);
+  J["params"]["meshrules"]["blocklist"] = utf16VectorToUTF8(Params.MeshRules.BlockList);
+
+  // "texturerules"
+  for (const auto &[Key, Value] : Params.TextureRules.TextureMaps) {
+    J["params"]["texturerules"]["texturemaps"][UTF16toUTF8(Key)] = NIFUtil::getStrFromTexType(Value);
+  }
+  J["params"]["texturerules"]["vanillabsalist"] = utf16VectorToUTF8(Params.TextureRules.VanillaBSAList);
+
   // Update UserConfig var
   UserConfig = J;
 
@@ -432,6 +525,16 @@ void ParallaxGenConfig::saveUserConfig() {
   } catch (const exception &E) {
     spdlog::error("Failed to save user config: {}", E.what());
   }
+}
+
+auto ParallaxGenConfig::utf16VectorToUTF8(const vector<wstring> &Vec) -> vector<string> {
+  vector<string> Out;
+  Out.reserve(Vec.size());
+  for (const auto &Item : Vec) {
+    Out.push_back(UTF16toUTF8(Item));
+  }
+
+  return Out;
 }
 
 auto ParallaxGenConfig::PGParams::getString() const -> wstring {
