@@ -1,6 +1,7 @@
 #include <CLI/CLI.hpp>
 
 #include <NifFile.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 #include <spdlog/common.h>
 #include <spdlog/logger.h>
 #include <spdlog/sinks/rotating_file_sink.h>
@@ -191,6 +192,12 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   if (filesystem::equivalent(Params.Output.Dir, PGD.getDataPath())) {
     spdlog::critical("Output directory cannot be the same directory as your data folder. "
                      "Exiting.");
+    exit(1);
+  }
+
+  // If output dir is a subdirectory of data dir vfs issues can occur
+  if (boost::istarts_with(Params.Output.Dir.wstring(), BG.getGameDataPath().wstring() + "\\")) {
+    spdlog::critical("Output directory cannot be a subdirectory of your data folder. Exiting.");
     exit(1);
   }
 

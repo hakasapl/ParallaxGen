@@ -21,6 +21,8 @@
 - Advanced is now a checkbox with persistence in the launcher GUI
 - Added critical error if outputting to MO2 mod and mod is enabled in MO2 VFS
 - Added critical error if DynDoLOD output is activated
+- Fixed failed shader upgrade applying the wrong shader
+- Shader transform errors don't post more than once now
 
 ## [0.7.1] - 2024-11-18
 

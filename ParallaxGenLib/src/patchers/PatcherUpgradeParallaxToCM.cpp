@@ -25,25 +25,32 @@ auto PatcherUpgradeParallaxToCM::getFromShader() -> NIFUtil::ShapeShader {
 auto PatcherUpgradeParallaxToCM::getToShader() -> NIFUtil::ShapeShader { return NIFUtil::ShapeShader::COMPLEXMATERIAL; }
 
 PatcherUpgradeParallaxToCM::PatcherUpgradeParallaxToCM(std::filesystem::path NIFPath, nifly::NifFile *NIF)
-    : PatcherShaderTransform(std::move(NIFPath), NIF, "UpgradeParallaxToCM") {}
+    : PatcherShaderTransform(std::move(NIFPath), NIF, "UpgradeParallaxToCM", NIFUtil::ShapeShader::VANILLAPARALLAX,
+                             NIFUtil::ShapeShader::COMPLEXMATERIAL) {}
 
-auto PatcherUpgradeParallaxToCM::transform(const PatcherShader::PatcherMatch &FromMatch)
-    -> PatcherShader::PatcherMatch {
+auto PatcherUpgradeParallaxToCM::transform(const PatcherShader::PatcherMatch &FromMatch,
+                                           PatcherShader::PatcherMatch &Result) -> bool {
   lock_guard<mutex> Lock(UpgradeCMMutex);
 
   const auto HeightMap = FromMatch.MatchedPath;
+
+  Result = FromMatch;
+
+  if (alreadyTried(HeightMap)) {
+    // already tried this file
+    return false;
+  }
 
   // Get texture base (remove _p.dds)
   const auto TexBase = NIFUtil::getTexBase(HeightMap);
 
   const filesystem::path ComplexMap = TexBase + L"_m.dds";
 
-  PatcherShader::PatcherMatch Result = FromMatch;
   Result.MatchedPath = ComplexMap;
 
   if (getPGD()->isGenerated(ComplexMap)) {
     // this was already upgraded
-    return Result;
+    return true;
   }
 
   static const auto CMBaseMap = getPGD()->getTextureMapConst(NIFUtil::TextureSlots::ENVMASK);
@@ -66,9 +73,10 @@ auto PatcherUpgradeParallaxToCM::transform(const PatcherShader::PatcherMatch &Fr
     const HRESULT HR = DirectX::SaveToDDSFile(NewComplexMap.GetImages(), NewComplexMap.GetImageCount(),
                                               NewComplexMap.GetMetadata(), DirectX::DDS_FLAGS_NONE, OutputPath.c_str());
     if (FAILED(HR)) {
-      Logger::error(L"Unable to save complex material {}: {}", OutputPath.wstring(),
+      Logger::debug(L"Unable to save complex material {}: {}", OutputPath.wstring(),
                     ParallaxGenUtil::ASCIItoUTF16(ParallaxGenD3D::getHRESULTErrorMessage(HR)));
-      return FromMatch;
+      postError(HeightMap);
+      return false;
     }
 
     // add newly created file to complexMaterialMaps for later processing
@@ -81,8 +89,9 @@ auto PatcherUpgradeParallaxToCM::transform(const PatcherShader::PatcherMatch &Fr
 
     Logger::debug(L"Generated complex material map: {}", ComplexMap.wstring());
 
-    return Result;
+    return true;
   }
 
-  return FromMatch;
+  postError(HeightMap);
+  return false;
 }
