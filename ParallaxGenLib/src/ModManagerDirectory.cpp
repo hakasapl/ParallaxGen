@@ -86,6 +86,7 @@ void ModManagerDirectory::populateModFileMapMO2(const filesystem::path &Instance
   // Find MO2 paths from ModOrganizer.ini
   filesystem::path ProfileDir;
   filesystem::path ModDir;
+  filesystem::path BaseDir;
 
   ifstream MO2IniFileF(MO2IniFile);
   string MO2IniLine;
@@ -94,17 +95,27 @@ void ModManagerDirectory::populateModFileMapMO2(const filesystem::path &Instance
       ProfileDir = InstanceDir / MO2IniLine.substr(19);
     } else if (MO2IniLine.starts_with("mod_directory=")) {
       ModDir = InstanceDir / MO2IniLine.substr(14);
+    } else if (MO2IniLine.starts_with("base_directory=")) {
+      BaseDir = InstanceDir / MO2IniLine.substr(15);
     }
   }
 
   MO2IniFileF.close();
 
   if (ProfileDir.empty()) {
-    ProfileDir = InstanceDir / "profiles";
+    if (BaseDir.empty()) {
+      ProfileDir = InstanceDir / "profiles";
+    } else {
+      ProfileDir = BaseDir / "profiles";
+    }
   }
 
   if (ModDir.empty()) {
-    ModDir = InstanceDir / "mods";
+    if (BaseDir.empty()) {
+      ModDir = InstanceDir / "mods";
+    } else {
+      ModDir = BaseDir / "mods";
+    }
   }
 
   // Find location of modlist.txt
@@ -217,27 +228,33 @@ auto ModManagerDirectory::getModManagerTypeFromStr(const string &Type) -> ModMan
 }
 
 auto ModManagerDirectory::getMO2ProfilesFromInstanceDir(const filesystem::path &InstanceDir) -> vector<wstring> {
-  // Find profiles folder
-  filesystem::path ProfileDir;
-
   // First read modorganizer.ini in the instance folder to get the profiles and mods folders
   filesystem::path MO2IniFile = InstanceDir / L"modorganizer.ini";
   if (!filesystem::exists(MO2IniFile)) {
     return {};
   }
 
-  // Find MO2 paths from ModOrganizer.ini
-  ifstream MO2IniFileF(MO2IniFile);
+  filesystem::path ProfileDir;
+  filesystem::path BaseDir;
 
+  ifstream MO2IniFileF(MO2IniFile);
   string MO2IniLine;
   while(getline(MO2IniFileF, MO2IniLine)) {
     if (MO2IniLine.starts_with("profiles_directory=")) {
       ProfileDir = InstanceDir / MO2IniLine.substr(19);
+    } else if (MO2IniLine.starts_with("base_directory=")) {
+      BaseDir = InstanceDir / MO2IniLine.substr(15);
     }
   }
 
+  MO2IniFileF.close();
+
   if (ProfileDir.empty()) {
-    ProfileDir = InstanceDir / "profiles";
+    if (BaseDir.empty()) {
+      ProfileDir = InstanceDir / "profiles";
+    } else {
+      ProfileDir = BaseDir / "profiles";
+    }
   }
 
   // check if the "profiles" folder exists
