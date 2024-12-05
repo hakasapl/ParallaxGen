@@ -16,6 +16,7 @@
 - Added mesh allowlist
 - Added mesh allowlist, mesh blocklist, texture maps, vanilla bsa list, and dyncubemap blocklist to GUI advanced options
 - Added ESMify option for ParallaxGen.esp
+- INI files in the data folder will be read for BSA loading now
 
 ## [0.7.1] - 2024-11-18
 
