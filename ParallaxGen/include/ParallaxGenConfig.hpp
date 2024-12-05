@@ -53,6 +53,9 @@ public:
       auto operator==(const Output &Other) const -> bool { return Dir == Other.Dir && Zip == Other.Zip; }
     } Output;
 
+    // Advanced
+    bool Advanced = false;
+
     // Processing
     struct Processing {
       bool Multithread = true;
@@ -137,7 +140,8 @@ public:
       return Autostart == Other.Autostart && Game == Other.Game && ModManager == Other.ModManager &&
              Output == Other.Output && Processing == Other.Processing && PrePatcher == Other.PrePatcher &&
              ShaderPatcher == Other.ShaderPatcher && ShaderTransforms == Other.ShaderTransforms &&
-             PostPatcher == Other.PostPatcher && MeshRules == Other.MeshRules && TextureRules == Other.TextureRules;
+             PostPatcher == Other.PostPatcher && MeshRules == Other.MeshRules && TextureRules == Other.TextureRules &&
+             Advanced == Other.Advanced;
     }
 
     auto operator!=(const PGParams &Other) const -> bool { return !(*this == Other); }
@@ -146,7 +150,7 @@ public:
 private:
   std::filesystem::path ExePath; /** Stores the ExePath of ParallaxGen.exe */
 
-  PGParams Params;                                 /** Stores the configured parameters */
+  PGParams Params; /** Stores the configured parameters */
 
   std::mutex ModOrderMutex;           /** Mutex for locking mod order */
   std::vector<std::wstring> ModOrder; /** Stores the mod order configuration */

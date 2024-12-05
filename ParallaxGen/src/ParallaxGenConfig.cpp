@@ -185,6 +185,11 @@ auto ParallaxGenConfig::addConfigJSON(const nlohmann::json &J) -> void {
       ParamJ["output"]["zip"].get_to<bool>(Params.Output.Zip);
     }
 
+    // "advanced"
+    if (ParamJ.contains("advanced")) {
+      ParamJ["advanced"].get_to<bool>(Params.Advanced);
+    }
+
     // "processing"
     if (ParamJ.contains("processing") && ParamJ["processing"].contains("multithread")) {
       ParamJ["processing"]["multithread"].get_to<bool>(Params.Processing.Multithread);
@@ -200,6 +205,9 @@ auto ParallaxGenConfig::addConfigJSON(const nlohmann::json &J) -> void {
     }
     if (ParamJ.contains("processing") && ParamJ["processing"].contains("pluginpatching")) {
       ParamJ["processing"]["pluginpatching"].get_to<bool>(Params.Processing.PluginPatching);
+    }
+    if (ParamJ.contains("processing") && ParamJ["processing"].contains("pluginesmify")) {
+      ParamJ["processing"]["pluginesmify"].get_to<bool>(Params.Processing.PluginESMify);
     }
     if (ParamJ.contains("processing") && ParamJ["processing"].contains("mapfrommeshes")) {
       ParamJ["processing"]["mapfrommeshes"].get_to<bool>(Params.Processing.MapFromMeshes);
@@ -482,12 +490,16 @@ void ParallaxGenConfig::saveUserConfig() {
   J["params"]["output"]["dir"] = UTF16toUTF8(Params.Output.Dir.wstring());
   J["params"]["output"]["zip"] = Params.Output.Zip;
 
+  // "advanced"
+  J["params"]["advanced"] = Params.Advanced;
+
   // "processing"
   J["params"]["processing"]["multithread"] = Params.Processing.Multithread;
   J["params"]["processing"]["highmem"] = Params.Processing.HighMem;
   J["params"]["processing"]["gpuacceleration"] = Params.Processing.GPUAcceleration;
   J["params"]["processing"]["bsa"] = Params.Processing.BSA;
   J["params"]["processing"]["pluginpatching"] = Params.Processing.PluginPatching;
+  J["params"]["processing"]["pluginesmify"] = Params.Processing.PluginESMify;
   J["params"]["processing"]["mapfrommeshes"] = Params.Processing.MapFromMeshes;
 
   // "prepatcher"

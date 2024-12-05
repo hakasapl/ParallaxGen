@@ -155,6 +155,17 @@ LauncherWindow::LauncherWindow(ParallaxGenConfig &PGC)
   LeftSizer->Add(OutputSizer, 0, wxEXPAND | wxALL, 5);
 
   //
+  // Advanced
+  //
+  auto *AdvancedSizer = new wxStaticBoxSizer(wxVERTICAL, this, "Advanced");
+  AdvancedOptionsCheckbox = // NOLINT(cppcoreguidelines-owning-memory)
+      new wxCheckBox(this, wxID_ANY, "Show Advanced Options");
+  AdvancedOptionsCheckbox->Bind(wxEVT_CHECKBOX, &LauncherWindow::onAdvancedOptionsChange, this);
+  AdvancedSizer->Add(AdvancedOptionsCheckbox, 0, wxALL, 5);
+
+  LeftSizer->Add(AdvancedSizer, 0, wxEXPAND | wxALL, 5);
+
+  //
   // Right Panel
   //
 
@@ -277,10 +288,6 @@ LauncherWindow::LauncherWindow(ParallaxGenConfig &PGC)
   //
   // Advanced
   //
-
-  AdvancedButton = new wxButton(this, wxID_ANY, "Show Advanced"); // NOLINT(cppcoreguidelines-owning-memory)
-  LeftSizer->Add(AdvancedButton, 0, wxALIGN_LEFT | wxALL, 5);
-  AdvancedButton->Bind(wxEVT_BUTTON, &LauncherWindow::onToggleAdvanced, this);
 
   // Processing Options (hidden by default)
   AdvancedOptionsSizer = // NOLINT(cppcoreguidelines-owning-memory, cppcoreguidelines-prefer-member-initializer)
@@ -490,6 +497,10 @@ void LauncherWindow::loadConfig() {
   OutputLocationTextbox->SetValue(InitParams.Output.Dir.wstring());
   OutputZipCheckbox->SetValue(InitParams.Output.Zip);
 
+  // Advanced
+  AdvancedOptionsCheckbox->SetValue(InitParams.Advanced);
+  updateAdvanced();
+
   // Processing
   ProcessingPluginPatchingCheckbox->SetValue(InitParams.Processing.PluginPatching);
   ProcessingPluginPatchingOptionsESMifyCheckbox->SetValue(InitParams.Processing.PluginESMify);
@@ -599,6 +610,26 @@ void LauncherWindow::onOutputLocationChange([[maybe_unused]] wxCommandEvent &Eve
 
 void LauncherWindow::onOutputZipChange([[maybe_unused]] wxCommandEvent &Event) { updateDisabledElements(); }
 
+void LauncherWindow::onAdvancedOptionsChange([[maybe_unused]] wxCommandEvent &Event) {
+  updateAdvanced();
+
+  updateDisabledElements();
+}
+
+void LauncherWindow::updateAdvanced() {
+  bool AdvancedVisible = AdvancedOptionsCheckbox->GetValue();
+
+  AdvancedOptionsSizer->Show(AdvancedVisible);
+  ProcessingOptionsSizer->Show(AdvancedVisible);
+
+  if (ShaderPatcherComplexMaterialCheckbox->GetValue()) {
+    ShaderPatcherComplexMaterialOptionsSizer->Show(AdvancedVisible);
+  }
+
+  Layout(); // Refresh layout to apply visibility changes
+  Fit();
+}
+
 void LauncherWindow::onProcessingPluginPatchingChange([[maybe_unused]] wxCommandEvent &Event) {
   if (ProcessingPluginPatchingCheckbox->GetValue()) {
     ProcessingPluginPatchingOptions->Show(ProcessingPluginPatchingCheckbox->GetValue());
@@ -638,7 +669,7 @@ void LauncherWindow::onPrePatcherDisableMLPChange([[maybe_unused]] wxCommandEven
 void LauncherWindow::onShaderPatcherParallaxChange([[maybe_unused]] wxCommandEvent &Event) { updateDisabledElements(); }
 
 void LauncherWindow::onShaderPatcherComplexMaterialChange([[maybe_unused]] wxCommandEvent &Event) {
-  if (ShaderPatcherComplexMaterialCheckbox->GetValue() && AdvancedVisible) {
+  if (ShaderPatcherComplexMaterialCheckbox->GetValue() && AdvancedOptionsCheckbox->GetValue()) {
     ShaderPatcherComplexMaterialOptionsSizer->Show(ShaderPatcherComplexMaterialCheckbox->GetValue());
     Layout(); // Refresh layout to apply visibility changes
     Fit();
@@ -776,6 +807,9 @@ auto LauncherWindow::getParams() -> ParallaxGenConfig::PGParams {
   Params.Output.Dir = OutputLocationTextbox->GetValue().ToStdWstring();
   Params.Output.Zip = OutputZipCheckbox->GetValue();
 
+  // Advanced
+  Params.Advanced = AdvancedOptionsCheckbox->GetValue();
+
   // Processing
   Params.Processing.PluginPatching = ProcessingPluginPatchingCheckbox->GetValue();
   Params.Processing.PluginESMify = ProcessingPluginPatchingOptionsESMifyCheckbox->GetValue();
@@ -844,20 +878,6 @@ auto LauncherWindow::getParams() -> ParallaxGenConfig::PGParams {
   }
 
   return Params;
-}
-
-void LauncherWindow::onToggleAdvanced([[maybe_unused]] wxCommandEvent &Event) {
-  AdvancedVisible = !AdvancedVisible;
-  AdvancedOptionsSizer->Show(AdvancedVisible);
-  ProcessingOptionsSizer->Show(AdvancedVisible);
-
-  if (ShaderPatcherComplexMaterialCheckbox->GetValue()) {
-    ShaderPatcherComplexMaterialOptionsSizer->Show(AdvancedVisible);
-  }
-
-  AdvancedButton->SetLabel(AdvancedVisible ? "Hide Advanced" : "Show Advanced");
-  Layout(); // Refresh layout to apply the visibility change
-  Fit();
 }
 
 void LauncherWindow::onBrowseGameLocation([[maybe_unused]] wxCommandEvent &Event) {
