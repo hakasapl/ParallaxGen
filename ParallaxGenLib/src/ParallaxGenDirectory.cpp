@@ -96,6 +96,9 @@ auto ParallaxGenDirectory::mapFiles(const vector<wstring> &NIFBlocklist, const v
 #else
   const size_t NumThreads = boost::thread::hardware_concurrency();
 #endif
+
+  bool KillThreads = false;
+
   boost::asio::thread_pool MapTextureFromMeshPool(NumThreads);
 
   // Loop through each mesh to confirm textures
@@ -122,11 +125,12 @@ auto ParallaxGenDirectory::mapFiles(const vector<wstring> &NIFBlocklist, const v
     }
 
     if (Multithreading) {
-      boost::asio::post(MapTextureFromMeshPool, [this, &TaskTracker, &Mesh, &CacheNIFs] {
+      boost::asio::post(MapTextureFromMeshPool, [this, &TaskTracker, &Mesh, &CacheNIFs, &KillThreads] {
         ParallaxGenTask::PGResult Result = ParallaxGenTask::PGResult::SUCCESS;
         try {
           Result = mapTexturesFromNIF(Mesh, CacheNIFs);
         } catch (const exception &E) {
+          KillThreads = true;
           spdlog::error(L"Exception in thread loading NIF \"{}\": {}", Mesh.wstring(), ASCIItoUTF16(E.what()));
           Result = ParallaxGenTask::PGResult::FAILURE;
         }
@@ -144,6 +148,13 @@ auto ParallaxGenDirectory::mapFiles(const vector<wstring> &NIFBlocklist, const v
   }
 
   if (Multithreading) {
+    while (!TaskTracker.isCompleted()) {
+      if (KillThreads) {
+        MapTextureFromMeshPool.stop();
+        throw runtime_error("Exception in thread mapping textures from NIFs");
+      }
+    }
+
     // Wait for all threads to complete
     MapTextureFromMeshPool.join();
   }

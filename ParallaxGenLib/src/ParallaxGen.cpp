@@ -69,18 +69,29 @@ void ParallaxGen::patchMeshes(const PatcherUtil::PatcherSet &Patchers, const uno
 
     boost::asio::thread_pool MeshPatchPool(NumThreads);
 
-    for (const auto &Mesh : Meshes) {
-      boost::asio::post(MeshPatchPool, [this, &TaskTracker, &DiffJSON, &Mesh, &PatchPlugin, &Patchers, &ModPriority] {
-        ParallaxGenTask::PGResult Result = ParallaxGenTask::PGResult::SUCCESS;
-        try {
-          Result = processNIF(Patchers, ModPriority, Mesh, &DiffJSON, PatchPlugin);
-        } catch (const exception &E) {
-          spdlog::error(L"Exception in thread patching NIF {}: {}", Mesh.wstring(), ASCIItoUTF16(E.what()));
-          Result = ParallaxGenTask::PGResult::FAILURE;
-        }
+    bool KillThreads = false;
 
-        TaskTracker.completeJob(Result);
-      });
+    for (const auto &Mesh : Meshes) {
+      boost::asio::post(
+          MeshPatchPool, [this, &TaskTracker, &DiffJSON, &Mesh, &PatchPlugin, &Patchers, &ModPriority, &KillThreads] {
+            ParallaxGenTask::PGResult Result = ParallaxGenTask::PGResult::SUCCESS;
+            try {
+              Result = processNIF(Patchers, ModPriority, Mesh, &DiffJSON, PatchPlugin);
+            } catch (const exception &E) {
+              KillThreads = true;
+              spdlog::error(L"Exception in thread patching NIF {}: {}", Mesh.wstring(), ASCIItoUTF16(E.what()));
+              Result = ParallaxGenTask::PGResult::FAILURE;
+            }
+
+            TaskTracker.completeJob(Result);
+          });
+    }
+
+    while (!TaskTracker.isCompleted()) {
+      if (KillThreads) {
+        MeshPatchPool.stop();
+        throw runtime_error("Exception in thread patching NIF");
+      }
     }
 
     // verify that all threads complete (should be redundant)
@@ -125,21 +136,31 @@ auto ParallaxGen::findModConflicts(const PatcherUtil::PatcherSet &Patchers, cons
     const size_t NumThreads = boost::thread::hardware_concurrency();
 #endif
 
+    bool KillThreads = false;
+
     boost::asio::thread_pool MeshPatchPool(NumThreads);
 
     for (const auto &Mesh : Meshes) {
       boost::asio::post(MeshPatchPool, [this, &TaskTracker, &Mesh, &PatchPlugin, &ConflictMods, &ConflictModsMutex,
-                                        &Patchers] {
+                                        &Patchers, &KillThreads] {
         ParallaxGenTask::PGResult Result = ParallaxGenTask::PGResult::SUCCESS;
         try {
           Result = processNIF(Patchers, nullptr, Mesh, nullptr, PatchPlugin, true, &ConflictMods, &ConflictModsMutex);
         } catch (const exception &E) {
+          KillThreads = true;
           spdlog::error(L"Exception in thread finding mod conflicts {}: {}", Mesh.wstring(), ASCIItoUTF16(E.what()));
           Result = ParallaxGenTask::PGResult::FAILURE;
         }
 
         TaskTracker.completeJob(Result);
       });
+    }
+
+    while (!TaskTracker.isCompleted()) {
+      if (KillThreads) {
+        MeshPatchPool.stop();
+        throw runtime_error("Exception in thread finding mod conflicts");
+      }
     }
 
     // verify that all threads complete (should be redundant)
@@ -328,8 +349,7 @@ auto ParallaxGen::processNIF(
     }
 
     // Sort ShapeTracker by new block id
-    sort(ShapeTracker.begin(), ShapeTracker.end(),
-         [](const auto &A, const auto &B) { return get<2>(A) < get<2>(B); });
+    sort(ShapeTracker.begin(), ShapeTracker.end(), [](const auto &A, const auto &B) { return get<2>(A) < get<2>(B); });
 
     // Find new 3d index for each shape
     for (int I = 0; I < ShapeTracker.size(); I++) {
@@ -451,7 +471,7 @@ auto ParallaxGen::processShape(
   unordered_set<wstring> ModSet;
   if (!CacheExists) {
     for (const auto &[Shader, Patcher] : Patchers.ShaderPatchers) {
-        // note: name is defined in source code in UTF8-encoded files
+      // note: name is defined in source code in UTF8-encoded files
       Logger::Prefix PrefixPatches(UTF8toUTF16(Patcher->getPatcherName()));
 
       // Check if shader should be applied
@@ -566,7 +586,8 @@ void ParallaxGen::addFileToZip(mz_zip_archive &Zip, const filesystem::path &File
   const string RelativeFilePathAscii = UTF16toASCII(RelativePath.wstring());
 
   // add file to Zip
-  if (mz_zip_writer_add_mem(&Zip, RelativeFilePathAscii.c_str(), Buffer.data(), Buffer.size(), MZ_NO_COMPRESSION) == 0) {
+  if (mz_zip_writer_add_mem(&Zip, RelativeFilePathAscii.c_str(), Buffer.data(), Buffer.size(), MZ_NO_COMPRESSION) ==
+      0) {
     spdlog::error(L"Error adding file to zip: {}", FilePath.wstring());
     exit(1);
   }

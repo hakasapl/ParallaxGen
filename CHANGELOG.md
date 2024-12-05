@@ -23,6 +23,7 @@
 - Added critical error if DynDoLOD output is activated
 - Fixed failed shader upgrade applying the wrong shader
 - Shader transform errors don't post more than once now
+- Exceptions in threads will trigger exceptions in main thread now to prevent error spam
 
 ## [0.7.1] - 2024-11-18
 
