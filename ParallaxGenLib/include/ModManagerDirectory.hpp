@@ -8,11 +8,7 @@
 class ModManagerDirectory {
 
 public:
-  enum class ModManagerType {
-    None,
-    Vortex,
-    ModOrganizer2
-  };
+  enum class ModManagerType { None, Vortex, ModOrganizer2 };
 
 private:
   std::unordered_map<std::filesystem::path, std::wstring> ModFileMap;
@@ -30,7 +26,8 @@ public:
 
   static auto getMO2ProfilesFromInstanceDir(const std::filesystem::path &InstanceDir) -> std::vector<std::wstring>;
 
-  void populateModFileMapMO2(const std::filesystem::path &InstanceDir, const std::wstring &Profile);
+  void populateModFileMapMO2(const std::filesystem::path &InstanceDir, const std::wstring &Profile,
+                             const std::filesystem::path &OutputDir);
   void populateModFileMapVortex(const std::filesystem::path &DeploymentDir);
 
   // Helpers

@@ -194,17 +194,6 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
     exit(1);
   }
 
-  // delete existing output
-  PG.deleteOutputDir();
-
-  // Check if ParallaxGen output already exists in data directory
-  const filesystem::path PGStateFilePath = BG.getGameDataPath() / ParallaxGen::getDiffJSONName();
-  if (filesystem::exists(PGStateFilePath)) {
-    spdlog::critical("ParallaxGen meshes exist in your data directory, please delete before "
-                     "re-running.");
-    exit(1);
-  }
-
   // Init PGP library
   if (Params.Processing.PluginPatching) {
     spdlog::info("Initializing plugin patcher");
@@ -217,12 +206,32 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   if (Params.ModManager.Type == ModManagerDirectory::ModManagerType::ModOrganizer2 &&
       !Params.ModManager.MO2InstanceDir.empty() && !Params.ModManager.MO2Profile.empty()) {
     // MO2
-    MMD.populateModFileMapMO2(Params.ModManager.MO2InstanceDir, Params.ModManager.MO2Profile);
+    MMD.populateModFileMapMO2(Params.ModManager.MO2InstanceDir, Params.ModManager.MO2Profile, Params.Output.Dir);
   } else if (Params.ModManager.Type == ModManagerDirectory::ModManagerType::Vortex) {
     // Vortex
     MMD.populateModFileMapVortex(BG.getGameDataPath());
   }
 
+  // delete existing output
+  PG.deleteOutputDir();
+
+  // Check if ParallaxGen output already exists in data directory
+  const filesystem::path PGStateFilePath = BG.getGameDataPath() / ParallaxGen::getDiffJSONName();
+  if (filesystem::exists(PGStateFilePath)) {
+    spdlog::critical("ParallaxGen meshes exist in your data directory, please delete before "
+                     "re-running.");
+    exit(1);
+  }
+
+  // Check if dyndolod.esp exists
+  const auto ActivePlugins = BG.getActivePlugins(false, true);
+  if (find(ActivePlugins.begin(), ActivePlugins.end(), L"dyndolod.esp") != ActivePlugins.end()) {
+    spdlog::critical("DynDoLOD and TexGen outputs must be disabled prior to running ParallaxGen. It is recommended to "
+                     "generate LODs after running ParallaxGen with the ParallaxGen output enabled.");
+    exit(1);
+  }
+
+  // Init file map
   PGD.populateFileMap(Params.Processing.BSA);
 
   // Map files

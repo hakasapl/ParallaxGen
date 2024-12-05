@@ -296,7 +296,7 @@ auto BethesdaGame::getPluginsFile() const -> filesystem::path {
   return GamePluginsFile;
 }
 
-auto BethesdaGame::getActivePlugins(const bool &TrimExtension) const -> vector<wstring> {
+auto BethesdaGame::getActivePlugins(const bool &TrimExtension, const bool &Lowercase) const -> vector<wstring> {
   vector<wstring> OutputLO;
 
   // Build set of plugins that are actually active
@@ -365,7 +365,12 @@ auto BethesdaGame::getActivePlugins(const bool &TrimExtension) const -> vector<w
     }
 
     // Add to output list
-    OutputLO.push_back(ParallaxGenUtil::UTF8toUTF16(Line));
+    auto OutputLOElem = ParallaxGenUtil::UTF8toUTF16(Line);
+    if (Lowercase) {
+      OutputLOElem = ParallaxGenUtil::ToLowerASCII(OutputLOElem);
+    }
+
+    OutputLO.push_back(OutputLOElem);
   }
 
   // close file handle
