@@ -379,7 +379,7 @@ public class PGMutagen
   }
 
   [UnmanagedCallersOnly(EntryPoint = "Finalize", CallConvs = [typeof(CallConvCdecl)])]
-  public static void Finalize([DNNE.C99Type("const wchar_t*")] IntPtr outputPathPtr)
+  public static void Finalize([DNNE.C99Type("const wchar_t*")] IntPtr outputPathPtr, [DNNE.C99Type("const int")] int esmify)
   {
     try
     {
@@ -573,6 +573,10 @@ public class PGMutagen
         // Can be light
         MessageHandler.Log("[Finalize] Output Plugin can be compacted to a small master", 0);
         ModCompaction.CompactToSmallMaster(OutMod);
+      }
+
+      if (esmify == 1) {
+        OutMod.IsMaster = true;
       }
 
       // Write the output plugin

@@ -294,7 +294,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   // Write plugin
   if (Params.Processing.PluginPatching) {
     spdlog::info("Saving ParallaxGen.esp");
-    ParallaxGenPlugin::savePlugin(Params.Output.Dir);
+    ParallaxGenPlugin::savePlugin(Params.Output.Dir, Params.Processing.PluginESMify);
   }
 
   deployAssets(&PGD, Params.Output.Dir, ExePath);

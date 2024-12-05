@@ -86,6 +86,9 @@ private:
   // Processing
   wxCheckBox *ProcessingPluginPatchingCheckbox;
   void onProcessingPluginPatchingChange(wxCommandEvent &Event);
+  wxStaticBoxSizer *ProcessingPluginPatchingOptions;
+  wxCheckBox *ProcessingPluginPatchingOptionsESMifyCheckbox;
+  void onProcessingPluginPatchingOptionsESMifyChange(wxCommandEvent &Event);
 
   wxCheckBox *ProcessingMultithreadingCheckbox;
   void onProcessingMultithreadingChange(wxCommandEvent &Event);

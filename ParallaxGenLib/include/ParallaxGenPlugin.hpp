@@ -20,7 +20,7 @@ private:
   static void libInitialize(const int &GameType, const std::wstring &DataPath, const std::wstring &OutputPlugin,
                             const std::vector<std::wstring> &LoadOrder = {});
   static void libPopulateObjs();
-  static void libFinalize(const std::filesystem::path &OutputPath);
+  static void libFinalize(const std::filesystem::path &OutputPath, const bool &ESMify);
 
   /// @brief get the TXST objects that are used by a shape
   /// @param[in] NIFName filename of the nif
@@ -96,5 +96,5 @@ public:
   static void set3DIndices(const std::wstring &NIFPath,
                            const std::vector<std::tuple<nifly::NiShape *, int, int>> &ShapeTracker);
 
-  static void savePlugin(const std::filesystem::path &OutputDir);
+  static void savePlugin(const std::filesystem::path &OutputDir, bool ESMify);
 };

@@ -299,6 +299,18 @@ LauncherWindow::LauncherWindow(ParallaxGenConfig &PGC)
   ProcessingPluginPatchingCheckbox->Bind(wxEVT_CHECKBOX, &LauncherWindow::onProcessingPluginPatchingChange, this);
   ProcessingOptionsSizer->Add(ProcessingPluginPatchingCheckbox, 0, wxALL, 5);
 
+  ProcessingPluginPatchingOptions = // NOLINT(cppcoreguidelines-owning-memory)
+      new wxStaticBoxSizer(wxVERTICAL, this, "Plugin Patching Options");
+  ProcessingPluginPatchingOptionsESMifyCheckbox = // NOLINT(cppcoreguidelines-owning-memory)
+      new wxCheckBox(this, wxID_ANY, "ESMify Plugin");
+  ProcessingPluginPatchingOptionsESMifyCheckbox->SetToolTip(
+      "ESM flags the output plugin (don't check this if you don't know what you're doing)");
+  ProcessingPluginPatchingOptionsESMifyCheckbox->Bind(
+      wxEVT_CHECKBOX, &LauncherWindow::onProcessingPluginPatchingOptionsESMifyChange, this);
+  ProcessingPluginPatchingOptions->Add(ProcessingPluginPatchingOptionsESMifyCheckbox, 0, wxALL, 5);
+
+  ProcessingOptionsSizer->Add(ProcessingPluginPatchingOptions, 0, wxEXPAND | wxALL, 5);
+
   ProcessingMultithreadingCheckbox = // NOLINT(cppcoreguidelines-owning-memory)
       new wxCheckBox(this, wxID_ANY, "Multithreading");
   ProcessingMultithreadingCheckbox->SetToolTip("Speeds up runtime at the cost of using more resources");
@@ -411,6 +423,7 @@ LauncherWindow::LauncherWindow(ParallaxGenConfig &PGC)
   AdvancedOptionsSizer->Show(false);                     // Initially hidden
   ShaderPatcherComplexMaterialOptionsSizer->Show(false); // Initially hidden
   ProcessingOptionsSizer->Show(false);                   // Initially hidden
+  ProcessingPluginPatchingOptions->Show(false);          // Initially hidden
 
   ColumnsSizer->Add(AdvancedOptionsSizer, 0, wxEXPAND | wxALL, 0);
   ColumnsSizer->Add(LeftSizer, 1, wxEXPAND | wxALL, 0);
@@ -479,6 +492,7 @@ void LauncherWindow::loadConfig() {
 
   // Processing
   ProcessingPluginPatchingCheckbox->SetValue(InitParams.Processing.PluginPatching);
+  ProcessingPluginPatchingOptionsESMifyCheckbox->SetValue(InitParams.Processing.PluginESMify);
   ProcessingMultithreadingCheckbox->SetValue(InitParams.Processing.Multithread);
   ProcessingHighMemCheckbox->SetValue(InitParams.Processing.HighMem);
   ProcessingGPUAccelerationCheckbox->SetValue(InitParams.Processing.GPUAcceleration);
@@ -586,6 +600,20 @@ void LauncherWindow::onOutputLocationChange([[maybe_unused]] wxCommandEvent &Eve
 void LauncherWindow::onOutputZipChange([[maybe_unused]] wxCommandEvent &Event) { updateDisabledElements(); }
 
 void LauncherWindow::onProcessingPluginPatchingChange([[maybe_unused]] wxCommandEvent &Event) {
+  if (ProcessingPluginPatchingCheckbox->GetValue()) {
+    ProcessingPluginPatchingOptions->Show(ProcessingPluginPatchingCheckbox->GetValue());
+    Layout(); // Refresh layout to apply visibility changes
+    Fit();
+  } else {
+    ProcessingPluginPatchingOptions->Show(false);
+    Layout(); // Refresh layout to apply visibility changes
+    Fit();
+  }
+
+  updateDisabledElements();
+}
+
+void LauncherWindow::onProcessingPluginPatchingOptionsESMifyChange([[maybe_unused]] wxCommandEvent &Event) {
   updateDisabledElements();
 }
 
@@ -750,6 +778,7 @@ auto LauncherWindow::getParams() -> ParallaxGenConfig::PGParams {
 
   // Processing
   Params.Processing.PluginPatching = ProcessingPluginPatchingCheckbox->GetValue();
+  Params.Processing.PluginESMify = ProcessingPluginPatchingOptionsESMifyCheckbox->GetValue();
   Params.Processing.Multithread = ProcessingMultithreadingCheckbox->GetValue();
   Params.Processing.HighMem = ProcessingHighMemCheckbox->GetValue();
   Params.Processing.GPUAcceleration = ProcessingGPUAccelerationCheckbox->GetValue();

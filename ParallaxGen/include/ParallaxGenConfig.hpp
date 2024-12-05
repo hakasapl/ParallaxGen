@@ -60,6 +60,7 @@ public:
       bool GPUAcceleration = true;
       bool BSA = true;
       bool PluginPatching = true;
+      bool PluginESMify = false;
       bool MapFromMeshes = true;
 
       auto operator==(const Processing &Other) const -> bool {

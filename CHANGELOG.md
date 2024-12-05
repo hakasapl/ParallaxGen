@@ -15,6 +15,7 @@
 - When PBR is the only shader patcher selected "map textures from meshes" will be automatically unselected
 - Added mesh allowlist
 - Added mesh allowlist, mesh blocklist, texture maps, vanilla bsa list, and dyncubemap blocklist to GUI advanced options
+- Added ESMify option for ParallaxGen.esp
 
 ## [0.7.1] - 2024-11-18
 
