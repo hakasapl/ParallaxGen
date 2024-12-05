@@ -58,6 +58,45 @@ auto ParallaxGenConfig::getUserConfigFile() const -> filesystem::path {
   return UserConfigFile;
 }
 
+auto ParallaxGenConfig::getDefaultParams() -> PGParams {
+  PGParams OutParams;
+
+  // Game
+  OutParams.Game.Dir = BethesdaGame::findGamePathFromSteam(BethesdaGame::GameType::SKYRIM_SE);
+
+  // Output
+  OutParams.Output.Dir = ExePath / "ParallaxGen_Output";
+
+  // Mesh Rules
+  static const vector<wstring> DefaultMeshBlocklist = {L"*\\cameras\\*", L"*\\dyndolod\\*", L"*\\lod\\*",
+                                                       L"*\\magic\\*",   L"*\\markers\\*",  L"*\\mps\\*",
+                                                       L"*\\sky\\*"};
+  OutParams.MeshRules.BlockList = DefaultMeshBlocklist;
+
+  // Texture Rules
+  static const vector<wstring> DefaultVanillaBSAList = {L"Skyrim - Textures0.bsa",
+                                                        L"Skyrim - Textures1.bsa",
+                                                        L"Skyrim - Textures2.bsa",
+                                                        L"Skyrim - Textures3.bsa",
+                                                        L"Skyrim - Textures4.bsa",
+                                                        L"Skyrim - Textures5.bsa",
+                                                        L"Skyrim - Textures6.bsa",
+                                                        L"Skyrim - Textures7.bsa",
+                                                        L"Skyrim - Textures8.bsa",
+                                                        L"Project Clarity AIO Half Res Packed.bsa",
+                                                        L"Project Clarity AIO Half Res Packed - Textures.bsa",
+                                                        L"Project Clarity AIO Half Res Packed0 - Textures.bsa",
+                                                        L"Project Clarity AIO Half Res Packed1 - Textures.bsa",
+                                                        L"Project Clarity AIO Half Res Packed2 - Textures.bsa",
+                                                        L"Project Clarity AIO Half Res Packed3 - Textures.bsa",
+                                                        L"Project Clarity AIO Half Res Packed4 - Textures.bsa",
+                                                        L"Project Clarity AIO Half Res Packed5 - Textures.bsa",
+                                                        L"Project Clarity AIO Half Res Packed6 - Textures.bsa"};
+  OutParams.TextureRules.VanillaBSAList = DefaultVanillaBSAList;
+
+  return OutParams;
+}
+
 void ParallaxGenConfig::loadConfig() {
   // Initialize Validator
   try {
@@ -95,41 +134,7 @@ void ParallaxGenConfig::loadConfig() {
       }
     }
   } else {
-    // fill in default values
-    if (Params.Game.Dir.empty()) {
-      Params.Game.Dir = BethesdaGame::findGamePathFromSteam(Params.Game.Type);
-    }
-
-    if (Params.Output.Dir.empty()) {
-      Params.Output.Dir = ExePath / "ParallaxGen_Output";
-    }
-
-    static const vector<wstring> DefaultMeshBlocklist = {L"*\\cameras\\*", L"*\\dyndolod\\*", L"*\\lod\\*",
-                                                         L"*\\magic\\*",   L"*\\markers\\*",  L"*\\mps\\*",
-                                                         L"*\\sky\\*"};
-
-    Params.MeshRules.BlockList = DefaultMeshBlocklist;
-
-    static const vector<wstring> DefaultVanillaBSAList = {L"Skyrim - Textures0.bsa",
-                                                          L"Skyrim - Textures1.bsa",
-                                                          L"Skyrim - Textures2.bsa",
-                                                          L"Skyrim - Textures3.bsa",
-                                                          L"Skyrim - Textures4.bsa",
-                                                          L"Skyrim - Textures5.bsa",
-                                                          L"Skyrim - Textures6.bsa",
-                                                          L"Skyrim - Textures7.bsa",
-                                                          L"Skyrim - Textures8.bsa",
-                                                          L"Project Clarity AIO Half Res Packed.bsa",
-                                                          L"Project Clarity AIO Half Res Packed - Textures.bsa",
-                                                          L"Project Clarity AIO Half Res Packed0 - Textures.bsa",
-                                                          L"Project Clarity AIO Half Res Packed1 - Textures.bsa",
-                                                          L"Project Clarity AIO Half Res Packed2 - Textures.bsa",
-                                                          L"Project Clarity AIO Half Res Packed3 - Textures.bsa",
-                                                          L"Project Clarity AIO Half Res Packed4 - Textures.bsa",
-                                                          L"Project Clarity AIO Half Res Packed5 - Textures.bsa",
-                                                          L"Project Clarity AIO Half Res Packed6 - Textures.bsa"};
-
-    Params.TextureRules.VanillaBSAList = DefaultVanillaBSAList;
+    Params = getDefaultParams();
   }
 
   // Print number of configs loaded

@@ -241,6 +241,13 @@ public:
    */
   [[nodiscard]] static auto validateParams(const PGParams &Params, std::vector<std::string> &Errors) -> bool;
 
+  /**
+   * @brief Get the Default Params object
+   *
+   * @return PGParams default params
+   */
+  [[nodiscard]] auto getDefaultParams() -> PGParams;
+
 private:
   /**
    * @brief Parses JSON from a file

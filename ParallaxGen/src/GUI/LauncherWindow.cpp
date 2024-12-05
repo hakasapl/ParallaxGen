@@ -251,6 +251,16 @@ LauncherWindow::LauncherWindow(ParallaxGenConfig &PGC)
 
   RightSizer->Add(PostPatcherSizer, 0, wxEXPAND | wxALL, 5);
 
+  // Restore defaults button
+  auto *RestoreDefaultsButton =
+      new wxButton(this, wxID_ANY, "Restore Defaults"); // NOLINT(cppcoreguidelines-owning-memory)
+  wxFont RestoreDefaultsButtonFont = RestoreDefaultsButton->GetFont();
+  RestoreDefaultsButtonFont.SetPointSize(12); // Set font size to 12
+  RestoreDefaultsButton->SetFont(RestoreDefaultsButtonFont);
+  RestoreDefaultsButton->Bind(wxEVT_BUTTON, &LauncherWindow::onRestoreDefaultsButtonPressed, this);
+
+  RightSizer->Add(RestoreDefaultsButton, 0, wxEXPAND | wxALL, 5);
+
   // Load config button
   LoadConfigButton = new wxButton(this, wxID_ANY, "Load Config"); // NOLINT(cppcoreguidelines-owning-memory)
   wxFont LoadConfigButtonFont = LoadConfigButton->GetFont();
@@ -1024,7 +1034,32 @@ void LauncherWindow::onSaveConfigButtonPressed([[maybe_unused]] wxCommandEvent &
 }
 
 void LauncherWindow::onLoadConfigButtonPressed([[maybe_unused]] wxCommandEvent &Event) {
+  int Response = wxMessageBox("Are you sure you want to load the config from the file? This action will overwrite all "
+                              "current unsaved settings.",
+                              "Confirm Load Config", wxYES_NO | wxICON_WARNING, this);
+
+  if (Response != wxYES) {
+    return;
+  }
+
   // Load the config from the file
+  loadConfig();
+
+  updateDisabledElements();
+}
+
+void LauncherWindow::onRestoreDefaultsButtonPressed([[maybe_unused]] wxCommandEvent &Event) {
+  // Show a confirmation dialog
+  int Response = wxMessageBox("Are you sure you want to restore the default settings? This action cannot be undone.",
+                              "Confirm Restore Defaults", wxYES_NO | wxICON_WARNING, this);
+
+  if (Response != wxYES) {
+    return;
+  }
+
+  // Reset the config to the default
+  PGC.setParams(PGC.getDefaultParams());
+
   loadConfig();
 
   updateDisabledElements();

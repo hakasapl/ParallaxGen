@@ -236,6 +236,13 @@ private:
   void onLoadConfigButtonPressed(wxCommandEvent &Event);
 
   /**
+   * @brief Event handler that triggers when the user presses the "Restore Defaults" button
+   *
+   * @param Event wxWidgets event object
+   */
+  void onRestoreDefaultsButtonPressed(wxCommandEvent &Event);
+
+  /**
    * @brief Event handler that triggers when the user presses the X on the dialog window, which closes the application
    *
    * @param Event wxWidgets event object
