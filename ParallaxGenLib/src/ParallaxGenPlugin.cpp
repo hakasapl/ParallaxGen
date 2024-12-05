@@ -114,10 +114,10 @@ void ParallaxGenPlugin::libPopulateObjs() {
   libThrowExceptionIfExists();
 }
 
-void ParallaxGenPlugin::libFinalize(const filesystem::path &OutputPath) {
+void ParallaxGenPlugin::libFinalize(const filesystem::path &OutputPath, const bool &ESMify) {
   lock_guard<mutex> Lock(LibMutex);
 
-  Finalize(OutputPath.c_str());
+  Finalize(OutputPath.c_str(), static_cast<int>(ESMify));
   libLogMessageIfExists();
   libThrowExceptionIfExists();
 }
@@ -471,4 +471,4 @@ void ParallaxGenPlugin::set3DIndices(const wstring &NIFPath,
   }
 }
 
-void ParallaxGenPlugin::savePlugin(const filesystem::path &OutputDir) { libFinalize(OutputDir); }
+void ParallaxGenPlugin::savePlugin(const filesystem::path &OutputDir, bool ESMify) { libFinalize(OutputDir, ESMify); }

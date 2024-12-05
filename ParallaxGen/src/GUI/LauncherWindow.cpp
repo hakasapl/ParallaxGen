@@ -155,6 +155,17 @@ LauncherWindow::LauncherWindow(ParallaxGenConfig &PGC)
   LeftSizer->Add(OutputSizer, 0, wxEXPAND | wxALL, 5);
 
   //
+  // Advanced
+  //
+  auto *AdvancedSizer = new wxStaticBoxSizer(wxVERTICAL, this, "Advanced");
+  AdvancedOptionsCheckbox = // NOLINT(cppcoreguidelines-owning-memory)
+      new wxCheckBox(this, wxID_ANY, "Show Advanced Options");
+  AdvancedOptionsCheckbox->Bind(wxEVT_CHECKBOX, &LauncherWindow::onAdvancedOptionsChange, this);
+  AdvancedSizer->Add(AdvancedOptionsCheckbox, 0, wxALL, 5);
+
+  LeftSizer->Add(AdvancedSizer, 0, wxEXPAND | wxALL, 5);
+
+  //
   // Right Panel
   //
 
@@ -240,6 +251,16 @@ LauncherWindow::LauncherWindow(ParallaxGenConfig &PGC)
 
   RightSizer->Add(PostPatcherSizer, 0, wxEXPAND | wxALL, 5);
 
+  // Restore defaults button
+  auto *RestoreDefaultsButton =
+      new wxButton(this, wxID_ANY, "Restore Defaults"); // NOLINT(cppcoreguidelines-owning-memory)
+  wxFont RestoreDefaultsButtonFont = RestoreDefaultsButton->GetFont();
+  RestoreDefaultsButtonFont.SetPointSize(12); // Set font size to 12
+  RestoreDefaultsButton->SetFont(RestoreDefaultsButtonFont);
+  RestoreDefaultsButton->Bind(wxEVT_BUTTON, &LauncherWindow::onRestoreDefaultsButtonPressed, this);
+
+  RightSizer->Add(RestoreDefaultsButton, 0, wxEXPAND | wxALL, 5);
+
   // Load config button
   LoadConfigButton = new wxButton(this, wxID_ANY, "Load Config"); // NOLINT(cppcoreguidelines-owning-memory)
   wxFont LoadConfigButtonFont = LoadConfigButton->GetFont();
@@ -278,10 +299,6 @@ LauncherWindow::LauncherWindow(ParallaxGenConfig &PGC)
   // Advanced
   //
 
-  AdvancedButton = new wxButton(this, wxID_ANY, "Show Advanced"); // NOLINT(cppcoreguidelines-owning-memory)
-  LeftSizer->Add(AdvancedButton, 0, wxALIGN_LEFT | wxALL, 5);
-  AdvancedButton->Bind(wxEVT_BUTTON, &LauncherWindow::onToggleAdvanced, this);
-
   // Processing Options (hidden by default)
   AdvancedOptionsSizer = // NOLINT(cppcoreguidelines-owning-memory, cppcoreguidelines-prefer-member-initializer)
       new wxBoxSizer(wxVERTICAL);
@@ -298,6 +315,18 @@ LauncherWindow::LauncherWindow(ParallaxGenConfig &PGC)
       "Creates a 'ParallaxGen.esp' plugin in the output that patches TXST records according to how NIFs were patched");
   ProcessingPluginPatchingCheckbox->Bind(wxEVT_CHECKBOX, &LauncherWindow::onProcessingPluginPatchingChange, this);
   ProcessingOptionsSizer->Add(ProcessingPluginPatchingCheckbox, 0, wxALL, 5);
+
+  ProcessingPluginPatchingOptions = // NOLINT(cppcoreguidelines-owning-memory)
+      new wxStaticBoxSizer(wxVERTICAL, this, "Plugin Patching Options");
+  ProcessingPluginPatchingOptionsESMifyCheckbox = // NOLINT(cppcoreguidelines-owning-memory)
+      new wxCheckBox(this, wxID_ANY, "ESMify Plugin");
+  ProcessingPluginPatchingOptionsESMifyCheckbox->SetToolTip(
+      "ESM flags the output plugin (don't check this if you don't know what you're doing)");
+  ProcessingPluginPatchingOptionsESMifyCheckbox->Bind(
+      wxEVT_CHECKBOX, &LauncherWindow::onProcessingPluginPatchingOptionsESMifyChange, this);
+  ProcessingPluginPatchingOptions->Add(ProcessingPluginPatchingOptionsESMifyCheckbox, 0, wxALL, 5);
+
+  ProcessingOptionsSizer->Add(ProcessingPluginPatchingOptions, 0, wxEXPAND | wxALL, 5);
 
   ProcessingMultithreadingCheckbox = // NOLINT(cppcoreguidelines-owning-memory)
       new wxCheckBox(this, wxID_ANY, "Multithreading");
@@ -411,6 +440,7 @@ LauncherWindow::LauncherWindow(ParallaxGenConfig &PGC)
   AdvancedOptionsSizer->Show(false);                     // Initially hidden
   ShaderPatcherComplexMaterialOptionsSizer->Show(false); // Initially hidden
   ProcessingOptionsSizer->Show(false);                   // Initially hidden
+  ProcessingPluginPatchingOptions->Show(false);          // Initially hidden
 
   ColumnsSizer->Add(AdvancedOptionsSizer, 0, wxEXPAND | wxALL, 0);
   ColumnsSizer->Add(LeftSizer, 1, wxEXPAND | wxALL, 0);
@@ -477,8 +507,13 @@ void LauncherWindow::loadConfig() {
   OutputLocationTextbox->SetValue(InitParams.Output.Dir.wstring());
   OutputZipCheckbox->SetValue(InitParams.Output.Zip);
 
+  // Advanced
+  AdvancedOptionsCheckbox->SetValue(InitParams.Advanced);
+  updateAdvanced();
+
   // Processing
   ProcessingPluginPatchingCheckbox->SetValue(InitParams.Processing.PluginPatching);
+  ProcessingPluginPatchingOptionsESMifyCheckbox->SetValue(InitParams.Processing.PluginESMify);
   ProcessingMultithreadingCheckbox->SetValue(InitParams.Processing.Multithread);
   ProcessingHighMemCheckbox->SetValue(InitParams.Processing.HighMem);
   ProcessingGPUAccelerationCheckbox->SetValue(InitParams.Processing.GPUAcceleration);
@@ -585,7 +620,41 @@ void LauncherWindow::onOutputLocationChange([[maybe_unused]] wxCommandEvent &Eve
 
 void LauncherWindow::onOutputZipChange([[maybe_unused]] wxCommandEvent &Event) { updateDisabledElements(); }
 
+void LauncherWindow::onAdvancedOptionsChange([[maybe_unused]] wxCommandEvent &Event) {
+  updateAdvanced();
+
+  updateDisabledElements();
+}
+
+void LauncherWindow::updateAdvanced() {
+  bool AdvancedVisible = AdvancedOptionsCheckbox->GetValue();
+
+  AdvancedOptionsSizer->Show(AdvancedVisible);
+  ProcessingOptionsSizer->Show(AdvancedVisible);
+
+  if (ShaderPatcherComplexMaterialCheckbox->GetValue()) {
+    ShaderPatcherComplexMaterialOptionsSizer->Show(AdvancedVisible);
+  }
+
+  Layout(); // Refresh layout to apply visibility changes
+  Fit();
+}
+
 void LauncherWindow::onProcessingPluginPatchingChange([[maybe_unused]] wxCommandEvent &Event) {
+  if (ProcessingPluginPatchingCheckbox->GetValue()) {
+    ProcessingPluginPatchingOptions->Show(ProcessingPluginPatchingCheckbox->GetValue());
+    Layout(); // Refresh layout to apply visibility changes
+    Fit();
+  } else {
+    ProcessingPluginPatchingOptions->Show(false);
+    Layout(); // Refresh layout to apply visibility changes
+    Fit();
+  }
+
+  updateDisabledElements();
+}
+
+void LauncherWindow::onProcessingPluginPatchingOptionsESMifyChange([[maybe_unused]] wxCommandEvent &Event) {
   updateDisabledElements();
 }
 
@@ -610,7 +679,7 @@ void LauncherWindow::onPrePatcherDisableMLPChange([[maybe_unused]] wxCommandEven
 void LauncherWindow::onShaderPatcherParallaxChange([[maybe_unused]] wxCommandEvent &Event) { updateDisabledElements(); }
 
 void LauncherWindow::onShaderPatcherComplexMaterialChange([[maybe_unused]] wxCommandEvent &Event) {
-  if (ShaderPatcherComplexMaterialCheckbox->GetValue() && AdvancedVisible) {
+  if (ShaderPatcherComplexMaterialCheckbox->GetValue() && AdvancedOptionsCheckbox->GetValue()) {
     ShaderPatcherComplexMaterialOptionsSizer->Show(ShaderPatcherComplexMaterialCheckbox->GetValue());
     Layout(); // Refresh layout to apply visibility changes
     Fit();
@@ -748,8 +817,12 @@ auto LauncherWindow::getParams() -> ParallaxGenConfig::PGParams {
   Params.Output.Dir = OutputLocationTextbox->GetValue().ToStdWstring();
   Params.Output.Zip = OutputZipCheckbox->GetValue();
 
+  // Advanced
+  Params.Advanced = AdvancedOptionsCheckbox->GetValue();
+
   // Processing
   Params.Processing.PluginPatching = ProcessingPluginPatchingCheckbox->GetValue();
+  Params.Processing.PluginESMify = ProcessingPluginPatchingOptionsESMifyCheckbox->GetValue();
   Params.Processing.Multithread = ProcessingMultithreadingCheckbox->GetValue();
   Params.Processing.HighMem = ProcessingHighMemCheckbox->GetValue();
   Params.Processing.GPUAcceleration = ProcessingGPUAccelerationCheckbox->GetValue();
@@ -815,20 +888,6 @@ auto LauncherWindow::getParams() -> ParallaxGenConfig::PGParams {
   }
 
   return Params;
-}
-
-void LauncherWindow::onToggleAdvanced([[maybe_unused]] wxCommandEvent &Event) {
-  AdvancedVisible = !AdvancedVisible;
-  AdvancedOptionsSizer->Show(AdvancedVisible);
-  ProcessingOptionsSizer->Show(AdvancedVisible);
-
-  if (ShaderPatcherComplexMaterialCheckbox->GetValue()) {
-    ShaderPatcherComplexMaterialOptionsSizer->Show(AdvancedVisible);
-  }
-
-  AdvancedButton->SetLabel(AdvancedVisible ? "Hide Advanced" : "Show Advanced");
-  Layout(); // Refresh layout to apply the visibility change
-  Fit();
 }
 
 void LauncherWindow::onBrowseGameLocation([[maybe_unused]] wxCommandEvent &Event) {
@@ -975,7 +1034,32 @@ void LauncherWindow::onSaveConfigButtonPressed([[maybe_unused]] wxCommandEvent &
 }
 
 void LauncherWindow::onLoadConfigButtonPressed([[maybe_unused]] wxCommandEvent &Event) {
+  int Response = wxMessageBox("Are you sure you want to load the config from the file? This action will overwrite all "
+                              "current unsaved settings.",
+                              "Confirm Load Config", wxYES_NO | wxICON_WARNING, this);
+
+  if (Response != wxYES) {
+    return;
+  }
+
   // Load the config from the file
+  loadConfig();
+
+  updateDisabledElements();
+}
+
+void LauncherWindow::onRestoreDefaultsButtonPressed([[maybe_unused]] wxCommandEvent &Event) {
+  // Show a confirmation dialog
+  int Response = wxMessageBox("Are you sure you want to restore the default settings? This action cannot be undone.",
+                              "Confirm Restore Defaults", wxYES_NO | wxICON_WARNING, this);
+
+  if (Response != wxYES) {
+    return;
+  }
+
+  // Reset the config to the default
+  PGC.setParams(PGC.getDefaultParams());
+
   loadConfig();
 
   updateDisabledElements();

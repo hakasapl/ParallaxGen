@@ -12,9 +12,13 @@
 - If using MO2 you now have the option to use the MO2 left pane (loose file) order for PG order
 - Added a "save config" button to the launcher GUI
 - Added a "load config" button to the launcher GUI
+- Added a "restore defaults" button to the launcher GUI
 - When PBR is the only shader patcher selected "map textures from meshes" will be automatically unselected
 - Added mesh allowlist
 - Added mesh allowlist, mesh blocklist, texture maps, vanilla bsa list, and dyncubemap blocklist to GUI advanced options
+- Added ESMify option for ParallaxGen.esp
+- INI files in the data folder will be read for BSA loading now
+- Advanced is now a checkbox with persistence in the launcher GUI
 
 ## [0.7.1] - 2024-11-18
 

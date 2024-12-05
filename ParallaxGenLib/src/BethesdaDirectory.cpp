@@ -468,7 +468,14 @@ auto BethesdaDirectory::getBSAFilesFromINIs() const -> vector<wstring> {
   // find ini paths
   const BethesdaGame::ININame INILocs = BG.getINIPaths();
 
-  const vector<filesystem::path> INIFileOrder = {INILocs.INI, INILocs.INICustom};
+  vector<filesystem::path> INIFileOrder = {INILocs.INI, INILocs.INICustom};
+
+  // Find INIs in data folder
+  for (const auto &Entry : filesystem::directory_iterator(DataDir, filesystem::directory_options::skip_permission_denied)) {
+    if (Entry.is_regular_file() && ToLowerASCII(Entry.path().extension().wstring()) == L".ini") {
+      INIFileOrder.push_back(Entry.path());
+    }
+  }
 
   // loop through each field
   bool FirstINIRead = true;

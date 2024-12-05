@@ -83,9 +83,16 @@ private:
   wxCheckBox *OutputZipCheckbox;
   void onOutputZipChange(wxCommandEvent &Event);
 
+  // Advanced
+  wxCheckBox *AdvancedOptionsCheckbox;
+  void onAdvancedOptionsChange(wxCommandEvent &Event);
+
   // Processing
   wxCheckBox *ProcessingPluginPatchingCheckbox;
   void onProcessingPluginPatchingChange(wxCommandEvent &Event);
+  wxStaticBoxSizer *ProcessingPluginPatchingOptions;
+  wxCheckBox *ProcessingPluginPatchingOptionsESMifyCheckbox;
+  void onProcessingPluginPatchingOptionsESMifyChange(wxCommandEvent &Event);
 
   wxCheckBox *ProcessingMultithreadingCheckbox;
   void onProcessingMultithreadingChange(wxCommandEvent &Event);
@@ -182,15 +189,7 @@ private:
   void updateDisabledElements();
 
   wxBoxSizer *AdvancedOptionsSizer; /** Container that stores advanced options */
-  wxButton *AdvancedButton;         /** Button to show/hide advanced options */
-  bool AdvancedVisible = false;     /** Stores whether advanced options are shown or not */
-
-  /**
-   * @brief Event handler responsible for showing/hiding the advanced options when the button is pressed
-   *
-   * @param Event wxWidgets event object
-   */
-  void onToggleAdvanced(wxCommandEvent &Event);
+  void updateAdvanced();
 
   /**
    * @brief Event handler responsible for deleting/adding items based on list edits
@@ -235,6 +234,13 @@ private:
    * @param Event wxWidgets event object
    */
   void onLoadConfigButtonPressed(wxCommandEvent &Event);
+
+  /**
+   * @brief Event handler that triggers when the user presses the "Restore Defaults" button
+   *
+   * @param Event wxWidgets event object
+   */
+  void onRestoreDefaultsButtonPressed(wxCommandEvent &Event);
 
   /**
    * @brief Event handler that triggers when the user presses the X on the dialog window, which closes the application
