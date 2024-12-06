@@ -57,7 +57,7 @@ auto PatcherComplexMaterial::canApply(NiShape &NIFShape) -> bool {
 }
 
 auto PatcherComplexMaterial::shouldApply(nifly::NiShape &NIFShape, std::vector<PatcherMatch> &Matches) -> bool {
-  return shouldApply(NIFUtil::getTextureSlots(getNIF(), &NIFShape), Matches);
+  return shouldApply(getTextureSet(NIFShape), Matches);
 }
 
 auto PatcherComplexMaterial::shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
@@ -135,8 +135,8 @@ auto PatcherComplexMaterial::applyPatch(NiShape &NIFShape, const PatcherMatch &M
   NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF2_UNUSED01, NIFModified);
   NIFUtil::setShaderFlag(NIFShaderBSLSP, SLSF1_ENVIRONMENT_MAPPING, NIFModified);
 
-  auto NewSlots = applyPatchSlots(NIFUtil::getTextureSlots(getNIF(), &NIFShape), Match);
-  NIFUtil::setTextureSlots(getNIF(), &NIFShape, NewSlots, NIFModified);
+  auto NewSlots = applyPatchSlots(getTextureSet(NIFShape), Match);
+  setTextureSet(NIFShape, NewSlots, NIFModified);
 
   return NewSlots;
 }

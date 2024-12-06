@@ -82,6 +82,7 @@ auto PatcherUpgradeParallaxToCM::transform(const PatcherShader::PatcherMatch &Fr
     // add newly created file to complexMaterialMaps for later processing
     getPGD()->getTextureMap(NIFUtil::TextureSlots::ENVMASK)[TexBase].insert(
         {ComplexMap, NIFUtil::TextureType::COMPLEXMATERIAL});
+    getPGD()->setTextureType(ComplexMap, NIFUtil::TextureType::COMPLEXMATERIAL);
 
     // Update file map
     auto HeightMapMod = getPGD()->getMod(HeightMap);

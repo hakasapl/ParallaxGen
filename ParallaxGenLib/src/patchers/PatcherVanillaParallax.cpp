@@ -74,7 +74,7 @@ auto PatcherVanillaParallax::canApply(NiShape &NIFShape) -> bool {
 }
 
 auto PatcherVanillaParallax::shouldApply(nifly::NiShape &NIFShape, std::vector<PatcherMatch> &Matches) -> bool {
-  return shouldApply(NIFUtil::getTextureSlots(getNIF(), &NIFShape), Matches);
+  return shouldApply(getTextureSet(NIFShape), Matches);
 }
 
 auto PatcherVanillaParallax::shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
@@ -153,8 +153,8 @@ auto PatcherVanillaParallax::applyPatch(nifly::NiShape &NIFShape, const PatcherM
     NIFModified = true;
   }
 
-  auto NewSlots = applyPatchSlots(NIFUtil::getTextureSlots(getNIF(), &NIFShape), Match);
-  NIFUtil::setTextureSlots(getNIF(), &NIFShape, NewSlots, NIFModified);
+  auto NewSlots = applyPatchSlots(getTextureSet(NIFShape), Match);
+  setTextureSet(NIFShape, NewSlots, NIFModified);
 
   return NewSlots;
 }

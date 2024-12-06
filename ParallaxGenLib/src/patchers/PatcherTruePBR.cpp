@@ -138,25 +138,16 @@ auto PatcherTruePBR::shouldApply(nifly::NiShape &NIFShape, std::vector<PatcherMa
   // Prep
   auto *NIFShader = getNIF()->GetShader(&NIFShape);
   auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
-  auto TextureSetBlockID = NIFShaderBSLSP->TextureSetRef()->index;
-
-  // Check if we already matched this texture set
-  if (MatchedTextureSets.find(TextureSetBlockID) != MatchedTextureSets.end()) {
-    Matches = MatchedTextureSets[TextureSetBlockID];
-    return Matches.size() > 0;
-  }
 
   Logger::trace(L"Starting checking");
 
   Matches.clear();
 
   // Find Old Slots
-  auto OldSlots = NIFUtil::getTextureSlots(getNIF(), &NIFShape);
+  auto OldSlots = getTextureSet(NIFShape);
 
   if (shouldApply(OldSlots, Matches)) {
     Logger::trace(L"{} PBR configs matched", Matches.size());
-    // Add to matched texture sets for future use
-    MatchedTextureSets[TextureSetBlockID] = Matches;
   } else {
     Logger::trace(L"No PBR Configs matched");
   }
@@ -403,7 +394,7 @@ auto PatcherTruePBR::insertTruePBRData(std::map<size_t, std::tuple<nlohmann::jso
 
 auto PatcherTruePBR::applyPatch(nifly::NiShape &NIFShape, const PatcherMatch &Match, bool &NIFModified,
                                 bool &ShapeDeleted) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
-  auto NewSlots = NIFUtil::getTextureSlots(getNIF(), &NIFShape);
+  auto NewSlots = getTextureSet(NIFShape);
 
   if (Match.MatchedPath == getNIFPath().wstring() || getPGD()->getTextureType(Match.MatchedPath) == NIFUtil::TextureType::RMAOS) {
     // already has PBR, just add PBR prefix to the slots if not already there
@@ -469,7 +460,7 @@ auto PatcherTruePBR::applyNeutral(const std::array<std::wstring, NUM_TEXTURE_SLO
 
 void PatcherTruePBR::applyOnePatch(NiShape *NIFShape, nlohmann::json &TruePBRData, const std::wstring &MatchedPath,
                                    bool &NIFModified, bool &ShapeDeleted,
-                                   std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots) const {
+                                   std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots) {
 
   // Prep
   auto *NIFShader = getNIF()->GetShader(NIFShape);
@@ -606,15 +597,6 @@ void PatcherTruePBR::applyOnePatch(NiShape *NIFShape, nlohmann::json &TruePBRDat
     // no pbr, we can return here
     enableTruePBROnShape(NIFShape, NIFShader, NIFShaderBSLSP, TruePBRData, MatchedPath, NIFModified, NewSlots);
   }
-
-  // "SlotX" attributes
-  for (int I = 0; I < NUM_TEXTURE_SLOTS - 1; I++) {
-    string SlotName = "slot" + to_string(I + 1);
-    if (TruePBRData.contains(SlotName)) {
-      string NewSlot = TruePBRData[SlotName].get<string>();
-      NIFUtil::setTextureSlot(getNIF(), NIFShape, static_cast<NIFUtil::TextureSlots>(I), NewSlot, NIFModified);
-    }
-  }
 }
 
 void PatcherTruePBR::applyOnePatchSlots(std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots,
@@ -706,9 +688,9 @@ void PatcherTruePBR::applyOnePatchSlots(std::array<std::wstring, NUM_TEXTURE_SLO
 void PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader,
                                           BSLightingShaderProperty *NIFShaderBSLSP, nlohmann::json &TruePBRData,
                                           const wstring &MatchedPath, bool &NIFModified,
-                                          std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots) const {
+                                          std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots) {
   applyOnePatchSlots(NewSlots, TruePBRData, MatchedPath);
-  NIFUtil::setTextureSlots(getNIF(), NIFShape, NewSlots, NIFModified);
+  setTextureSet(*NIFShape, NewSlots, NIFModified);
 
   // "emissive" attribute
   if (TruePBRData.contains("emissive") && !flag(TruePBRData, "lock_emissive")) {
