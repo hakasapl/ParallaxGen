@@ -25,6 +25,7 @@
 - Shader transform errors don't post more than once now
 - Exceptions in threads will trigger exceptions in main thread now to prevent error spam
 - Texture TXST missing warnings are changed to debug level
+- If mesh texture set has less than 9 slots it will be resized to 9 slots automatically while patching
 
 ## [0.7.1] - 2024-11-18
 

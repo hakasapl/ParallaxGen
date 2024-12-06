@@ -560,6 +560,14 @@ auto ParallaxGen::processShape(
   // Apply transforms
   WinningShaderMatch = PatcherUtil::applyTransformIfNeeded(WinningShaderMatch, Patchers);
 
+  // Fix num texture slots
+  // TODO move to patcher at some point?
+  auto *TXSTRec = NIF.GetHeader().GetBlock(NIFShader->TextureSetRef());
+  if (TXSTRec->textures.size() < 9) {
+    TXSTRec->textures.resize(9);
+    ShapeModified = true;
+  }
+
   // loop through patchers
   array<wstring, NUM_TEXTURE_SLOTS> NewSlots =
       Patchers.ShaderPatchers.at(WinningShaderMatch.Shader)
