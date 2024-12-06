@@ -46,6 +46,10 @@ ParallaxGenD3D::ParallaxGenD3D(ParallaxGenDirectory *PGD, filesystem::path Outpu
     : PGD(PGD), OutputDir(std::move(OutputDir)), ExePath(std::move(ExePath)), UseGPU(UseGPU) {}
 
 auto ParallaxGenD3D::findCMMaps(const std::vector<std::wstring> &BSAExcludes) -> ParallaxGenTask::PGResult {
+  if (UseGPU && (!PtrDevice || !PtrContext)) {
+    throw runtime_error("GPU not initialized");
+  }
+
   auto &EnvMasks = PGD->getTextureMap(NIFUtil::TextureSlots::ENVMASK);
 
   ParallaxGenTask::PGResult PGResult = ParallaxGenTask::PGResult::SUCCESS;
@@ -88,6 +92,7 @@ auto ParallaxGenD3D::findCMMaps(const std::vector<std::wstring> &BSAExcludes) ->
     for (const auto &CMMap : CMMaps) {
       EnvSlot.second.erase(CMMap);
       EnvSlot.second.insert({CMMap.Path, NIFUtil::TextureType::COMPLEXMATERIAL});
+      PGD->setTextureType(CMMap.Path, NIFUtil::TextureType::COMPLEXMATERIAL);
     }
   }
 
@@ -442,6 +447,7 @@ auto ParallaxGenD3D::upgradeToComplexMaterial(const std::filesystem::path &Paral
   {
     throw runtime_error("GPU was not initialized");
   }
+
   lock_guard<mutex> Lock(UpgradeCMMutex);
 
   ParallaxGenTask::PGResult PGResult{};
@@ -451,6 +457,11 @@ auto ParallaxGenD3D::upgradeToComplexMaterial(const std::filesystem::path &Paral
 
   // Check if any texture was supplied
   if (!ParallaxExists && !EnvExists) {
+    return {};
+  }
+
+  if (EnvExists && PGD->getTextureType(EnvMap) == NIFUtil::TextureType::COMPLEXMATERIAL) {
+    spdlog::trace(L"Skipping shader upgrade for {} as it is already a complex material", EnvMap.wstring());
     return {};
   }
 

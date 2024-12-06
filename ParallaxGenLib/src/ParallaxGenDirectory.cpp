@@ -476,6 +476,12 @@ auto ParallaxGenDirectory::getPBRJSONs() const -> const vector<filesystem::path>
 
 auto ParallaxGenDirectory::getPGJSONs() const -> const vector<filesystem::path> & { return PGJSONs; }
 
+void ParallaxGenDirectory::setTextureType(const filesystem::path &Path, const NIFUtil::TextureType &Type) {
+  lock_guard<mutex> Lock(TextureTypesMutex);
+
+  TextureTypes[Path] = Type;
+}
+
 auto ParallaxGenDirectory::getTextureType(const filesystem::path &Path) -> NIFUtil::TextureType {
   lock_guard<mutex> Lock(TextureTypesMutex);
 

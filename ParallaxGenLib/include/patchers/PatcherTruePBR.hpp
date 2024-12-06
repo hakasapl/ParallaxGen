@@ -36,8 +36,6 @@ private:
     }
   };
 
-  std::unordered_map<uint32_t, std::vector<PatcherMatch>> MatchedTextureSets;  /** Set that stores already matched texture sets */
-
 public:
   /**
    * @brief Get the True PBR Configs
@@ -184,7 +182,7 @@ private:
    */
   void applyOnePatch(nifly::NiShape *NIFShape, nlohmann::json &TruePBRData, const std::wstring &MatchedPath,
                      bool &NIFModified, bool &ShapeDeleted,
-                     std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots) const;
+                     std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots);
 
   /**
    * @brief Applies a single JSON config to slots
@@ -212,7 +210,7 @@ private:
   void enableTruePBROnShape(nifly::NiShape *NIFShape, nifly::NiShader *NIFShader,
                             nifly::BSLightingShaderProperty *NIFShaderBSLSP, nlohmann::json &TruePBRData,
                             const std::wstring &MatchedPath, bool &NIFModified,
-                            std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots) const;
+                            std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots);
 
   // TruePBR Helpers
 

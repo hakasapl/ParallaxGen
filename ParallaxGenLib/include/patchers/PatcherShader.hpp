@@ -13,9 +13,30 @@
  * @brief Base class for shader patchers
  */
 class PatcherShader : public Patcher {
+private:
+  struct PatchedTextureSetsHash {
+    auto operator()(const std::tuple<std::filesystem::path, uint32_t> &Key) const -> std::size_t {
+      return std::hash<std::filesystem::path>()(std::get<0>(Key)) ^ std::hash<uint32_t>()(std::get<1>(Key));
+    }
+  };
+
+  struct PatchedTextureSet {
+    std::array<std::wstring, NUM_TEXTURE_SLOTS> Original;
+    std::unordered_map<uint32_t, std::array<std::wstring, NUM_TEXTURE_SLOTS>> PatchResults;
+  };
+
+  static std::mutex PatchedTextureSetsMutex;
+  static std::unordered_map<std::tuple<std::filesystem::path, uint32_t>, PatchedTextureSet, PatchedTextureSetsHash>
+      PatchedTextureSets;
+
+protected:
+  auto getTextureSet(nifly::NiShape &NIFShape) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;
+  void setTextureSet(nifly::NiShape &NIFShape, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &Textures,
+                     bool &NIFModified);
+
 public:
   // type definitions
-  using PatcherShaderFactory = std::function<std::unique_ptr<PatcherShader>(std::filesystem::path, nifly::NifFile*)>;
+  using PatcherShaderFactory = std::function<std::unique_ptr<PatcherShader>(std::filesystem::path, nifly::NifFile *)>;
   using PatcherShaderObject = std::unique_ptr<PatcherShader>;
 
   /**

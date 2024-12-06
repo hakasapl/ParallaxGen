@@ -419,6 +419,12 @@ auto ParallaxGen::processShape(
     bool &ShapeDeleted, NIFUtil::ShapeShader &ShaderApplied, const bool &Dry,
     unordered_map<wstring, tuple<set<NIFUtil::ShapeShader>, unordered_set<wstring>>> *ConflictMods,
     mutex *ConflictModsMutex) -> ParallaxGenTask::PGResult {
+
+  if (boost::icontains(NIFPath.wstring(), L"dwemerlargedoor01")) {
+    // skip LOD meshes
+    spdlog::trace("HERE");
+  }
+
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Prep
@@ -559,6 +565,14 @@ auto ParallaxGen::processShape(
 
   // Apply transforms
   WinningShaderMatch = PatcherUtil::applyTransformIfNeeded(WinningShaderMatch, Patchers);
+
+  // Fix num texture slots
+  // TODO move to patcher at some point?
+  auto *TXSTRec = NIF.GetHeader().GetBlock(NIFShader->TextureSetRef());
+  if (TXSTRec->textures.size() < 9) {
+    TXSTRec->textures.resize(9);
+    ShapeModified = true;
+  }
 
   // loop through patchers
   array<wstring, NUM_TEXTURE_SLOTS> NewSlots =
