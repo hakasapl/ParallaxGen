@@ -457,7 +457,7 @@ auto ParallaxGenD3D::upgradeToComplexMaterial(const std::filesystem::path &Paral
   // get parallax map
   DirectX::ScratchImage ParallaxMapDDS;
   if (ParallaxExists && getDDS(ParallaxMap, ParallaxMapDDS) != ParallaxGenTask::PGResult::SUCCESS) {
-    spdlog::error(L"Failed to load DDS file: {}", ParallaxMap.wstring());
+    spdlog::debug(L"Failed to load DDS file: {}", ParallaxMap.wstring());
     return {};
   }
   const DirectX::TexMetadata ParallaxMeta = ParallaxMapDDS.GetMetadata();
@@ -465,7 +465,7 @@ auto ParallaxGenD3D::upgradeToComplexMaterial(const std::filesystem::path &Paral
   // get env map
   DirectX::ScratchImage EnvMapDDS;
   if (EnvExists && getDDS(EnvMap, EnvMapDDS) != ParallaxGenTask::PGResult::SUCCESS) {
-    spdlog::error(L"Failed to load DDS file: {}", ParallaxMap.wstring());
+    spdlog::debug(L"Failed to load DDS file: {}", ParallaxMap.wstring());
     return {};
   }
   const DirectX::TexMetadata EnvMeta = EnvMapDDS.GetMetadata();
@@ -502,12 +502,12 @@ auto ParallaxGenD3D::upgradeToComplexMaterial(const std::filesystem::path &Paral
   if (ParallaxExists) {
     PGResult = createTexture2D(ParallaxMapDDS, ParallaxMapGPU);
     if (PGResult != ParallaxGenTask::PGResult::SUCCESS) {
-      spdlog::error(L"Failed to create GPU texture for {}", ParallaxMap.wstring());
+      spdlog::debug(L"Failed to create GPU texture for {}", ParallaxMap.wstring());
       return {};
     }
     PGResult = createShaderResourceView(ParallaxMapGPU, ParallaxMapSRV);
     if (PGResult != ParallaxGenTask::PGResult::SUCCESS) {
-      spdlog::error(L"Failed to create GPU SRV for {}", ParallaxMap.wstring());
+      spdlog::debug(L"Failed to create GPU SRV for {}", ParallaxMap.wstring());
       return {};
     }
   }
@@ -693,7 +693,7 @@ auto ParallaxGenD3D::upgradeToComplexMaterial(const std::filesystem::path &Paral
   HRESULT HR = DirectX::Compress(OutputImage.GetImages(), OutputImage.GetImageCount(), OutputImage.GetMetadata(),
                                  DXGI_FORMAT_BC3_UNORM, DirectX::TEX_COMPRESS_DEFAULT, 1.0F, CompressedImage);
   if (FAILED(HR)) {
-    spdlog::error("Failed to compress output DDS file: {}", getHRESULTErrorMessage(HR));
+    spdlog::debug("Failed to compress output DDS file: {}", getHRESULTErrorMessage(HR));
     return {};
   }
 
@@ -1040,7 +1040,7 @@ auto ParallaxGenD3D::getDDS(const filesystem::path &DDSPath,
   }
 
   if (FAILED(HR)) {
-    spdlog::error(L"Failed to load DDS file from {}: {}", DDSPath.wstring(), ASCIItoUTF16(getHRESULTErrorMessage(HR)));
+    spdlog::debug(L"Failed to load DDS file from {}: {}", DDSPath.wstring(), ASCIItoUTF16(getHRESULTErrorMessage(HR)));
     return ParallaxGenTask::PGResult::FAILURE;
   }
 
@@ -1082,7 +1082,7 @@ auto ParallaxGenD3D::getDDSMetadata(const filesystem::path &DDSPath,
   }
 
   if (FAILED(HR)) {
-    spdlog::error(L"Failed to load DDS file metadata from {}: {}", DDSPath.wstring(),
+    spdlog::debug(L"Failed to load DDS file metadata from {}: {}", DDSPath.wstring(),
                   ASCIItoUTF16(getHRESULTErrorMessage(HR)));
     return ParallaxGenTask::PGResult::FAILURE;
   }

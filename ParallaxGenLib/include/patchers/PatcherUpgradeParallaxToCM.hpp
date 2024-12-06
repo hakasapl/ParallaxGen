@@ -48,5 +48,5 @@ public:
    * @param FromMatch Match to transform
    * @return PatcherShader::PatcherMatch Transformed match
    */
-  auto transform(const PatcherShader::PatcherMatch &FromMatch) -> PatcherShader::PatcherMatch override;
+  auto transform(const PatcherShader::PatcherMatch &FromMatch, PatcherShader::PatcherMatch &Result) -> bool override;
 };

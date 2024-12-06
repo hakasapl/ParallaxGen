@@ -56,10 +56,11 @@ auto PatcherUtil::applyTransformIfNeeded(const ShaderPatcherMatch &Match,
     auto *const Transform = Patchers.ShaderTransformPatchers.at(Match.Shader).at(Match.ShaderTransformTo).get();
 
     // Transform Shader
-    TransformedMatch.Match = Transform->transform(Match.Match);
-    TransformedMatch.Shader = Match.ShaderTransformTo;
+    if (Transform->transform(Match.Match, TransformedMatch.Match)) {
+      // Reset Transform
+      TransformedMatch.Shader = Match.ShaderTransformTo;
+    }
 
-    // Reset Transform
     TransformedMatch.ShaderTransformTo = NIFUtil::ShapeShader::NONE;
   }
 

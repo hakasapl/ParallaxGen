@@ -72,7 +72,8 @@ void ModManagerDirectory::populateModFileMapVortex(const filesystem::path &Deplo
   }
 }
 
-void ModManagerDirectory::populateModFileMapMO2(const filesystem::path &InstanceDir, const wstring &Profile) {
+void ModManagerDirectory::populateModFileMapMO2(const filesystem::path &InstanceDir, const wstring &Profile,
+                                                const filesystem::path &OutputDir) {
   // required file is modlist.txt in the profile folder
 
   spdlog::info("Populating mods from Mod Organizer 2");
@@ -80,7 +81,8 @@ void ModManagerDirectory::populateModFileMapMO2(const filesystem::path &Instance
   // First read modorganizer.ini in the instance folder to get the profiles and mods folders
   filesystem::path MO2IniFile = InstanceDir / L"modorganizer.ini";
   if (!filesystem::exists(MO2IniFile)) {
-    throw runtime_error("Mod Organizer 2 ini file does not exist: " + ParallaxGenUtil::UTF16toUTF8(MO2IniFile.wstring()));
+    throw runtime_error("Mod Organizer 2 ini file does not exist: " +
+                        ParallaxGenUtil::UTF16toUTF8(MO2IniFile.wstring()));
   }
 
   // Find MO2 paths from ModOrganizer.ini
@@ -90,7 +92,7 @@ void ModManagerDirectory::populateModFileMapMO2(const filesystem::path &Instance
 
   ifstream MO2IniFileF(MO2IniFile);
   string MO2IniLine;
-  while(getline(MO2IniFileF, MO2IniLine)) {
+  while (getline(MO2IniFileF, MO2IniLine)) {
     if (MO2IniLine.starts_with("profiles_directory=")) {
       ProfileDir = InstanceDir / MO2IniLine.substr(19);
     } else if (MO2IniLine.starts_with("mod_directory=")) {
@@ -153,10 +155,17 @@ void ModManagerDirectory::populateModFileMapMO2(const filesystem::path &Instance
 
     // loop through all files in mod
     Mod.erase(0, 1); // remove +
+    const auto CurModDir = ModDir / Mod;
+
+    // check if mod dir is output dir
+    if (filesystem::equivalent(CurModDir, OutputDir)) {
+      spdlog::critical(L"If outputting to MO2 you must disable the mod {} first to prevent issues with MO2 VFS", Mod);
+      exit(1);
+    }
+
     AllMods.insert(Mod);
     InferredOrder.insert(InferredOrder.begin(), Mod);
 
-    const auto CurModDir = ModDir / Mod;
     if (!filesystem::exists(CurModDir)) {
       spdlog::warn(L"Mod directory from modlist.txt does not exist: {}", CurModDir.wstring());
       continue;
@@ -239,7 +248,7 @@ auto ModManagerDirectory::getMO2ProfilesFromInstanceDir(const filesystem::path &
 
   ifstream MO2IniFileF(MO2IniFile);
   string MO2IniLine;
-  while(getline(MO2IniFileF, MO2IniLine)) {
+  while (getline(MO2IniFileF, MO2IniLine)) {
     if (MO2IniLine.starts_with("profiles_directory=")) {
       ProfileDir = InstanceDir / MO2IniLine.substr(19);
     } else if (MO2IniLine.starts_with("base_directory=")) {
@@ -274,6 +283,4 @@ auto ModManagerDirectory::getMO2ProfilesFromInstanceDir(const filesystem::path &
   return Profiles;
 }
 
-auto ModManagerDirectory::getInferredOrder() const -> const vector<wstring> & {
-  return InferredOrder;
-}
+auto ModManagerDirectory::getInferredOrder() const -> const vector<wstring> & { return InferredOrder; }
