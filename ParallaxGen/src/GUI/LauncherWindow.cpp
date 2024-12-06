@@ -1012,7 +1012,6 @@ void LauncherWindow::updateDisabledElements() {
     ProcessingMapFromMeshesCheckbox->Enable(false);
   } else {
     ProcessingMapFromMeshesCheckbox->Enable(true);
-    ProcessingMapFromMeshesCheckbox->SetValue(true);
   }
 
   // save button
