@@ -21,6 +21,7 @@ private:
     }
   };
 
+  static std::mutex ErrorTrackerMutex; /** Mutex for error tracker */
   static std::unordered_set<std::tuple<std::filesystem::path, NIFUtil::ShapeShader, NIFUtil::ShapeShader>,
                             ErrorTrackerHasher>
       ErrorTracker;                /** Tracks transforms that failed for error messages */
