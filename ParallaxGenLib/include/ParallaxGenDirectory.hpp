@@ -112,5 +112,7 @@ public:
 
   [[nodiscard]] auto getPGJSONs() const -> const std::vector<std::filesystem::path> &;
 
+  void setTextureType(const std::filesystem::path &Path, const NIFUtil::TextureType &Type);
+
   auto getTextureType(const std::filesystem::path &Path) -> NIFUtil::TextureType;
 };
