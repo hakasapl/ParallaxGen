@@ -390,7 +390,7 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
         for (auto const &ShaderTransformBase : ShaderTransformBases) {
           ShaderStr += L" or " + ParallaxGenUtil::UTF8toUTF16(NIFUtil::getStrFromShader(ShaderTransformBase));
         }
-        spdlog::warn(L"Did not find required {} textures for {}, TXST {} - setting neutral textures",
+        spdlog::debug(L"Did not find required {} textures for {}, TXST {} - setting neutral textures",
                     ShaderStr,
                      BaseSlots[static_cast<int>(NIFUtil::TextureSlots::DIFFUSE)], FormIDStr);
       }

@@ -37,7 +37,7 @@ public:
       ModManagerDirectory::ModManagerType Type = ModManagerDirectory::ModManagerType::None;
       std::filesystem::path MO2InstanceDir;
       std::wstring MO2Profile = L"Default";
-      bool MO2UseOrder = false;
+      bool MO2UseOrder = true;
 
       auto operator==(const ModManager &Other) const -> bool {
         return Type == Other.Type && MO2InstanceDir == Other.MO2InstanceDir && MO2Profile == Other.MO2Profile &&

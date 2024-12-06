@@ -76,14 +76,13 @@ auto ParallaxGenDirectory::findFiles() -> void {
 
 auto ParallaxGenDirectory::mapFiles(const vector<wstring> &NIFBlocklist, const vector<wstring> &NIFAllowlist,
                                     const vector<pair<wstring, NIFUtil::TextureType>> &ManualTextureMaps,
-                                    const vector<wstring> &ParallaxBSAExcludes,
-                                    const bool &MapFromMeshes, const bool &Multithreading,
-                                    const bool &CacheNIFs) -> void {
+                                    const vector<wstring> &ParallaxBSAExcludes, const bool &MapFromMeshes,
+                                    const bool &Multithreading, const bool &CacheNIFs) -> void {
   findFiles();
 
   // Helpers
   const unordered_map<wstring, NIFUtil::TextureType> ManualTextureMapsMap(ManualTextureMaps.begin(),
-                                                                         ManualTextureMaps.end());
+                                                                          ManualTextureMaps.end());
 
   spdlog::info("Starting building texture map");
 
@@ -98,6 +97,7 @@ auto ParallaxGenDirectory::mapFiles(const vector<wstring> &NIFBlocklist, const v
 #endif
 
   bool KillThreads = false;
+  mutex KillThreadsMutex;
 
   boost::asio::thread_pool MapTextureFromMeshPool(NumThreads);
 
@@ -125,18 +125,20 @@ auto ParallaxGenDirectory::mapFiles(const vector<wstring> &NIFBlocklist, const v
     }
 
     if (Multithreading) {
-      boost::asio::post(MapTextureFromMeshPool, [this, &TaskTracker, &Mesh, &CacheNIFs, &KillThreads] {
-        ParallaxGenTask::PGResult Result = ParallaxGenTask::PGResult::SUCCESS;
-        try {
-          Result = mapTexturesFromNIF(Mesh, CacheNIFs);
-        } catch (const exception &E) {
-          KillThreads = true;
-          spdlog::error(L"Exception in thread loading NIF \"{}\": {}", Mesh.wstring(), ASCIItoUTF16(E.what()));
-          Result = ParallaxGenTask::PGResult::FAILURE;
-        }
+      boost::asio::post(
+          MapTextureFromMeshPool, [this, &TaskTracker, &Mesh, &CacheNIFs, &KillThreads, &KillThreadsMutex] {
+            ParallaxGenTask::PGResult Result = ParallaxGenTask::PGResult::SUCCESS;
+            try {
+              Result = mapTexturesFromNIF(Mesh, CacheNIFs);
+            } catch (const exception &E) {
+              lock_guard<mutex> Lock(KillThreadsMutex);
+              spdlog::error(L"Exception in thread loading NIF \"{}\": {}", Mesh.wstring(), ASCIItoUTF16(E.what()));
+              KillThreads = true;
+              Result = ParallaxGenTask::PGResult::FAILURE;
+            }
 
-        TaskTracker.completeJob(Result);
-      });
+            TaskTracker.completeJob(Result);
+          });
     } else {
       try {
         TaskTracker.completeJob(mapTexturesFromNIF(Mesh, CacheNIFs));
@@ -234,7 +236,14 @@ auto ParallaxGenDirectory::mapTexturesFromNIF(const filesystem::path &NIFPath,
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Load NIF
-  const auto NIFBytes = getFile(NIFPath, CacheNIFs);
+  vector<std::byte> NIFBytes;
+  try {
+    NIFBytes = getFile(NIFPath, CacheNIFs);
+  } catch (const exception &E) {
+    spdlog::error(L"Error reading NIF File \"{}\" (skipping): {}", NIFPath.wstring(), ASCIItoUTF16(E.what()));
+    return ParallaxGenTask::PGResult::FAILURE;
+  }
+
   NifFile NIF;
   try {
     // Attempt to load NIF file

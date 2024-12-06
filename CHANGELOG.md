@@ -24,6 +24,7 @@
 - Fixed failed shader upgrade applying the wrong shader
 - Shader transform errors don't post more than once now
 - Exceptions in threads will trigger exceptions in main thread now to prevent error spam
+- Texture TXST missing warnings are changed to debug level
 
 ## [0.7.1] - 2024-11-18
 

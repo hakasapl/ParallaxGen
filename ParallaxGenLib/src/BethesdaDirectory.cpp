@@ -175,9 +175,6 @@ auto BethesdaDirectory::getFile(const filesystem::path &RelPath, const bool &Cac
       auto &S = AOS.get<binary_io::memory_ostream>();
       OutFileBytes = S.rdbuf();
     } else {
-      if (Logging) {
-        spdlog::error(L"File not found in BSA archive: {}", RelPath.wstring());
-      }
       throw runtime_error("File not found in BSA archive");
     }
   }
@@ -448,7 +445,7 @@ auto BethesdaDirectory::getBSALoadOrder() const -> vector<wstring> {
 
 auto BethesdaDirectory::getAsciiPathLower(const filesystem::path &Path) -> filesystem::path {
   if (!isPathAscii(Path)) {
-    spdlog::warn(L"Trying to convert unicode path {} to lower case but only ASCII characters are converted", Path.wstring());
+    spdlog::debug(L"Trying to convert unicode path {} to lower case but only ASCII characters are converted", Path.wstring());
   }
   return {boost::to_lower_copy(Path.wstring(), std::locale::classic())};
 }
