@@ -75,23 +75,22 @@ auto getGameTypeMapStr() -> string {
   return GameTypeStr;
 }
 
-auto deployAssets(ParallaxGenDirectory *PGD, const filesystem::path &OutputDir,
+auto deployAssets(const filesystem::path &OutputDir,
                   const filesystem::path &ExePath) -> void {
   // Install default cubemap file if needed
   static const filesystem::path DynCubeMapPath = "textures/cubemaps/dynamic1pxcubemap_black.dds";
-  if (!PGD->isFile(DynCubeMapPath)) {
-    spdlog::info("Installing default dynamic cubemap file");
 
-    // Create Directory
-    const filesystem::path OutputCubemapPath = OutputDir / DynCubeMapPath.parent_path();
-    filesystem::create_directories(OutputCubemapPath);
+  spdlog::info("Installing default dynamic cubemap file");
 
-    boost::filesystem::path AssetPath = boost::filesystem::path(ExePath) / "assets/dynamic1pxcubemap_black_ENB.dds";
-    boost::filesystem::path OutputPath = boost::filesystem::path(OutputDir) / DynCubeMapPath;
+  // Create Directory
+  const filesystem::path OutputCubemapPath = OutputDir / DynCubeMapPath.parent_path();
+  filesystem::create_directories(OutputCubemapPath);
 
-    // Move File
-    boost::filesystem::copy_file(AssetPath, OutputPath, boost::filesystem::copy_options::overwrite_existing);
-  }
+  boost::filesystem::path AssetPath = boost::filesystem::path(ExePath) / "assets/dynamic1pxcubemap_black_ENB.dds";
+  boost::filesystem::path OutputPath = boost::filesystem::path(OutputDir) / DynCubeMapPath;
+
+  // Move File
+  boost::filesystem::copy_file(AssetPath, OutputPath, boost::filesystem::copy_options::overwrite_existing);
 
   spdlog::info("Installing neutral textures");
 
@@ -313,7 +312,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
     ParallaxGenPlugin::savePlugin(Params.Output.Dir, Params.Processing.PluginESMify);
   }
 
-  deployAssets(&PGD, Params.Output.Dir, ExePath);
+  deployAssets(Params.Output.Dir, ExePath);
 
   // archive
   if (Params.Output.Zip) {
