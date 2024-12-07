@@ -1,26 +1,24 @@
 # Changelog
 
-## [0.7.2] - UNRELEASED
+## [0.7.2] - 2024-12-07
 
+- Added mesh allowlist
+- Added mesh allowlist, mesh blocklist, texture maps, vanilla bsa list, and dyncubemap blocklist to GUI advanced options
+- If using MO2 you now have the option to use the MO2 left pane (loose file) order for PG order
+- Added ESMify option for ParallaxGen.esp
 - Fixed unicode character handling
+- Added critical error if outputting to MO2 mod and mod is enabled in MO2 VFS
+- Added critical error if DynDoLOD output is activated
+- Added "save config", "load config", and "restore config" buttons to the launcher GUI
+- MO2 selection will respect custom paths for mods and profiles folder now
 - Fixed exceptions when plugin patching is not enabled
 - PBR prefix check accounts for slot commands now too
 - Improved warning output for texture mismatches
 - Fixed case where multiple PBR entries did not apply together
 - Fixed PBR slot check to check at the end of applying all entries for the match
-- MO2 selection will respect custom paths for mods and profiles folder now
-- If using MO2 you now have the option to use the MO2 left pane (loose file) order for PG order
-- Added a "save config" button to the launcher GUI
-- Added a "load config" button to the launcher GUI
-- Added a "restore defaults" button to the launcher GUI
 - When PBR is the only shader patcher selected "map textures from meshes" will be automatically unselected
-- Added mesh allowlist
-- Added mesh allowlist, mesh blocklist, texture maps, vanilla bsa list, and dyncubemap blocklist to GUI advanced options
-- Added ESMify option for ParallaxGen.esp
 - INI files in the data folder will be read for BSA loading now
 - Advanced is now a checkbox with persistence in the launcher GUI
-- Added critical error if outputting to MO2 mod and mod is enabled in MO2 VFS
-- Added critical error if DynDoLOD output is activated
 - Fixed failed shader upgrade applying the wrong shader
 - Shader transform errors don't post more than once now
 - Exceptions in threads will trigger exceptions in main thread now to prevent error spam

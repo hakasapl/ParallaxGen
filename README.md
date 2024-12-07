@@ -4,9 +4,13 @@ NIF patcher to patch meshes for various things in your load order.
 
 See the [Nexus Page](https://www.nexusmods.com/skyrimspecialedition/mods/120946) for full description.
 
+A wiki is available [here](https://github.com/hakasapl/ParallaxGen/wiki)
+
 ## Contributing
 
-Contributors are welcome. Thank you in advance! This is a CMake project with VCPKG for packages. Supported IDEs are Visual Studio 2022 or Visual Studio Code. Personally I use Visual Studio Code with the [clangd extension](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd). It tends to be much faster than VS2022.
+Contributors are welcome. Thank you in advance!
+
+This is a CMake project with VCPKG for packages. Supported IDEs are Visual Studio 2022 or Visual Studio Code. Personally I use Visual Studio Code with the [clangd extension](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd). It tends to be much faster than VS2022.
 
 ### Visual Studio Code
 
