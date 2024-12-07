@@ -420,11 +420,6 @@ auto ParallaxGen::processShape(
     unordered_map<wstring, tuple<set<NIFUtil::ShapeShader>, unordered_set<wstring>>> *ConflictMods,
     mutex *ConflictModsMutex) -> ParallaxGenTask::PGResult {
 
-  if (boost::icontains(NIFPath.wstring(), L"dwemerlargedoor01")) {
-    // skip LOD meshes
-    spdlog::trace("HERE");
-  }
-
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Prep
