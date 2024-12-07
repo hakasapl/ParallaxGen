@@ -35,9 +35,7 @@ auto PatcherShader::getTextureSet(nifly::NiShape &NIFShape) -> array<wstring, NU
   }
 
   // get the texture slots
-  const auto Slots = NIFUtil::getTextureSlots(getNIF(), &NIFShape);
-  PatchedTextureSets[NIFShapeKey].Original = Slots;
-  return Slots;
+  return NIFUtil::getTextureSlots(getNIF(), &NIFShape);
 }
 
 auto PatcherShader::setTextureSet(nifly::NiShape &NIFShape, const array<wstring, NUM_TEXTURE_SLOTS> &Textures, bool &NIFModified) -> void {
@@ -48,6 +46,7 @@ auto PatcherShader::setTextureSet(nifly::NiShape &NIFShape, const array<wstring,
   const auto NIFShapeKey = make_tuple(getNIFPath(), TextureSetBlockID);
 
   if (PatchedTextureSets.find(NIFShapeKey) != PatchedTextureSets.end()) {
+    // This texture set has been patched before
     uint32_t NewBlockID = 0;
 
     // already been patched, check if it is the same
@@ -83,6 +82,10 @@ auto PatcherShader::setTextureSet(nifly::NiShape &NIFShape, const array<wstring,
     NIFModified = true;
     return;
   }
+
+  // set original for future use
+  const auto Slots = NIFUtil::getTextureSlots(getNIF(), &NIFShape);
+  PatchedTextureSets[NIFShapeKey].Original = Slots;
 
   // set the texture slots for the shape like normal
   NIFUtil::setTextureSlots(getNIF(), &NIFShape, Textures, NIFModified);
