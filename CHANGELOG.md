@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.3] - UNRELEASED
+
+- Fixed thread gridlock that casued mesh patching to get suck occasionally
+- Fixed PBR JSON delete: true not working
+- Fixed uncaught exception if mod folder does not exist in MO2
+- Fixed dyncubemap blocklist not showing up on start in the GUI if advanced options is enabled
+- Fixed uncaught exception when a NIF has non-ASCII chars as a texture slot
+
 ## [0.7.2] - 2024-12-07
 
 - Added mesh allowlist

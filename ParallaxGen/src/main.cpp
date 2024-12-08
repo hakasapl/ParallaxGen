@@ -444,8 +444,9 @@ auto main(int ArgC, char **ArgV) -> int {
   initLogger(LogPath, Args);
 
   // Main Runner (Catches all exceptions)
+  mainRunner(Args, ExePath);
   try {
-    mainRunner(Args, ExePath);
+    //mainRunner(Args, ExePath);
   } catch (const exception &E) {
     auto Trace = boost::stacktrace::stacktrace();
     spdlog::critical("An unhandled exception occurred (Please provide this entire message "

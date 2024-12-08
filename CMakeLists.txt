@@ -22,12 +22,12 @@ add_compile_definitions(_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR)
 set(PROJECT_NAME "ParallaxGen")
 
 # Initialize Project
-set(PARALLAXGEN_VERSION 0.7.2)
+set(PARALLAXGEN_VERSION 0.7.3)
 project(${PROJECT_NAME} VERSION ${PARALLAXGEN_VERSION})
 add_compile_definitions(PARALLAXGEN_VERSION="${PARALLAXGEN_VERSION}")
 
 # Set test version (set this to 0 for prod releases)
-add_compile_definitions(PARALLAXGEN_TEST_VERSION=0)
+add_compile_definitions(PARALLAXGEN_TEST_VERSION=1)
 
 # Setup Folders
 set(EXTRN_BUILD_DIR ${CMAKE_BINARY_DIR}/external/blds)

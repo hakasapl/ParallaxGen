@@ -96,8 +96,7 @@ auto ParallaxGenDirectory::mapFiles(const vector<wstring> &NIFBlocklist, const v
   const size_t NumThreads = boost::thread::hardware_concurrency();
 #endif
 
-  bool KillThreads = false;
-  mutex KillThreadsMutex;
+  atomic<bool> KillThreads = false;
 
   boost::asio::thread_pool MapTextureFromMeshPool(NumThreads);
 
@@ -125,36 +124,31 @@ auto ParallaxGenDirectory::mapFiles(const vector<wstring> &NIFBlocklist, const v
     }
 
     if (Multithreading) {
-      boost::asio::post(
-          MapTextureFromMeshPool, [this, &TaskTracker, &Mesh, &CacheNIFs, &KillThreads, &KillThreadsMutex] {
-            ParallaxGenTask::PGResult Result = ParallaxGenTask::PGResult::SUCCESS;
-            try {
-              Result = mapTexturesFromNIF(Mesh, CacheNIFs);
-            } catch (const exception &E) {
-              lock_guard<mutex> Lock(KillThreadsMutex);
-              spdlog::error(L"Exception in thread loading NIF \"{}\": {}", Mesh.wstring(), ASCIItoUTF16(E.what()));
-              KillThreads = true;
-              Result = ParallaxGenTask::PGResult::FAILURE;
-            }
+      boost::asio::post(MapTextureFromMeshPool, [this, &TaskTracker, &Mesh, &CacheNIFs, &KillThreads] {
+        ParallaxGenTask::PGResult Result = ParallaxGenTask::PGResult::SUCCESS;
+        try {
+          Result = mapTexturesFromNIF(Mesh, CacheNIFs);
+        } catch (const exception &E) {
+          spdlog::error(L"Exception in thread loading NIF \"{}\": {}", Mesh.wstring(), ASCIItoUTF16(E.what()));
+          KillThreads.store(true, std::memory_order_release);
+          Result = ParallaxGenTask::PGResult::FAILURE;
+        }
 
-            TaskTracker.completeJob(Result);
-          });
+        TaskTracker.completeJob(Result);
+      });
     } else {
-      try {
-        TaskTracker.completeJob(mapTexturesFromNIF(Mesh, CacheNIFs));
-      } catch (const exception &E) {
-        spdlog::error(L"Exception loading NIF \"{}\": {}", Mesh.wstring(), ASCIItoUTF16(E.what()));
-        TaskTracker.completeJob(ParallaxGenTask::PGResult::FAILURE);
-      }
+      TaskTracker.completeJob(mapTexturesFromNIF(Mesh, CacheNIFs));
     }
   }
 
   if (Multithreading) {
     while (!TaskTracker.isCompleted()) {
-      if (KillThreads) {
+      if (KillThreads.load(std::memory_order_acquire)) {
         MapTextureFromMeshPool.stop();
         throw runtime_error("Exception in thread mapping textures from NIFs");
       }
+
+      this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
     // Wait for all threads to complete
@@ -233,6 +227,11 @@ auto ParallaxGenDirectory::checkGlobMatchInVector(const wstring &Check, const ve
 
 auto ParallaxGenDirectory::mapTexturesFromNIF(const filesystem::path &NIFPath,
                                               const bool &CacheNIFs) -> ParallaxGenTask::PGResult {
+  if (boost::icontains(NIFPath.wstring(), "opheliamarryringsmall")) {
+    // Skip LOD meshes
+    spdlog::trace("DEBUG");
+  }
+
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Load NIF
@@ -281,6 +280,12 @@ auto ParallaxGenDirectory::mapTexturesFromNIF(const filesystem::path &NIFPath,
     for (uint32_t Slot = 0; Slot < NUM_TEXTURE_SLOTS; Slot++) {
       string Texture;
       NIF.GetTextureSlot(Shape, Texture, Slot);
+
+      if (!ContainsOnlyAscii(Texture)) {
+        spdlog::error(L"NIF {} has texture slot(s) with invalid non-ASCII chars (skipping)", NIFPath.wstring());
+        return ParallaxGenTask::PGResult::FAILURE;
+      }
+
       if (Texture.empty()) {
         // No texture in this slot
         continue;

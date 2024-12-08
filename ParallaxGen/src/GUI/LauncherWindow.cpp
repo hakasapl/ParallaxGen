@@ -509,7 +509,6 @@ void LauncherWindow::loadConfig() {
 
   // Advanced
   AdvancedOptionsCheckbox->SetValue(InitParams.Advanced);
-  updateAdvanced();
 
   // Processing
   ProcessingPluginPatchingCheckbox->SetValue(InitParams.Processing.PluginPatching);
@@ -571,6 +570,8 @@ void LauncherWindow::loadConfig() {
     TextureRulesVanillaBSAList->InsertItem(TextureRulesVanillaBSAList->GetItemCount(), VanillaBSA);
   }
   TextureRulesVanillaBSAList->InsertItem(TextureRulesVanillaBSAList->GetItemCount(), ""); // Add empty line
+
+  updateAdvanced();
 }
 
 // Component event handlers
