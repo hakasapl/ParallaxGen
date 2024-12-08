@@ -62,7 +62,7 @@ One of the main goals for ParallaxGen is to allow texture artists to worry about
 [code]-vv[/code] = Trace mode - don't run this unless trying to report a bug or debugging reasons, it creates a huge amount of output that also slows down the general execution of the program
 [code]--autostart[/code] = Enabling this flag will skip the launcher UI and just start using the last saved settings
 
-[size=6][b][center][color=#6aa84f]Linux Users[/color][/center][/b][/size]ParallaxGen mostly seems to work using proton on linux. For now, you will need to disable the output ZIP option in the GUI. None of the GPU features work yet as well so disable GPU acceleration under advanced options. I am looking for ways to improve the experience on Linux but everything else seems to work properly for now. I do intend to spin up a Linux dev machine soon to figure out full proton compatibility so linux users can enjoy ParallaxGen the same, that will likely happen once ParallaxGen enters beta. Thank you [url=https://next.nexusmods.com/profile/ThePrincessKing/about-me]ThePrincessKing[/url] for your help with testing on Linux!
+[size=6][b][center][color=#6aa84f]Linux Users[/color][/center][/b][/size]ParallaxGen mostly seems to work using proton on linux. For now, you will need to disable the output ZIP option in the GUI. GPU acceleration does also work but you need to install d3dcompiler_47 into your prefix.
 
 [size=6][center][color=#6aa84f][b]Contributors[/b][/color][/center][/size]This is an open-source project. We would love to have others contribute as well; check out the project's [url=https://github.com/hakasapl/ParallaxGen]GitHub page[/url] for more information. The following authors have contributed to ParallaxGen:
 
