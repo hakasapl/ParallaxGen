@@ -227,11 +227,6 @@ auto ParallaxGenDirectory::checkGlobMatchInVector(const wstring &Check, const ve
 
 auto ParallaxGenDirectory::mapTexturesFromNIF(const filesystem::path &NIFPath,
                                               const bool &CacheNIFs) -> ParallaxGenTask::PGResult {
-  if (boost::icontains(NIFPath.wstring(), "opheliamarryringsmall")) {
-    // Skip LOD meshes
-    spdlog::trace("DEBUG");
-  }
-
   auto Result = ParallaxGenTask::PGResult::SUCCESS;
 
   // Load NIF
