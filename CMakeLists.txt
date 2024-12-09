@@ -67,6 +67,7 @@ execute_process(COMMAND ${CMAKE_COMMAND} --build ${EXTRN_BUILD_DIR}/nifly --targ
 enable_testing()
 add_subdirectory(ParallaxGen)
 add_subdirectory(ParallaxGenLib)
+add_subdirectory(PGTools)
 
 # Install Global Things
 # Copy Folders
