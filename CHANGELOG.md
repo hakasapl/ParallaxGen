@@ -2,6 +2,7 @@
 
 ## [0.7.3] - UNRELEASED
 
+- Added a warning for simplicity of snow users if PBR or CM is enabled (SoS is incompatible with these shaders)
 - Fixed thread gridlock that casued mesh patching to get suck occasionally
 - Fixed PBR JSON delete: true not working
 - Fixed uncaught exception if mod folder does not exist in MO2
