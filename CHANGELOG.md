@@ -5,6 +5,7 @@
 - Fixed thread gridlock that casued mesh patching to get suck occasionally
 - Fixed PBR JSON delete: true not working
 - Fixed uncaught exception if mod folder does not exist in MO2
+- Fixed dyncubemap blocklist not saving/loading correctly in the GUI
 - Fixed dyncubemap blocklist not showing up on start in the GUI if advanced options is enabled
 - Fixed uncaught exception when a NIF has non-ASCII chars as a texture slot
 

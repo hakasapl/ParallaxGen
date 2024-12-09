@@ -209,7 +209,7 @@ LauncherWindow::LauncherWindow(ParallaxGenConfig &PGC)
   ShaderPatcherComplexMaterialDynCubemapBlocklist->SetColumnWidth(
       0, ShaderPatcherComplexMaterialDynCubemapBlocklist->GetClientSize().GetWidth() - ScrollbarWidth);
   ShaderPatcherComplexMaterialDynCubemapBlocklist->Bind(
-      wxEVT_LIST_ITEM_ACTIVATED, &LauncherWindow::onShaderPatcherComplexMaterialDynCubemapBlocklistChange, this);
+      wxEVT_LIST_END_LABEL_EDIT, &LauncherWindow::onShaderPatcherComplexMaterialDynCubemapBlocklistChange, this);
   ShaderPatcherComplexMaterialDynCubemapBlocklist->Bind(wxEVT_LIST_ITEM_ACTIVATED, &LauncherWindow::onListItemActivated,
                                                         this);
   ShaderPatcherComplexMaterialOptionsSizer->Add(ShaderPatcherComplexMaterialDynCubemapBlocklist, 0, wxEXPAND | wxALL,
