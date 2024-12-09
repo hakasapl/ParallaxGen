@@ -209,14 +209,27 @@ auto PatcherTruePBR::shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOT
     Match.MatchedFrom = TruePBRMatchedFrom[JSON];
     Match.ExtraData = make_shared<decltype(JSONData)>(JSONData);
 
+    // loop through json data
+    bool DeleteShape = false;
+    for (const auto &[Sequence, Data] : JSONData) {
+      if (get<0>(Data).contains("delete") && get<0>(Data)["delete"].get<bool>()) {
+        Logger::trace(L"PBR JSON Match: Result marked for deletion, skipping slot checks");
+        DeleteShape = true;
+        break;
+      }
+    }
+
     // check paths
     bool Valid = true;
-    const auto NewSlots = applyPatchSlots(OldSlots, Match);
-    for (size_t I = 0; I < NUM_TEXTURE_SLOTS; I++) {
-      if (!NewSlots[I].empty() && !getPGD()->isFile(NewSlots[I])) {
-        // Slot does not exist
-        Logger::trace(L"PBR JSON Match: Result texture slot {} does not exist", NewSlots[I]);
-        Valid = false;
+
+    if (!DeleteShape) {
+      const auto NewSlots = applyPatchSlots(OldSlots, Match);
+      for (size_t I = 0; I < NUM_TEXTURE_SLOTS; I++) {
+        if (!NewSlots[I].empty() && !getPGD()->isFile(NewSlots[I])) {
+          // Slot does not exist
+          Logger::trace(L"PBR JSON Match: Result texture slot {} does not exist", NewSlots[I]);
+          Valid = false;
+        }
       }
     }
 

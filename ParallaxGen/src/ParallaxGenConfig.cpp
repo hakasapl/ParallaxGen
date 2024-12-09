@@ -68,9 +68,8 @@ auto ParallaxGenConfig::getDefaultParams() -> PGParams {
   OutParams.Output.Dir = ExePath / "ParallaxGen_Output";
 
   // Mesh Rules
-  static const vector<wstring> DefaultMeshBlocklist = {L"*\\cameras\\*", L"*\\dyndolod\\*", L"*\\lod\\*",
-                                                       L"*\\magic\\*",   L"*\\markers\\*",  L"*\\mps\\*",
-                                                       L"*\\sky\\*"};
+  static const vector<wstring> DefaultMeshBlocklist = {
+      L"*\\cameras\\*", L"*\\dyndolod\\*", L"*\\lod\\*", L"*\\magic\\*", L"*\\markers\\*", L"*\\mps\\*", L"*\\sky\\*"};
   OutParams.MeshRules.BlockList = DefaultMeshBlocklist;
 
   // Texture Rules
@@ -230,6 +229,12 @@ auto ParallaxGenConfig::addConfigJSON(const nlohmann::json &J) -> void {
     if (ParamJ.contains("shaderpatcher") && ParamJ["shaderpatcher"].contains("complexmaterial")) {
       ParamJ["shaderpatcher"]["complexmaterial"].get_to<bool>(Params.ShaderPatcher.ComplexMaterial);
     }
+    if (ParamJ.contains("shaderpatcher") && ParamJ["shaderpatcher"].contains("complexmaterialdyncubemapblocklist")) {
+      for (const auto &Item : ParamJ["shaderpatcher"]["complexmaterialdyncubemapblocklist"]) {
+        Params.ShaderPatcher.ShaderPatcherComplexMaterial.ListsDyncubemapBlocklist.push_back(
+            UTF8toUTF16(Item.get<string>()));
+      }
+    }
     if (ParamJ.contains("shaderpatcher") && ParamJ["shaderpatcher"].contains("truepbr")) {
       ParamJ["shaderpatcher"]["truepbr"].get_to<bool>(Params.ShaderPatcher.TruePBR);
     }
@@ -384,8 +389,7 @@ auto ParallaxGenConfig::validateParams(const PGParams &Params, vector<string> &E
     }
 
     // Check if the MO2 profile exists
-    const auto Profiles =
-      ModManagerDirectory::getMO2ProfilesFromInstanceDir(Params.ModManager.MO2InstanceDir);
+    const auto Profiles = ModManagerDirectory::getMO2ProfilesFromInstanceDir(Params.ModManager.MO2InstanceDir);
     if (find(Profiles.begin(), Profiles.end(), Params.ModManager.MO2Profile) == Profiles.end()) {
       Errors.emplace_back("MO2 Profile does not exist");
     }
@@ -513,6 +517,8 @@ void ParallaxGenConfig::saveUserConfig() {
   // "shaderpatcher"
   J["params"]["shaderpatcher"]["parallax"] = Params.ShaderPatcher.Parallax;
   J["params"]["shaderpatcher"]["complexmaterial"] = Params.ShaderPatcher.ComplexMaterial;
+  J["params"]["shaderpatcher"]["complexmaterialdyncubemapblocklist"] =
+      utf16VectorToUTF8(Params.ShaderPatcher.ShaderPatcherComplexMaterial.ListsDyncubemapBlocklist);
   J["params"]["shaderpatcher"]["truepbr"] = Params.ShaderPatcher.TruePBR;
 
   // "shadertransforms"
