@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.7.3] - UNRELEASED
+## [0.7.3] - 2024-12-09
 
 - Added a warning for simplicity of snow users if PBR or CM is enabled (SoS is incompatible with these shaders)
 - Fixed thread gridlock that casued mesh patching to get suck occasionally
