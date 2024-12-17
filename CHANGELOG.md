@@ -4,6 +4,16 @@
 
 - Added pgtools.exe modding tools
 
+## [0.7.3] - 2024-12-09
+
+- Added a warning for simplicity of snow users if PBR or CM is enabled (SoS is incompatible with these shaders)
+- Fixed thread gridlock that casued mesh patching to get suck occasionally
+- Fixed PBR JSON delete: true not working
+- Fixed uncaught exception if mod folder does not exist in MO2
+- Fixed dyncubemap blocklist not saving/loading correctly in the GUI
+- Fixed dyncubemap blocklist not showing up on start in the GUI if advanced options is enabled
+- Fixed uncaught exception when a NIF has non-ASCII chars as a texture slot
+
 ## [0.7.2] - 2024-12-07
 
 - Added mesh allowlist

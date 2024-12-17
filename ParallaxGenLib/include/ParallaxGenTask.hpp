@@ -28,12 +28,14 @@ public:
   ParallaxGenTask(std::string TaskName, const size_t &TotalJobs, const int &ProgressPrintModulo = 1);
 
   void completeJob(const PGResult &Result);
-  void initJobStatus();
-  void printJobStatus(bool Force = false);
-  void printJobSummary();
-  [[nodiscard]] auto getCompletedJobs() -> size_t;
   [[nodiscard]] auto isCompleted() -> bool;
 
   static void updatePGResult(PGResult &Result, const PGResult &CurrentResult,
                              const PGResult &Threshold = PGResult::FAILURE);
+
+private:
+  void initJobStatus();
+  void printJobStatus(bool Force = false);
+  void printJobSummary();
+  [[nodiscard]] auto getCompletedJobs() -> size_t;
 };

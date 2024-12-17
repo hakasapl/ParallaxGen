@@ -1,5 +1,6 @@
 #include "ParallaxGenWarnings.hpp"
 
+#include <mutex>
 #include <spdlog/spdlog.h>
 
 using namespace std;
@@ -46,8 +47,15 @@ void ParallaxGenWarnings::mismatchWarn(const wstring &MatchedPath, const wstring
     return;
   }
 
-   MismatchWarnDebugTracker[MatchedPathMod].insert(std::make_pair(MatchedPath,BaseTex));
-   MismatchWarnTracker[MatchedPathMod].insert(BaseTexMod);
+  {
+    const lock_guard<mutex> Lock(MismatchWarnDebugTrackerMutex);
+    MismatchWarnDebugTracker[MatchedPathMod].insert(std::make_pair(MatchedPath,BaseTex));
+  }
+
+  {
+    const lock_guard<mutex> Lock2(MismatchWarnTrackerMutex);
+    MismatchWarnTracker[MatchedPathMod].insert(BaseTexMod);
+  }
 }
 
 void ParallaxGenWarnings::printWarnings() {
@@ -132,9 +140,4 @@ void ParallaxGenWarnings::meshWarn(const wstring &MatchedPath, const wstring &NI
     // add to tracker if not
     MeshWarnTracker.insert(Key);
   }
-
-  // log warning
-  //spdlog::warn(
-  //    L"[Potential Mesh Mismatch] Mod \"{}\" assets were used on meshes from mod \"{}\". Please verify that this is intended.",
-  //    MatchedPathMod, NIFPathMod);
 }

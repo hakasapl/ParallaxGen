@@ -75,8 +75,7 @@ auto getGameTypeMapStr() -> string {
   return GameTypeStr;
 }
 
-auto deployAssets(const filesystem::path &OutputDir,
-                  const filesystem::path &ExePath) -> void {
+auto deployAssets(const filesystem::path &OutputDir, const filesystem::path &ExePath) -> void {
   // Install default cubemap file if needed
   static const filesystem::path DynCubeMapPath = "textures/cubemaps/dynamic1pxcubemap_black.dds";
 
@@ -200,6 +199,20 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
     exit(1);
   }
 
+  // Check if dyndolod.esp exists
+  const auto ActivePlugins = BG.getActivePlugins(false, true);
+  if (find(ActivePlugins.begin(), ActivePlugins.end(), L"dyndolod.esp") != ActivePlugins.end()) {
+    spdlog::critical("DynDoLOD and TexGen outputs must be disabled prior to running ParallaxGen. It is recommended to "
+                     "generate LODs after running ParallaxGen with the ParallaxGen output enabled.");
+    exit(1);
+  }
+
+  if (find(ActivePlugins.begin(), ActivePlugins.end(), L"simplicity of snow.esp") != ActivePlugins.end() &&
+      (Params.ShaderPatcher.TruePBR || Params.ShaderPatcher.ComplexMaterial)) {
+    spdlog::warn("You have Simplicity of Snow installed. SoS is incompatible with complex material and PBR. Use a "
+                 "single-pass snow mod such as Better Dynamic Snow v3 instead.");
+  }
+
   // Init PGP library
   if (Params.Processing.PluginPatching) {
     spdlog::info("Initializing plugin patcher");
@@ -226,14 +239,6 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   if (filesystem::exists(PGStateFilePath)) {
     spdlog::critical("ParallaxGen meshes exist in your data directory, please delete before "
                      "re-running.");
-    exit(1);
-  }
-
-  // Check if dyndolod.esp exists
-  const auto ActivePlugins = BG.getActivePlugins(false, true);
-  if (find(ActivePlugins.begin(), ActivePlugins.end(), L"dyndolod.esp") != ActivePlugins.end()) {
-    spdlog::critical("DynDoLOD and TexGen outputs must be disabled prior to running ParallaxGen. It is recommended to "
-                     "generate LODs after running ParallaxGen with the ParallaxGen output enabled.");
     exit(1);
   }
 
