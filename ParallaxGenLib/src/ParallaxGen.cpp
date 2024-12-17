@@ -69,19 +69,17 @@ void ParallaxGen::patchMeshes(const PatcherUtil::PatcherSet &Patchers, const uno
 
     boost::asio::thread_pool MeshPatchPool(NumThreads);
 
-    bool KillThreads = false;
-    mutex KillThreadsMutex;
+    atomic<bool> KillThreads = false;
 
     for (const auto &Mesh : Meshes) {
       boost::asio::post(MeshPatchPool, [this, &TaskTracker, &DiffJSON, &Mesh, &PatchPlugin, &Patchers, &ModPriority,
-                                        &KillThreads, &KillThreadsMutex] {
+                                        &KillThreads] {
         ParallaxGenTask::PGResult Result = ParallaxGenTask::PGResult::SUCCESS;
         try {
           Result = processNIF(Patchers, ModPriority, Mesh, &DiffJSON, PatchPlugin);
         } catch (const exception &E) {
-          lock_guard<mutex> Lock(KillThreadsMutex);
           spdlog::error(L"Exception in thread patching NIF {}: {}", Mesh.wstring(), ASCIItoUTF16(E.what()));
-          KillThreads = true;
+          KillThreads.store(true, std::memory_order_release);
           Result = ParallaxGenTask::PGResult::FAILURE;
         }
 
@@ -90,10 +88,12 @@ void ParallaxGen::patchMeshes(const PatcherUtil::PatcherSet &Patchers, const uno
     }
 
     while (!TaskTracker.isCompleted()) {
-      if (KillThreads) {
+      if (KillThreads.load(std::memory_order_acquire)) {
         MeshPatchPool.stop();
         throw runtime_error("Exception in thread patching NIF");
       }
+
+      this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
     // verify that all threads complete (should be redundant)
@@ -138,21 +138,19 @@ auto ParallaxGen::findModConflicts(const PatcherUtil::PatcherSet &Patchers, cons
     const size_t NumThreads = boost::thread::hardware_concurrency();
 #endif
 
-    bool KillThreads = false;
-    mutex KillThreadsMutex;
+    atomic<bool> KillThreads = false;
 
     boost::asio::thread_pool MeshPatchPool(NumThreads);
 
     for (const auto &Mesh : Meshes) {
       boost::asio::post(MeshPatchPool, [this, &TaskTracker, &Mesh, &PatchPlugin, &ConflictMods, &ConflictModsMutex,
-                                        &Patchers, &KillThreads, &KillThreadsMutex] {
+                                        &Patchers, &KillThreads] {
         ParallaxGenTask::PGResult Result = ParallaxGenTask::PGResult::SUCCESS;
         try {
           Result = processNIF(Patchers, nullptr, Mesh, nullptr, PatchPlugin, true, &ConflictMods, &ConflictModsMutex);
         } catch (const exception &E) {
-          lock_guard<mutex> Lock(KillThreadsMutex);
           spdlog::error(L"Exception in thread finding mod conflicts {}: {}", Mesh.wstring(), ASCIItoUTF16(E.what()));
-          KillThreads = true;
+          KillThreads.store(true, std::memory_order_release);
           Result = ParallaxGenTask::PGResult::FAILURE;
         }
 
@@ -161,10 +159,12 @@ auto ParallaxGen::findModConflicts(const PatcherUtil::PatcherSet &Patchers, cons
     }
 
     while (!TaskTracker.isCompleted()) {
-      if (KillThreads) {
+      if (KillThreads.load(std::memory_order_acquire)) {
         MeshPatchPool.stop();
         throw runtime_error("Exception in thread finding mod conflicts");
       }
+
+      this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
     // verify that all threads complete (should be redundant)
@@ -303,6 +303,17 @@ auto ParallaxGen::processNIF(
   bool OneShapeSuccess = false;
   vector<tuple<NiShape *, int, int>> ShapeTracker;
   for (NiShape *NIFShape : NIF.GetShapes()) {
+    // Check for any non-ascii chars
+    for (uint32_t Slot = 0; Slot < NUM_TEXTURE_SLOTS; Slot++) {
+      string Texture;
+      NIF.GetTextureSlot(NIFShape, Texture, Slot);
+
+      if (!ContainsOnlyAscii(Texture)) {
+        spdlog::error(L"NIF {} has texture slot(s) with invalid non-ASCII chars (skipping)", NIFFile.wstring());
+        return ParallaxGenTask::PGResult::FAILURE;
+      }
+    }
+
     // get shape name and blockid
     const auto ShapeBlockID = NIF.GetBlockID(NIFShape);
     const auto ShapeName = ASCIItoUTF16(NIFShape->name.get());
@@ -320,16 +331,14 @@ auto ParallaxGen::processNIF(
                                                  ConflictModsMutex),
                                     ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
 
-    // Update NIFModified if shape was modified
-    if (ShapeModified && ShaderApplied != NIFUtil::ShapeShader::NONE) {
-      NIFModified = true;
+    NIFModified |= ShapeModified;
 
-      if (PatchPlugin) {
-        // Process plugin
-        array<wstring, NUM_TEXTURE_SLOTS> NewSlots;
-        ParallaxGenPlugin::processShape(ShaderApplied, NIFFile.wstring(), ShapeName, OldShapeIndex, PatcherObjects,
-                                        ModPriority, NewSlots);
-      }
+    // Update NIFModified if shape was modified
+    if (ShaderApplied != NIFUtil::ShapeShader::NONE && PatchPlugin) {
+      // Process plugin
+      array<wstring, NUM_TEXTURE_SLOTS> NewSlots;
+      ParallaxGenPlugin::processShape(ShaderApplied, NIFFile.wstring(), ShapeName, OldShapeIndex, PatcherObjects,
+                                      ModPriority, NewSlots);
     }
 
     if (Result == ParallaxGenTask::PGResult::SUCCESS) {

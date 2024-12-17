@@ -157,6 +157,12 @@ void ModManagerDirectory::populateModFileMapMO2(const filesystem::path &Instance
     Mod.erase(0, 1); // remove +
     const auto CurModDir = ModDir / Mod;
 
+    // Check if mod folder exists
+    if (!filesystem::exists(CurModDir)) {
+      spdlog::warn(L"Mod directory from modlist.txt does not exist: {}", CurModDir.wstring());
+      continue;
+    }
+
     // check if mod dir is output dir
     if (filesystem::equivalent(CurModDir, OutputDir)) {
       spdlog::critical(L"If outputting to MO2 you must disable the mod {} first to prevent issues with MO2 VFS", Mod);
@@ -165,11 +171,6 @@ void ModManagerDirectory::populateModFileMapMO2(const filesystem::path &Instance
 
     AllMods.insert(Mod);
     InferredOrder.insert(InferredOrder.begin(), Mod);
-
-    if (!filesystem::exists(CurModDir)) {
-      spdlog::warn(L"Mod directory from modlist.txt does not exist: {}", CurModDir.wstring());
-      continue;
-    }
 
     try {
       for (const auto &File :

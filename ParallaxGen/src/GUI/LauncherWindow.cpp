@@ -209,7 +209,7 @@ LauncherWindow::LauncherWindow(ParallaxGenConfig &PGC)
   ShaderPatcherComplexMaterialDynCubemapBlocklist->SetColumnWidth(
       0, ShaderPatcherComplexMaterialDynCubemapBlocklist->GetClientSize().GetWidth() - ScrollbarWidth);
   ShaderPatcherComplexMaterialDynCubemapBlocklist->Bind(
-      wxEVT_LIST_ITEM_ACTIVATED, &LauncherWindow::onShaderPatcherComplexMaterialDynCubemapBlocklistChange, this);
+      wxEVT_LIST_END_LABEL_EDIT, &LauncherWindow::onShaderPatcherComplexMaterialDynCubemapBlocklistChange, this);
   ShaderPatcherComplexMaterialDynCubemapBlocklist->Bind(wxEVT_LIST_ITEM_ACTIVATED, &LauncherWindow::onListItemActivated,
                                                         this);
   ShaderPatcherComplexMaterialOptionsSizer->Add(ShaderPatcherComplexMaterialDynCubemapBlocklist, 0, wxEXPAND | wxALL,
@@ -509,7 +509,6 @@ void LauncherWindow::loadConfig() {
 
   // Advanced
   AdvancedOptionsCheckbox->SetValue(InitParams.Advanced);
-  updateAdvanced();
 
   // Processing
   ProcessingPluginPatchingCheckbox->SetValue(InitParams.Processing.PluginPatching);
@@ -571,6 +570,8 @@ void LauncherWindow::loadConfig() {
     TextureRulesVanillaBSAList->InsertItem(TextureRulesVanillaBSAList->GetItemCount(), VanillaBSA);
   }
   TextureRulesVanillaBSAList->InsertItem(TextureRulesVanillaBSAList->GetItemCount(), ""); // Add empty line
+
+  updateAdvanced();
 }
 
 // Component event handlers

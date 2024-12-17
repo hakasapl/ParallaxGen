@@ -13,17 +13,17 @@ void ParallaxGenTask::completeJob(const PGResult &Result) {
   // Use lock_guard to make this method thread-safe
   const lock_guard<mutex> Lock(NumJobsCompletedMutex);
 
-  // Check if NumJobsCompleted has Result for key
-  if (NumJobsCompleted.find(Result) == NumJobsCompleted.end()) {
-    NumJobsCompleted[Result] = 0;
-  }
-
   NumJobsCompleted[Result]++;
   printJobStatus();
 }
 
 void ParallaxGenTask::initJobStatus() {
   LastPerc = 0;
+
+  // Initialize all known PGResult values
+  NumJobsCompleted[PGResult::FAILURE] = 0;
+  NumJobsCompleted[PGResult::SUCCESS] = 0;
+  NumJobsCompleted[PGResult::SUCCESS_WITH_WARNINGS] = 0;
 
   spdlog::info("{} Starting...", TaskName);
 }
@@ -48,8 +48,10 @@ void ParallaxGenTask::printJobSummary() {
   // Print each job status Result
   string OutputLog = TaskName + " Summary: ";
   for (const auto &Pair : NumJobsCompleted) {
-    const string StateStr = PGResultStr[Pair.first];
-    OutputLog += "[ " + StateStr + " : " + to_string(Pair.second) + " ] ";
+    if (Pair.second > 0) {
+      const string StateStr = PGResultStr[Pair.first];
+      OutputLog += "[ " + StateStr + " : " + to_string(Pair.second) + " ] ";
+    }
   }
   OutputLog += "See log to see error messages, if any.";
   spdlog::info(OutputLog);
