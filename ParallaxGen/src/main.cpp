@@ -156,10 +156,10 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   spdlog::info(L"ParallaxGen output directory: {}", Params.Output.Dir.wstring());
 
   // Create relevant objects
-  const auto BG = BethesdaGame(Params.Game.Type, true, Params.Game.Dir);
+  auto BG = BethesdaGame(Params.Game.Type, true, Params.Game.Dir);
 
   auto MMD = ModManagerDirectory(Params.ModManager.Type);
-  auto PGD = ParallaxGenDirectory(BG, Params.Output.Dir, &MMD);
+  auto PGD = ParallaxGenDirectory(&BG, Params.Output.Dir, &MMD);
   auto PGD3D = ParallaxGenD3D(&PGD, Params.Output.Dir, ExePath, Params.Processing.GPUAcceleration);
   auto PG = ParallaxGen(Params.Output.Dir, &PGD, &PGD3D, Params.PostPatcher.OptimizeMeshes);
 

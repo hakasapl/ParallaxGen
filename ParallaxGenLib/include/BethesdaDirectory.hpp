@@ -103,7 +103,7 @@ public:
    * @param BG BethesdaGame object corresponding to load order
    * @param Logging Whether to enable CLI logging
    */
-  BethesdaDirectory(BethesdaGame &BG, std::filesystem::path GeneratedPath = "", ModManagerDirectory *MMD = nullptr, const bool &Logging = false);
+  BethesdaDirectory(BethesdaGame *BG, std::filesystem::path GeneratedPath = "", ModManagerDirectory *MMD = nullptr, const bool &Logging = false);
 
   /**
    * @brief Construct a new Bethesda Directory object without a game type, for generic folders only

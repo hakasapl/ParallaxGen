@@ -76,7 +76,7 @@ void mainRunner(PGToolsCLIArgs &Args) {
     Args.Patch.Source = filesystem::absolute(Args.Patch.Source);
     Args.Patch.Output = filesystem::absolute(Args.Patch.Output);
 
-    auto PGD = ParallaxGenDirectory(Args.Patch.Source, Args.Patch.Output);
+    auto PGD = ParallaxGenDirectory(Args.Patch.Source, Args.Patch.Output, nullptr);
     auto PGD3D = ParallaxGenD3D(&PGD, Args.Patch.Output, ExePath, Args.GPUAcceleration);
     auto PG = ParallaxGen(Args.Patch.Output, &PGD, &PGD3D, Args.Patch.Patchers.contains("optimize"));
 

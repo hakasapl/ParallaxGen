@@ -48,7 +48,7 @@
 using namespace std;
 using namespace ParallaxGenUtil;
 
-BethesdaDirectory::BethesdaDirectory(BethesdaGame &BG, filesystem::path GeneratedPath, ModManagerDirectory *MMD, const bool &Logging) : GeneratedDir(std::move(GeneratedPath)), Logging(Logging), BG(&BG), MMD(MMD) {
+BethesdaDirectory::BethesdaDirectory(BethesdaGame *BG, filesystem::path GeneratedPath, ModManagerDirectory *MMD, const bool &Logging) : GeneratedDir(std::move(GeneratedPath)), Logging(Logging), BG(BG), MMD(MMD) {
   // Assign instance vars
   DataDir = filesystem::path(this->BG->getGameDataPath());
 

@@ -22,7 +22,7 @@ protected:
 
     BG = make_unique<BethesdaGame>(Params.GameType, false, Params.GamePath, Params.AppDataPath,
                                    Params.DocumentPath); // no logging
-    PGD = make_unique<ParallaxGenDirectory>(*BG, "", nullptr); // no logging
+    PGD = make_unique<ParallaxGenDirectory>(BG.get(), "", nullptr); // no logging
   }
 
   // Tear down code for each test

@@ -22,7 +22,7 @@ protected:
     auto &Params = GetParam();
 
     BG = make_unique<BethesdaGame>(Params.GameType, false, Params.GamePath, Params.AppDataPath, Params.DocumentPath); // no logging
-    BD = make_unique<BethesdaDirectory>(*BG, "", nullptr, false); // no logging
+    BD = make_unique<BethesdaDirectory>(BG.get(), "", nullptr, false); // no logging
   }
 
   // Tear down code for each test
