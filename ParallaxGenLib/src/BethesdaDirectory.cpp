@@ -48,10 +48,17 @@
 using namespace std;
 using namespace ParallaxGenUtil;
 
-BethesdaDirectory::BethesdaDirectory(BethesdaGame &BG, filesystem::path GeneratedPath, ModManagerDirectory *MMD, const bool &Logging) : GeneratedDir(std::move(GeneratedPath)), Logging(Logging), BG(BG), MMD(MMD) {
+BethesdaDirectory::BethesdaDirectory(BethesdaGame *BG, filesystem::path GeneratedPath, ModManagerDirectory *MMD, const bool &Logging) : GeneratedDir(std::move(GeneratedPath)), Logging(Logging), BG(BG), MMD(MMD) {
   // Assign instance vars
-  DataDir = filesystem::path(this->BG.getGameDataPath());
+  DataDir = filesystem::path(this->BG->getGameDataPath());
 
+  if (this->Logging) {
+    // Log starting message
+    spdlog::info(L"Opening Data Folder \"{}\"", DataDir.wstring());
+  }
+}
+
+BethesdaDirectory::BethesdaDirectory(filesystem::path DataPath, filesystem::path GeneratedPath, ModManagerDirectory *MMD, const bool &Logging) : DataDir(std::move(DataPath)), GeneratedDir(std::move(GeneratedPath)), Logging(Logging), BG(nullptr), MMD(MMD) {
   if (this->Logging) {
     // Log starting message
     spdlog::info(L"Opening Data Folder \"{}\"", DataDir.wstring());
@@ -97,7 +104,7 @@ void BethesdaDirectory::populateFileMap(bool IncludeBSAs) {
     FileMap.clear();
   }
 
-  if (IncludeBSAs) {
+  if (IncludeBSAs && BG != nullptr) {
     // add BSA files to file map
     addBSAFilesToMap();
   }
@@ -278,6 +285,10 @@ auto BethesdaDirectory::getDataPath() const -> filesystem::path { return DataDir
 auto BethesdaDirectory::getGeneratedPath() const -> filesystem::path { return GeneratedDir; }
 
 void BethesdaDirectory::addBSAFilesToMap() {
+  if (BG == nullptr) {
+    throw runtime_error("BethesdaGame object is not set which is required to load BSA files");
+  }
+
   if (Logging) {
     spdlog::info("Adding BSA files to file map.");
   }
@@ -416,7 +427,7 @@ auto BethesdaDirectory::getBSALoadOrder() const -> vector<wstring> {
   vector<wstring> OutBSAOrder = getBSAFilesFromINIs();
 
   // get esp priority list
-  const vector<wstring> LoadOrder = BG.getActivePlugins(true);
+  const vector<wstring> LoadOrder = BG->getActivePlugins(true);
 
   // list BSA files in data directory
   const vector<wstring> AllBSAFiles = getBSAFilesInDirectory();
@@ -463,7 +474,7 @@ auto BethesdaDirectory::getBSAFilesFromINIs() const -> vector<wstring> {
   }
 
   // find ini paths
-  const BethesdaGame::ININame INILocs = BG.getINIPaths();
+  const BethesdaGame::ININame INILocs = BG->getINIPaths();
 
   vector<filesystem::path> INIFileOrder = {INILocs.INI, INILocs.INICustom};
 

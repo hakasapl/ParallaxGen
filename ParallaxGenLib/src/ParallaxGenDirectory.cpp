@@ -26,8 +26,11 @@
 using namespace std;
 using namespace ParallaxGenUtil;
 
-ParallaxGenDirectory::ParallaxGenDirectory(BethesdaGame BG, filesystem::path OutputPath, ModManagerDirectory *MMD)
+ParallaxGenDirectory::ParallaxGenDirectory(BethesdaGame *BG, filesystem::path OutputPath, ModManagerDirectory *MMD)
     : BethesdaDirectory(BG, std::move(OutputPath), MMD, true) {}
+
+ParallaxGenDirectory::ParallaxGenDirectory(filesystem::path DataPath, filesystem::path OutputPath, ModManagerDirectory *MMD)
+    : BethesdaDirectory(std::move(DataPath), std::move(OutputPath), MMD, true) {}
 
 auto ParallaxGenDirectory::findFiles() -> void {
   // Clear existing unconfirmedtextures

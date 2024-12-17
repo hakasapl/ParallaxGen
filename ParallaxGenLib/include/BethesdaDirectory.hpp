@@ -76,7 +76,7 @@ private:
   std::mutex FileCacheMutex; /** < Mutex for the file cache map */
 
   bool Logging;  /** < Bool for whether logging is enabled or not */
-  BethesdaGame BG; /** < BethesdaGame which stores a BethesdaGame object
+  BethesdaGame *BG; /** < BethesdaGame which stores a BethesdaGame object
                       corresponding to this load order */
   ModManagerDirectory *MMD; /** < ModManagerDirectory which stores a pointer to a
                                ModManagerDirectory object corresponding to this
@@ -103,7 +103,17 @@ public:
    * @param BG BethesdaGame object corresponding to load order
    * @param Logging Whether to enable CLI logging
    */
-  BethesdaDirectory(BethesdaGame &BG, std::filesystem::path GeneratedPath = "", ModManagerDirectory *MMD = nullptr, const bool &Logging = false);
+  BethesdaDirectory(BethesdaGame *BG, std::filesystem::path GeneratedPath = "", ModManagerDirectory *MMD = nullptr, const bool &Logging = false);
+
+  /**
+   * @brief Construct a new Bethesda Directory object without a game type, for generic folders only
+   *
+   * @param DataPath Data path
+   * @param GeneratedPath Generated path
+   * @param MMD ModManagerDirectory object
+   * @param Logging Whether to enable CLI logging
+   */
+  BethesdaDirectory(std::filesystem::path DataPath, std::filesystem::path GeneratedPath = "", ModManagerDirectory *MMD = nullptr, const bool &Logging = false);
 
   /**
    * @brief Populate file map with all files in the load order

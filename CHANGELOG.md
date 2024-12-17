@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.8.0] - UNRELEASED
+
+- Added pgtools.exe modding tools
+
 ## [0.7.3] - 2024-12-09
 
 - Added a warning for simplicity of snow users if PBR or CM is enabled (SoS is incompatible with these shaders)
