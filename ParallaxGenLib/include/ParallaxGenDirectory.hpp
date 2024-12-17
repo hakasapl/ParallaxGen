@@ -48,6 +48,7 @@ private:
 public:
   // constructor - calls the BethesdaDirectory constructor
   ParallaxGenDirectory(BethesdaGame BG, std::filesystem::path OutputPath = "", ModManagerDirectory *MMD = nullptr);
+  ParallaxGenDirectory(std::filesystem::path DataPath, std::filesystem::path OutputPath = "", ModManagerDirectory *MMD = nullptr);
 
   /// @brief Map all files in the load order to their type
   ///

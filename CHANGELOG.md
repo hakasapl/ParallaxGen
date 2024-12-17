@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.8.0] - UNRELEASED
+
+- Added pgtools.exe modding tools
+
 ## [0.7.2] - 2024-12-07
 
 - Added mesh allowlist
