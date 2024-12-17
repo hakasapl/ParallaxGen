@@ -107,7 +107,7 @@ public:
 
   /**
    * @brief Construct a new Bethesda Directory object without a game type, for generic folders only
-   * 
+   *
    * @param DataPath Data path
    * @param GeneratedPath Generated path
    * @param MMD ModManagerDirectory object
