@@ -75,6 +75,7 @@ ModSortDialog::ModSortDialog(const std::vector<std::wstring> &Mods, const std::v
   // Add OK button
   auto *OkButton = new wxButton(this, wxID_OK, "OK");
   MainSizer->Add(OkButton, 0, wxALIGN_CENTER_HORIZONTAL | wxALL, 10);
+  Bind(wxEVT_CLOSE_WINDOW, &ModSortDialog::onClose, this);
 
   SetSizer(MainSizer);
 
@@ -372,4 +373,10 @@ auto ModSortDialog::getSortedItems() const -> std::vector<std::wstring> {
   }
 
   return SortedItems;
+}
+
+void ModSortDialog::onClose( // NOLINT(readability-convert-member-functions-to-static)
+    [[maybe_unused]] wxCloseEvent &Event) {
+  UIExitTriggered = true;
+  wxTheApp->Exit();
 }

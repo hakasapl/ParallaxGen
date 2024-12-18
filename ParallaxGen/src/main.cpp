@@ -25,6 +25,7 @@
 
 #include "BethesdaGame.hpp"
 #include "GUI/LauncherWindow.hpp"
+#include "GUI/ModSortDialog.hpp"
 #include "ModManagerDirectory.hpp"
 #include "NIFUtil.hpp"
 #include "ParallaxGen.hpp"
@@ -332,7 +333,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 }
 
 void exitBlocking() {
-  if (LauncherWindow::UIExitTriggered) {
+  if (LauncherWindow::UIExitTriggered || ModSortDialog::UIExitTriggered) {
     return;
   }
 

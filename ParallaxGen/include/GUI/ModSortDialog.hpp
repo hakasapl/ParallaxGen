@@ -41,6 +41,8 @@ private:
   bool SortAscending; /** Stores whether the list is in asc or desc order */
 
 public:
+  static inline bool UIExitTriggered = false;
+
   /**
    * @brief Construct a new Mod Sort Dialog object
    *
@@ -102,6 +104,13 @@ private:
    * @param Event wxWidgets event object
    */
   void onTimer(wxTimerEvent &Event);
+
+  /**
+   * @brief Resets indices for the list after drag or sort
+   *
+   * @param Event wxWidgets event object
+   */
+  void onClose(wxCloseEvent &Event);
 
   /**
    * @brief Get the Header Height for positioning
