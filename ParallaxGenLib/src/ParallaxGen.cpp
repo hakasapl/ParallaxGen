@@ -437,7 +437,7 @@ auto ParallaxGen::processShape(
   // Check for exclusions
   // only allow BSLightingShaderProperty blocks
   string NIFShapeName = NIFShape->GetBlockName();
-  if (NIFShapeName != "NiTriShape" && NIFShapeName != "BSTriShape" && NIFShapeName != "BSLODTriShape") {
+  if (NIFShapeName != "NiTriShape" && NIFShapeName != "BSTriShape" && NIFShapeName != "BSLODTriShape" && NIFShapeName != "BSMeshLODTriShape") {
     Logger::trace(L"Rejecting: Incorrect shape block type");
     return Result;
   }
