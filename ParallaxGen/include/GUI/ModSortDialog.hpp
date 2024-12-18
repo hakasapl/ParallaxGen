@@ -107,7 +107,7 @@ private:
 
   /**
    * @brief Resets indices for the list after drag or sort
-   * 
+   *
    * @param Event wxWidgets event object
    */
   void onClose(wxCloseEvent &Event);
