@@ -3,6 +3,8 @@
 ## [0.8.0] - UNRELEASED
 
 - Added pgtools.exe modding tools
+- Parallax maps included in the pbr subdirectory will be considered a different "height pbr" texture type
+- Closing mod sort dialog will now close the whole app
 
 ## [0.7.3] - 2024-12-09
 
