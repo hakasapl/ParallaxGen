@@ -3,6 +3,7 @@
 ## [0.8.0] - UNRELEASED
 
 - Added pgtools.exe modding tools
+- Removed simplicity of snow warning as the mod is not inherently incompatible
 
 ## [0.7.3] - 2024-12-09
 
