@@ -5,17 +5,18 @@
 [list]
 [*][size=3]Make sure [url=https://aka.ms/vs/17/release/vc_redist.x64.exe]Microsoft Visual C++ Redistributable x64[/url] is installed[/size]
 [*][size=3]Make sure .NET 8 runtime is installed, you can get it here [url=https://dotnet.microsoft.com/en-us/download/dotnet/8.0]Download .NET 8.0[/url][/size]
-[*][size=3]Mod manager that creates [i]plugin.txt[/i] and [i]loadorder.txt[/i], known to work: [url=https://www.nexusmods.com/about/vortex/]Vortex[/url] and [url=https://www.modorganizer.org/]Mod Organizer 2[/url][/size]
+[*][size=3]Mod manager that creates [i]plugins.txt[/i] and [i]loadorder.txt[/i], known to work: [url=https://www.nexusmods.com/about/vortex/]Vortex[/url] and [url=https://www.modorganizer.org/]Mod Organizer 2[/url][/size]
 [/list]
 
 [b][size=6][center][color=#6aa84f]Overview[/color][/center][/size][/b]
-[size=3]ParallaxGen scans the textures of your load order and creates patched meshes and a plugin to enable shaders on meshes. You need this tool in the following cases:[/size]
+[size=3]ParallaxGen scans the textures of your load order and creates patched meshes and a plugin to enable shaders on meshes. This tool is required in the following cases:[/size]
 [list]
-[*][size=3]you installed a mod that contains parallax or complex material textures but does not contain parallax/complex material meshes, note that this is the recommended way to provide textures[/size]
+[*][size=3]you installed a mod that contains parallax, complex material or PBR textures but does not contain the corresponding meshes, note that this is the recommended way to provide textures[/size]
 [*][size=3]you created your own parallax textures[/size]
-[*][size=3]you do have parallax/complex material meshes, but they are overridden by another mod that does not have parallax/complex material enabled[/size]
-[*][size=3]you do have both complex material as well as parallax textures[/size]
-[*][size=3]you don't want to use mod author provided meshes because they overwrite meshes from mesh fix mods[/size]
+[*][size=3]you do have parallax, complex material or PBR meshes, but they are overridden by another mod that does not have the corresponding shaders enabled in the meshes[/size]
+[*][size=3]you do have mixture of parallax, complex material or PBR textures[/size]
+[*][size=3]you don't want to use mod author provided meshes of parallax, complex material or PBR mods because they overwrite meshes from mesh fix mods[/size]
+[*][size=3]you want to upgrade your parallax textures to complex material textures
 [/list]
 
 [size=6][center][b][color=#6aa84f]Basic usage[/color][/b][/center][/size]
@@ -38,7 +39,7 @@ Before this, mod authors would need to ship pre-patched meshes with their textur
 
 In addition, sometimes there is a need to combine shaders in a single mesh. For example, your mountains might be complex material, and your whiterun street might be regular parallax, but a single whiterun street mesh has some rocks on the side of the road. Before, this would have to be done manually using applications like NifSkope. ParallaxGen will know which should be which and patch the mesh automatically for both.
 
-Want to learn more about all the shader types ParallaxGen supports? Check out this [url=https://github.com/hakasapl/ParallaxGen/wiki/History-of-Extended-Shaders]wiki page[/url].
+Want to learn more about all the shader types ParallaxGen supports? Check out this [url=https://github.com/hakasapl/ParallaxGen/wiki/Supported-Shaders]wiki page[/url].
 
 [size=4]Plugin Patching[/size]
 
@@ -46,7 +47,7 @@ Plugins (mainly TXST records) will also be patched according to how the original
 
 [size=4]Shader Upgrades[/size]
 
-Complex parallax has a lot of limitations that I didn't like, so I implemented shader upgrades into ParallaxGen. What this means is that by passing the [code]--upgrade-shaders[/code] argument, ParallaxGen will generate complex material environment mask files for every parallax height map you have in your load order, if an existing complex material map does not already exist. Then, when patching meshes, ParallaxGen will use those newly generated textures and enable complex material on meshes instead of complex parallax. In most cases you won't see any difference in-game between complex parallax and complex material since ParallaxGen does not add any extra data such as metalness and roughness (so you should still prefer to get complex material mods, which will). However, this will allow you to use single-pass snow shaders (ie. Vanilla or Better Dynamic Snow v3), see parallax on decals, and many more things that complex material supports where complex parallax doesn't. [b]In most cases I recommend enabling this flag always[/b]. This also fixes the dreaded blue/white distant mesh bug with parallax meshes. After running with this option the result will be NO complex parallax in your game.
+Complex parallax has a lot of limitations that I didn't like, so I implemented shader upgrades into ParallaxGen. What this means is that by chosing "Upgrade Parallax to Complex Material", ParallaxGen will generate complex material environment mask files for every parallax height map you have in your load order, if an existing complex material map does not already exist. Then, when patching meshes, ParallaxGen will use those newly generated textures and enable complex material on meshes instead of complex parallax. In most cases you won't see any difference in-game between complex parallax and complex material since ParallaxGen does not add any extra data such as metalness and roughness (so you should still prefer to get complex material mods, which will). However, this will allow you to use single-pass snow shaders (ie. Vanilla or Better Dynamic Snow v3), see parallax on decals, and many more things that complex material supports where complex parallax doesn't. [b]In most cases I recommend enabling this flag always[/b]. This also fixes the dreaded blue/white distant mesh bug with parallax meshes. After running with this option the result will be NO complex parallax in your game.
 
 [color=#6aa84f][size=6][center][b]A Note to Mod Authors[/b][/center][/size][/color]
 One of the main goals for ParallaxGen is to allow texture artists to worry about just that, and not the mesh part. Historically parallax or complex material meshes needed to be included in mods for them to work in-game. With ParallaxGen you should be able to ship only textures with your mod, and send your users to here to patch their meshes. That being said, the way ParallaxGen identifies textures is not fool-proof. If your mod follows these guidelines, ParallaxGen will work correctly with it:
