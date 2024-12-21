@@ -7,6 +7,7 @@
 - Parallax maps included in the pbr subdirectory will be considered a different "height pbr" texture type
 - Closing mod sort dialog will now close the whole app
 - BSMeshLODTriShapes will also be patched now
+- Existing TXST records will no longer be patched, only new ones will be created
 
 ## [0.7.3] - 2024-12-09
 

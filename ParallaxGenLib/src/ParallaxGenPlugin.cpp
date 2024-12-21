@@ -292,18 +292,14 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
   // loop through matches
   for (const auto &[TXSTIndex, AltTexIndex] : Matches) {
     int TXSTId = 0;
-    bool NewTXST = false;
+
     // Check if the TXST is already modified
     {
       lock_guard<mutex> Lock(TXSTModMapMutex);
 
       if (TXSTModMap.find(TXSTIndex) != TXSTModMap.end()) {
         // TXST set was already patched, check to see which shader
-        if (TXSTModMap[TXSTIndex].find(AppliedShader) == TXSTModMap[TXSTIndex].end()) {
-          // TXST was patched, but not for the current shader. We need to make a new TXST record
-          NewTXST = true;
-          spdlog::trace(L"Plugin Patching | {} | {} | {} | New TXST record needed", NIFPath, Name3D, Index3D);
-        } else {
+        if (TXSTModMap[TXSTIndex].find(AppliedShader) != TXSTModMap[TXSTIndex].end()) {
           // TXST was patched, and for the current shader. We need to determine if AltTex is set correctly
           spdlog::trace(L"Plugin Patching | {} | {} | {} | TXST record already patched correctly", NIFPath, Name3D,
                         Index3D);
@@ -423,24 +419,13 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
       continue;
     }
 
-    // Patch record
-    if (NewTXST) {
-      // Create a new TXST record
-      spdlog::trace(L"Plugin Patching | {} | {} | {} | Creating a new TXST record and patching", NIFPath, Name3D,
-                    Index3D);
-      TXSTId = libCreateNewTXSTPatch(AltTexIndex, NewSlots);
-      {
-        lock_guard<mutex> Lock(TXSTModMapMutex);
-        TXSTModMap[TXSTIndex][AppliedShader] = TXSTId;
-      }
-    } else {
-      // Update the existing TXST record
-      spdlog::trace(L"Plugin Patching | {} | {} | {} | Patching an existing TXST record", NIFPath, Name3D, Index3D);
-      libCreateTXSTPatch(TXSTIndex, NewSlots);
-      {
-        lock_guard<mutex> Lock(TXSTModMapMutex);
-        TXSTModMap[TXSTIndex][AppliedShader] = TXSTIndex;
-      }
+    // Create a new TXST record
+    spdlog::trace(L"Plugin Patching | {} | {} | {} | Creating a new TXST record and patching", NIFPath, Name3D,
+                  Index3D);
+    TXSTId = libCreateNewTXSTPatch(AltTexIndex, NewSlots);
+    {
+      lock_guard<mutex> Lock(TXSTModMapMutex);
+      TXSTModMap[TXSTIndex][AppliedShader] = TXSTId;
     }
   }
 }
