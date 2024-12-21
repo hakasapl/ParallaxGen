@@ -69,6 +69,7 @@ auto NIFUtil::getTexSuffixMap() -> map<wstring, tuple<NIFUtil::TextureSlots, NIF
       {L"_cnr", {NIFUtil::TextureSlots::MULTILAYER, NIFUtil::TextureType::COATNORMALROUGHNESS}},
       {L"_s", {NIFUtil::TextureSlots::MULTILAYER, NIFUtil::TextureType::SUBSURFACETINT}},
       {L"_i", {NIFUtil::TextureSlots::MULTILAYER, NIFUtil::TextureType::INNERLAYER}},
+      {L"_f", {NIFUtil::TextureSlots::MULTILAYER, NIFUtil::TextureType::FUZZPBR}},
       {L"_rmaos", {NIFUtil::TextureSlots::ENVMASK, NIFUtil::TextureType::RMAOS}},
       {L"_envmask", {NIFUtil::TextureSlots::ENVMASK, NIFUtil::TextureType::ENVIRONMENTMASK}},
       {L"_em", {NIFUtil::TextureSlots::ENVMASK, NIFUtil::TextureType::ENVIRONMENTMASK}},
@@ -101,6 +102,7 @@ auto NIFUtil::getStrFromTexType(const TextureType &Type) -> string {
       {TextureType::RMAOS, "rmaos"},
       {TextureType::SUBSURFACETINT, "subsurface tint"},
       {TextureType::INNERLAYER, "inner layer"},
+      {TextureType::FUZZPBR, "fuzz pbr"},
       {TextureType::COATNORMALROUGHNESS, "coat normal roughness"},
       {TextureType::BACKLIGHT, "backlight"},
       {TextureType::SPECULAR, "specular"},
@@ -130,6 +132,7 @@ auto NIFUtil::getTexTypeFromStr(const string &Type) -> TextureType {
       {"rmaos", TextureType::RMAOS},
       {"subsurface tint", TextureType::SUBSURFACETINT},
       {"inner layer", TextureType::INNERLAYER},
+      {"fuzz pbr", TextureType::FUZZPBR},
       {"coat normal roughness", TextureType::COATNORMALROUGHNESS},
       {"backlight", TextureType::BACKLIGHT},
       {"specular", TextureType::SPECULAR},
@@ -160,6 +163,7 @@ auto NIFUtil::getSlotFromTexType(const TextureType &Type) -> TextureSlots {
       {TextureType::RMAOS, TextureSlots::ENVMASK},
       {TextureType::SUBSURFACETINT, TextureSlots::MULTILAYER},
       {TextureType::INNERLAYER, TextureSlots::MULTILAYER},
+      {TextureType::FUZZPBR, TextureSlots::MULTILAYER},
       {TextureType::COATNORMALROUGHNESS, TextureSlots::MULTILAYER},
       {TextureType::BACKLIGHT, TextureSlots::BACKLIGHT},
       {TextureType::SPECULAR, TextureSlots::BACKLIGHT},
@@ -201,7 +205,7 @@ auto NIFUtil::getTexTypesStr() -> vector<string> {
   static const vector<string> TexTypesStr = {
       "diffuse",          "normal",   "model space normal", "emissive",    "skin tint",
       "subsurface color", "height",   "height pbr",         "cubemap",     "environment mask",
-      "complex material", "rmaos",    "subsurface tint",    "inner layer", "coat normal roughness",
+      "complex material", "rmaos",    "subsurface tint",    "inner layer", "fuzz pbr", "coat normal roughness",
       "backlight",        "specular", "subsurface pbr",     "unknown"};
 
   return TexTypesStr;

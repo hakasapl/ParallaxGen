@@ -8,6 +8,8 @@
 - Closing mod sort dialog will now close the whole app
 - BSMeshLODTriShapes will also be patched now
 - Existing TXST records will no longer be patched, only new ones will be created
+- Added support for PBR fuzz
+- Added support for PBR hair
 
 ## [0.7.3] - 2024-12-09
 
