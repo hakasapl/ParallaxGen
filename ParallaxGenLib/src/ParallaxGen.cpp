@@ -187,7 +187,7 @@ void ParallaxGen::zipMeshes() const {
 }
 
 void ParallaxGen::deleteOutputDir(const bool &PreOutput) const {
-  static const unordered_set<filesystem::path> FoldersToDelete = {"meshes", "textures"};
+  static const unordered_set<filesystem::path> FoldersToDelete = {"meshes", "textures", "LightPlacer"};
   static const unordered_set<filesystem::path> FilesToDelete = {"ParallaxGen.esp", getDiffJSONName()};
   static const unordered_set<filesystem::path> FilesToIgnore = {"meta.ini"};
   static const unordered_set<filesystem::path> FilesToDeletePreOutput = {getOutputZipName()};
@@ -296,6 +296,10 @@ auto ParallaxGen::processNIF(
       PatcherObjects.ShaderTransformPatchers[Shader].emplace(TransformShader, std::move(Transform));
     }
   }
+  for (const auto &Factory : Patchers.GlobalPatchers) {
+    auto Patcher = Factory(NIFFile, &NIF);
+    PatcherObjects.GlobalPatchers.emplace_back(std::move(Patcher));
+  }
 
   // Patch each shape in NIF
   size_t NumShapes = 0;
@@ -357,6 +361,15 @@ auto ParallaxGen::processNIF(
     Result = ParallaxGenTask::PGResult::FAILURE;
     return Result;
   }
+
+  // Run global patchers
+  for (const auto &GlobalPatcher : PatcherObjects.GlobalPatchers) {
+    Logger::Prefix PrefixPatches(UTF8toUTF16(GlobalPatcher->getPatcherName()));
+    GlobalPatcher->applyPatch(NIFModified);
+  }
+
+  // Delete unreferenced blocks
+  NIF.DeleteUnreferencedBlocks();
 
   // Save patched NIF if it was modified
   if (NIFModified && !Dry) {

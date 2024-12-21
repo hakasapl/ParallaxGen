@@ -17,6 +17,7 @@
 #include "patchers/PatcherTruePBR.hpp"
 #include "patchers/PatcherUpgradeParallaxToCM.hpp"
 #include "patchers/PatcherVanillaParallax.hpp"
+#include "patchers/PatcherParticleLightsToLP.hpp"
 
 using namespace std;
 
@@ -136,8 +137,16 @@ void mainRunner(PGToolsCLIArgs &Args) {
       Patchers.ShaderTransformPatchers[PatcherUpgradeParallaxToCM::getFromShader()].emplace(
           PatcherUpgradeParallaxToCM::getToShader(), PatcherUpgradeParallaxToCM::getFactory());
     }
+    if (Args.Patch.Patchers.contains("particlelightstolp")) {
+      Patchers.GlobalPatchers.emplace_back(PatcherParticleLightsToLP::getFactory());
+    }
 
     PG.patchMeshes(Patchers, nullptr, Args.Multithreading, false);
+
+    // Finalize step
+    if (Args.Patch.Patchers.contains("particlelightstolp")) {
+      PatcherParticleLightsToLP::finalize();
+    }
 
     // Release cached files, if any
     PGD.clearCache();

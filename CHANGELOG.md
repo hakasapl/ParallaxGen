@@ -3,6 +3,7 @@
 ## [0.8.0] - UNRELEASED
 
 - Added pgtools.exe modding tools
+- Added pgtools patcher to convert particle lights to light placer lights
 - Parallax maps included in the pbr subdirectory will be considered a different "height pbr" texture type
 - Closing mod sort dialog will now close the whole app
 - BSMeshLODTriShapes will also be patched now
