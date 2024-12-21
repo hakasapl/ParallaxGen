@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 
+#include "patchers/PatcherGlobal.hpp"
 #include "patchers/PatcherShader.hpp"
 #include "patchers/PatcherShaderTransform.hpp"
 
@@ -18,6 +19,7 @@ public:
    * @brief Stores the patcher objects for a given run
    */
   struct PatcherObjectSet {
+    std::vector<PatcherGlobal::PatcherGlobalObject> GlobalPatchers;
     std::unordered_map<NIFUtil::ShapeShader, PatcherShader::PatcherShaderObject> ShaderPatchers;
     std::unordered_map<NIFUtil::ShapeShader,
                        std::map<NIFUtil::ShapeShader, PatcherShaderTransform::PatcherShaderTransformObject>>
@@ -29,6 +31,7 @@ public:
    * @brief Stores the patcher factories for a given run
    */
   struct PatcherSet {
+    std::vector<PatcherGlobal::PatcherGlobalFactory> GlobalPatchers;
     std::unordered_map<NIFUtil::ShapeShader, PatcherShader::PatcherShaderFactory> ShaderPatchers;
     std::unordered_map<NIFUtil::ShapeShader,
                        std::map<NIFUtil::ShapeShader, PatcherShaderTransform::PatcherShaderTransformFactory>>

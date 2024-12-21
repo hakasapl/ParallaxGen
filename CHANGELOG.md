@@ -3,6 +3,13 @@
 ## [0.8.0] - UNRELEASED
 
 - Added pgtools.exe modding tools
+- Added pgtools patcher to convert particle lights to light placer lights
+- Parallax maps included in the pbr subdirectory will be considered a different "height pbr" texture type
+- Closing mod sort dialog will now close the whole app
+- BSMeshLODTriShapes will also be patched now
+- Existing TXST records will no longer be patched, only new ones will be created
+- Added support for PBR fuzz
+- Added support for PBR hair
 - Removed simplicity of snow warning as the mod is not inherently incompatible
 
 ## [0.7.3] - 2024-12-09

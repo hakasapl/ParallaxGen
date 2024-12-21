@@ -672,6 +672,11 @@ void PatcherTruePBR::applyOnePatchSlots(std::array<std::wstring, NUM_TEXTURE_SLO
       NewCNR = MatchedPath + L"_cnr.dds";
     }
 
+    // Fuzz texture slot
+    if (TruePBRData.contains("fuzz") && flag(TruePBRData["fuzz"], "texture")) {
+      NewCNR = MatchedPath + L"_f.dds";
+    }
+
     Slots[static_cast<size_t>(NIFUtil::TextureSlots::MULTILAYER)] = NewCNR;
   }
 
@@ -728,6 +733,11 @@ void PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader
   if (TruePBRData.contains("subsurface")) {
     NIFUtil::configureShaderFlag(NIFShaderBSLSP, SLSF2_RIM_LIGHTING, TruePBRData["subsurface"].get<bool>(),
                                  NIFModified);
+  }
+
+  // "hair" attribute
+  if (flag(TruePBRData, "hair")) {
+    NIFUtil::setShaderFlag(NIFShaderBSLSP, SLSF2_BACK_LIGHTING, NIFModified);
   }
 
   // "multilayer" attribute
@@ -819,6 +829,32 @@ void PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader
       NIFUtil::setShaderFloat(NIFShaderBSLSP->parallaxInnerLayerTextureScale.v, GlintParams["density_randomization"],
                               NIFModified);
     }
+  } else if(TruePBRData.contains("fuzz")) {
+    // fuzz is enabled
+    const auto &FuzzParams = TruePBRData["fuzz"];
+
+    // Set shader type to MLP
+    NIFUtil::setShaderType(NIFShader, BSLSP_MULTILAYERPARALLAX, NIFModified);
+    // Enable Fuzz with soft lighting flag
+    NIFUtil::setShaderFlag(NIFShaderBSLSP, SLSF2_SOFT_LIGHTING, NIFModified);
+
+    // get color
+    auto FuzzColor = vector<float>{0.0F, 0.0F, 0.0F};
+    if (FuzzParams.contains("color")) {
+      FuzzColor = FuzzParams["color"].get<vector<float>>();
+    }
+
+    NIFUtil::setShaderFloat(NIFShaderBSLSP->parallaxInnerLayerThickness, FuzzColor[0], NIFModified);
+    NIFUtil::setShaderFloat(NIFShaderBSLSP->parallaxRefractionScale, FuzzColor[1], NIFModified);
+    NIFUtil::setShaderFloat(NIFShaderBSLSP->parallaxInnerLayerTextureScale.u, FuzzColor[2], NIFModified);
+
+    // get weight
+    auto FuzzWeight = 1.0F;
+    if (FuzzParams.contains("weight")) {
+      FuzzWeight = FuzzParams["weight"].get<float>();
+    }
+
+    NIFUtil::setShaderFloat(NIFShaderBSLSP->parallaxInnerLayerTextureScale.v, FuzzWeight, NIFModified);
   } else {
     // Revert to default NIFShader type
     NIFUtil::setShaderType(NIFShader, BSLSP_DEFAULT, NIFModified);
@@ -827,8 +863,14 @@ void PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader
   if (!EnableMultiLayer) {
     // Clear multilayer flags
     NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF2_MULTI_LAYER_PARALLAX, NIFModified);
-    NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF2_BACK_LIGHTING, NIFModified);
-    NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF2_SOFT_LIGHTING, NIFModified);
+
+    if (!flag(TruePBRData, "hair")) {
+      NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF2_BACK_LIGHTING, NIFModified);
+    }
+
+    if (!TruePBRData.contains("fuzz")) {
+      NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF2_SOFT_LIGHTING, NIFModified);
+    }
   }
 }
 

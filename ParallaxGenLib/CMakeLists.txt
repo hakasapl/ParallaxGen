@@ -20,6 +20,8 @@ set(HEADERS
     "include/patchers/PatcherUpgradeParallaxToCM.hpp"
     "include/patchers/Patcher.hpp"
     "include/patchers/PatcherUtil.hpp"
+    "include/patchers/PatcherGlobal.hpp"
+    "include/patchers/PatcherParticleLightsToLP.hpp"
 )
 
 set(SOURCES
@@ -43,6 +45,8 @@ set(SOURCES
     "src/patchers/PatcherUpgradeParallaxToCM.cpp"
     "src/patchers/Patcher.cpp"
     "src/patchers/PatcherUtil.cpp"
+    "src/patchers/PatcherGlobal.cpp"
+    "src/patchers/PatcherParticleLightsToLP.cpp"
 )
 
 include_directories("include")
