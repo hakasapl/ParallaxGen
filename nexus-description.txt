@@ -16,7 +16,7 @@
 [*][size=3]you do have parallax, complex material or PBR meshes, but they are overridden by another mod that does not have the corresponding shaders enabled in the meshes[/size]
 [*][size=3]you do have mixture of parallax, complex material or PBR textures[/size]
 [*][size=3]you don't want to use mod author provided meshes of parallax, complex material or PBR mods because they overwrite meshes from mesh fix mods[/size]
-[*][size=3]you want to upgrade your parallax textures to complex material textures
+[*][size=3]you want to upgrade your parallax textures to complex material textures[/size]
 [/list]
 
 [size=6][center][b][color=#6aa84f]Basic usage[/color][/b][/center][/size]
