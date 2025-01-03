@@ -10,6 +10,7 @@
 - Existing TXST records will no longer be patched, only new ones will be created
 - Added support for PBR fuzz
 - Added support for PBR hair
+- Mods that do not have any special shader type can be prioritized now
 
 ## [0.7.3] - 2024-12-09
 

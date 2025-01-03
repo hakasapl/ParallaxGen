@@ -96,6 +96,11 @@ auto ParallaxGenUI::selectModOrder(
 
     vector<wstring> ShaderStrs;
     for (const auto &Shader : get<0>(Conflicts.at(Mod))) {
+      if (Shader == NIFUtil::ShapeShader::NONE) {
+        // don't print none type
+        continue;
+      }
+
       ShaderStrs.insert(ShaderStrs.begin(), ParallaxGenUtil::UTF8toUTF16(NIFUtil::getStrFromShader(Shader)));
     }
 
