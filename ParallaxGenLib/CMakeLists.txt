@@ -22,6 +22,7 @@ set(HEADERS
     "include/patchers/PatcherUtil.hpp"
     "include/patchers/PatcherGlobal.hpp"
     "include/patchers/PatcherParticleLightsToLP.hpp"
+    "include/patchers/PatcherDefault.hpp"
 )
 
 set(SOURCES
@@ -47,6 +48,7 @@ set(SOURCES
     "src/patchers/PatcherUtil.cpp"
     "src/patchers/PatcherGlobal.cpp"
     "src/patchers/PatcherParticleLightsToLP.cpp"
+    "src/patchers/PatcherDefault.cpp"
 )
 
 include_directories("include")

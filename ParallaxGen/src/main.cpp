@@ -41,6 +41,7 @@
 #include "patchers/PatcherUpgradeParallaxToCM.hpp"
 #include "patchers/PatcherUtil.hpp"
 #include "patchers/PatcherVanillaParallax.hpp"
+#include "patchers/PatcherDefault.hpp"
 
 #include "ParallaxGenUI.hpp"
 
@@ -258,6 +259,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   // Create patcher factory
   PatcherUtil::PatcherSet Patchers;
+  Patchers.ShaderPatchers.emplace(PatcherDefault::getShaderType(), PatcherDefault::getFactory());
   if (Params.ShaderPatcher.Parallax) {
     Patchers.ShaderPatchers.emplace(PatcherVanillaParallax::getShaderType(), PatcherVanillaParallax::getFactory());
   }
