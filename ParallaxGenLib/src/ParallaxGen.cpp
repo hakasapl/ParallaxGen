@@ -64,7 +64,7 @@ void ParallaxGen::patchMeshes(const bool &MultiThread, const bool &PatchPlugin) 
   const boost::thread_group ThreadGroup;
 
   // Define diff JSON
-  nlohmann::json DiffJSON;
+  nlohmann::json DiffJSON = nlohmann::json::object();
 
   // Create threads
   if (MultiThread) {

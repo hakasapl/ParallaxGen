@@ -15,6 +15,7 @@
 - Meshes that have higher priority than textures can be patched now
 - Plugin patching will also be considered when evaluating mods for conflicts now
 - Removed simplicity of snow warning as the mod is not inherently incompatible
+- Fixed NULL output in ParallaxGen_Diff.json when PG patched nothing
 
 ## [0.7.3] - 2024-12-09
 
