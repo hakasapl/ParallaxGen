@@ -474,6 +474,7 @@ void PatcherTruePBR::applyShader(nifly::NiShape &NIFShape, bool &NIFModified) {
   // Clear unused flags
   NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF1_ENVIRONMENT_MAPPING, NIFModified);
   NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF1_PARALLAX, NIFModified);
+  NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF1_HAIR_SOFT_LIGHTING, NIFModified);
 }
 
 void PatcherTruePBR::loadOptions(unordered_set<string> &OptionsStr) {
@@ -731,6 +732,7 @@ void PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader
 
   // revert to default NIFShader type, remove flags used in other types
   NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF1_ENVIRONMENT_MAPPING, NIFModified);
+  NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF1_HAIR_SOFT_LIGHTING, NIFModified);
   NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF1_PARALLAX, NIFModified);
   NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF2_GLOW_MAP, NIFModified);
 

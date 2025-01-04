@@ -16,6 +16,7 @@
 - Plugin patching will also be considered when evaluating mods for conflicts now
 - Removed simplicity of snow warning as the mod is not inherently incompatible
 - Fixed NULL output in ParallaxGen_Diff.json when PG patched nothing
+- PBR patcher clears hair_soft_lighting flag now
 
 ## [0.7.3] - 2024-12-09
 
