@@ -115,26 +115,11 @@ auto PatcherComplexMaterial::applyPatch(NiShape &NIFShape, const PatcherMatch &M
                                         bool &NIFModified, bool &ShapeDeleted) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
   // Prep
   ShapeDeleted = false;
-  auto *NIFShader = getNIF()->GetShader(&NIFShape);
-  auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
 
-  // Remove texture slots if disabling MLP
-  if (DisableMLP && NIFShaderBSLSP->GetShaderType() == BSLSP_MULTILAYERPARALLAX) {
-    NIFUtil::setTextureSlot(getNIF(), &NIFShape, NIFUtil::TextureSlots::GLOW, "", NIFModified);
-    NIFUtil::setTextureSlot(getNIF(), &NIFShape, NIFUtil::TextureSlots::MULTILAYER, "", NIFModified);
-    NIFUtil::setTextureSlot(getNIF(), &NIFShape, NIFUtil::TextureSlots::BACKLIGHT, "", NIFModified);
+  // Apply shader
+  applyShader(NIFShape, NIFModified);
 
-    NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF2_MULTI_LAYER_PARALLAX, NIFModified);
-  }
-
-  // Set NIFShader type to env map
-  NIFUtil::setShaderType(NIFShader, BSLSP_ENVMAP, NIFModified);
-  NIFUtil::setShaderFloat(NIFShaderBSLSP->environmentMapScale, 1.0F, NIFModified);
-  // Set NIFShader flags
-  NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF1_PARALLAX, NIFModified);
-  NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF2_UNUSED01, NIFModified);
-  NIFUtil::setShaderFlag(NIFShaderBSLSP, SLSF1_ENVIRONMENT_MAPPING, NIFModified);
-
+  // Apply slots
   auto NewSlots = applyPatchSlots(getTextureSet(NIFShape), Match);
   setTextureSet(NIFShape, NewSlots, NIFModified);
 
@@ -157,6 +142,28 @@ auto PatcherComplexMaterial::applyPatchSlots(const std::array<std::wstring, NUM_
   }
 
   return NewSlots;
+}
+
+void PatcherComplexMaterial::applyShader(NiShape &NIFShape, bool &NIFModified) {
+  auto *NIFShader = getNIF()->GetShader(&NIFShape);
+  auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
+
+  // Remove texture slots if disabling MLP
+  if (DisableMLP && NIFShaderBSLSP->GetShaderType() == BSLSP_MULTILAYERPARALLAX) {
+    NIFUtil::setTextureSlot(getNIF(), &NIFShape, NIFUtil::TextureSlots::GLOW, "", NIFModified);
+    NIFUtil::setTextureSlot(getNIF(), &NIFShape, NIFUtil::TextureSlots::MULTILAYER, "", NIFModified);
+    NIFUtil::setTextureSlot(getNIF(), &NIFShape, NIFUtil::TextureSlots::BACKLIGHT, "", NIFModified);
+
+    NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF2_MULTI_LAYER_PARALLAX, NIFModified);
+  }
+
+  // Set NIFShader type to env map
+  NIFUtil::setShaderType(NIFShader, BSLSP_ENVMAP, NIFModified);
+  NIFUtil::setShaderFloat(NIFShaderBSLSP->environmentMapScale, 1.0F, NIFModified);
+  // Set NIFShader flags
+  NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF1_PARALLAX, NIFModified);
+  NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF2_UNUSED01, NIFModified);
+  NIFUtil::setShaderFlag(NIFShaderBSLSP, SLSF1_ENVIRONMENT_MAPPING, NIFModified);
 }
 
 auto PatcherComplexMaterial::applyNeutral(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots)

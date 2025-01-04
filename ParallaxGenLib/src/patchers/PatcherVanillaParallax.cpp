@@ -133,6 +133,27 @@ auto PatcherVanillaParallax::applyPatch(nifly::NiShape &NIFShape, const PatcherM
                                         bool &NIFModified, bool &ShapeDeleted) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
   // Prep
   ShapeDeleted = false;
+
+  // Apply shader
+  applyShader(NIFShape, NIFModified);
+
+  // Apply slots
+  auto NewSlots = applyPatchSlots(getTextureSet(NIFShape), Match);
+  setTextureSet(NIFShape, NewSlots, NIFModified);
+
+  return NewSlots;
+}
+
+auto PatcherVanillaParallax::applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
+                                             const PatcherMatch &Match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
+  array<wstring, NUM_TEXTURE_SLOTS> NewSlots = OldSlots;
+
+  NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::PARALLAX)] = Match.MatchedPath;
+
+  return NewSlots;
+}
+
+void PatcherVanillaParallax::applyShader(nifly::NiShape &NIFShape, bool &NIFModified) {
   auto *NIFShader = getNIF()->GetShader(&NIFShape);
   auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
 
@@ -152,20 +173,6 @@ auto PatcherVanillaParallax::applyPatch(nifly::NiShape &NIFShape, const PatcherM
     NIFShader->SetVertexColors(true);
     NIFModified = true;
   }
-
-  auto NewSlots = applyPatchSlots(getTextureSet(NIFShape), Match);
-  setTextureSet(NIFShape, NewSlots, NIFModified);
-
-  return NewSlots;
-}
-
-auto PatcherVanillaParallax::applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
-                                             const PatcherMatch &Match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
-  array<wstring, NUM_TEXTURE_SLOTS> NewSlots = OldSlots;
-
-  NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::PARALLAX)] = Match.MatchedPath;
-
-  return NewSlots;
 }
 
 auto PatcherVanillaParallax::applyNeutral(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots)

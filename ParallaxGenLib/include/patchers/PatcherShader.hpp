@@ -90,6 +90,11 @@ public:
   virtual auto applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
                                const PatcherMatch &Match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> = 0;
 
+  /// @brief apply the shader to the shape
+  /// @param[in] NIFShape shape to apply the shader to
+  /// @param[out] NIFModified if the shape was modified
+  virtual void applyShader(nifly::NiShape &NIFShape, bool &NIFModified) = 0;
+
   /// @brief apply neutral textures according to the that don't change the appearance
   /// @param[in] OldSlots array of the slot textures
   /// @return new array containing the applied textures

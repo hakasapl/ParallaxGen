@@ -89,7 +89,7 @@ void ParallaxGenPlugin::libInitialize(const int &GameType, const wstring &DataPa
                                       const vector<wstring> &LoadOrder) {
   lock_guard<mutex> Lock(LibMutex);
 
-  // Use std::vector to manage the memory for LoadOrderArr
+  // Use vector to manage the memory for LoadOrderArr
   vector<const wchar_t *> LoadOrderArr;
   if (!LoadOrder.empty()) {
     LoadOrderArr.reserve(LoadOrder.size()); // Pre-allocate the vector size
@@ -242,11 +242,33 @@ auto ParallaxGenPlugin::libGetTXSTFormID(const int &TXSTIndex) -> tuple<unsigned
   return make_tuple(FormID, PluginNameString);
 }
 
+auto ParallaxGenPlugin::libGetModelRecHandleFromAltTexHandle(const int &AltTexIndex) -> int {
+  lock_guard<mutex> Lock(LibMutex);
+
+  int ModelRecHandle = 0;
+  GetModelRecHandleFromAltTexHandle(AltTexIndex, &ModelRecHandle);
+  libLogMessageIfExists();
+  libThrowExceptionIfExists();
+
+  return ModelRecHandle;
+}
+
+void ParallaxGenPlugin::libSetModelRecNIF(const int &ModelRecHandle, const wstring &NIFPath) {
+  lock_guard<mutex> Lock(LibMutex);
+
+  SetModelRecNIF(ModelRecHandle, NIFPath.c_str());
+  libLogMessageIfExists();
+  libThrowExceptionIfExists();
+}
+
 mutex ParallaxGenPlugin::TXSTModMapMutex;
 unordered_map<int, unordered_map<NIFUtil::ShapeShader, int>> ParallaxGenPlugin::TXSTModMap; // NOLINT
 
 mutex ParallaxGenPlugin::TXSTWarningMapMutex;
 unordered_map<int, NIFUtil::ShapeShader> ParallaxGenPlugin::TXSTWarningMap; // NOLINT
+
+mutex ParallaxGenPlugin::CreatedTXSTMutex;
+unordered_map<array<wstring, NUM_TEXTURE_SLOTS>, int, ParallaxGenPlugin::ArrayHash, ParallaxGenPlugin::ArrayEqual> ParallaxGenPlugin::CreatedTXSTs;
 
 ParallaxGenDirectory *ParallaxGenPlugin::PGD;
 
@@ -269,50 +291,26 @@ void ParallaxGenPlugin::initialize(const BethesdaGame &Game) {
 
 void ParallaxGenPlugin::populateObjs() { libPopulateObjs(); }
 
-void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, const wstring &NIFPath,
-                                     const wstring &Name3D, const int &Index3D,
-                                     const PatcherUtil::PatcherObjectSet &Patchers,
-                                     const unordered_map<wstring, int> *ModPriority,
-                                     std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots) {
-  if (AppliedShader == NIFUtil::ShapeShader::NONE) {
-    spdlog::trace(L"Plugin Patching | {} | {} | {} | Skipping: No shader applied", NIFPath, Name3D, Index3D);
-    return;
-  }
-
+void ParallaxGenPlugin::processShape(
+    const wstring &NIFPath, nifly::NiShape *NIFShape, const wstring &Name3D, const int &Index3D,
+    const PatcherUtil::PatcherObjectSet &Patchers, const unordered_map<wstring, int> *ModPriority,
+    vector<TXSTResult> &Result, const bool &Dry,
+    unordered_map<wstring, tuple<set<NIFUtil::ShapeShader>, unordered_set<wstring>>> *ConflictMods,
+    mutex *ConflictModsMutex) {
   lock_guard<mutex> Lock(ProcessShapeMutex);
 
   const auto Matches = libGetMatchingTXSTObjs(NIFPath, Name3D, Index3D);
 
-  // gather the bases of the shader transforms that have the applied shader as target
-  auto ShaderTransformBases =
-      Patchers.ShaderTransformPatchers
-      | std::views::filter([&AppliedShader](auto const& Entry) { return Entry.second.count(AppliedShader) > 0; })
-      | std::views::transform([](auto const& TransformPatcher) { return TransformPatcher.first; });
+  Result.clear();
 
   // loop through matches
   for (const auto &[TXSTIndex, AltTexIndex] : Matches) {
-    int TXSTId = 0;
+    // TODO! caching (central location)
+    //  Allowed shaders from result of patchers
+    vector<PatcherUtil::ShaderPatcherMatch> Matches;
 
-    // Check if the TXST is already modified
-    {
-      lock_guard<mutex> Lock(TXSTModMapMutex);
-
-      if (TXSTModMap.find(TXSTIndex) != TXSTModMap.end()) {
-        // TXST set was already patched, check to see which shader
-        if (TXSTModMap[TXSTIndex].find(AppliedShader) != TXSTModMap[TXSTIndex].end()) {
-          // TXST was patched, and for the current shader. We need to determine if AltTex is set correctly
-          spdlog::trace(L"Plugin Patching | {} | {} | {} | TXST record already patched correctly", NIFPath, Name3D,
-                        Index3D);
-          TXSTId = TXSTModMap[TXSTIndex][AppliedShader];
-          if (TXSTId != TXSTIndex) {
-            // We need to set it
-            spdlog::trace(L"Plugin Patching | {} | {} | {} | Setting alternate texture ID", NIFPath, Name3D, Index3D);
-            libSetModelAltTex(AltTexIndex, TXSTId);
-          }
-          continue;
-        }
-      }
-    }
+    // Output information
+    TXSTResult CurResult;
 
     // Get TXST slots
     auto OldSlots = libGetTXSTSlots(TXSTIndex);
@@ -324,9 +322,10 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
       }
     }
 
-    // create a list of mods and the corresponding matches
-    vector<PatcherUtil::ShaderPatcherMatch> Matches;
+    // Loop through each shader
+    unordered_set<wstring> ModSet;
     for (const auto &[Shader, Patcher] : Patchers.ShaderPatchers) {
+      // note: name is defined in source code in UTF8-encoded files
       Logger::Prefix PrefixPatches(ParallaxGenUtil::UTF8toUTF16(Patcher->getPatcherName()));
 
       // Check if shader should be applied
@@ -346,55 +345,61 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
         // See if transform is possible
         if (Patchers.ShaderTransformPatchers.contains(Shader)) {
           const auto &AvailableTransforms = Patchers.ShaderTransformPatchers.at(Shader);
-          // check if transform is available
-          if (AvailableTransforms.contains(AppliedShader)) {
-            const auto TransformIter = AvailableTransforms.find(AppliedShader);
-            CurMatch.ShaderTransformTo = TransformIter->first;
+          // loop from highest element of map to 0
+          for (const auto &AvailableTransform : ranges::reverse_view(AvailableTransforms)) {
+            if (Patchers.ShaderPatchers.at(AvailableTransform.first)->canApply(*NIFShape)) {
+              // Found a transform that can apply, set the transform in the match
+              CurMatch.ShaderTransformTo = AvailableTransform.first;
+              break;
+            }
           }
         }
 
-        // Add to matches if shader or transform matches applied shader
-        if (Shader == AppliedShader || CurMatch.ShaderTransformTo == AppliedShader) {
+        // Add to matches if shader can apply (or if transform shader exists and can apply)
+        if (Patcher->canApply(*NIFShape) || CurMatch.ShaderTransformTo != NIFUtil::ShapeShader::NONE) {
           Matches.push_back(CurMatch);
+          ModSet.insert(CurMatch.Mod);
         }
       }
     }
 
-    // Find winning mod
+    if (Matches.empty()) {
+      // no shaders to apply
+      Logger::trace(L"Rejecting: No shaders to apply");
+      return;
+    }
+
+    // Populate conflict mods if set
+    if (ConflictMods != nullptr && ModSet.size() > 1) {
+      lock_guard<mutex> Lock(*ConflictModsMutex);
+
+      // add mods to conflict set
+      for (const auto &Match : Matches) {
+        if (ConflictMods->find(Match.Mod) == ConflictMods->end()) {
+          ConflictMods->insert({Match.Mod, {set<NIFUtil::ShapeShader>(), unordered_set<wstring>()}});
+        }
+
+        get<0>((*ConflictMods)[Match.Mod]).insert(Match.Shader);
+        get<1>((*ConflictMods)[Match.Mod]).insert(ModSet.begin(), ModSet.end());
+      }
+    }
+
+    if (Dry) {
+      // skip if dry run
+      return;
+    }
+
+    // Get winning match
     auto WinningShaderMatch = PatcherUtil::getWinningMatch(Matches, NIFPath, ModPriority);
+    CurResult.Shader = WinningShaderMatch.Shader;
+
     // Apply transforms
     WinningShaderMatch = PatcherUtil::applyTransformIfNeeded(WinningShaderMatch, Patchers);
 
-    // Run patcher
-    if (WinningShaderMatch.Match.MatchedPath.empty()) {
-      // no shaders to apply
-      lock_guard<mutex> Lock(TXSTWarningMapMutex);
-
-      if (TXSTWarningMap.find(TXSTIndex) != TXSTWarningMap.end() && TXSTWarningMap[TXSTIndex] == AppliedShader) {
-        // Warning already issued
-      } else {
-        TXSTWarningMap[TXSTIndex] = AppliedShader;
-        const auto [FormID, PluginName] = libGetTXSTFormID(TXSTIndex);
-
-        // todo: implement ESL flagged
-        const bool bESLFlagged = false;
-        const wstring FormIDStr =
-            (!bESLFlagged) ? format(L"{}/{:06X}", PluginName, FormID) : format(L"{0}/{1:03X}", PluginName, FormID);
-
-        wstring ShaderStr =
-            ParallaxGenUtil::UTF8toUTF16(NIFUtil::getStrFromShader(AppliedShader));
-        for (auto const &ShaderTransformBase : ShaderTransformBases) {
-          ShaderStr += L" or " + ParallaxGenUtil::UTF8toUTF16(NIFUtil::getStrFromShader(ShaderTransformBase));
-        }
-        spdlog::debug(L"Did not find required {} textures for {}, TXST {} - setting neutral textures",
-                    ShaderStr,
-                     BaseSlots[static_cast<int>(NIFUtil::TextureSlots::DIFFUSE)], FormIDStr);
-      }
-
-      NewSlots = Patchers.ShaderPatchers.at(AppliedShader)->applyNeutral(BaseSlots);
-    } else {
-      NewSlots = Patchers.ShaderPatchers.at(AppliedShader)->applyPatchSlots(BaseSlots, WinningShaderMatch.Match);
-    }
+    // loop through patchers
+    // TODO make a separate data type with hash function and all that for texture sets
+    array<wstring, NUM_TEXTURE_SLOTS> NewSlots =
+        Patchers.ShaderPatchers.at(WinningShaderMatch.Shader)->applyPatchSlots(BaseSlots, WinningShaderMatch.Match);
 
     // Post warnings if any
     for (const auto &CurMatchedFrom : WinningShaderMatch.Match.MatchedFrom) {
@@ -409,6 +414,7 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
     for (int I = 0; I < NUM_TEXTURE_SLOTS; ++I) {
       if (!boost::iequals(OldSlots[I], NewSlots[I])) {
         FoundDiff = true;
+        break;
       }
     }
 
@@ -419,14 +425,44 @@ void ParallaxGenPlugin::processShape(const NIFUtil::ShapeShader &AppliedShader, 
       continue;
     }
 
-    // Create a new TXST record
-    spdlog::trace(L"Plugin Patching | {} | {} | {} | Creating a new TXST record and patching", NIFPath, Name3D,
-                  Index3D);
-    TXSTId = libCreateNewTXSTPatch(AltTexIndex, NewSlots);
+    CurResult.AltTexIndex = AltTexIndex;
+    CurResult.ModelRecHandle = libGetModelRecHandleFromAltTexHandle(AltTexIndex);
+
     {
-      lock_guard<mutex> Lock(TXSTModMapMutex);
-      TXSTModMap[TXSTIndex][AppliedShader] = TXSTId;
+      lock_guard<mutex> Lock(CreatedTXSTMutex);
+
+      // Check if we need to make a new TXST record
+      if (CreatedTXSTs.contains(NewSlots)) {
+        // Already modded
+        spdlog::trace(L"Plugin Patching | {} | {} | {} | Already added, skipping", NIFPath, Name3D, Index3D);
+        CurResult.TXSTIndex = CreatedTXSTs[NewSlots];
+        return;
+      }
+
+      // Create a new TXST record
+      spdlog::trace(L"Plugin Patching | {} | {} | {} | Creating a new TXST record and patching", NIFPath, Name3D,
+                    Index3D);
+      CurResult.TXSTIndex = libCreateNewTXSTPatch(AltTexIndex, NewSlots);
+      CreatedTXSTs[NewSlots] = CurResult.TXSTIndex;
     }
+
+    // add to result
+    Result.push_back(CurResult);
+  }
+}
+
+void ParallaxGenPlugin::assignMesh(const wstring &NIFPath, const vector<TXSTResult> &Result) {
+  lock_guard<mutex> Lock(ProcessShapeMutex);
+
+  Logger::Prefix Prefix(L"assignMesh");
+
+  // Loop through results
+  for (const auto &CurResult : Result) {
+    // Set model rec handle
+    libSetModelRecNIF(CurResult.ModelRecHandle, NIFPath);
+
+    // Set model alt tex
+    libSetModelAltTex(CurResult.AltTexIndex, CurResult.TXSTIndex);
   }
 }
 

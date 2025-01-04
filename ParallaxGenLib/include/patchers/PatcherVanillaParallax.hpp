@@ -91,6 +91,14 @@ public:
                        const PatcherMatch &Match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
 
   /**
+   * @brief Apply parallax shader to a shape
+   *
+   * @param NIFShape Shape to apply shader to
+   * @param NIFModified Whether the NIF was modified
+   */
+  void applyShader(nifly::NiShape &NIFShape, bool &NIFModified) override;
+
+  /**
    * @brief Apply a neutral texture to slots for parallax
    *
    * @param Slots Slots to apply neutral tex to

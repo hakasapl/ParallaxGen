@@ -11,6 +11,7 @@
 - Added support for PBR fuzz
 - Added support for PBR hair
 - Mods that do not have any special shader type can be prioritized now
+- When mixing shaders with alternate texture records meshes will now be duplicated where required
 
 ## [0.7.3] - 2024-12-09
 

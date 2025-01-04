@@ -10,7 +10,7 @@ constexpr unsigned NUM_TEXTURE_SLOTS = 9;
 
 namespace NIFUtil {
 // These need to be in the order of worst shader to best shader
-enum class ShapeShader { NONE, VANILLAPARALLAX, COMPLEXMATERIAL, TRUEPBR };
+enum class ShapeShader { NONE, UNKNOWN, VANILLAPARALLAX, COMPLEXMATERIAL, TRUEPBR };
 
 /// @brief get a string that represents the given shader
 /// @param[in] Shader shader type

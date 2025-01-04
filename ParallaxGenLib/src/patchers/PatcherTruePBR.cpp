@@ -10,6 +10,7 @@
 #include "Logger.hpp"
 #include "NIFUtil.hpp"
 #include "ParallaxGenUtil.hpp"
+#include "patchers/Patcher.hpp"
 #include "patchers/PatcherShader.hpp"
 
 using namespace std;
@@ -455,6 +456,21 @@ auto PatcherTruePBR::applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_
   }
 
   return NewSlots;
+}
+
+void PatcherTruePBR::applyShader(nifly::NiShape &NIFShape, bool &NIFModified) {
+  // Contrary to the other patchers, this one is generic and is not called normally other than setting for plugins, later material swaps in CS are used
+
+  auto *NIFShader = getNIF()->GetShader(&NIFShape);
+  auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
+
+  // Set default PBR shader type
+  NIFUtil::setShaderType(NIFShader, BSLSP_DEFAULT, NIFModified);
+  NIFUtil::setShaderFlag(NIFShaderBSLSP, SLSF2_UNUSED01, NIFModified);
+
+  // Clear unused flags
+  NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF1_ENVIRONMENT_MAPPING, NIFModified);
+  NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF1_PARALLAX, NIFModified);
 }
 
 auto PatcherTruePBR::applyNeutral(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots)

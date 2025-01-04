@@ -97,7 +97,7 @@ public class PGMutagen
 
     return Env.LoadOrder.PriorityOrder.Activator().WinningOverrides()
             .Concat<IMajorRecordGetter>(Env.LoadOrder.PriorityOrder.AddonNode().WinningOverrides())
-            .Concat<IMajorRecordGetter>(Env.LoadOrder.PriorityOrder.Ammunition().WinningOverrides())
+            .Concat(Env.LoadOrder.PriorityOrder.Ammunition().WinningOverrides())
             .Concat(Env.LoadOrder.PriorityOrder.AnimatedObject().WinningOverrides())
             .Concat(Env.LoadOrder.PriorityOrder.Armor().WinningOverrides())
             .Concat(Env.LoadOrder.PriorityOrder.ArmorAddon().WinningOverrides())
@@ -897,7 +897,7 @@ public class PGMutagen
       *ResultTXSTId = TXSTObjs.Count - 1;
       MessageHandler.Log("[CreateNewTXSTPatch] [Alt Tex Index: " + AltTexHandle + "] Created TXST with ID: " + *ResultTXSTId, 0);
 
-      SetModelAltTexManage(AltTexHandle, *ResultTXSTId);
+      //SetModelAltTexManage(AltTexHandle, *ResultTXSTId);
     }
     catch (Exception ex)
     {
@@ -973,6 +973,46 @@ public class PGMutagen
       *FormID = FormIDStr;
 
       MessageHandler.Log("[GetTXSTFormID] [TXST Index: " + TXSTHandle + "] Plugin Name: " + PluginNameStr + " FormID: " + FormIDStr.ToString("X6"), 0);
+    }
+    catch (Exception ex)
+    {
+      ExceptionHandler.SetLastException(ex);
+    }
+  }
+
+  [UnmanagedCallersOnly(EntryPoint = "GetModelRecHandleFromAltTexHandle", CallConvs = [typeof(CallConvCdecl)])]
+  public static unsafe void GetModelRecHandleFromAltTexHandle([DNNE.C99Type("const int")] int AltTexHandle, [DNNE.C99Type("int*")] int* ModelRecHandle)
+  {
+    try {
+      var AltTexObj = GetAltTexFromHandle(AltTexHandle);
+      *ModelRecHandle = AltTexObj.Item2;
+    } catch (Exception ex) {
+      ExceptionHandler.SetLastException(ex);
+    }
+  }
+
+  [UnmanagedCallersOnly(EntryPoint = "SetModelRecNIF", CallConvs = [typeof(CallConvCdecl)])]
+  public static void SetModelRecNIF([DNNE.C99Type("const int")] int ModelRecHandle, [DNNE.C99Type("const wchar_t*")] IntPtr NIFPathPtr)
+  {
+    try
+    {
+      var ModelRec = (IModeled)ModelCopiesEditable[ModelRecHandle];
+      if (ModelRec.Model is null)
+      {
+        throw new Exception("Model Record does not have a model");
+      }
+
+      var NIFPath = Marshal.PtrToStringUni(NIFPathPtr);
+      if (NIFPath is null)
+      {
+        throw new Exception("NIF Path is null");
+      }
+
+      // remove "meshes" from beginning of NIFPath if exists
+      NIFPath = RemovePrefixIfExists("meshes\\", NIFPath);
+
+      ModelRec.Model.File = NIFPath;
+      MessageHandler.Log("[SetModelRecNIF] [Model Rec Index: " + ModelRecHandle + "] [NIF Path: " + NIFPath + "]", 0);
     }
     catch (Exception ex)
     {
