@@ -65,5 +65,7 @@ auto PatcherDefault::applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_
   return OldSlots;
 }
 
+void PatcherDefault::processNewTXSTRecord(const PatcherMatch &Match, const std::string &EDID) {}
+
 void PatcherDefault::applyShader(nifly::NiShape &NIFShape, bool &NIFModified) {
 }

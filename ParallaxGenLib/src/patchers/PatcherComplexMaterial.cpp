@@ -5,6 +5,7 @@
 
 #include "Logger.hpp"
 #include "NIFUtil.hpp"
+#include "patchers/PatcherUtil.hpp"
 
 using namespace std;
 
@@ -143,6 +144,8 @@ auto PatcherComplexMaterial::applyPatchSlots(const std::array<std::wstring, NUM_
 
   return NewSlots;
 }
+
+void PatcherComplexMaterial::processNewTXSTRecord(const PatcherMatch &Match, const std::string &EDID) {}
 
 void PatcherComplexMaterial::applyShader(NiShape &NIFShape, bool &NIFModified) {
   auto *NIFShader = getNIF()->GetShader(&NIFShape);

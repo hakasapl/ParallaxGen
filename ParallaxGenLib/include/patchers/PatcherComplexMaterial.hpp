@@ -102,6 +102,8 @@ public:
   auto applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
                        const PatcherMatch &Match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
 
+  void processNewTXSTRecord(const PatcherMatch &Match, const std::string &EDID = {}) override;
+
   /**
    * @brief Apply CM shader to a shape
    *

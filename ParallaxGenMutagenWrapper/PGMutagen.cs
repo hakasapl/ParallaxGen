@@ -822,7 +822,7 @@ public class PGMutagen
   }
 
   [UnmanagedCallersOnly(EntryPoint = "CreateNewTXSTPatch", CallConvs = [typeof(CallConvCdecl)])]
-  public static unsafe void CreateNewTXSTPatch([DNNE.C99Type("const int")] int AltTexHandle, [DNNE.C99Type("const wchar_t**")] IntPtr* slots, [DNNE.C99Type("int*")] int* ResultTXSTId)
+  public static unsafe void CreateNewTXSTPatch([DNNE.C99Type("const int")] int AltTexHandle, [DNNE.C99Type("const wchar_t**")] IntPtr* slots, [DNNE.C99Type("const char*")] IntPtr NewEDID, [DNNE.C99Type("int*")] int* ResultTXSTId)
   {
     try
     {
@@ -831,8 +831,12 @@ public class PGMutagen
         throw new Exception("Initialize must be called before CreateNewTXSTPatch");
       }
 
+      // Get EDID
+      string NewEDIDStr = Marshal.PtrToStringAnsi(NewEDID) ?? string.Empty;
+
       // Create a new TXST record
       var newTXSTObj = OutMod.TextureSets.AddNew();
+      newTXSTObj.EditorID = NewEDIDStr;
       MessageHandler.Log("[CreateNewTXSTPatch] [Alt Tex Index: " + AltTexHandle + "]", 0);
 
       // Define slot actions for assigning texture set slots

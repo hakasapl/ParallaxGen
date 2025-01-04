@@ -90,6 +90,8 @@ public:
   virtual auto applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
                                const PatcherMatch &Match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> = 0;
 
+  virtual void processNewTXSTRecord(const PatcherMatch &Match, const std::string &EDID = {}) = 0;
+
   /// @brief apply the shader to the shape
   /// @param[in] NIFShape shape to apply the shader to
   /// @param[out] NIFModified if the shape was modified

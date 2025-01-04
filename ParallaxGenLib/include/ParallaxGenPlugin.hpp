@@ -42,7 +42,7 @@ private:
   static void libCreateTXSTPatch(const int &TXSTIndex, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots);
 
   static auto libCreateNewTXSTPatch(const int &AltTexIndex,
-                                    const std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots) -> int;
+                                    const std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots, const std::string &NewEDID) -> int;
 
   /// @brief assign texture set to an "alternate texture", i.e. the "new texture" entry
   /// @param[in] AltTexIndex global index of the alternate texture
@@ -99,6 +99,9 @@ private:
   };
   static std::unordered_map<std::array<std::wstring, NUM_TEXTURE_SLOTS>, int, ArrayHash, ArrayEqual> CreatedTXSTs;
   static std::mutex CreatedTXSTMutex;
+
+  static int EDIDCounter;
+  static std::mutex EDIDCounterMutex;
 
   // Runner vars
   static std::unordered_map<std::wstring, int> *ModPriority;

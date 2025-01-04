@@ -171,6 +171,8 @@ public:
    */
   void applyShader(nifly::NiShape &NIFShape, bool &NIFModified) override;
 
+  void processNewTXSTRecord(const PatcherMatch &Match, const std::string &EDID = {}) override;
+
   /**
    * @brief Load PBR options string
    *
@@ -192,6 +194,8 @@ private:
   void applyOnePatch(nifly::NiShape *NIFShape, nlohmann::json &TruePBRData, const std::wstring &MatchedPath,
                      bool &NIFModified, bool &ShapeDeleted,
                      std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots);
+
+  static void applyOnePatchSwapJSON(const nlohmann::json &TruePBRData, nlohmann::json &Output);
 
   /**
    * @brief Applies a single JSON config to slots

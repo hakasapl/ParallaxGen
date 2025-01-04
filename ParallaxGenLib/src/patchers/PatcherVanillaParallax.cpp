@@ -174,3 +174,5 @@ void PatcherVanillaParallax::applyShader(nifly::NiShape &NIFShape, bool &NIFModi
     NIFModified = true;
   }
 }
+
+void PatcherVanillaParallax::processNewTXSTRecord(const PatcherMatch &Match, const std::string &EDID) {}

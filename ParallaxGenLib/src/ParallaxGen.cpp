@@ -189,7 +189,7 @@ void ParallaxGen::zipMeshes() const {
 }
 
 void ParallaxGen::deleteOutputDir(const bool &PreOutput) const {
-  static const unordered_set<filesystem::path> FoldersToDelete = {"meshes", "textures", "LightPlacer"};
+  static const unordered_set<filesystem::path> FoldersToDelete = {"meshes", "textures", "LightPlacer", "PBRTextureSets"};
   static const unordered_set<filesystem::path> FilesToDelete = {"ParallaxGen.esp", getDiffJSONName()};
   static const unordered_set<filesystem::path> FilesToIgnore = {"meta.ini"};
   static const unordered_set<filesystem::path> FilesToDeletePreOutput = {getOutputZipName()};

@@ -5,7 +5,9 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <cstddef>
 #include <memory>
+#include <nlohmann/json_fwd.hpp>
 #include <string>
+#include <fstream>
 
 #include "Logger.hpp"
 #include "NIFUtil.hpp"
@@ -461,6 +463,78 @@ auto PatcherTruePBR::applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_
   return NewSlots;
 }
 
+void PatcherTruePBR::applyOnePatchSwapJSON(const nlohmann::json &TruePBRData, nlohmann::json &Output) {
+  // "coatColor"
+  if (TruePBRData.contains("coat_color")) {
+    Output["coatColor"] = TruePBRData["coat_color"];
+  }
+  // "coatRoughness"
+  if (TruePBRData.contains("coat_roughness")) {
+    Output["coatRoughness"] = TruePBRData["coat_roughness"];
+  }
+  // "coatSpecularLevel"
+  if (TruePBRData.contains("coat_specular_level")) {
+    Output["coatSpecularLevel"] = TruePBRData["coat_specular_level"];
+  }
+  // "coatStrength"
+  if (TruePBRData.contains("coat_strength")) {
+    Output["coatStrength"] = TruePBRData["coat_strength"];
+  }
+  // "displacementScale"
+  if (TruePBRData.contains("displacement_scale")) {
+    Output["displacementScale"] = TruePBRData["displacement_scale"];
+  }
+  // "fuzzColor"
+  if (TruePBRData.contains("fuzz") && TruePBRData["fuzz"].contains("color")) {
+    Output["fuzzColor"] = TruePBRData["fuzz"]["color"];
+  }
+  // "fuzzWeight"
+  if (TruePBRData.contains("fuzz") && TruePBRData["fuzz"].contains("weight")) {
+    Output["fuzzWeight"] = TruePBRData["fuzz"]["weight"];
+  }
+  // "glintParameters"
+  if (TruePBRData.contains("glint")) {
+    Output["glintParameters"] = nlohmann::json::object();
+    Output["glintParameters"]["enabled"] = true;
+  }
+  // "densityRandomization"
+  if (TruePBRData.contains("glint") && TruePBRData["glint"].contains("density_randomization")) {
+    Output["glintParameters"]["densityRandomization"] = TruePBRData["glint"]["density_randomization"];
+  }
+  // "logMicrofacetDensity"
+  if (TruePBRData.contains("glint") && TruePBRData["glint"].contains("log_microfacet_density")) {
+    Output["glintParameters"]["logMicrofacetDensity"] = TruePBRData["glint"]["log_microfacet_density"];
+  }
+  // "microfacetDensity"
+  if (TruePBRData.contains("glint") && TruePBRData["glint"].contains("microfacet_density")) {
+    Output["glintParameters"]["microfacetDensity"] = TruePBRData["glint"]["microfacet_density"];
+  }
+  // "screenSpaceScale"
+  if (TruePBRData.contains("glint") && TruePBRData["glint"].contains("screen_space_scale")) {
+    Output["glintParameters"]["screenSpaceScale"] = TruePBRData["glint"]["screen_space_scale"];
+  }
+  // "innerLayerDisplacementOffset"
+  //if (TruePBRData.contains("inner_layer_displacement_offset")) {
+  //  Output["innerLayerDisplacementOffset"] = TruePBRData["inner_layer_displacement_offset"];
+  //}
+  // "roughnessScale"
+  if (TruePBRData.contains("roughness_scale")) {
+    Output["roughnessScale"] = TruePBRData["roughness_scale"];
+  }
+  // "specularLevel"
+  if (TruePBRData.contains("specular_level")) {
+    Output["specularLevel"] = TruePBRData["specular_level"];
+  }
+  // "subsurfaceColor"
+  if (TruePBRData.contains("subsurface_color")) {
+    Output["subsurfaceColor"] = TruePBRData["subsurface_color"];
+  }
+  // "subsurfaceOpacity"
+  if (TruePBRData.contains("subsurface_opacity")) {
+    Output["subsurfaceOpacity"] = TruePBRData["subsurface_opacity"];
+  }
+}
+
 void PatcherTruePBR::applyShader(nifly::NiShape &NIFShape, bool &NIFModified) {
   // Contrary to the other patchers, this one is generic and is not called normally other than setting for plugins, later material swaps in CS are used
 
@@ -483,6 +557,28 @@ void PatcherTruePBR::loadOptions(unordered_set<string> &OptionsStr) {
       CheckPaths = false;
     }
   }
+}
+
+void PatcherTruePBR::processNewTXSTRecord(const PatcherMatch &Match, const std::string &EDID) {
+  // create texture swap json
+  if (EDID.empty()) {
+    return;
+  }
+
+  nlohmann::json TextureSwap = nlohmann::json::object();
+  auto ExtraData = static_pointer_cast<map<size_t, tuple<nlohmann::json, wstring>>>(Match.ExtraData);
+  for (const auto &[Sequence, Data] : *ExtraData) {
+    auto TruePBRData = get<0>(Data);
+    applyOnePatchSwapJSON(TruePBRData, TextureSwap);
+  }
+
+  // write to file
+  filesystem::path RelOutputJSONPath = "PBRTextureSets/" + EDID + ".json";
+  filesystem::path OutputJSON = getPGD()->getGeneratedPath() / RelOutputJSONPath;
+  filesystem::create_directories(OutputJSON.parent_path());
+  ofstream Out(OutputJSON);
+  Out << TextureSwap.dump(2);
+  Out.close();
 }
 
 void PatcherTruePBR::applyOnePatch(NiShape *NIFShape, nlohmann::json &TruePBRData, const std::wstring &MatchedPath,

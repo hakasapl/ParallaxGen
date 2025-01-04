@@ -187,7 +187,7 @@ void ParallaxGenPlugin::libCreateTXSTPatch(const int &TXSTIndex, const array<wst
 }
 
 auto ParallaxGenPlugin::libCreateNewTXSTPatch(const int &AltTexIndex,
-                                              const array<wstring, NUM_TEXTURE_SLOTS> &Slots) -> int {
+                                              const array<wstring, NUM_TEXTURE_SLOTS> &Slots, const string &NewEDID) -> int {
   lock_guard<mutex> Lock(LibMutex);
 
   // Prepare the array of const wchar_t* pointers from the Slots array
@@ -198,7 +198,7 @@ auto ParallaxGenPlugin::libCreateNewTXSTPatch(const int &AltTexIndex,
 
   // Call the CreateNewTXSTPatch function with AltTexIndex and the array of wide string pointers
   int NewTXSTId = 0;
-  CreateNewTXSTPatch(AltTexIndex, SlotsArray, &NewTXSTId);
+  CreateNewTXSTPatch(AltTexIndex, SlotsArray, NewEDID.c_str(), &NewTXSTId);
   libLogMessageIfExists();
   libThrowExceptionIfExists();
 
@@ -265,6 +265,9 @@ void ParallaxGenPlugin::libSetModelRecNIF(const int &ModelRecHandle, const wstri
 mutex ParallaxGenPlugin::CreatedTXSTMutex;
 unordered_map<array<wstring, NUM_TEXTURE_SLOTS>, int, ParallaxGenPlugin::ArrayHash, ParallaxGenPlugin::ArrayEqual>
     ParallaxGenPlugin::CreatedTXSTs;
+
+mutex ParallaxGenPlugin::EDIDCounterMutex;
+int ParallaxGenPlugin::EDIDCounter = 0;
 
 ParallaxGenDirectory *ParallaxGenPlugin::PGD;
 
@@ -439,7 +442,9 @@ void ParallaxGenPlugin::processShape(const wstring &NIFPath, nifly::NiShape *NIF
       // Create a new TXST record
       spdlog::trace(L"Plugin Patching | {} | {} | {} | Creating a new TXST record and patching", NIFPath, Name3D,
                     Index3D);
-      CurResult.TXSTIndex = libCreateNewTXSTPatch(AltTexIndex, NewSlots);
+      string NewEDID = fmt::format("PGTXST{:05d}", EDIDCounter++);
+      CurResult.TXSTIndex = libCreateNewTXSTPatch(AltTexIndex, NewSlots, NewEDID);
+      Patchers.ShaderPatchers.at(WinningShaderMatch.Shader)->processNewTXSTRecord(WinningShaderMatch.Match, NewEDID);
       CreatedTXSTs[NewSlots] = CurResult.TXSTIndex;
     }
 
