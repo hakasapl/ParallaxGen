@@ -57,7 +57,7 @@ public:
    * @param ModPriority Mod priority map
    * @return ShaderPatcherMatch Winning match
    */
-  static auto getWinningMatch(const std::vector<ShaderPatcherMatch> &Matches, const std::filesystem::path &NIFPath,
+  static auto getWinningMatch(const std::vector<ShaderPatcherMatch> &Matches,
                               const std::unordered_map<std::wstring, int> *ModPriority = nullptr) -> ShaderPatcherMatch;
 
   /**

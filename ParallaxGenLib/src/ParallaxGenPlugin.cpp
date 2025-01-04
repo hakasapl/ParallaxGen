@@ -390,7 +390,7 @@ void ParallaxGenPlugin::processShape(
     }
 
     // Get winning match
-    auto WinningShaderMatch = PatcherUtil::getWinningMatch(Matches, NIFPath, ModPriority);
+    auto WinningShaderMatch = PatcherUtil::getWinningMatch(Matches, ModPriority);
     CurResult.Shader = WinningShaderMatch.Shader;
 
     // Apply transforms

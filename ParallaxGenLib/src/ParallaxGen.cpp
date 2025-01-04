@@ -680,7 +680,7 @@ auto ParallaxGen::processShape(
   }
 
   // Get winning match
-  auto WinningShaderMatch = PatcherUtil::getWinningMatch(Matches, NIFPath, ModPriority);
+  auto WinningShaderMatch = PatcherUtil::getWinningMatch(Matches, ModPriority);
 
   // Apply transforms
   WinningShaderMatch = PatcherUtil::applyTransformIfNeeded(WinningShaderMatch, Patchers);
