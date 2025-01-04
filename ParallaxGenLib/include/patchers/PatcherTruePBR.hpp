@@ -36,6 +36,9 @@ private:
     }
   };
 
+  // Options
+  static bool CheckPaths;
+
 public:
   /**
    * @brief Get the True PBR Configs
@@ -161,13 +164,21 @@ public:
                        const PatcherMatch &Match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
 
   /**
-   * @brief Apply neutral texture to slots
+   * @brief Apply pbr shader to a shape
    *
-   * @param Slots Slots to apply neutral tex to
-   * @return std::array<std::wstring, NUM_TEXTURE_SLOTS> New slots
+   * @param NIFShape Shape to apply shader to
+   * @param NIFModified Whether the NIF was modified
    */
-  auto applyNeutral(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots)
-      -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
+  void applyShader(nifly::NiShape &NIFShape, bool &NIFModified) override;
+
+  void processNewTXSTRecord(const PatcherMatch &Match, const std::string &EDID = {}) override;
+
+  /**
+   * @brief Load PBR options string
+   *
+   * @param OptionsStr string to load
+   */
+  static void loadOptions(std::unordered_set<std::string> &OptionsStr);
 
 private:
   /**
@@ -183,6 +194,8 @@ private:
   void applyOnePatch(nifly::NiShape *NIFShape, nlohmann::json &TruePBRData, const std::wstring &MatchedPath,
                      bool &NIFModified, bool &ShapeDeleted,
                      std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots);
+
+  static void applyOnePatchSwapJSON(const nlohmann::json &TruePBRData, nlohmann::json &Output);
 
   /**
    * @brief Applies a single JSON config to slots

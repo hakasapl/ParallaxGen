@@ -10,7 +10,14 @@
 - Existing TXST records will no longer be patched, only new ones will be created
 - Added support for PBR fuzz
 - Added support for PBR hair
+- Mods that do not have any special shader type can be prioritized now
+- When mixing shaders with alternate texture records meshes will now be duplicated where required
+- Meshes that have higher priority than textures can be patched now
+- Plugin patching will also be considered when evaluating mods for conflicts now
 - Removed simplicity of snow warning as the mod is not inherently incompatible
+- Fixed NULL output in ParallaxGen_Diff.json when PG patched nothing
+- PBR patcher clears hair_soft_lighting flag now
+- PBR texture swap JSONs are automatically generated
 
 ## [0.7.3] - 2024-12-09
 

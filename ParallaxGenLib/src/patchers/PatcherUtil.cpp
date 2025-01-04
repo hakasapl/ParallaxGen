@@ -4,17 +4,11 @@
 
 using namespace std;
 
-auto PatcherUtil::getWinningMatch(const vector<ShaderPatcherMatch> &Matches, const filesystem::path &NIFPath,
+auto PatcherUtil::getWinningMatch(const vector<ShaderPatcherMatch> &Matches,
                                   const unordered_map<wstring, int> *ModPriority) -> ShaderPatcherMatch {
   // Find winning mod
   int MaxPriority = -1;
   auto WinningShaderMatch = PatcherUtil::ShaderPatcherMatch();
-
-  // get mesh file priority from map
-  int MeshFilePriority = -1;
-  if (ModPriority != nullptr && ModPriority->find(NIFPath) != ModPriority->end()) {
-    MeshFilePriority = ModPriority->at(NIFPath);
-  }
 
   for (const auto &Match : Matches) {
     Logger::Prefix PrefixMod(Match.Mod);
@@ -23,12 +17,6 @@ auto PatcherUtil::getWinningMatch(const vector<ShaderPatcherMatch> &Matches, con
     int CurPriority = -1;
     if (ModPriority != nullptr && ModPriority->find(Match.Mod) != ModPriority->end()) {
       CurPriority = ModPriority->at(Match.Mod);
-    }
-
-    if (CurPriority < MeshFilePriority && CurPriority != -1 && MeshFilePriority != -1) {
-      // skip mods with lower priority than mesh file
-      Logger::trace(L"Rejecting: Mod has lower priority than mesh file");
-      continue;
     }
 
     if (CurPriority < MaxPriority) {

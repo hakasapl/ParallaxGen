@@ -1,9 +1,13 @@
 #pragma once
 
+#include <Geometry.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 #include <filesystem>
 #include <mutex>
 #include <unordered_map>
 #include <windows.h>
+
+#include <boost/functional/hash.hpp>
 
 #include "BethesdaGame.hpp"
 #include "NIFUtil.hpp"
@@ -38,7 +42,7 @@ private:
   static void libCreateTXSTPatch(const int &TXSTIndex, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots);
 
   static auto libCreateNewTXSTPatch(const int &AltTexIndex,
-                                    const std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots) -> int;
+                                    const std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots, const std::string &NewEDID) -> int;
 
   /// @brief assign texture set to an "alternate texture", i.e. the "new texture" entry
   /// @param[in] AltTexIndex global index of the alternate texture
@@ -55,15 +59,12 @@ private:
   /// @return pair of form id and mod name
   static auto libGetTXSTFormID(const int &TXSTIndex) -> std::tuple<unsigned int, std::wstring>;
 
-  static std::mutex TXSTModMapMutex;
+  /// @brief get the model record handle from the alternate texture handle
+  /// @param[in] AltTexIndex global index of the alternate texture
+  /// @return model record handle
+  static auto libGetModelRecHandleFromAltTexHandle(const int &AltTexIndex) -> int;
 
-  /// @brief map of texture sets that are already modded, value is a map of shader types to new texture set
-  static std::unordered_map<int, std::unordered_map<NIFUtil::ShapeShader, int>> TXSTModMap;
-
-  static std::mutex TXSTWarningMapMutex;
-
-  /// @brief store all txsts where a warning has already been issued
-  static std::unordered_map<int, NIFUtil::ShapeShader> TXSTWarningMap;
+  static void libSetModelRecNIF(const int &ModelRecHandle, const std::wstring &NIFPath);
 
   static bool LoggingEnabled;
   static void logMessages();
@@ -72,12 +73,54 @@ private:
 
   static std::mutex ProcessShapeMutex;
 
+  // Custom hash function for std::array<std::string, 9>
+  struct ArrayHash {
+    auto operator()(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &Arr) const -> std::size_t {
+      std::size_t Hash = 0;
+      for (const auto &Str : Arr) {
+        // Convert string to lowercase and hash
+        std::wstring LowerStr = boost::to_lower_copy(Str);
+        boost::hash_combine(Hash, boost::hash<std::wstring>()(LowerStr));
+      }
+      return Hash;
+    }
+  };
+
+  struct ArrayEqual {
+    auto operator()(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &Lhs,
+                    const std::array<std::wstring, NUM_TEXTURE_SLOTS> &Rhs) const -> bool {
+      for (size_t I = 0; I < NUM_TEXTURE_SLOTS; ++I) {
+        if (!boost::iequals(Lhs[I], Rhs[I])) {
+          return false;
+        }
+      }
+      return true;
+    }
+  };
+  static std::unordered_map<std::array<std::wstring, NUM_TEXTURE_SLOTS>, int, ArrayHash, ArrayEqual> CreatedTXSTs;
+  static std::mutex CreatedTXSTMutex;
+
+  static int EDIDCounter;
+  static std::mutex EDIDCounterMutex;
+
+  // Runner vars
+  static std::unordered_map<std::wstring, int> *ModPriority;
+
 public:
+  // TODO all of this should not be static
   static void loadStatics(ParallaxGenDirectory *PGD);
+  static void loadModPriorityMap(std::unordered_map<std::wstring, int> *ModPriority);
 
   static void initialize(const BethesdaGame &Game);
 
   static void populateObjs();
+
+  struct TXSTResult {
+    int ModelRecHandle{};
+    int AltTexIndex{};
+    int TXSTIndex{};
+    NIFUtil::ShapeShader Shader{};
+  };
 
   /// @brief Patch texture sets for a given shape
   /// @param[in] AppliedShader shader that was applied to the shape by the patchers
@@ -87,11 +130,11 @@ public:
   /// @param[in] Index3DNew zero-based index of the shape in the nif after patching the shapes in the nif
   /// @param[in] Patchers patchers for the given nif
   /// @param[out] NewSlots textures that were assigned to the texture set slots
-  static void processShape(const NIFUtil::ShapeShader &AppliedShader, const std::wstring &NIFPath,
-                           const std::wstring &Name3D, const int &Index3D,
-                           const PatcherUtil::PatcherObjectSet &Patchers,
-                           const std::unordered_map<std::wstring, int> *ModPriority,
-                           std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots);
+  static void processShape(const std::wstring &NIFPath, nifly::NiShape *NIFShape, const std::wstring &Name3D,
+                           const int &Index3D, PatcherUtil::PatcherObjectSet &Patchers,
+                           std::vector<TXSTResult> &Results, PatcherUtil::ConflictModResults *ConflictMods = nullptr);
+
+  static void assignMesh(const std::wstring &NIFPath, const std::vector<TXSTResult> &Result);
 
   static void set3DIndices(const std::wstring &NIFPath,
                            const std::vector<std::tuple<nifly::NiShape *, int, int>> &ShapeTracker);

@@ -5,11 +5,14 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <cstddef>
 #include <memory>
+#include <nlohmann/json_fwd.hpp>
 #include <string>
+#include <fstream>
 
 #include "Logger.hpp"
 #include "NIFUtil.hpp"
 #include "ParallaxGenUtil.hpp"
+#include "patchers/Patcher.hpp"
 #include "patchers/PatcherShader.hpp"
 
 using namespace std;
@@ -46,6 +49,9 @@ auto PatcherTruePBR::getTruePBRConfigFilenameFields() -> vector<string> {
   static const vector<string> PGConfigFilenameFields = {"match_normal", "match_diffuse", "rename"};
   return PGConfigFilenameFields;
 }
+
+// Statics
+bool PatcherTruePBR::CheckPaths = true;
 
 void PatcherTruePBR::loadStatics(const std::vector<std::filesystem::path> &PBRJSONs) {
   size_t ConfigOrder = 0;
@@ -222,7 +228,7 @@ auto PatcherTruePBR::shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOT
     // check paths
     bool Valid = true;
 
-    if (!DeleteShape) {
+    if (!DeleteShape && CheckPaths) {
       const auto NewSlots = applyPatchSlots(OldSlots, Match);
       for (size_t I = 0; I < NUM_TEXTURE_SLOTS; I++) {
         if (!NewSlots[I].empty() && !getPGD()->isFile(NewSlots[I])) {
@@ -457,18 +463,122 @@ auto PatcherTruePBR::applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_
   return NewSlots;
 }
 
-auto PatcherTruePBR::applyNeutral(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots)
-    -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
+void PatcherTruePBR::applyOnePatchSwapJSON(const nlohmann::json &TruePBRData, nlohmann::json &Output) {
+  // "coatColor"
+  if (TruePBRData.contains("coat_color")) {
+    Output["coatColor"] = TruePBRData["coat_color"];
+  }
+  // "coatRoughness"
+  if (TruePBRData.contains("coat_roughness")) {
+    Output["coatRoughness"] = TruePBRData["coat_roughness"];
+  }
+  // "coatSpecularLevel"
+  if (TruePBRData.contains("coat_specular_level")) {
+    Output["coatSpecularLevel"] = TruePBRData["coat_specular_level"];
+  }
+  // "coatStrength"
+  if (TruePBRData.contains("coat_strength")) {
+    Output["coatStrength"] = TruePBRData["coat_strength"];
+  }
+  // "displacementScale"
+  if (TruePBRData.contains("displacement_scale")) {
+    Output["displacementScale"] = TruePBRData["displacement_scale"];
+  }
+  // "fuzzColor"
+  if (TruePBRData.contains("fuzz") && TruePBRData["fuzz"].contains("color")) {
+    Output["fuzzColor"] = TruePBRData["fuzz"]["color"];
+  }
+  // "fuzzWeight"
+  if (TruePBRData.contains("fuzz") && TruePBRData["fuzz"].contains("weight")) {
+    Output["fuzzWeight"] = TruePBRData["fuzz"]["weight"];
+  }
+  // "glintParameters"
+  if (TruePBRData.contains("glint")) {
+    Output["glintParameters"] = nlohmann::json::object();
+    Output["glintParameters"]["enabled"] = true;
+  }
+  // "densityRandomization"
+  if (TruePBRData.contains("glint") && TruePBRData["glint"].contains("density_randomization")) {
+    Output["glintParameters"]["densityRandomization"] = TruePBRData["glint"]["density_randomization"];
+  }
+  // "logMicrofacetDensity"
+  if (TruePBRData.contains("glint") && TruePBRData["glint"].contains("log_microfacet_density")) {
+    Output["glintParameters"]["logMicrofacetDensity"] = TruePBRData["glint"]["log_microfacet_density"];
+  }
+  // "microfacetDensity"
+  if (TruePBRData.contains("glint") && TruePBRData["glint"].contains("microfacet_density")) {
+    Output["glintParameters"]["microfacetDensity"] = TruePBRData["glint"]["microfacet_density"];
+  }
+  // "screenSpaceScale"
+  if (TruePBRData.contains("glint") && TruePBRData["glint"].contains("screen_space_scale")) {
+    Output["glintParameters"]["screenSpaceScale"] = TruePBRData["glint"]["screen_space_scale"];
+  }
+  // "innerLayerDisplacementOffset"
+  //if (TruePBRData.contains("inner_layer_displacement_offset")) {
+  //  Output["innerLayerDisplacementOffset"] = TruePBRData["inner_layer_displacement_offset"];
+  //}
+  // "roughnessScale"
+  if (TruePBRData.contains("roughness_scale")) {
+    Output["roughnessScale"] = TruePBRData["roughness_scale"];
+  }
+  // "specularLevel"
+  if (TruePBRData.contains("specular_level")) {
+    Output["specularLevel"] = TruePBRData["specular_level"];
+  }
+  // "subsurfaceColor"
+  if (TruePBRData.contains("subsurface_color")) {
+    Output["subsurfaceColor"] = TruePBRData["subsurface_color"];
+  }
+  // "subsurfaceOpacity"
+  if (TruePBRData.contains("subsurface_opacity")) {
+    Output["subsurfaceOpacity"] = TruePBRData["subsurface_opacity"];
+  }
+}
 
-  array<wstring, NUM_TEXTURE_SLOTS> NewSlots = Slots;
+void PatcherTruePBR::applyShader(nifly::NiShape &NIFShape, bool &NIFModified) {
+  // Contrary to the other patchers, this one is generic and is not called normally other than setting for plugins, later material swaps in CS are used
 
-  // potentially existing height map can be used
-  NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::GLOW)] = L"";
-  NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::ENVMASK)] = L"textures\\parallaxgen\\neutral_rmaos.dds";
-  NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::MULTILAYER)] = L"";
-  NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::BACKLIGHT)] = L"";
+  auto *NIFShader = getNIF()->GetShader(&NIFShape);
+  auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
 
-  return NewSlots;
+  // Set default PBR shader type
+  NIFUtil::setShaderType(NIFShader, BSLSP_DEFAULT, NIFModified);
+  NIFUtil::setShaderFlag(NIFShaderBSLSP, SLSF2_UNUSED01, NIFModified);
+
+  // Clear unused flags
+  NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF1_ENVIRONMENT_MAPPING, NIFModified);
+  NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF1_PARALLAX, NIFModified);
+  NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF1_HAIR_SOFT_LIGHTING, NIFModified);
+}
+
+void PatcherTruePBR::loadOptions(unordered_set<string> &OptionsStr) {
+  for (const auto &Option : OptionsStr) {
+    if (Option == "no_path_check") {
+      CheckPaths = false;
+    }
+  }
+}
+
+void PatcherTruePBR::processNewTXSTRecord(const PatcherMatch &Match, const std::string &EDID) {
+  // create texture swap json
+  if (EDID.empty()) {
+    return;
+  }
+
+  nlohmann::json TextureSwap = nlohmann::json::object();
+  auto ExtraData = static_pointer_cast<map<size_t, tuple<nlohmann::json, wstring>>>(Match.ExtraData);
+  for (const auto &[Sequence, Data] : *ExtraData) {
+    auto TruePBRData = get<0>(Data);
+    applyOnePatchSwapJSON(TruePBRData, TextureSwap);
+  }
+
+  // write to file
+  filesystem::path RelOutputJSONPath = "PBRTextureSets/" + EDID + ".json";
+  filesystem::path OutputJSON = getPGD()->getGeneratedPath() / RelOutputJSONPath;
+  filesystem::create_directories(OutputJSON.parent_path());
+  ofstream Out(OutputJSON);
+  Out << TextureSwap.dump(2);
+  Out.close();
 }
 
 void PatcherTruePBR::applyOnePatch(NiShape *NIFShape, nlohmann::json &TruePBRData, const std::wstring &MatchedPath,
@@ -718,6 +828,7 @@ void PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader
 
   // revert to default NIFShader type, remove flags used in other types
   NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF1_ENVIRONMENT_MAPPING, NIFModified);
+  NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF1_HAIR_SOFT_LIGHTING, NIFModified);
   NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF1_PARALLAX, NIFModified);
   NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF2_GLOW_MAP, NIFModified);
 

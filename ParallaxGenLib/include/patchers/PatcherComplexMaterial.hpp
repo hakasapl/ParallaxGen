@@ -102,12 +102,13 @@ public:
   auto applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
                        const PatcherMatch &Match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
 
+  void processNewTXSTRecord(const PatcherMatch &Match, const std::string &EDID = {}) override;
+
   /**
-   * @brief Apply neutral textures to slots
+   * @brief Apply CM shader to a shape
    *
-   * @param Slots Slots to apply to
-   * @return std::array<std::wstring, NUM_TEXTURE_SLOTS> New slots after patching
+   * @param NIFShape Shape to apply shader to
+   * @param NIFModified Whether the NIF was modified
    */
-  auto applyNeutral(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots)
-      -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
+  void applyShader(nifly::NiShape &NIFShape, bool &NIFModified) override;
 };

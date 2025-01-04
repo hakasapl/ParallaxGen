@@ -8,13 +8,10 @@
 #include "Patchers/PatcherShader.hpp"
 
 /**
- * @class PatcherVanillaParallax
- * @brief Patcher for vanilla parallax
+ * @class PatcherVanilla
+ * @brief Patcher for vanilla
  */
-class PatcherVanillaParallax : public PatcherShader {
-private:
-  bool HasAttachedHavok = false;  /** Stores at the NIF level whether the NIF has attached havok (incompatible with parallax) */
-
+class PatcherDefault : public PatcherShader {
 public:
   /**
    * @brief Get the Factory object for parallax patcher
@@ -36,7 +33,7 @@ public:
    * @param NIFPath NIF path to patch
    * @param NIF NIF object to patch
    */
-  PatcherVanillaParallax(std::filesystem::path NIFPath, nifly::NifFile *NIF);
+  PatcherDefault(std::filesystem::path NIFPath, nifly::NifFile *NIF);
 
   /**
    * @brief Check if a shape can be patched by this patcher (without looking at slots)
@@ -93,7 +90,7 @@ public:
   void processNewTXSTRecord(const PatcherMatch &Match, const std::string &EDID = {}) override;
 
   /**
-   * @brief Apply parallax shader to a shape
+   * @brief Apply default shader to a shape (does nothing)
    *
    * @param NIFShape Shape to apply shader to
    * @param NIFModified Whether the NIF was modified
