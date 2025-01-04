@@ -113,7 +113,29 @@ void mainRunner(PGToolsCLIArgs &Args) {
     // Map files
     PGD.mapFiles({}, {}, {}, {}, Args.Patch.MapTexturesFromMeshes, Args.Multithreading, Args.Patch.HighMem);
 
-    if (Args.Patch.Patchers.contains("complexmaterial")) {
+    // Split patchers into names and options
+    unordered_map<string, unordered_set<string>> PatcherDefs;
+    for (const auto &Patcher : Args.Patch.Patchers) {
+      auto OpenBracket = Patcher.find('[');
+      auto CloseBracket = Patcher.find(']');
+      if (OpenBracket == string::npos || CloseBracket == string::npos) {
+        PatcherDefs[Patcher] = {};
+        continue;
+      }
+
+      // Get substring between brackets
+      auto Options = Patcher.substr(OpenBracket + 1, CloseBracket - OpenBracket - 1);
+      // Split options by | into unordered set
+      unordered_set<string> OptionSet;
+      for (const auto &Option : Options | views::split('|')) {
+        OptionSet.insert(string(Option.begin(), Option.end()));
+      }
+
+      // Add to set
+      PatcherDefs[Patcher.substr(0, OpenBracket)] = OptionSet;
+    }
+
+    if (PatcherDefs.contains("complexmaterial")) {
       // Find CM maps
       spdlog::info("Finding complex material env maps");
       PGD3D.findCMMaps({});
@@ -122,22 +144,23 @@ void mainRunner(PGToolsCLIArgs &Args) {
 
     // Create patcher factory
     PatcherUtil::PatcherSet Patchers;
-    if (Args.Patch.Patchers.contains("parallax")) {
+    if (PatcherDefs.contains("parallax")) {
       Patchers.ShaderPatchers.emplace(PatcherVanillaParallax::getShaderType(), PatcherVanillaParallax::getFactory());
     }
-    if (Args.Patch.Patchers.contains("complexmaterial")) {
+    if (PatcherDefs.contains("complexmaterial")) {
       Patchers.ShaderPatchers.emplace(PatcherComplexMaterial::getShaderType(), PatcherComplexMaterial::getFactory());
       PatcherComplexMaterial::loadStatics(Args.Patch.Patchers.contains("disablemlp"), {});
     }
-    if (Args.Patch.Patchers.contains("truepbr")) {
+    if (PatcherDefs.contains("truepbr")) {
       Patchers.ShaderPatchers.emplace(PatcherTruePBR::getShaderType(), PatcherTruePBR::getFactory());
       PatcherTruePBR::loadStatics(PGD.getPBRJSONs());
+      PatcherTruePBR::loadOptions(PatcherDefs["truepbr"]);
     }
-    if (Args.Patch.Patchers.contains("parallaxtocm")) {
+    if (PatcherDefs.contains("parallaxtocm")) {
       Patchers.ShaderTransformPatchers[PatcherUpgradeParallaxToCM::getFromShader()].emplace(
           PatcherUpgradeParallaxToCM::getToShader(), PatcherUpgradeParallaxToCM::getFactory());
     }
-    if (Args.Patch.Patchers.contains("particlelightstolp")) {
+    if (PatcherDefs.contains("particlelightstolp")) {
       Patchers.GlobalPatchers.emplace_back(PatcherParticleLightsToLP::getFactory());
     }
 
@@ -145,7 +168,7 @@ void mainRunner(PGToolsCLIArgs &Args) {
     PG.patchMeshes(Args.Multithreading, false);
 
     // Finalize step
-    if (Args.Patch.Patchers.contains("particlelightstolp")) {
+    if (PatcherDefs.contains("particlelightstolp")) {
       PatcherParticleLightsToLP::finalize();
     }
 

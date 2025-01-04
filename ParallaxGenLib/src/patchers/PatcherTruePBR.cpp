@@ -48,6 +48,9 @@ auto PatcherTruePBR::getTruePBRConfigFilenameFields() -> vector<string> {
   return PGConfigFilenameFields;
 }
 
+// Statics
+bool PatcherTruePBR::CheckPaths = true;
+
 void PatcherTruePBR::loadStatics(const std::vector<std::filesystem::path> &PBRJSONs) {
   size_t ConfigOrder = 0;
   for (const auto &Config : PBRJSONs) {
@@ -223,7 +226,7 @@ auto PatcherTruePBR::shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOT
     // check paths
     bool Valid = true;
 
-    if (!DeleteShape) {
+    if (!DeleteShape && CheckPaths) {
       const auto NewSlots = applyPatchSlots(OldSlots, Match);
       for (size_t I = 0; I < NUM_TEXTURE_SLOTS; I++) {
         if (!NewSlots[I].empty() && !getPGD()->isFile(NewSlots[I])) {
@@ -471,6 +474,14 @@ void PatcherTruePBR::applyShader(nifly::NiShape &NIFShape, bool &NIFModified) {
   // Clear unused flags
   NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF1_ENVIRONMENT_MAPPING, NIFModified);
   NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF1_PARALLAX, NIFModified);
+}
+
+void PatcherTruePBR::loadOptions(unordered_set<string> &OptionsStr) {
+  for (const auto &Option : OptionsStr) {
+    if (Option == "no_path_check") {
+      CheckPaths = false;
+    }
+  }
 }
 
 void PatcherTruePBR::applyOnePatch(NiShape *NIFShape, nlohmann::json &TruePBRData, const std::wstring &MatchedPath,

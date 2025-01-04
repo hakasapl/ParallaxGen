@@ -36,6 +36,9 @@ private:
     }
   };
 
+  // Options
+  static bool CheckPaths;
+
 public:
   /**
    * @brief Get the True PBR Configs
@@ -167,6 +170,13 @@ public:
    * @param NIFModified Whether the NIF was modified
    */
   void applyShader(nifly::NiShape &NIFShape, bool &NIFModified) override;
+
+  /**
+   * @brief Load PBR options string
+   *
+   * @param OptionsStr string to load
+   */
+  static void loadOptions(std::unordered_set<std::string> &OptionsStr);
 
 private:
   /**
