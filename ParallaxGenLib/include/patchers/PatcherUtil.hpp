@@ -49,6 +49,11 @@ public:
     NIFUtil::ShapeShader ShaderTransformTo;
   };
 
+  struct ConflictModResults {
+    std::unordered_map<std::wstring, std::tuple<std::set<NIFUtil::ShapeShader>, std::unordered_set<std::wstring>>> Mods;
+    std::mutex Mutex;
+  };
+
   /**
    * @brief Get the Winning Match object (checks mod priority)
    *

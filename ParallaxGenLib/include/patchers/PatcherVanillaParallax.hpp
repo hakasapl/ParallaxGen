@@ -97,13 +97,4 @@ public:
    * @param NIFModified Whether the NIF was modified
    */
   void applyShader(nifly::NiShape &NIFShape, bool &NIFModified) override;
-
-  /**
-   * @brief Apply a neutral texture to slots for parallax
-   *
-   * @param Slots Slots to apply neutral tex to
-   * @return std::array<std::wstring, NUM_TEXTURE_SLOTS> New slots
-   */
-  auto applyNeutral(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots)
-      -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
 };

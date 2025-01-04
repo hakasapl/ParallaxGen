@@ -109,13 +109,4 @@ public:
    * @param NIFModified Whether the NIF was modified
    */
   void applyShader(nifly::NiShape &NIFShape, bool &NIFModified) override;
-
-  /**
-   * @brief Apply neutral textures to slots
-   *
-   * @param Slots Slots to apply to
-   * @return std::array<std::wstring, NUM_TEXTURE_SLOTS> New slots after patching
-   */
-  auto applyNeutral(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots)
-      -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
 };

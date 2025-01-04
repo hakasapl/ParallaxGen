@@ -168,15 +168,6 @@ public:
    */
   void applyShader(nifly::NiShape &NIFShape, bool &NIFModified) override;
 
-  /**
-   * @brief Apply neutral texture to slots
-   *
-   * @param Slots Slots to apply neutral tex to
-   * @return std::array<std::wstring, NUM_TEXTURE_SLOTS> New slots
-   */
-  auto applyNeutral(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots)
-      -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
-
 private:
   /**
    * @brief Applies a single JSON config to a shape

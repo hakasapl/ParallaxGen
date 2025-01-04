@@ -78,7 +78,7 @@ auto getGameTypeMapStr() -> string {
 }
 
 auto deployAssets(const filesystem::path &OutputDir, const filesystem::path &ExePath) -> void {
-  // Install default cubemap file if needed
+  // Install default cubemap file
   static const filesystem::path DynCubeMapPath = "textures/cubemaps/dynamic1pxcubemap_black.dds";
 
   spdlog::info("Installing default dynamic cubemap file");
@@ -92,20 +92,6 @@ auto deployAssets(const filesystem::path &OutputDir, const filesystem::path &Exe
 
   // Move File
   boost::filesystem::copy_file(AssetPath, OutputPath, boost::filesystem::copy_options::overwrite_existing);
-
-  spdlog::info("Installing neutral textures");
-
-  const filesystem::path OutputAssetsPath = OutputDir / "textures\\parallaxgen";
-  filesystem::create_directories(OutputAssetsPath);
-
-  std::vector<filesystem::path> assets = {"neutral_m.dds", "neutral_p.dds", "neutral_rmaos.dds"};
-
-  for (auto const &a : assets) {
-    filesystem::path AssetPath = ExePath / "assets" / a;
-    filesystem::path OutputPath = OutputAssetsPath / a;
-
-    filesystem::copy_file(AssetPath, OutputPath, filesystem::copy_options::overwrite_existing);
-  }
 }
 
 void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
@@ -277,6 +263,8 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
         PatcherUpgradeParallaxToCM::getToShader(), PatcherUpgradeParallaxToCM::getFactory());
   }
 
+  PG.loadPatchers(Patchers);
+
   if (Params.ModManager.Type != ModManagerDirectory::ModManagerType::None) {
     // Check if MO2 is used and MO2 use order is checked
     if (Params.ModManager.Type == ModManagerDirectory::ModManagerType::ModOrganizer2 && Params.ModManager.MO2UseOrder) {
@@ -286,7 +274,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
     } else {
       // Find conflicts
       const auto ModConflicts =
-          PG.findModConflicts(Patchers, Params.Processing.Multithread, Params.Processing.PluginPatching);
+          PG.findModConflicts(Params.Processing.Multithread, Params.Processing.PluginPatching);
       const auto ExistingOrder = PGC.getModOrder();
 
       if (!ModConflicts.empty()) {
@@ -304,9 +292,10 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   // Patch meshes if set
   auto ModPriorityMap = PGC.getModPriorityMap();
+  PG.loadModPriorityMap(&ModPriorityMap);
   ParallaxGenWarnings::init(&PGD, &ModPriorityMap);
   if (Params.ShaderPatcher.Parallax || Params.ShaderPatcher.ComplexMaterial || Params.ShaderPatcher.TruePBR) {
-    PG.patchMeshes(Patchers, &ModPriorityMap, Params.Processing.Multithread, Params.Processing.PluginPatching);
+    PG.patchMeshes(Params.Processing.Multithread, Params.Processing.PluginPatching);
   }
 
   // Release cached files, if any

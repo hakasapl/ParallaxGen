@@ -141,7 +141,8 @@ void mainRunner(PGToolsCLIArgs &Args) {
       Patchers.GlobalPatchers.emplace_back(PatcherParticleLightsToLP::getFactory());
     }
 
-    PG.patchMeshes(Patchers, nullptr, Args.Multithreading, false);
+    PG.loadPatchers(Patchers);
+    PG.patchMeshes(Args.Multithreading, false);
 
     // Finalize step
     if (Args.Patch.Patchers.contains("particlelightstolp")) {

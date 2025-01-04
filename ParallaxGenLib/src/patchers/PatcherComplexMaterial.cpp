@@ -165,14 +165,3 @@ void PatcherComplexMaterial::applyShader(NiShape &NIFShape, bool &NIFModified) {
   NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF2_UNUSED01, NIFModified);
   NIFUtil::setShaderFlag(NIFShaderBSLSP, SLSF1_ENVIRONMENT_MAPPING, NIFModified);
 }
-
-auto PatcherComplexMaterial::applyNeutral(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots)
-    -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
-
-  array<wstring, NUM_TEXTURE_SLOTS> NewSlots = Slots;
-
-  NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::PARALLAX)] = L"";
-  NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::ENVMASK)] = L"textures\\parallaxgen\\neutral_m.dds";
-
-  return NewSlots;
-}

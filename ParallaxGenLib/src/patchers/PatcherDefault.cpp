@@ -67,8 +67,3 @@ auto PatcherDefault::applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_
 
 void PatcherDefault::applyShader(nifly::NiShape &NIFShape, bool &NIFModified) {
 }
-
-auto PatcherDefault::applyNeutral(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots)
-    -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
-  return Slots;
-}

@@ -1011,6 +1011,13 @@ public class PGMutagen
       // remove "meshes" from beginning of NIFPath if exists
       NIFPath = RemovePrefixIfExists("meshes\\", NIFPath);
 
+      // Check if NIFPath is different from ModelRec ignore case
+      if (NIFPath.Equals(ModelRec.Model.File, StringComparison.OrdinalIgnoreCase))
+      {
+        MessageHandler.Log("[SetModelRecNIF] [Model Rec Index: " + ModelRecHandle + "] [NIF Path: " + NIFPath + "] NIF Path is the same as the current one", 0);
+        return;
+      }
+
       ModelRec.Model.File = NIFPath;
       MessageHandler.Log("[SetModelRecNIF] [Model Rec Index: " + ModelRecHandle + "] [NIF Path: " + NIFPath + "]", 0);
     }

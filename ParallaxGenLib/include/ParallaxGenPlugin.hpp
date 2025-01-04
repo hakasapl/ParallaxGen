@@ -66,16 +66,6 @@ private:
 
   static void libSetModelRecNIF(const int &ModelRecHandle, const std::wstring &NIFPath);
 
-  static std::mutex TXSTModMapMutex;
-
-  /// @brief map of texture sets that are already modded, value is a map of shader types to new texture set
-  static std::unordered_map<int, std::unordered_map<NIFUtil::ShapeShader, int>> TXSTModMap;
-
-  static std::mutex TXSTWarningMapMutex;
-
-  /// @brief store all txsts where a warning has already been issued
-  static std::unordered_map<int, NIFUtil::ShapeShader> TXSTWarningMap;
-
   static bool LoggingEnabled;
   static void logMessages();
 
@@ -110,8 +100,13 @@ private:
   static std::unordered_map<std::array<std::wstring, NUM_TEXTURE_SLOTS>, int, ArrayHash, ArrayEqual> CreatedTXSTs;
   static std::mutex CreatedTXSTMutex;
 
+  // Runner vars
+  static std::unordered_map<std::wstring, int> *ModPriority;
+
 public:
+  // TODO all of this should not be static
   static void loadStatics(ParallaxGenDirectory *PGD);
+  static void loadModPriorityMap(std::unordered_map<std::wstring, int> *ModPriority);
 
   static void initialize(const BethesdaGame &Game);
 
@@ -132,13 +127,9 @@ public:
   /// @param[in] Index3DNew zero-based index of the shape in the nif after patching the shapes in the nif
   /// @param[in] Patchers patchers for the given nif
   /// @param[out] NewSlots textures that were assigned to the texture set slots
-  static void processShape(
-      const std::wstring &NIFPath, nifly::NiShape *NIFShape, const std::wstring &Name3D, const int &Index3D,
-      const PatcherUtil::PatcherObjectSet &Patchers, const std::unordered_map<std::wstring, int> *ModPriority,
-      std::vector<TXSTResult> &Result, const bool &Dry = false,
-      std::unordered_map<std::wstring, std::tuple<std::set<NIFUtil::ShapeShader>, std::unordered_set<std::wstring>>>
-          *ConflictMods = nullptr,
-      std::mutex *ConflictModsMutex = nullptr);
+  static void processShape(const std::wstring &NIFPath, nifly::NiShape *NIFShape, const std::wstring &Name3D,
+                           const int &Index3D, PatcherUtil::PatcherObjectSet &Patchers,
+                           std::vector<TXSTResult> &Results, PatcherUtil::ConflictModResults *ConflictMods = nullptr);
 
   static void assignMesh(const std::wstring &NIFPath, const std::vector<TXSTResult> &Result);
 

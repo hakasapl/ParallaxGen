@@ -261,20 +261,22 @@ void ParallaxGenPlugin::libSetModelRecNIF(const int &ModelRecHandle, const wstri
   libThrowExceptionIfExists();
 }
 
-mutex ParallaxGenPlugin::TXSTModMapMutex;
-unordered_map<int, unordered_map<NIFUtil::ShapeShader, int>> ParallaxGenPlugin::TXSTModMap; // NOLINT
-
-mutex ParallaxGenPlugin::TXSTWarningMapMutex;
-unordered_map<int, NIFUtil::ShapeShader> ParallaxGenPlugin::TXSTWarningMap; // NOLINT
-
+// Statics
 mutex ParallaxGenPlugin::CreatedTXSTMutex;
-unordered_map<array<wstring, NUM_TEXTURE_SLOTS>, int, ParallaxGenPlugin::ArrayHash, ParallaxGenPlugin::ArrayEqual> ParallaxGenPlugin::CreatedTXSTs;
+unordered_map<array<wstring, NUM_TEXTURE_SLOTS>, int, ParallaxGenPlugin::ArrayHash, ParallaxGenPlugin::ArrayEqual>
+    ParallaxGenPlugin::CreatedTXSTs;
 
 ParallaxGenDirectory *ParallaxGenPlugin::PGD;
 
 mutex ParallaxGenPlugin::ProcessShapeMutex;
 
 void ParallaxGenPlugin::loadStatics(ParallaxGenDirectory *PGD) { ParallaxGenPlugin::PGD = PGD; }
+
+unordered_map<wstring, int> *ParallaxGenPlugin::ModPriority;
+
+void ParallaxGenPlugin::loadModPriorityMap(std::unordered_map<std::wstring, int> *ModPriority) {
+  ParallaxGenPlugin::ModPriority = ModPriority;
+}
 
 void ParallaxGenPlugin::initialize(const BethesdaGame &Game) {
   set_failure_callback(dnne_failure);
@@ -291,17 +293,14 @@ void ParallaxGenPlugin::initialize(const BethesdaGame &Game) {
 
 void ParallaxGenPlugin::populateObjs() { libPopulateObjs(); }
 
-void ParallaxGenPlugin::processShape(
-    const wstring &NIFPath, nifly::NiShape *NIFShape, const wstring &Name3D, const int &Index3D,
-    const PatcherUtil::PatcherObjectSet &Patchers, const unordered_map<wstring, int> *ModPriority,
-    vector<TXSTResult> &Result, const bool &Dry,
-    unordered_map<wstring, tuple<set<NIFUtil::ShapeShader>, unordered_set<wstring>>> *ConflictMods,
-    mutex *ConflictModsMutex) {
+void ParallaxGenPlugin::processShape(const wstring &NIFPath, nifly::NiShape *NIFShape, const wstring &Name3D,
+                                     const int &Index3D, PatcherUtil::PatcherObjectSet &Patchers,
+                                     vector<TXSTResult> &Results, PatcherUtil::ConflictModResults *ConflictMods) {
   lock_guard<mutex> Lock(ProcessShapeMutex);
 
   const auto Matches = libGetMatchingTXSTObjs(NIFPath, Name3D, Index3D);
 
-  Result.clear();
+  Results.clear();
 
   // loop through matches
   for (const auto &[TXSTIndex, AltTexIndex] : Matches) {
@@ -370,22 +369,21 @@ void ParallaxGenPlugin::processShape(
     }
 
     // Populate conflict mods if set
-    if (ConflictMods != nullptr && ModSet.size() > 1) {
-      lock_guard<mutex> Lock(*ConflictModsMutex);
+    if (ConflictMods != nullptr) {
+      if (ModSet.size() > 1) {
+        lock_guard<mutex> Lock(ConflictMods->Mutex);
 
-      // add mods to conflict set
-      for (const auto &Match : Matches) {
-        if (ConflictMods->find(Match.Mod) == ConflictMods->end()) {
-          ConflictMods->insert({Match.Mod, {set<NIFUtil::ShapeShader>(), unordered_set<wstring>()}});
+        // add mods to conflict set
+        for (const auto &Match : Matches) {
+          if (ConflictMods->Mods.find(Match.Mod) == ConflictMods->Mods.end()) {
+            ConflictMods->Mods.insert({Match.Mod, {set<NIFUtil::ShapeShader>(), unordered_set<wstring>()}});
+          }
+
+          get<0>(ConflictMods->Mods[Match.Mod]).insert(Match.Shader);
+          get<1>(ConflictMods->Mods[Match.Mod]).insert(ModSet.begin(), ModSet.end());
         }
-
-        get<0>((*ConflictMods)[Match.Mod]).insert(Match.Shader);
-        get<1>((*ConflictMods)[Match.Mod]).insert(ModSet.begin(), ModSet.end());
       }
-    }
 
-    if (Dry) {
-      // skip if dry run
       return;
     }
 
@@ -397,8 +395,7 @@ void ParallaxGenPlugin::processShape(
     WinningShaderMatch = PatcherUtil::applyTransformIfNeeded(WinningShaderMatch, Patchers);
 
     // loop through patchers
-    // TODO make a separate data type with hash function and all that for texture sets
-    array<wstring, NUM_TEXTURE_SLOTS> NewSlots =
+    NIFUtil::TextureSet NewSlots =
         Patchers.ShaderPatchers.at(WinningShaderMatch.Shader)->applyPatchSlots(BaseSlots, WinningShaderMatch.Match);
 
     // Post warnings if any
@@ -447,7 +444,7 @@ void ParallaxGenPlugin::processShape(
     }
 
     // add to result
-    Result.push_back(CurResult);
+    Results.push_back(CurResult);
   }
 }
 
