@@ -14,6 +14,7 @@
 - When mixing shaders with alternate texture records meshes will now be duplicated where required
 - Meshes that have higher priority than textures can be patched now
 - Plugin patching will also be considered when evaluating mods for conflicts now
+- Removed simplicity of snow warning as the mod is not inherently incompatible
 
 ## [0.7.3] - 2024-12-09
 
