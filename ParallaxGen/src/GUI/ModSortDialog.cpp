@@ -56,7 +56,8 @@ ModSortDialog::ModSortDialog(const std::vector<std::wstring> &Mods, const std::v
                                       L"priority order for these mods. Mods that are highlighted in green are new mods "
                                       L"that do not exist in the saved order and may need to be sorted. Mods "
                                       L"highlighted in yellow conflict with the currently selected mod. Higher "
-                                      L"priority mods win over lower priority mods";
+                                      L"priority mods win over lower priority mods, where priority refers to the 3rd "
+                                      L"column. (For example priority 10 would win over priority 1)";
   // Create the wxStaticText and set wrapping
   auto *MessageText = new wxStaticText(this, wxID_ANY, Message, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
   MessageText->Wrap(TotalWidth - 40); // Adjust wrapping width

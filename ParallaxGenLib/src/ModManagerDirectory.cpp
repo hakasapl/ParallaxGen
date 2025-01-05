@@ -26,7 +26,7 @@ auto ModManagerDirectory::getMod(const filesystem::path &RelPath) const -> wstri
     return ModFileMap.at(RelPathLower);
   }
 
-  return L"[UNMANAGED]";
+  return L"";
 }
 
 void ModManagerDirectory::populateModFileMapVortex(const filesystem::path &DeploymentDir) {

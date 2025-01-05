@@ -19,6 +19,8 @@
 - PBR patcher clears hair_soft_lighting flag now
 - PBR texture swap JSONs are automatically generated
 - Fixed yellow highlights staying in mod list after deselecting everything
+- Fixed deleted texture maps not actually deleting
+- Added additional help text to mod sort dialog
 
 ## [0.7.3] - 2024-12-09
 
