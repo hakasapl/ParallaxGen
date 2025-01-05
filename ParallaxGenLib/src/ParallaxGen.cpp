@@ -478,7 +478,7 @@ auto ParallaxGen::processNIF(const std::filesystem::path &NIFFile, const vector<
           // Create duplicate NIF object from original bytes
           bool DupNIFModified = false;
           auto DupNIF = processNIF(NewNIFName, NIFBytes, DupNIFModified, &CurShaders);
-          if (DupNIFs != nullptr) {
+          if (DupNIFs != nullptr && DupNIF.IsValid() && DupNIFModified) {
             DupNIFs->emplace_back(NewNIFName, DupNIF);
           }
         }
@@ -504,7 +504,7 @@ auto ParallaxGen::processNIF(const std::filesystem::path &NIFFile, const vector<
   // Sort blocks and set plugin indices
   NIF.PrettySortBlocks();
 
-  if (PatchPlugin) {
+  if (PatchPlugin && ForceShaders == nullptr) {
     for (auto &Shape : ShapeTracker) {
       // Find new block id
       const auto NewBlockID = NIF.GetBlockID(get<0>(Shape));
@@ -521,6 +521,11 @@ auto ParallaxGen::processNIF(const std::filesystem::path &NIFFile, const vector<
     }
 
     ParallaxGenPlugin::set3DIndices(NIFFile.wstring(), ShapeTracker);
+  }
+
+  if (ForceShaders != nullptr) {
+    // duplicates are always saved
+    NIFModified = true;
   }
 
   return NIF;
