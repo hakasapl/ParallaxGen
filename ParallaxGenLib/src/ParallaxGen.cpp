@@ -393,7 +393,7 @@ auto ParallaxGen::processNIF(const std::filesystem::path &NIFFile, const vector<
 
     bool ShapeModified = false;
     bool ShapeDeleted = false;
-    NIFUtil::ShapeShader ShaderApplied = NIFUtil::ShapeShader::NONE;
+    NIFUtil::ShapeShader ShaderApplied = NIFUtil::ShapeShader::UNKNOWN;
 
     ParallaxGenTask::PGResult ShapeResult = ParallaxGenTask::PGResult::SUCCESS;
     if (ForceShaders != nullptr && OldShapeIndex < ForceShaders->size()) {
@@ -415,7 +415,7 @@ auto ParallaxGen::processNIF(const std::filesystem::path &NIFFile, const vector<
     ShadersAppliedMesh[OldShapeIndex] = ShaderApplied;
 
     // Update NIFModified if shape was modified
-    if (PatchPlugin) {
+    if (ShaderApplied != NIFUtil::ShapeShader::UNKNOWN && PatchPlugin && ForceShaders == nullptr) {
       // Get all plugin results
       vector<ParallaxGenPlugin::TXSTResult> Results;
       ParallaxGenPlugin::processShape(NIFFile.wstring(), NIFShape, ShapeName, OldShapeIndex, PatcherObjects, Results,
@@ -445,12 +445,18 @@ auto ParallaxGen::processNIF(const std::filesystem::path &NIFFile, const vector<
     return NIF;
   }
 
-  if (PatchPlugin) {
+  if (PatchPlugin && ForceShaders == nullptr) {
     // Loop through plugin results and fix unknowns to match mesh
     for (auto &[ModelRecHandle, Results] : RecordHandleTracker) {
       for (size_t I = 0; I < Shapes.size(); I++) {
         if (Results.first[I] == NIFUtil::ShapeShader::UNKNOWN) {
-          Results.first[I] = ShadersAppliedMesh[I];
+          if (ShadersAppliedMesh[I] == NIFUtil::ShapeShader::UNKNOWN) {
+            // No shader applied to mesh, use default
+            Results.first[I] = NIFUtil::ShapeShader::UNKNOWN;
+          } else {
+            // Use mesh shader
+            Results.first[I] = ShadersAppliedMesh[I];
+          }
         }
       }
     }
@@ -561,6 +567,8 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
     Logger::trace(L"Rejecting: Incorrect NIFShader block type");
     return Result;
   }
+
+  ShaderApplied = NIFUtil::ShapeShader::NONE;
 
   if (ForceShader != nullptr) {
     // Force shader means we can just apply the shader and return

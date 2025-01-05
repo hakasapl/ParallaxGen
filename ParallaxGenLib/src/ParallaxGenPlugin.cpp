@@ -392,10 +392,10 @@ void ParallaxGenPlugin::processShape(const wstring &NIFPath, nifly::NiShape *NIF
 
     // Get winning match
     auto WinningShaderMatch = PatcherUtil::getWinningMatch(Matches, ModPriority);
-    CurResult.Shader = WinningShaderMatch.Shader;
 
     // Apply transforms
     WinningShaderMatch = PatcherUtil::applyTransformIfNeeded(WinningShaderMatch, Patchers);
+    CurResult.Shader = WinningShaderMatch.Shader;
 
     // loop through patchers
     NIFUtil::TextureSet NewSlots =

@@ -15,7 +15,6 @@ using Mutagen.Bethesda.Plugins.Binary.Parameters;
 using Mutagen.Bethesda.Plugins.Records;
 using Noggog;
 using Mutagen.Bethesda.Plugins.Utility;
-using Mutagen.Bethesda.Plugins.Analysis;
 
 public static class ExceptionHandler
 {
@@ -335,7 +334,7 @@ public class PGMutagen
           foreach (var alternateTexture in modelRec.AlternateTextures)
           {
             // Add to global
-            var AltTexEntry = new Tuple<IAlternateTextureGetter, int, int>(alternateTexture, DCIdx, ModelRecCounter++);
+            var AltTexEntry = new Tuple<IAlternateTextureGetter, int, int>(alternateTexture, DCIdx, ModelRecCounter);
             AltTexRefs.Add(AltTexEntry);
             var AltTexId = AltTexRefs.Count - 1;
 
@@ -370,6 +369,8 @@ public class PGMutagen
               MessageHandler.Log("[PopulateObjs] Adding Alt Tex Reference: " + key.ToString() + " -> " + GetRecordDesc(newTXSTObj), 0);
             }
           }
+
+          ModelRecCounter++;
         }
       }
     }
