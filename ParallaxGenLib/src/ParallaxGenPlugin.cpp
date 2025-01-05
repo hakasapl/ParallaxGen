@@ -461,7 +461,7 @@ void ParallaxGenPlugin::assignMesh(const wstring &NIFPath, const vector<TXSTResu
   // Loop through results
   for (const auto &CurResult : Result) {
     // Set model rec handle
-    libSetModelRecNIF(CurResult.ModelRecHandle, NIFPath);
+    libSetModelRecNIF(CurResult.AltTexIndex, NIFPath);
 
     // Set model alt tex
     libSetModelAltTex(CurResult.AltTexIndex, CurResult.TXSTIndex);
