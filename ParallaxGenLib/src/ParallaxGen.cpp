@@ -319,7 +319,7 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json *Di
     const auto DupNIFPath = OutputDir / DupNIFFile;
     // TODO do we need to add info about this to diff json?
     if (DupNIF.Save(DupNIFPath, NIFSaveOptions) != 0) {
-      Logger::error(L"Unable to save duplicate NIF file");
+      Logger::error(L"Unable to save duplicate NIF file {}", DupNIFFile.wstring());
       Result = ParallaxGenTask::PGResult::FAILURE;
       return Result;
     }
@@ -368,7 +368,6 @@ auto ParallaxGen::processNIF(const std::filesystem::path &NIFFile, const vector<
   unordered_map<int, pair<vector<NIFUtil::ShapeShader>, vector<ParallaxGenPlugin::TXSTResult>>> RecordHandleTracker;
 
   // Patch each shape in NIF
-  size_t NumShapes = 0;
   int OldShapeIndex = 0;
   vector<tuple<NiShape *, int, int>> ShapeTracker;
   for (NiShape *NIFShape : Shapes) {
@@ -388,8 +387,6 @@ auto ParallaxGen::processNIF(const std::filesystem::path &NIFFile, const vector<
     const auto ShapeName = ASCIItoUTF16(NIFShape->name.get());
     const auto ShapeIDStr = to_wstring(ShapeBlockID) + L" / " + ShapeName;
     Logger::Prefix PrefixShape(ShapeIDStr);
-
-    NumShapes++;
 
     bool ShapeModified = false;
     bool ShapeDeleted = false;
