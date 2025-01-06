@@ -92,6 +92,11 @@ auto ParallaxGenUI::selectModOrder(
   // first loop through existing order to restore is
 
   for (const auto &Mod : FinalModOrder) {
+    if (Mod.empty()) {
+      // skip unmanaged stuff
+      continue;
+    }
+
     ModStrs.push_back(Mod);
 
     vector<wstring> ShaderStrs;

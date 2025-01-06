@@ -317,9 +317,11 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json *Di
   // Save any duplicate NIFs
   for (auto &[DupNIFFile, DupNIF] : DupNIFs) {
     const auto DupNIFPath = OutputDir / DupNIFFile;
+    filesystem::create_directories(DupNIFPath.parent_path());
     // TODO do we need to add info about this to diff json?
+    Logger::debug(L"Saving duplicate NIF to output: {}", DupNIFPath.wstring());
     if (DupNIF.Save(DupNIFPath, NIFSaveOptions) != 0) {
-      Logger::error(L"Unable to save duplicate NIF file");
+      Logger::error(L"Unable to save duplicate NIF file {}", DupNIFFile.wstring());
       Result = ParallaxGenTask::PGResult::FAILURE;
       return Result;
     }
@@ -368,7 +370,6 @@ auto ParallaxGen::processNIF(const std::filesystem::path &NIFFile, const vector<
   unordered_map<int, pair<vector<NIFUtil::ShapeShader>, vector<ParallaxGenPlugin::TXSTResult>>> RecordHandleTracker;
 
   // Patch each shape in NIF
-  size_t NumShapes = 0;
   int OldShapeIndex = 0;
   vector<tuple<NiShape *, int, int>> ShapeTracker;
   for (NiShape *NIFShape : Shapes) {
@@ -389,11 +390,9 @@ auto ParallaxGen::processNIF(const std::filesystem::path &NIFFile, const vector<
     const auto ShapeIDStr = to_wstring(ShapeBlockID) + L" / " + ShapeName;
     Logger::Prefix PrefixShape(ShapeIDStr);
 
-    NumShapes++;
-
     bool ShapeModified = false;
     bool ShapeDeleted = false;
-    NIFUtil::ShapeShader ShaderApplied = NIFUtil::ShapeShader::NONE;
+    NIFUtil::ShapeShader ShaderApplied = NIFUtil::ShapeShader::UNKNOWN;
 
     ParallaxGenTask::PGResult ShapeResult = ParallaxGenTask::PGResult::SUCCESS;
     if (ForceShaders != nullptr && OldShapeIndex < ForceShaders->size()) {
@@ -415,7 +414,7 @@ auto ParallaxGen::processNIF(const std::filesystem::path &NIFFile, const vector<
     ShadersAppliedMesh[OldShapeIndex] = ShaderApplied;
 
     // Update NIFModified if shape was modified
-    if (PatchPlugin) {
+    if (ShaderApplied != NIFUtil::ShapeShader::UNKNOWN && PatchPlugin && ForceShaders == nullptr) {
       // Get all plugin results
       vector<ParallaxGenPlugin::TXSTResult> Results;
       ParallaxGenPlugin::processShape(NIFFile.wstring(), NIFShape, ShapeName, OldShapeIndex, PatcherObjects, Results,
@@ -445,12 +444,18 @@ auto ParallaxGen::processNIF(const std::filesystem::path &NIFFile, const vector<
     return NIF;
   }
 
-  if (PatchPlugin) {
+  if (PatchPlugin && ForceShaders == nullptr) {
     // Loop through plugin results and fix unknowns to match mesh
     for (auto &[ModelRecHandle, Results] : RecordHandleTracker) {
       for (size_t I = 0; I < Shapes.size(); I++) {
         if (Results.first[I] == NIFUtil::ShapeShader::UNKNOWN) {
-          Results.first[I] = ShadersAppliedMesh[I];
+          if (ShadersAppliedMesh[I] == NIFUtil::ShapeShader::UNKNOWN) {
+            // No shader applied to mesh, use default
+            Results.first[I] = NIFUtil::ShapeShader::UNKNOWN;
+          } else {
+            // Use mesh shader
+            Results.first[I] = ShadersAppliedMesh[I];
+          }
         }
       }
     }
@@ -474,7 +479,7 @@ auto ParallaxGen::processNIF(const std::filesystem::path &NIFFile, const vector<
           // Create duplicate NIF object from original bytes
           bool DupNIFModified = false;
           auto DupNIF = processNIF(NewNIFName, NIFBytes, DupNIFModified, &CurShaders);
-          if (DupNIFs != nullptr) {
+          if (DupNIFs != nullptr && DupNIF.IsValid() && DupNIFModified) {
             DupNIFs->emplace_back(NewNIFName, DupNIF);
           }
         }
@@ -500,7 +505,7 @@ auto ParallaxGen::processNIF(const std::filesystem::path &NIFFile, const vector<
   // Sort blocks and set plugin indices
   NIF.PrettySortBlocks();
 
-  if (PatchPlugin) {
+  if (PatchPlugin && ForceShaders == nullptr) {
     for (auto &Shape : ShapeTracker) {
       // Find new block id
       const auto NewBlockID = NIF.GetBlockID(get<0>(Shape));
@@ -517,6 +522,11 @@ auto ParallaxGen::processNIF(const std::filesystem::path &NIFFile, const vector<
     }
 
     ParallaxGenPlugin::set3DIndices(NIFFile.wstring(), ShapeTracker);
+  }
+
+  if (ForceShaders != nullptr) {
+    // duplicates are always saved
+    NIFModified = true;
   }
 
   return NIF;
@@ -561,6 +571,8 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
     Logger::trace(L"Rejecting: Incorrect NIFShader block type");
     return Result;
   }
+
+  ShaderApplied = NIFUtil::ShapeShader::NONE;
 
   if (ForceShader != nullptr) {
     // Force shader means we can just apply the shader and return

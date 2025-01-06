@@ -20,6 +20,7 @@ ModSortDialog::ModSortDialog(const std::vector<std::wstring> &Mods, const std::v
   ListCtrl->InsertColumn(2, "Priority");
 
   ListCtrl->Bind(wxEVT_LIST_ITEM_SELECTED, &ModSortDialog::onItemSelected, this);
+  ListCtrl->Bind(wxEVT_LIST_ITEM_DESELECTED, &ModSortDialog::onItemDeselected, this);
   ListCtrl->Bind(wxEVT_LIST_COL_CLICK, &ModSortDialog::onColumnClick, this);
 
   ListCtrl->Bind(wxEVT_LEFT_DOWN, &ModSortDialog::onMouseLeftDown, this);
@@ -55,7 +56,8 @@ ModSortDialog::ModSortDialog(const std::vector<std::wstring> &Mods, const std::v
                                       L"priority order for these mods. Mods that are highlighted in green are new mods "
                                       L"that do not exist in the saved order and may need to be sorted. Mods "
                                       L"highlighted in yellow conflict with the currently selected mod. Higher "
-                                      L"priority mods win over lower priority mods";
+                                      L"priority mods win over lower priority mods, where priority refers to the 3rd "
+                                      L"column. (For example priority 10 would win over priority 1)";
   // Create the wxStaticText and set wrapping
   auto *MessageText = new wxStaticText(this, wxID_ANY, Message, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
   MessageText->Wrap(TotalWidth - 40); // Adjust wrapping width
@@ -87,7 +89,40 @@ ModSortDialog::ModSortDialog(const std::vector<std::wstring> &Mods, const std::v
 void ModSortDialog::onItemSelected(wxListEvent &Event) {
   long Index = Event.GetIndex();
   std::wstring SelectedMod = ListCtrl->GetItemText(Index).ToStdWstring();
-  highlightConflictingItems(SelectedMod);
+
+  if (Index == -1) {
+    clearAllHighlights(); // Clear all highlights when no item is selected
+  } else {
+    highlightConflictingItems(SelectedMod); // Highlight conflicts for the selected mod
+  }
+}
+
+void ModSortDialog::onItemDeselected(wxListEvent &Event) {
+  // Check if no items are selected
+  long SelectedItem = -1;
+  bool AnyItemSelected = false;
+  while ((SelectedItem = ListCtrl->GetNextItem(SelectedItem, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED)) != wxNOT_FOUND) {
+    AnyItemSelected = true;
+    break;
+  }
+
+  if (!AnyItemSelected) {
+    clearAllHighlights(); // Clear highlights if no items are selected
+  }
+
+  Event.Skip();
+}
+
+void ModSortDialog::clearAllHighlights() {
+  for (long I = 0; I < ListCtrl->GetItemCount(); ++I) {
+    std::wstring ItemText = ListCtrl->GetItemText(I).ToStdWstring();
+    auto It = OriginalBackgroundColors.find(ItemText);
+    if (It != OriginalBackgroundColors.end()) {
+      ListCtrl->SetItemBackgroundColour(I, It->second); // Restore original color
+    } else {
+      ListCtrl->SetItemBackgroundColour(I, *wxWHITE); // Fallback to white
+    }
+  }
 }
 
 void ModSortDialog::highlightConflictingItems(const std::wstring &SelectedMod) {

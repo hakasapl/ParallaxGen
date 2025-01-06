@@ -71,6 +71,13 @@ private:
   void onItemSelected(wxListEvent &Event);
 
   /**
+   * @brief Event handler that triggers when an item is deselected in the list
+   *
+   * @param Event wxWidgets event object
+   */
+  void onItemDeselected(wxListEvent &Event);
+
+  /**
    * @brief Event handler that triggers when the left mouse button is pressed down (dragging)
    *
    * @param Event wxWidgets event object
@@ -133,6 +140,11 @@ private:
    * @param SelectedMod Mod that is selected
    */
   void highlightConflictingItems(const std::wstring &SelectedMod);
+
+  /**
+   * @brief Clear all yellow highlights from the list
+   */
+  void clearAllHighlights();
 
   /**
    * @brief Draws a drop indicator during drag and drop

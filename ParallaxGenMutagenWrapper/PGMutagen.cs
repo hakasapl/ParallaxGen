@@ -15,7 +15,6 @@ using Mutagen.Bethesda.Plugins.Binary.Parameters;
 using Mutagen.Bethesda.Plugins.Records;
 using Noggog;
 using Mutagen.Bethesda.Plugins.Utility;
-using Mutagen.Bethesda.Plugins.Analysis;
 
 public static class ExceptionHandler
 {
@@ -82,7 +81,7 @@ public class PGMutagen
   private static SkyrimMod? OutMod;
   private static IGameEnvironment<ISkyrimMod, ISkyrimModGetter>? Env;
   private static List<ITextureSetGetter> TXSTObjs = [];
-  private static List<Tuple<IAlternateTextureGetter, int>> AltTexRefs = [];
+  private static List<Tuple<IAlternateTextureGetter, int, int>> AltTexRefs = [];
   private static List<IMajorRecord> ModelCopies = [];
   private static List<IMajorRecord> ModelCopiesEditable = [];
   private static Dictionary<Tuple<string, string, int>, List<Tuple<int, int>>>? TXSTRefs;
@@ -287,6 +286,7 @@ public class PGMutagen
 
         bool CopiedRecord = false;
         var DCIdx = -1;
+        int ModelRecCounter = 0;
         foreach (var modelRec in ModelRecs)
         {
           if (modelRec.AlternateTextures is null)
@@ -334,7 +334,7 @@ public class PGMutagen
           foreach (var alternateTexture in modelRec.AlternateTextures)
           {
             // Add to global
-            var AltTexEntry = new Tuple<IAlternateTextureGetter, int>(alternateTexture, DCIdx);
+            var AltTexEntry = new Tuple<IAlternateTextureGetter, int, int>(alternateTexture, DCIdx, ModelRecCounter);
             AltTexRefs.Add(AltTexEntry);
             var AltTexId = AltTexRefs.Count - 1;
 
@@ -369,6 +369,8 @@ public class PGMutagen
               MessageHandler.Log("[PopulateObjs] Adding Alt Tex Reference: " + key.ToString() + " -> " + GetRecordDesc(newTXSTObj), 0);
             }
           }
+
+          ModelRecCounter++;
         }
       }
     }
@@ -569,11 +571,7 @@ public class PGMutagen
         }
       }
 
-      if (RecordCompactionCompatibilityDetection.CouldBeSmallMasterCompatible(OutMod)) {
-        // Can be light
-        MessageHandler.Log("[Finalize] Output Plugin can be compacted to a small master", 0);
-        ModCompaction.CompactToSmallMaster(OutMod);
-      }
+      ModCompaction.CompactToWithFallback(OutMod, MasterStyle.Small);
 
       if (esmify == 1) {
         OutMod.IsMaster = true;
@@ -924,7 +922,7 @@ public class PGMutagen
       }
 
       AltTexObj.Item1.NewTexture.SetTo(TXSTObjs[TXSTHandle]);
-      ModifiedModeledRecords.Add(AltTexObj.Item2);
+      ModifiedModeledRecords.Add(AltTexObj.Item3);
     }
     catch (Exception ex)
     {
@@ -955,7 +953,7 @@ public class PGMutagen
       }
 
       AltTexObj.Item1.Index = NewIndex;
-      ModifiedModeledRecords.Add(AltTexObj.Item2);
+      ModifiedModeledRecords.Add(AltTexObj.Item3);
     }
     catch (Exception ex)
     {
@@ -988,20 +986,20 @@ public class PGMutagen
   public static unsafe void GetModelRecHandleFromAltTexHandle([DNNE.C99Type("const int")] int AltTexHandle, [DNNE.C99Type("int*")] int* ModelRecHandle)
   {
     try {
-      var AltTexObj = GetAltTexFromHandle(AltTexHandle);
-      *ModelRecHandle = AltTexObj.Item2;
+      *ModelRecHandle = AltTexRefs[AltTexHandle].Item3;
     } catch (Exception ex) {
       ExceptionHandler.SetLastException(ex);
     }
   }
 
   [UnmanagedCallersOnly(EntryPoint = "SetModelRecNIF", CallConvs = [typeof(CallConvCdecl)])]
-  public static void SetModelRecNIF([DNNE.C99Type("const int")] int ModelRecHandle, [DNNE.C99Type("const wchar_t*")] IntPtr NIFPathPtr)
+  public static void SetModelRecNIF([DNNE.C99Type("const int")] int AltTexHandle, [DNNE.C99Type("const wchar_t*")] IntPtr NIFPathPtr)
   {
     try
     {
-      var ModelRec = (IModeled)ModelCopiesEditable[ModelRecHandle];
-      if (ModelRec.Model is null)
+      var ModelRec = GetAltTexFromHandle(AltTexHandle).Item2;
+
+      if (ModelRec is null)
       {
         throw new Exception("Model Record does not have a model");
       }
@@ -1016,14 +1014,14 @@ public class PGMutagen
       NIFPath = RemovePrefixIfExists("meshes\\", NIFPath);
 
       // Check if NIFPath is different from ModelRec ignore case
-      if (NIFPath.Equals(ModelRec.Model.File, StringComparison.OrdinalIgnoreCase))
+      if (NIFPath.Equals(ModelRec.File, StringComparison.OrdinalIgnoreCase))
       {
-        MessageHandler.Log("[SetModelRecNIF] [Model Rec Index: " + ModelRecHandle + "] [NIF Path: " + NIFPath + "] NIF Path is the same as the current one", 0);
+        MessageHandler.Log("[SetModelRecNIF] [Alt Tex Index: " + AltTexHandle + "] [NIF Path: " + NIFPath + "] NIF Path is the same as the current one", 0);
         return;
       }
 
-      ModelRec.Model.File = NIFPath;
-      MessageHandler.Log("[SetModelRecNIF] [Model Rec Index: " + ModelRecHandle + "] [NIF Path: " + NIFPath + "]", 0);
+      ModelRec.File = NIFPath;
+      MessageHandler.Log("[SetModelRecNIF] [Alt Tex Index: " + AltTexHandle + "] [NIF Path: " + NIFPath + "]", 0);
     }
     catch (Exception ex)
     {
@@ -1033,7 +1031,7 @@ public class PGMutagen
 
   // Helpers
 
-  private static (AlternateTexture?, int) GetAltTexFromHandle(int AltTexHandle)
+  private static (AlternateTexture?, IModel?, int) GetAltTexFromHandle(int AltTexHandle)
   {
     var oldAltTex = AltTexRefs[AltTexHandle].Item1;
     var ModeledRecordId = AltTexRefs[AltTexHandle].Item2;
@@ -1058,13 +1056,14 @@ public class PGMutagen
             alternateTexture.NewTexture.FormKey.ID.ToString() == oldAltTex.NewTexture.FormKey.ID.ToString())
         {
           // Found the one to update
-          var EditableObj = GetModelElems(ModelCopiesEditable[ModeledRecordId])[i].AlternateTextures?[j];
-          return (EditableObj, ModeledRecordId);
+          var EditableModelObj = GetModelElems(ModelCopiesEditable[ModeledRecordId])[i];
+          var EditableAltTexObj = EditableModelObj.AlternateTextures?[j];
+          return (EditableAltTexObj, EditableModelObj, ModeledRecordId);
         }
       }
     }
 
-    return (null, -1);
+    return (null, null, -1);
   }
 
   private static string GetRecordDesc(IMajorRecordGetter rec)

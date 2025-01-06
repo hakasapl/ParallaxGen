@@ -532,6 +532,7 @@ void ParallaxGenConfig::saveUserConfig() {
   J["params"]["meshrules"]["blocklist"] = utf16VectorToUTF8(Params.MeshRules.BlockList);
 
   // "texturerules"
+  J["params"]["texturerules"]["texturemaps"] = nlohmann::json::object();
   for (const auto &[Key, Value] : Params.TextureRules.TextureMaps) {
     J["params"]["texturerules"]["texturemaps"][UTF16toUTF8(Key)] = NIFUtil::getStrFromTexType(Value);
   }
