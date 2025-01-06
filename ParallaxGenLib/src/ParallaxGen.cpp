@@ -317,6 +317,7 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json *Di
   // Save any duplicate NIFs
   for (auto &[DupNIFFile, DupNIF] : DupNIFs) {
     const auto DupNIFPath = OutputDir / DupNIFFile;
+    filesystem::create_directories(DupNIFPath.parent_path());
     // TODO do we need to add info about this to diff json?
     Logger::debug(L"Saving duplicate NIF to output: {}", DupNIFPath.wstring());
     if (DupNIF.Save(DupNIFPath, NIFSaveOptions) != 0) {
