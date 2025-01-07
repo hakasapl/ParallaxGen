@@ -16,6 +16,7 @@
 #include <mutex>
 #include <ranges>
 #include <spdlog/spdlog.h>
+#include <stdexcept>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -30,6 +31,7 @@
 #include "ParallaxGenTask.hpp"
 #include "ParallaxGenUtil.hpp"
 #include "ParallaxGenWarnings.hpp"
+#include "ParallaxGenRunner.hpp"
 #include "patchers/PatcherShader.hpp"
 #include "patchers/PatcherShaderTransform.hpp"
 #include "patchers/PatcherUtil.hpp"
@@ -57,60 +59,26 @@ void ParallaxGen::loadModPriorityMap(unordered_map<wstring, int> *ModPriority) {
 void ParallaxGen::patchMeshes(const bool &MultiThread, const bool &PatchPlugin) {
   auto Meshes = PGD->getMeshes();
 
-  // Create task tracker
-  ParallaxGenTask TaskTracker("Mesh Patcher", Meshes.size());
-
-  // Create thread group
-  const boost::thread_group ThreadGroup;
-
   // Define diff JSON
   nlohmann::json DiffJSON = nlohmann::json::object();
 
-  // Create threads
-  if (MultiThread) {
-#ifdef _DEBUG
-    size_t NumThreads = 1;
-#else
-    const size_t NumThreads = boost::thread::hardware_concurrency();
-#endif
+  // Create task tracker
+  ParallaxGenTask TaskTracker("Mesh Patcher", Meshes.size());
 
-    boost::asio::thread_pool MeshPatchPool(NumThreads);
+  // Create runner
+  ParallaxGenRunner Runner(MultiThread);
 
-    atomic<bool> KillThreads = false;
-
-    for (const auto &Mesh : Meshes) {
-      boost::asio::post(MeshPatchPool, [this, &TaskTracker, &DiffJSON, &Mesh, &PatchPlugin, &KillThreads] {
-        ParallaxGenTask::PGResult Result = ParallaxGenTask::PGResult::SUCCESS;
-        try {
-          Result = processNIF(Mesh, &DiffJSON, PatchPlugin);
-        } catch (const exception &E) {
-          spdlog::error(L"Exception in thread patching NIF {}: {}", Mesh.wstring(), ASCIItoUTF16(E.what()));
-          KillThreads.store(true, std::memory_order_release);
-          Result = ParallaxGenTask::PGResult::FAILURE;
-        }
-
-        TaskTracker.completeJob(Result);
-      });
-    }
-
-    while (!TaskTracker.isCompleted()) {
-      if (KillThreads.load(std::memory_order_acquire)) {
-        MeshPatchPool.stop();
-        throw runtime_error("Exception in thread patching NIF");
-      }
-
-      this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-
-    // verify that all threads complete (should be redundant)
-    MeshPatchPool.join();
-
-  } else {
-    for (const auto &Mesh : Meshes) {
-      TaskTracker.completeJob(processNIF(Mesh, &DiffJSON));
-    }
+  // Add tasks
+  for (const auto &Mesh : Meshes) {
+    Runner.addTask([this, &TaskTracker, &DiffJSON, &Mesh, &PatchPlugin] {
+      TaskTracker.completeJob(processNIF(Mesh, &DiffJSON, PatchPlugin));
+    });
   }
 
+  // Blocks until all tasks are done
+  Runner.runTasks();
+
+  // Print any resulting warning
   ParallaxGenWarnings::printWarnings();
 
   // Write DiffJSON file
@@ -276,7 +244,7 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json *Di
   auto NIF = processNIF(NIFFile, NIFFileData, NIFModified, nullptr, &DupNIFs, PatchPlugin, ConflictMods);
 
   // Save patched NIF if it was modified
-  if (NIFModified && ConflictMods == nullptr) {
+  if (NIF.IsValid() && NIFModified && ConflictMods == nullptr) {
     // Calculate CRC32 hash before
     boost::crc_32_type CRCBeforeResult{};
     CRCBeforeResult.process_bytes(NIFFileData.data(), NIFFileData.size());

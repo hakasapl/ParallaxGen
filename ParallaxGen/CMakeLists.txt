@@ -20,11 +20,13 @@ add_executable(ParallaxGen ${SOURCES} ${HEADERS} icon.rc)
 # Packages
 find_package(CLI11 REQUIRED CONFIG)
 find_package(wxWidgets REQUIRED COMPONENTS core base)
+find_package(cpptrace REQUIRED CONFIG)
 
 target_link_libraries(ParallaxGen PRIVATE
     ParallaxGenLib
     CLI11::CLI11
     ${wxWidgets_LIBRARIES}
+    cpptrace::cpptrace
 )
 
 install(TARGETS ParallaxGen DESTINATION . )

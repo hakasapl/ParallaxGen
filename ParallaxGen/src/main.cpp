@@ -11,7 +11,8 @@
 #include <boost/algorithm/string/join.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
-#include <boost/stacktrace/stacktrace.hpp>
+
+#include <cpptrace/from_current.hpp>
 
 #include <windows.h>
 
@@ -35,6 +36,7 @@
 #include "ParallaxGenPlugin.hpp"
 #include "ParallaxGenUtil.hpp"
 #include "ParallaxGenWarnings.hpp"
+#include "ParallaxGenRunner.hpp"
 #include "patchers/PatcherComplexMaterial.hpp"
 #include "patchers/PatcherShader.hpp"
 #include "patchers/PatcherTruePBR.hpp"
@@ -435,14 +437,11 @@ auto main(int ArgC, char **ArgV) -> int {
   initLogger(LogPath, Args);
 
   // Main Runner (Catches all exceptions)
-  try {
+  CPPTRACE_TRY {
     mainRunner(Args, ExePath);
-  } catch (const exception &E) {
-    auto Trace = boost::stacktrace::stacktrace();
-    spdlog::critical("An unhandled exception occurred (Please provide this entire message "
-                     "in your bug report).\n\nException type: {}\nMessage: {}\nStack Trace: "
-                     "\n{}",
-                     typeid(E).name(), E.what(), boost::stacktrace::to_string(Trace));
+  } CPPTRACE_CATCH(const exception& E) {
+    ParallaxGenRunner::processException(E, cpptrace::from_current_exception().to_string());
+
     cout << "Press ENTER to abort...";
     cin.get();
     abort();

@@ -25,7 +25,7 @@
       "version>=": "1.85.0#1"
     },
     {
-      "name": "boost-stacktrace",
+      "name": "boost-locale",
       "version>=": "1.85.0#2"
     },
     {
@@ -33,19 +33,15 @@
       "version>=": "1.85.0#1"
     },
     {
-      "name": "boost-locale",
-      "version>=": "1.85.0#2"
-    },
-    {
       "name": "cli11",
       "version>=": "2.4.2"
     },
     {
       "name": "directxtex",
-      "version>=": "2024-06-04",
       "features": [
         "dx11"
-      ]
+      ],
+      "version>=": "2024-06-04"
     },
     {
       "name": "directxtk",
@@ -69,17 +65,21 @@
     },
     {
       "name": "rsm-bsa",
-      "version>=": "4.1.0",
       "features": [
         "xmem"
-      ]
+      ],
+      "version>=": "4.1.0"
     },
     {
       "name": "spdlog",
-      "version>=": "1.15.0#1",
       "features": [
         "wchar"
-      ]
+      ],
+      "version>=": "1.15.0#1"
+    },
+    {
+      "name": "wxwidgets",
+      "version>=": "3.2.5#3"
     },
     {
       "name": "zlib",
@@ -89,9 +89,6 @@
       "name": "zstd",
       "version>=": "1.5.6"
     },
-    {
-      "name": "wxwidgets",
-      "version>=": "3.2.5#3"
-    }
+    "cpptrace"
   ]
 }

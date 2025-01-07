@@ -12,6 +12,7 @@ set(HEADERS
     "include/ParallaxGenUtil.hpp"
     "include/ParallaxGenWarnings.hpp"
     "include/ParallaxGenDirectory.hpp"
+    "include/ParallaxGenRunner.hpp"
     "include/patchers/PatcherShader.hpp"
     "include/patchers/PatcherComplexMaterial.hpp"
     "include/patchers/PatcherTruePBR.hpp"
@@ -38,6 +39,7 @@ set(SOURCES
     "src/ParallaxGenUtil.cpp"
     "src/ParallaxGenWarnings.cpp"
     "src/ParallaxGenDirectory.cpp"
+    "src/ParallaxGenRunner.cpp"
     "src/patchers/PatcherShader.cpp"
     "src/patchers/PatcherComplexMaterial.cpp"
     "src/patchers/PatcherTruePBR.cpp"
@@ -60,13 +62,14 @@ add_library(ParallaxGenLib SHARED ${SOURCES} ${HEADERS})
 # Add Packages
 find_package(spdlog REQUIRED CONFIG)
 find_package(bsa REQUIRED CONFIG)
-find_package(Boost REQUIRED COMPONENTS filesystem stacktrace_windbg thread locale)
+find_package(Boost REQUIRED COMPONENTS filesystem thread locale)
 find_package(directxtk REQUIRED)
 find_package(directxtex REQUIRED CONFIG)
 find_package(miniz REQUIRED CONFIG)
 find_package(nlohmann_json REQUIRED CONFIG)
 find_package(nlohmann_json_schema_validator REQUIRED)
 find_package(nifly REQUIRED CONFIG)
+find_package(cpptrace REQUIRED CONFIG)
 
 set(DirectXTK_LIBS
     d3d11.lib
@@ -94,6 +97,7 @@ target_link_libraries(ParallaxGenLib PUBLIC
     Shlwapi
     nlohmann_json::nlohmann_json
     nlohmann_json_schema_validator::validator
+    cpptrace::cpptrace
 )
 target_include_directories(ParallaxGenLib PUBLIC include)
 
