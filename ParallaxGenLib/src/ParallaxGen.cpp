@@ -96,56 +96,21 @@ auto ParallaxGen::findModConflicts(const bool &MultiThread, const bool &PatchPlu
   // Create task tracker
   ParallaxGenTask TaskTracker("Finding Mod Conflicts", Meshes.size(), 10);
 
-  // Create thread group
-  const boost::thread_group ThreadGroup;
-
   // Define conflicts
   PatcherUtil::ConflictModResults ConflictMods;
 
-  // Create threads
-  if (MultiThread) {
-#ifdef _DEBUG
-    size_t NumThreads = 1;
-#else
-    const size_t NumThreads = boost::thread::hardware_concurrency();
-#endif
+  // Create runner
+  ParallaxGenRunner Runner(MultiThread);
 
-    atomic<bool> KillThreads = false;
-
-    boost::asio::thread_pool MeshPatchPool(NumThreads);
-
-    for (const auto &Mesh : Meshes) {
-      boost::asio::post(MeshPatchPool, [this, &TaskTracker, &Mesh, &PatchPlugin, &KillThreads, &ConflictMods] {
-        ParallaxGenTask::PGResult Result = ParallaxGenTask::PGResult::SUCCESS;
-        try {
-          Result = processNIF(Mesh, nullptr, PatchPlugin, &ConflictMods);
-        } catch (const exception &E) {
-          spdlog::error(L"Exception in thread finding mod conflicts {}: {}", Mesh.wstring(), ASCIItoUTF16(E.what()));
-          KillThreads.store(true, std::memory_order_release);
-          Result = ParallaxGenTask::PGResult::FAILURE;
-        }
-
-        TaskTracker.completeJob(Result);
-      });
-    }
-
-    while (!TaskTracker.isCompleted()) {
-      if (KillThreads.load(std::memory_order_acquire)) {
-        MeshPatchPool.stop();
-        throw runtime_error("Exception in thread finding mod conflicts");
-      }
-
-      this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-
-    // verify that all threads complete (should be redundant)
-    MeshPatchPool.join();
-
-  } else {
-    for (const auto &Mesh : Meshes) {
-      TaskTracker.completeJob(processNIF(Mesh, nullptr, true, &ConflictMods));
-    }
+  // Add tasks
+  for (const auto &Mesh : Meshes) {
+    Runner.addTask([this, &TaskTracker, &Mesh, &PatchPlugin, &ConflictMods] {
+      TaskTracker.completeJob(processNIF(Mesh, nullptr, PatchPlugin, &ConflictMods));
+    });
   }
+
+  // Blocks until all tasks are done
+  Runner.runTasks();
 
   return ConflictMods.Mods;
 }
