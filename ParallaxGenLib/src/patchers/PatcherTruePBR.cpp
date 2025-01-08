@@ -808,6 +808,11 @@ void PatcherTruePBR::applyOnePatchSlots(std::array<std::wstring, NUM_TEXTURE_SLO
     string SlotName = "slot" + to_string(I + 1);
     if (TruePBRData.contains(SlotName)) {
       string NewSlot = TruePBRData[SlotName].get<string>();
+      // add "textures\\" to the beginning of string if not there
+      if (!boost::istarts_with(NewSlot, "textures\\")) {
+        NewSlot = "textures\\" + NewSlot;  // NOLINT(performance-inefficient-string-concatenation)
+      }
+
       Slots[I] = ParallaxGenUtil::UTF8toUTF16(NewSlot);
     }
   }
@@ -821,7 +826,7 @@ void PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader
   setTextureSet(*NIFShape, NewSlots, NIFModified);
 
   // "emissive" attribute
-  if (TruePBRData.contains("emissive") && !flag(TruePBRData, "lock_emissive")) {
+  if (TruePBRData.contains("emissive")) {
     NIFUtil::configureShaderFlag(NIFShaderBSLSP, SLSF1_EXTERNAL_EMITTANCE, TruePBRData["emissive"].get<bool>(),
                                  NIFModified);
   }

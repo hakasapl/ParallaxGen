@@ -21,6 +21,7 @@
 - Fixed yellow highlights staying in mod list after deselecting everything
 - Fixed deleted texture maps not actually deleting
 - Added additional help text to mod sort dialog
+- PBR slot commands will have "textures\\" added to the beginning automatically if not already there
 
 ## [0.7.3] - 2024-12-09
 
