@@ -37,6 +37,8 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "Logger.hpp"
+
 using namespace std;
 using namespace ParallaxGenUtil;
 using Microsoft::WRL::ComPtr;
@@ -46,6 +48,8 @@ ParallaxGenD3D::ParallaxGenD3D(ParallaxGenDirectory *PGD, filesystem::path Outpu
     : PGD(PGD), OutputDir(std::move(OutputDir)), ExePath(std::move(ExePath)), UseGPU(UseGPU) {}
 
 auto ParallaxGenD3D::findCMMaps(const std::vector<std::wstring> &BSAExcludes) -> ParallaxGenTask::PGResult {
+  Logger::info("Finding complex material maps");
+
   if (UseGPU && (!PtrDevice || !PtrContext)) {
     throw runtime_error("GPU not initialized");
   }
@@ -95,6 +99,8 @@ auto ParallaxGenD3D::findCMMaps(const std::vector<std::wstring> &BSAExcludes) ->
       PGD->setTextureType(CMMap.Path, NIFUtil::TextureType::COMPLEXMATERIAL);
     }
   }
+
+  Logger::info("Done finding complex material env maps");
 
   return ParallaxGenTask::PGResult::SUCCESS;
 }

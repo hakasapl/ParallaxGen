@@ -4,6 +4,7 @@
 #include "ModManagerDirectory.hpp"
 #include "NIFUtil.hpp"
 #include "ParallaxGenUtil.hpp"
+#include "Logger.hpp"
 
 #include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/predicate.hpp>
@@ -97,52 +98,38 @@ auto ParallaxGenConfig::getDefaultParams() -> PGParams {
 }
 
 void ParallaxGenConfig::loadConfig() {
+  Logger::Prefix Prefix("PGC/loadConfig");
+
   // Initialize Validator
-  try {
-    Validator.set_root_schema(getConfigValidation());
-  } catch (const std::exception &E) {
-    spdlog::critical("Unable to validate JSON validation: {}", E.what());
-    exit(1);
-  }
+  Validator.set_root_schema(getConfigValidation());
 
-  size_t NumConfigs = 0;
-
+  bool LoadedConfig = false;
   if (filesystem::exists(getUserConfigFile())) {
     // don't load a config that doesn't exist
-    spdlog::debug(L"Loading ParallaxGen Config: {}", getUserConfigFile().wstring());
+    Logger::debug(L"Loading ParallaxGen Config: {}", getUserConfigFile().wstring());
 
     nlohmann::json J;
-    bool ProcessJSON = true;
-    if (!parseJSON(getUserConfigFile(), getFileBytes(getUserConfigFile()), J)) {
-      ProcessJSON = false;
-    }
-
-    if (!validateJSON(getUserConfigFile(), J)) {
-      ProcessJSON = false;
-    }
-
-    if (ProcessJSON) {
+    if (parseJSON(getFileBytes(getUserConfigFile()), J) && validateJSON(J)) {
       if (!J.empty()) {
         replaceForwardSlashes(J);
         addConfigJSON(J);
-        NumConfigs++;
       }
 
-      if (getUserConfigFile() == getUserConfigFile()) {
-        UserConfig = J;
-      }
+      UserConfig = J;
+      LoadedConfig = true;
+      Logger::info("Loaded user config successfully");
+    } else {
+      Logger::error("Failed to parse ParallaxGen config file");
     }
-  } else {
-    Params = getDefaultParams();
   }
 
-  // Print number of configs loaded
-  spdlog::info("Loaded {} ParallaxGen configs successfully", NumConfigs);
+  if (!LoadedConfig) {
+    Logger::warn("No user config found, using defaults");
+    Params = getDefaultParams();
+  }
 }
 
 auto ParallaxGenConfig::addConfigJSON(const nlohmann::json &J) -> void {
-  // TODO UNIFORM check if to_lower_copy can handle UTF8
-
   // "mod_order" field
   if (J.contains("mod_order")) {
     lock_guard<mutex> Lock(ModOrderMutex);
@@ -278,13 +265,11 @@ auto ParallaxGenConfig::addConfigJSON(const nlohmann::json &J) -> void {
   }
 }
 
-auto ParallaxGenConfig::parseJSON(const std::filesystem::path &JSONFile, const vector<std::byte> &Bytes,
-                                  nlohmann::json &J) -> bool {
+auto ParallaxGenConfig::parseJSON(const vector<std::byte> &Bytes, nlohmann::json &J) -> bool {
   // Parse JSON
   try {
     J = nlohmann::json::parse(Bytes);
   } catch (const nlohmann::json::parse_error &E) {
-    spdlog::error(L"Error parsing JSON file {}: {}", JSONFile.wstring(), ASCIItoUTF16(E.what()));
     J = {};
     return false;
   }
@@ -292,12 +277,11 @@ auto ParallaxGenConfig::parseJSON(const std::filesystem::path &JSONFile, const v
   return true;
 }
 
-auto ParallaxGenConfig::validateJSON(const std::filesystem::path &JSONFile, const nlohmann::json &J) -> bool {
+auto ParallaxGenConfig::validateJSON(const nlohmann::json &J) -> bool {
   // Validate JSON
   try {
     Validator.validate(J);
   } catch (const std::exception &E) {
-    spdlog::error(L"Invalid JSON file {}: {}", JSONFile.wstring(), ASCIItoUTF16(E.what()));
     return false;
   }
 

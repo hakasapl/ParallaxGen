@@ -27,6 +27,7 @@
 #include "BethesdaGame.hpp"
 #include "GUI/LauncherWindow.hpp"
 #include "GUI/ModSortDialog.hpp"
+#include "Logger.hpp"
 #include "ModManagerDirectory.hpp"
 #include "NIFUtil.hpp"
 #include "ParallaxGen.hpp"
@@ -83,7 +84,7 @@ auto deployAssets(const filesystem::path &OutputDir, const filesystem::path &Exe
   // Install default cubemap file
   static const filesystem::path DynCubeMapPath = "textures/cubemaps/dynamic1pxcubemap_black.dds";
 
-  spdlog::info("Installing default dynamic cubemap file");
+  Logger::info("Installing default dynamic cubemap file");
 
   // Create Directory
   const filesystem::path OutputCubemapPath = OutputDir / DynCubeMapPath.parent_path();
@@ -98,20 +99,21 @@ auto deployAssets(const filesystem::path &OutputDir, const filesystem::path &Exe
 
 void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   // Welcome Message
-  spdlog::info("Welcome to ParallaxGen version {}!", PARALLAXGEN_VERSION);
+  Logger::info("Welcome to ParallaxGen version {}!", PARALLAXGEN_VERSION);
 
   // Test message if required
   if (PARALLAXGEN_TEST_VERSION > 0) {
-    spdlog::warn("This is an EXPERIMENTAL development build of ParallaxGen: {} Test Build {}", PARALLAXGEN_VERSION,
+    Logger::warn("This is an EXPERIMENTAL development build of ParallaxGen: {} Test Build {}", PARALLAXGEN_VERSION,
                  PARALLAXGEN_TEST_VERSION);
   }
 
   // Alpha message
-  spdlog::warn("ParallaxGen is currently in ALPHA. Please file detailed bug reports on nexus or github.");
+  Logger::warn("ParallaxGen is currently in ALPHA. Please file detailed bug reports on nexus or github.");
 
   // Create cfg directory if it does not exist
   const filesystem::path CfgDir = ExePath / "cfg";
   if (!filesystem::exists(CfgDir)) {
+    Logger::info(L"There is no existing configuration. Creating config directory \"{}\"", CfgDir.wstring());
     filesystem::create_directories(CfgDir);
   }
 
@@ -126,24 +128,26 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   // Show launcher UI
   if (!Args.Autostart) {
+    Logger::info("Showing launcher UI");
     Params = ParallaxGenUI::showLauncher(PGC);
   }
 
   // Validate config
   vector<string> Errors;
   if (!ParallaxGenConfig::validateParams(Params, Errors)) {
+    // This should never happen because there is a frontend validation that would have to be bypassed
     for (const auto &Error : Errors) {
-      spdlog::error("{}", Error);
+      Logger::error("{}", Error);
     }
-    spdlog::critical("Validation errors were found. Exiting.");
+    Logger::critical("Validation errors were found. Exiting.");
     exit(1);
   }
 
   // Print configuration parameters
-  spdlog::debug(L"Configuration Parameters:\n\n{}\n", Params.getString());
+  Logger::debug(L"Configuration Parameters:\n\n{}\n", Params.getString());
 
   // print output location
-  spdlog::info(L"ParallaxGen output directory: {}", Params.Output.Dir.wstring());
+  Logger::info(L"ParallaxGen output directory: {}", Params.Output.Dir.wstring());
 
   // Create relevant objects
   auto BG = BethesdaGame(Params.Game.Type, true, Params.Game.Dir);
@@ -157,6 +161,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   // Check if GPU needs to be initialized
   if (Params.Processing.GPUAcceleration) {
+    Logger::info("Initializing GPU");
     PGD3D.initGPU();
   }
 
@@ -170,36 +175,38 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
 
   // Create output directory
   try {
-    filesystem::create_directories(Params.Output.Dir);
+    if (filesystem::create_directories(Params.Output.Dir)) {
+      Logger::debug(L"Output directory created: {}", Params.Output.Dir.wstring());
+    }
   } catch (const filesystem::filesystem_error &E) {
-    spdlog::error("Failed to create output directory: {}", E.what());
+    Logger::error("Failed to create output directory: {}", E.what());
     exit(1);
   }
 
   // If output dir is the same as data dir meshes might get overwritten
   if (filesystem::equivalent(Params.Output.Dir, PGD.getDataPath())) {
-    spdlog::critical("Output directory cannot be the same directory as your data folder. "
+    Logger::critical("Output directory cannot be the same directory as your data folder. "
                      "Exiting.");
     exit(1);
   }
 
   // If output dir is a subdirectory of data dir vfs issues can occur
   if (boost::istarts_with(Params.Output.Dir.wstring(), BG.getGameDataPath().wstring() + "\\")) {
-    spdlog::critical("Output directory cannot be a subdirectory of your data folder. Exiting.");
+    Logger::critical("Output directory cannot be a subdirectory of your data folder. Exiting.");
     exit(1);
   }
 
   // Check if dyndolod.esp exists
   const auto ActivePlugins = BG.getActivePlugins(false, true);
   if (find(ActivePlugins.begin(), ActivePlugins.end(), L"dyndolod.esp") != ActivePlugins.end()) {
-    spdlog::critical("DynDoLOD and TexGen outputs must be disabled prior to running ParallaxGen. It is recommended to "
+    Logger::critical("DynDoLOD and TexGen outputs must be disabled prior to running ParallaxGen. It is recommended to "
                      "generate LODs after running ParallaxGen with the ParallaxGen output enabled.");
     exit(1);
   }
 
   // Init PGP library
   if (Params.Processing.PluginPatching) {
-    spdlog::info("Initializing plugin patcher");
+    Logger::info("Initializing plugin patching");
     ParallaxGenPlugin::loadStatics(&PGD);
     ParallaxGenPlugin::initialize(BG);
     ParallaxGenPlugin::populateObjs();
@@ -221,7 +228,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   // Check if ParallaxGen output already exists in data directory
   const filesystem::path PGStateFilePath = BG.getGameDataPath() / ParallaxGen::getDiffJSONName();
   if (filesystem::exists(PGStateFilePath)) {
-    spdlog::critical("ParallaxGen meshes exist in your data directory, please delete before "
+    Logger::critical("ParallaxGen meshes exist in your data directory, please delete before "
                      "re-running.");
     exit(1);
   }
@@ -235,26 +242,30 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
                Params.Processing.HighMem);
 
   // Find CM maps
-  spdlog::info("Finding complex material env maps");
-  PGD3D.findCMMaps(Params.TextureRules.VanillaBSAList);
-  spdlog::info("Done finding complex material env maps");
+  if (Params.ShaderPatcher.ComplexMaterial) {
+    PGD3D.findCMMaps(Params.TextureRules.VanillaBSAList);
+  }
 
   // Create patcher factory
   PatcherUtil::PatcherSet Patchers;
   Patchers.ShaderPatchers.emplace(PatcherDefault::getShaderType(), PatcherDefault::getFactory());
   if (Params.ShaderPatcher.Parallax) {
+    Logger::debug("Adding Parallax shader patcher");
     Patchers.ShaderPatchers.emplace(PatcherVanillaParallax::getShaderType(), PatcherVanillaParallax::getFactory());
   }
   if (Params.ShaderPatcher.ComplexMaterial) {
+    Logger::debug("Adding Complex Material shader patcher");
     Patchers.ShaderPatchers.emplace(PatcherComplexMaterial::getShaderType(), PatcherComplexMaterial::getFactory());
     PatcherComplexMaterial::loadStatics(Params.PrePatcher.DisableMLP,
                                         Params.ShaderPatcher.ShaderPatcherComplexMaterial.ListsDyncubemapBlocklist);
   }
   if (Params.ShaderPatcher.TruePBR) {
+    Logger::debug("Adding True PBR shader patcher");
     Patchers.ShaderPatchers.emplace(PatcherTruePBR::getShaderType(), PatcherTruePBR::getFactory());
     PatcherTruePBR::loadStatics(PGD.getPBRJSONs());
   }
   if (Params.ShaderTransforms.ParallaxToCM) {
+    Logger::debug("Adding Parallax to Complex Material shader transform patcher");
     Patchers.ShaderTransformPatchers[PatcherUpgradeParallaxToCM::getFromShader()].emplace(
         PatcherUpgradeParallaxToCM::getToShader(), PatcherUpgradeParallaxToCM::getFactory());
   }
@@ -278,6 +289,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
         TimeTaken += chrono::duration_cast<chrono::seconds>(chrono::high_resolution_clock::now() - StartTime).count();
 
         // Select mod order
+        Logger::info("Mod conflicts found. Showing mod order dialog.");
         auto SelectedOrder = ParallaxGenUI::selectModOrder(ModConflicts, ExistingOrder);
         StartTime = chrono::high_resolution_clock::now();
 
@@ -297,11 +309,9 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   // Release cached files, if any
   PGD.clearCache();
 
-  spdlog::info("ParallaxGen has finished patching meshes.");
-
   // Write plugin
   if (Params.Processing.PluginPatching) {
-    spdlog::info("Saving ParallaxGen.esp");
+    Logger::info("Saving ParallaxGen.esp");
     ParallaxGenPlugin::savePlugin(Params.Output.Dir, Params.Processing.PluginESMify);
   }
 
@@ -316,7 +326,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
   const auto EndTime = chrono::high_resolution_clock::now();
   TimeTaken += chrono::duration_cast<chrono::seconds>(EndTime - StartTime).count();
 
-  spdlog::info("ParallaxGen took {} seconds to complete", TimeTaken);
+  Logger::info("ParallaxGen took {} seconds to complete (does not include time in user interface)", TimeTaken);
 }
 
 void exitBlocking() {

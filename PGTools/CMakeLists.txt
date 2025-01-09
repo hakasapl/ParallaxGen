@@ -11,10 +11,12 @@ add_executable(pgtools ${SOURCES} ${HEADERS})
 
 # Packages
 find_package(CLI11 REQUIRED CONFIG)
+find_package(cpptrace REQUIRED CONFIG)
 
 target_link_libraries(pgtools PRIVATE
     ParallaxGenLib
     CLI11::CLI11
+    cpptrace::cpptrace
 )
 
 install(TARGETS pgtools DESTINATION . )
