@@ -4,6 +4,8 @@
 
 #include <windows.h>
 
+#include <cpptrace/from_current.hpp>
+
 #include <string>
 #include <unordered_set>
 
@@ -11,6 +13,7 @@
 #include "ParallaxGenD3D.hpp"
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenWarnings.hpp"
+#include "ParallaxGenRunner.hpp"
 
 #include "patchers/Patcher.hpp"
 #include "patchers/PatcherComplexMaterial.hpp"
@@ -251,12 +254,13 @@ auto main(int ArgC, char **ArgV) -> int {
   }
 
   // Main Runner (Catches all exceptions)
-  try {
+  CPPTRACE_TRY {
     mainRunner(Args);
-  } catch (const exception &E) {
-    spdlog::critical("An unhandled exception occurred (Please provide this entire message "
-                     "in your bug report).\n\nException type: {}\nMessage: {}",
-                     typeid(E).name(), E.what());
+  } CPPTRACE_CATCH(const exception& E) {
+    ParallaxGenRunner::processException(E, cpptrace::from_current_exception().to_string());
+
+    cout << "Press ENTER to abort...";
+    cin.get();
     abort();
   }
 }

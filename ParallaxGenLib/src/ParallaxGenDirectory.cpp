@@ -22,6 +22,7 @@
 #include "NIFUtil.hpp"
 #include "ParallaxGenTask.hpp"
 #include "ParallaxGenUtil.hpp"
+#include "ParallaxGenRunner.hpp"
 
 using namespace std;
 using namespace ParallaxGenUtil;
@@ -92,16 +93,8 @@ auto ParallaxGenDirectory::mapFiles(const vector<wstring> &NIFBlocklist, const v
   // Create task tracker
   ParallaxGenTask TaskTracker("Loading NIFs", UnconfirmedMeshes.size(), MAPTEXTURE_PROGRESS_MODULO);
 
-  // Create thread pool
-#ifdef _DEBUG
-  size_t NumThreads = 1;
-#else
-  const size_t NumThreads = boost::thread::hardware_concurrency();
-#endif
-
-  atomic<bool> KillThreads = false;
-
-  boost::asio::thread_pool MapTextureFromMeshPool(NumThreads);
+  // Create runner
+  ParallaxGenRunner Runner(Multithreading);
 
   // Loop through each mesh to confirm textures
   for (const auto &Mesh : UnconfirmedMeshes) {
@@ -126,37 +119,13 @@ auto ParallaxGenDirectory::mapFiles(const vector<wstring> &NIFBlocklist, const v
       continue;
     }
 
-    if (Multithreading) {
-      boost::asio::post(MapTextureFromMeshPool, [this, &TaskTracker, &Mesh, &CacheNIFs, &KillThreads] {
-        ParallaxGenTask::PGResult Result = ParallaxGenTask::PGResult::SUCCESS;
-        try {
-          Result = mapTexturesFromNIF(Mesh, CacheNIFs);
-        } catch (const exception &E) {
-          spdlog::error(L"Exception in thread loading NIF \"{}\": {}", Mesh.wstring(), ASCIItoUTF16(E.what()));
-          KillThreads.store(true, std::memory_order_release);
-          Result = ParallaxGenTask::PGResult::FAILURE;
-        }
-
-        TaskTracker.completeJob(Result);
-      });
-    } else {
+    Runner.addTask([this, &TaskTracker, &Mesh, &CacheNIFs] {
       TaskTracker.completeJob(mapTexturesFromNIF(Mesh, CacheNIFs));
-    }
+    });
   }
 
-  if (Multithreading) {
-    while (!TaskTracker.isCompleted()) {
-      if (KillThreads.load(std::memory_order_acquire)) {
-        MapTextureFromMeshPool.stop();
-        throw runtime_error("Exception in thread mapping textures from NIFs");
-      }
-
-      this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-
-    // Wait for all threads to complete
-    MapTextureFromMeshPool.join();
-  }
+  // Blocks until all tasks are done
+  Runner.runTasks();
 
   // Loop through unconfirmed textures to confirm them
   for (const auto &[Texture, Property] : UnconfirmedTextures) {
@@ -340,10 +309,15 @@ auto ParallaxGenDirectory::mapTexturesFromNIF(const filesystem::path &NIFPath,
         continue;
       case NIFUtil::TextureSlots::PARALLAX:
         // Parallax check
-        if ((ShaderType == BSLSP_PARALLAX && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF1_PARALLAX)) ||
-            (ShaderType == BSLSP_DEFAULT && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF2_UNUSED01))) {
+        if ((ShaderType == BSLSP_PARALLAX && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF1_PARALLAX))) {
           // This is a height map
           TextureType = NIFUtil::TextureType::HEIGHT;
+          break;
+        }
+
+        if ((ShaderType == BSLSP_DEFAULT && NIFUtil::hasShaderFlag(ShaderBSSP, SLSF2_UNUSED01))) {
+          // This is a height map for PBR
+          TextureType = NIFUtil::TextureType::HEIGHTPBR;
           break;
         }
 

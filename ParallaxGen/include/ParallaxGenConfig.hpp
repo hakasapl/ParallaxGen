@@ -258,8 +258,7 @@ private:
    * @return true no json errors
    * @return false unable to parse
    */
-  static auto parseJSON(const std::filesystem::path &JSONFile, const std::vector<std::byte> &Bytes,
-                        nlohmann::json &J) -> bool;
+  static auto parseJSON(const std::vector<std::byte> &Bytes, nlohmann::json &J) -> bool;
 
   /**
    * @brief Validates JSON file
@@ -269,7 +268,7 @@ private:
    * @return true no validation errors
    * @return false validation errors
    */
-  auto validateJSON(const std::filesystem::path &JSONFile, const nlohmann::json &J) -> bool;
+  auto validateJSON(const nlohmann::json &J) -> bool;
 
   /**
    * @brief Adds a JSON config to the current config
