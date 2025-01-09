@@ -258,17 +258,22 @@ auto PatcherParticleLightsToLP::getControllerJSON(nifly::NiTimeController *Contr
   }
 
   auto *const FloatController = dynamic_cast<nifly::BSEffectShaderPropertyFloatController *>(Controller);
+  NiBlockRef<NiInterpController> InterpRef;
   if (FloatController != nullptr) {
     if (FloatController->typeOfControlledVariable != 0) {
       // We don't care about this controller (not controlling emissive mult)
       return ControllerJson;
     }
 
+    InterpRef = FloatController->interpolatorRef;
+
     JSONField = "fadeController";
   }
 
   auto *const ColorController = dynamic_cast<nifly::BSEffectShaderPropertyColorController *>(Controller);
   if (ColorController != nullptr) {
+    InterpRef = ColorController->interpolatorRef;
+
     JSONField = "colorController";
   }
 
@@ -278,7 +283,6 @@ auto PatcherParticleLightsToLP::getControllerJSON(nifly::NiTimeController *Contr
     return ControllerJson;
   }
 
-  const auto InterpRef = FloatController->interpolatorRef;
   if (InterpRef.IsEmpty()) {
     return ControllerJson;
   }
