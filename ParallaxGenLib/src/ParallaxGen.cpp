@@ -429,7 +429,7 @@ auto ParallaxGen::processNIF(const std::filesystem::path &NIFFile, const vector<
   // Run global patchers
   for (const auto &GlobalPatcher : PatcherObjects.GlobalPatchers) {
     Logger::Prefix PrefixPatches(UTF8toUTF16(GlobalPatcher->getPatcherName()));
-    GlobalPatcher->applyPatch(NIFModified);
+    //GlobalPatcher->applyPatch(NIFModified);
   }
 
   // Delete unreferenced blocks
