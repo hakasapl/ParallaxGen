@@ -209,7 +209,7 @@ auto ParallaxGen::processNIF(const filesystem::path &NIFFile, nlohmann::json *Di
   auto NIF = processNIF(NIFFile, NIFFileData, NIFModified, nullptr, &DupNIFs, PatchPlugin, ConflictMods);
 
   // Save patched NIF if it was modified
-  if (NIF.IsValid() && NIFModified && ConflictMods == nullptr) {
+  if (NIFModified && ConflictMods == nullptr && NIF.IsValid()) {
     // Calculate CRC32 hash before
     boost::crc_32_type CRCBeforeResult{};
     CRCBeforeResult.process_bytes(NIFFileData.data(), NIFFileData.size());
@@ -306,6 +306,12 @@ auto ParallaxGen::processNIF(const std::filesystem::path &NIFFile, const vector<
   int OldShapeIndex = 0;
   vector<tuple<NiShape *, int, int>> ShapeTracker;
   for (NiShape *NIFShape : Shapes) {
+    if (NIFShape == nullptr) {
+      spdlog::error(L"NIF {} has a null shape (skipping)", NIFFile.wstring());
+      NIFModified = false;
+      return {};
+    }
+
     // Check for any non-ascii chars
     for (uint32_t Slot = 0; Slot < NUM_TEXTURE_SLOTS; Slot++) {
       string Texture;
@@ -313,6 +319,7 @@ auto ParallaxGen::processNIF(const std::filesystem::path &NIFFile, const vector<
 
       if (!ContainsOnlyAscii(Texture)) {
         spdlog::error(L"NIF {} has texture slot(s) with invalid non-ASCII chars (skipping)", NIFFile.wstring());
+        NIFModified = false;
         return {};
       }
     }
@@ -340,6 +347,7 @@ auto ParallaxGen::processNIF(const std::filesystem::path &NIFFile, const vector<
 
     if (ShapeResult != ParallaxGenTask::PGResult::SUCCESS) {
       // Fail on process shape fail
+      NIFModified = false;
       return {};
     }
 
@@ -374,7 +382,8 @@ auto ParallaxGen::processNIF(const std::filesystem::path &NIFFile, const vector<
 
   if (ConflictMods != nullptr) {
     // no need to continue if just getting mod conflicts
-    return NIF;
+    NIFModified = false;
+    return {};
   }
 
   if (PatchPlugin && ForceShaders == nullptr) {
