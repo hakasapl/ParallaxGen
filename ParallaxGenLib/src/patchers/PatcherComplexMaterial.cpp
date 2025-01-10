@@ -142,6 +142,16 @@ auto PatcherComplexMaterial::applyPatch(NiShape &NIFShape, const PatcherMatch &M
   // Apply shader
   applyShader(NIFShape, NIFModified);
 
+  // Check if specular should be white
+  if (getPGD()->hasTextureAttribute(Match.MatchedPath, NIFUtil::TextureAttribute::CM_METALNESS)) {
+    Logger::trace(L"Setting specular to white because CM has metalness");
+    auto *NIFShader = getNIF()->GetShader(&NIFShape);
+    auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
+    NIFUtil::setShaderFloat(NIFShaderBSLSP->specularColor.x, 1.0F, NIFModified);
+    NIFUtil::setShaderFloat(NIFShaderBSLSP->specularColor.y, 1.0F, NIFModified);
+    NIFUtil::setShaderFloat(NIFShaderBSLSP->specularColor.z, 1.0F, NIFModified);
+  }
+
   // Apply slots
   auto NewSlots = applyPatchSlots(getTextureSet(NIFShape), Match);
   setTextureSet(NIFShape, NewSlots, NIFModified);
@@ -190,9 +200,7 @@ void PatcherComplexMaterial::applyShader(NiShape &NIFShape, bool &NIFModified) {
   // Set NIFShader type to env map
   NIFUtil::setShaderType(NIFShader, BSLSP_ENVMAP, NIFModified);
   NIFUtil::setShaderFloat(NIFShaderBSLSP->environmentMapScale, 1.0F, NIFModified);
-  NIFUtil::setShaderFloat(NIFShaderBSLSP->specularColor.x, 1.0F, NIFModified);
-  NIFUtil::setShaderFloat(NIFShaderBSLSP->specularColor.y, 1.0F, NIFModified);
-  NIFUtil::setShaderFloat(NIFShaderBSLSP->specularColor.z, 1.0F, NIFModified);
+
   // Set NIFShader flags
   NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF1_PARALLAX, NIFModified);
   NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF2_UNUSED01, NIFModified);

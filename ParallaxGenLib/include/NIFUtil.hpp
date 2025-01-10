@@ -58,6 +58,13 @@ enum class TextureType {
   UNKNOWN
 };
 
+enum class TextureAttribute {
+  CM_ENVMASK,
+  CM_GLOSSINESS,
+  CM_METALNESS,
+  CM_HEIGHT
+};
+
 auto getStrFromTexType(const TextureType &Type) -> std::string;
 
 auto getTexTypeFromStr(const std::string &Type) -> TextureType;

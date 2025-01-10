@@ -91,9 +91,9 @@ public:
   static auto getHRESULTErrorMessage(HRESULT HR) -> std::string;
 
 private:
-  auto checkIfCM(const std::filesystem::path &DDSPath, bool &Result) -> ParallaxGenTask::PGResult;
-  auto countAlphaValuesGPU(const DirectX::ScratchImage &Image) -> int;
-  static auto countAlphaValuesCPU(const DirectX::ScratchImage &Image, const bool &BCCompressed) -> int;
+  auto checkIfCM(const std::filesystem::path &DDSPath, bool &Result, bool &HasMetalness) -> ParallaxGenTask::PGResult;
+  auto countValuesGPU(const DirectX::ScratchImage &Image) -> std::array<int, 2>;
+  static auto countValuesCPU(const DirectX::ScratchImage &Image, const bool &BCCompressed) -> std::array<int, 2>;
 
   // GPU functions
   void initShaders();

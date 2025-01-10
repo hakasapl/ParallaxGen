@@ -23,7 +23,7 @@
 - Added additional help text to mod sort dialog
 - PBR slot commands will have "textures\\" added to the beginning automatically if not already there
 - Meshes that are already patched for complex material can be ignored depending on priority order
-- Specular color will be set to white for complex material
+- Specular color will be set to white for complex material that has metalness
 
 ## [0.7.3] - 2024-12-09
 

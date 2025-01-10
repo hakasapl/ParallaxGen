@@ -34,8 +34,8 @@ auto PatcherDefault::shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOT
                                          std::vector<PatcherMatch> &Matches) -> bool {
   Matches.clear();
 
-  // Loop through slots
-  for (size_t Slot = 0; Slot < NUM_TEXTURE_SLOTS; Slot++) {
+  // Loop through slots (only diffuse and normal)
+  for (size_t Slot = 0; Slot <= 1; Slot++) {
     if (OldSlots[Slot].empty()) {
       continue;
     }
