@@ -9,6 +9,7 @@
 #include <nlohmann/json.hpp>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 #include <winnt.h>
 
@@ -33,9 +34,14 @@ private:
   std::mutex UnconfirmedTexturesMutex{};
   std::unordered_set<std::filesystem::path> UnconfirmedMeshes{};
 
+  struct TextureDetails {
+    NIFUtil::TextureType Type;
+    std::unordered_set<NIFUtil::TextureAttribute> Attributes;
+  };
+
   // Structures to store relevant files (sometimes their contents)
   std::array<std::map<std::wstring, std::unordered_set<NIFUtil::PGTexture, NIFUtil::PGTextureHasher>>, NUM_TEXTURE_SLOTS> TextureMaps{};
-  std::unordered_map<std::filesystem::path, NIFUtil::TextureType> TextureTypes;
+  std::unordered_map<std::filesystem::path, TextureDetails> TextureTypes;
   std::unordered_set<std::filesystem::path> Meshes{};
   std::vector<std::filesystem::path> PBRJSONs{};
   std::vector<std::filesystem::path> PGJSONs{};
@@ -73,7 +79,7 @@ private:
       std::unordered_map<std::filesystem::path, UnconfirmedTextureProperty> &UnconfirmedTextureSlots) -> void;
 
   auto addToTextureMaps(const std::filesystem::path &Path, const NIFUtil::TextureSlots &Slot,
-                        const NIFUtil::TextureType &Type) -> void;
+                        const NIFUtil::TextureType &Type, const std::unordered_set<NIFUtil::TextureAttribute> &Attributes) -> void;
 
   auto addMesh(const std::filesystem::path &Path) -> void;
 
@@ -112,6 +118,14 @@ public:
   [[nodiscard]] auto getPBRJSONs() const -> const std::vector<std::filesystem::path> &;
 
   [[nodiscard]] auto getPGJSONs() const -> const std::vector<std::filesystem::path> &;
+
+  auto addTextureAttribute(const std::filesystem::path &Path, const NIFUtil::TextureAttribute &Attribute) -> bool;
+
+  auto removeTextureAttribute(const std::filesystem::path &Path, const NIFUtil::TextureAttribute &Attribute) -> bool;
+
+  [[nodiscard]] auto hasTextureAttribute(const std::filesystem::path &Path, const NIFUtil::TextureAttribute &Attribute) -> bool;
+
+  [[nodiscard]] auto getTextureAttributes(const std::filesystem::path &Path) -> std::unordered_set<NIFUtil::TextureAttribute>;
 
   void setTextureType(const std::filesystem::path &Path, const NIFUtil::TextureType &Type);
 

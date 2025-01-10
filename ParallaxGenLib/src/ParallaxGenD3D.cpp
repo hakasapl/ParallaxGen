@@ -60,7 +60,7 @@ auto ParallaxGenD3D::findCMMaps(const std::vector<std::wstring> &BSAExcludes) ->
 
   // loop through maps
   for (auto &EnvSlot : EnvMasks) {
-    vector<NIFUtil::PGTexture> CMMaps;
+    vector<pair<NIFUtil::PGTexture, bool>> CMMaps;
 
     for (const auto &EnvMask : EnvSlot.second) {
       if (EnvMask.Type != NIFUtil::TextureType::ENVIRONMENTMASK) {
@@ -70,9 +70,10 @@ auto ParallaxGenD3D::findCMMaps(const std::vector<std::wstring> &BSAExcludes) ->
       bool BFileInVanillaBSA = PGD->isFileInBSA(EnvMask.Path, BSAExcludes);
 
       bool Result = false;
+      bool HasMetalness = false;
       if (!BFileInVanillaBSA) {
         try {
-          ParallaxGenTask::updatePGResult(PGResult, checkIfCM(EnvMask.Path, Result),
+          ParallaxGenTask::updatePGResult(PGResult, checkIfCM(EnvMask.Path, Result, HasMetalness),
                                         ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
         } catch (const exception &E) {
           spdlog::error(L"Failed to check if {} is a complex material: {}", EnvMask.Path.wstring(), ASCIItoUTF16(E.what()));
@@ -87,16 +88,20 @@ auto ParallaxGenD3D::findCMMaps(const std::vector<std::wstring> &BSAExcludes) ->
       if (Result) {
         // TODO we need to fill in alpha for non-CM stuff
         // remove old env mask
-        CMMaps.push_back(EnvMask);
+        CMMaps.emplace_back(EnvMask, HasMetalness);
         spdlog::trace(L"Found complex material env mask: {}", EnvMask.Path.wstring());
       }
     }
 
     // update map
-    for (const auto &CMMap : CMMaps) {
+    for (const auto &[CMMap, HasMetalness] : CMMaps) {
       EnvSlot.second.erase(CMMap);
       EnvSlot.second.insert({CMMap.Path, NIFUtil::TextureType::COMPLEXMATERIAL});
       PGD->setTextureType(CMMap.Path, NIFUtil::TextureType::COMPLEXMATERIAL);
+
+      if (HasMetalness) {
+        PGD->addTextureAttribute(CMMap.Path, NIFUtil::TextureAttribute::CM_METALNESS);
+      }
     }
   }
 
@@ -105,7 +110,7 @@ auto ParallaxGenD3D::findCMMaps(const std::vector<std::wstring> &BSAExcludes) ->
   return ParallaxGenTask::PGResult::SUCCESS;
 }
 
-auto ParallaxGenD3D::checkIfCM(const filesystem::path &DDSPath, bool &Result) -> ParallaxGenTask::PGResult {
+auto ParallaxGenD3D::checkIfCM(const filesystem::path &DDSPath, bool &Result, bool &HasMetalness) -> ParallaxGenTask::PGResult {
   // get metadata (should only pull headers, which is much faster)
   DirectX::TexMetadata DDSImageMeta{};
   auto PGResult = getDDSMetadata(DDSPath, DDSImageMeta);
@@ -169,26 +174,30 @@ auto ParallaxGenD3D::checkIfCM(const filesystem::path &DDSPath, bool &Result) ->
     return PGResult;
   }
 
-  int AlphaValues = -1;
+  array<int, 2> Values{};
   if (UseGPU) {
     // GPU
-    AlphaValues = countAlphaValuesGPU(Image);
+    Values = countValuesGPU(Image);
   } else {
     // CPU
-    AlphaValues = countAlphaValuesCPU(Image, BCCompressed);
+    Values = countValuesCPU(Image, BCCompressed);
   }
 
   const size_t NumPixels = DDSImageMeta.width * DDSImageMeta.height;
-  if (AlphaValues > NumPixels / 2) {
+  if (Values[0] > NumPixels / 2) {
     Result = false;
     return ParallaxGenTask::PGResult::SUCCESS;
+  }
+
+  if (Values[1] > 0) {
+    HasMetalness = true;
   }
 
   Result = true;
   return ParallaxGenTask::PGResult::SUCCESS;
 }
 
-auto ParallaxGenD3D::countAlphaValuesGPU(const DirectX::ScratchImage &Image) -> int {
+auto ParallaxGenD3D::countValuesGPU(const DirectX::ScratchImage &Image) -> array<int, 2> {
   if (!PtrContext || !PtrDevice || !ShaderCountAlphaValues) {
     throw runtime_error("GPU not initialized");
   }
@@ -196,28 +205,28 @@ auto ParallaxGenD3D::countAlphaValuesGPU(const DirectX::ScratchImage &Image) -> 
   // Create GPU texture
   ComPtr<ID3D11Texture2D> InputTex;
   if (createTexture2D(Image, InputTex) != ParallaxGenTask::PGResult::SUCCESS) {
-    return -1;
+    return {};
   }
 
   // Create SRV
   ComPtr<ID3D11ShaderResourceView> InputSRV;
   if (createShaderResourceView(InputTex, InputSRV) != ParallaxGenTask::PGResult::SUCCESS) {
-    return -1;
+    return {};
   }
 
   // Create buffer for output
   D3D11_BUFFER_DESC BufferDesc = {};
   BufferDesc.Usage = D3D11_USAGE_DEFAULT;
-  BufferDesc.ByteWidth = sizeof(UINT);
+  BufferDesc.ByteWidth = sizeof(UINT) * 2;
   BufferDesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
   BufferDesc.CPUAccessFlags = 0;
   BufferDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
   BufferDesc.StructureByteStride = sizeof(UINT);
 
-  unsigned int OutputData = 0;
+  array<unsigned int, 2> OutputData = {0, 0};
   ComPtr<ID3D11Buffer> OutputBuffer;
-  if (createBuffer(&OutputData, BufferDesc, OutputBuffer) != ParallaxGenTask::PGResult::SUCCESS) {
-    return -1;
+  if (createBuffer(OutputData.data(), BufferDesc, OutputBuffer) != ParallaxGenTask::PGResult::SUCCESS) {
+    return {};
   }
 
   // Create UAV for output buffer
@@ -225,11 +234,11 @@ auto ParallaxGenD3D::countAlphaValuesGPU(const DirectX::ScratchImage &Image) -> 
   UAVDesc.Format = DXGI_FORMAT_UNKNOWN;
   UAVDesc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
   UAVDesc.Buffer.FirstElement = 0; // NOLINT
-  UAVDesc.Buffer.NumElements = 1;  // NOLINT
+  UAVDesc.Buffer.NumElements = 2;  // NOLINT
 
   ComPtr<ID3D11UnorderedAccessView> OutputBufferUAV;
   if (createUnorderedAccessView(OutputBuffer, UAVDesc, OutputBufferUAV) != ParallaxGenTask::PGResult::SUCCESS) {
-    return -1;
+    return {};
   }
 
   // Dispatch shader
@@ -240,7 +249,7 @@ auto ParallaxGenD3D::countAlphaValuesGPU(const DirectX::ScratchImage &Image) -> 
   const DirectX::TexMetadata ImageMeta = Image.GetMetadata();
   if (BlockingDispatch(static_cast<UINT>(ImageMeta.width), static_cast<UINT>(ImageMeta.height), 1) !=
       ParallaxGenTask::PGResult::SUCCESS) {
-    return -1;
+    return {};
   }
 
   // Clean Up Objects
@@ -256,7 +265,7 @@ auto ParallaxGenD3D::countAlphaValuesGPU(const DirectX::ScratchImage &Image) -> 
   PtrContext->CSSetShader(NullShader[0], nullptr, 0);
 
   // Read back data
-  vector<unsigned int> Data = readBack<unsigned int>(OutputBuffer);
+  vector<array<int, 2>> Data = readBack<array<int, 2>>(OutputBuffer);
 
   // Cleanup
   OutputBuffer.Reset();
@@ -264,10 +273,10 @@ auto ParallaxGenD3D::countAlphaValuesGPU(const DirectX::ScratchImage &Image) -> 
 
   PtrContext->Flush(); // Flush GPU to avoid leaks
 
-  return static_cast<int>(Data[0]);
+  return Data[0];
 }
 
-auto ParallaxGenD3D::countAlphaValuesCPU(const DirectX::ScratchImage &Image, const bool &BCCompressed) -> int {
+auto ParallaxGenD3D::countValuesCPU(const DirectX::ScratchImage &Image, const bool &BCCompressed) -> array<int, 2> {
   // Decompress image if needed
   HRESULT HR{};
   DirectX::ScratchImage InImage;
@@ -276,7 +285,7 @@ auto ParallaxGenD3D::countAlphaValuesCPU(const DirectX::ScratchImage &Image, con
                              InImage);
     if (FAILED(HR)) {
       spdlog::error("Failed to decompress DDS file (Skipping): {}", getHRESULTErrorMessage(HR));
-      return -1;
+      return {};
     }
   } else {
     InImage.Initialize2D(Image.GetMetadata().format, Image.GetMetadata().width, Image.GetMetadata().height, 1, 1);
@@ -290,11 +299,12 @@ auto ParallaxGenD3D::countAlphaValuesCPU(const DirectX::ScratchImage &Image, con
                              RowPitch, SlicePitch);
   if (FAILED(HR)) {
     spdlog::error("Failed to compute pitch for DDS file (Skipping): {}", getHRESULTErrorMessage(HR));
-    return -1;
+    return {};
   }
 
   // Calculate Median of Alpha Layer
   int AlphaValues = 0;
+  int BlueValues = 0;
 
   const auto *Pixels = InImage.GetPixels();
   for (size_t Y = 0; Y < InImage.GetMetadata().height; ++Y) {
@@ -304,10 +314,15 @@ auto ParallaxGenD3D::countAlphaValuesCPU(const DirectX::ScratchImage &Image, con
       if (Alpha == 255) {                                 // NOLINT
         AlphaValues++;
       }
+
+      uint8_t Blue = Pixels[PixelIndex + 2];  // NOLINT
+      if (Blue > 0) {
+        BlueValues++;
+      }
     }
   }
 
-  return AlphaValues;
+  return {AlphaValues, BlueValues};
 }
 
 auto ParallaxGenD3D::checkIfAspectRatioMatches(const std::filesystem::path &DDSPath1,

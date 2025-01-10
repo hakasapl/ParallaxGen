@@ -178,7 +178,7 @@ auto ParallaxGenDirectory::mapFiles(const vector<wstring> &NIFBlocklist, const v
     // Add to texture map
     if (WinningSlot != NIFUtil::TextureSlots::UNKNOWN) {
       // Only add if no unknowns
-      addToTextureMaps(Texture, WinningSlot, WinningType);
+      addToTextureMaps(Texture, WinningSlot, WinningType, {});
     }
   }
 
@@ -411,7 +411,7 @@ auto ParallaxGenDirectory::updateUnconfirmedTexturesMap(
 }
 
 auto ParallaxGenDirectory::addToTextureMaps(const filesystem::path &Path, const NIFUtil::TextureSlots &Slot,
-                                            const NIFUtil::TextureType &Type) -> void {
+                                            const NIFUtil::TextureType &Type, const unordered_set<NIFUtil::TextureAttribute> &Attributes) -> void {
   // Get texture base
   const auto &Base = NIFUtil::getTexBase(Path);
   const auto &SlotInt = static_cast<size_t>(Slot);
@@ -425,7 +425,8 @@ auto ParallaxGenDirectory::addToTextureMaps(const filesystem::path &Path, const 
 
   {
     lock_guard<mutex> Lock(TextureTypesMutex);
-    TextureTypes[Path] = Type;
+    const TextureDetails Details = {Type, Attributes};
+    TextureTypes[Path] = Details;
   }
 }
 
@@ -453,17 +454,57 @@ auto ParallaxGenDirectory::getPBRJSONs() const -> const vector<filesystem::path>
 
 auto ParallaxGenDirectory::getPGJSONs() const -> const vector<filesystem::path> & { return PGJSONs; }
 
+auto ParallaxGenDirectory::addTextureAttribute(const filesystem::path &Path, const NIFUtil::TextureAttribute &Attribute) -> bool {
+  lock_guard<mutex> Lock(TextureTypesMutex);
+
+  if (TextureTypes.find(Path) != TextureTypes.end()) {
+    return TextureTypes.at(Path).Attributes.insert(Attribute).second;
+  }
+
+  return false;
+}
+
+auto ParallaxGenDirectory::removeTextureAttribute(const filesystem::path &Path, const NIFUtil::TextureAttribute &Attribute) -> bool {
+  lock_guard<mutex> Lock(TextureTypesMutex);
+
+  if (TextureTypes.find(Path) != TextureTypes.end()) {
+    return TextureTypes.at(Path).Attributes.erase(Attribute) > 0;
+  }
+
+  return false;
+}
+
+auto ParallaxGenDirectory::hasTextureAttribute(const filesystem::path &Path, const NIFUtil::TextureAttribute &Attribute) -> bool {
+  lock_guard<mutex> Lock(TextureTypesMutex);
+
+  if (TextureTypes.find(Path) != TextureTypes.end()) {
+    return TextureTypes.at(Path).Attributes.find(Attribute) != TextureTypes.at(Path).Attributes.end();
+  }
+
+  return false;
+}
+
+auto ParallaxGenDirectory::getTextureAttributes(const filesystem::path &Path) -> unordered_set<NIFUtil::TextureAttribute> {
+  lock_guard<mutex> Lock(TextureTypesMutex);
+
+  if (TextureTypes.find(Path) != TextureTypes.end()) {
+    return TextureTypes.at(Path).Attributes;
+  }
+
+  return {};
+}
+
 void ParallaxGenDirectory::setTextureType(const filesystem::path &Path, const NIFUtil::TextureType &Type) {
   lock_guard<mutex> Lock(TextureTypesMutex);
 
-  TextureTypes[Path] = Type;
+  TextureTypes[Path].Type = Type;
 }
 
 auto ParallaxGenDirectory::getTextureType(const filesystem::path &Path) -> NIFUtil::TextureType {
   lock_guard<mutex> Lock(TextureTypesMutex);
 
   if (TextureTypes.find(Path) != TextureTypes.end()) {
-    return TextureTypes.at(Path);
+    return TextureTypes.at(Path).Type;
   }
 
   return NIFUtil::TextureType::UNKNOWN;

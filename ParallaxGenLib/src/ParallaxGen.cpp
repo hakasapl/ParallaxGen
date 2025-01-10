@@ -432,6 +432,11 @@ auto ParallaxGen::processNIF(const std::filesystem::path &NIFFile, const vector<
     //GlobalPatcher->applyPatch(NIFModified);
   }
 
+  if (!NIFModified) {
+    // No changes were made
+    return {};
+  }
+
   // Delete unreferenced blocks
   NIF.DeleteUnreferencedBlocks();
 
