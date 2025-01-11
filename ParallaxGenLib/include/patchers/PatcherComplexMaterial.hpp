@@ -89,8 +89,7 @@ public:
    * @param[out] ShapeDeleted If shape was deleted
    * @return std::array<std::wstring, NUM_TEXTURE_SLOTS> New slots after patching
    */
-  auto applyPatch(nifly::NiShape &NIFShape, const PatcherMatch &Match, bool &NIFModified,
-                  bool &ShapeDeleted) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
+  auto applyPatch(nifly::NiShape &NIFShape, const PatcherMatch &Match, bool &NIFModified) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
 
   /**
    * @brief Apply the CM shader to the slots

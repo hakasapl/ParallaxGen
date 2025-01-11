@@ -112,7 +112,7 @@ private:
   // processes a shape within a NIF file
   auto processShape(const std::filesystem::path &NIFPath, nifly::NifFile &NIF, nifly::NiShape *NIFShape,
                     const int &ShapeIndex, PatcherUtil::PatcherObjectSet &Patchers, bool &ShapeModified,
-                    bool &ShapeDeleted, NIFUtil::ShapeShader &ShaderApplied,
+                    NIFUtil::ShapeShader &ShaderApplied,
                     PatcherUtil::ConflictModResults *ConflictMods = nullptr,
                     const NIFUtil::ShapeShader *ForceShader = nullptr) -> ParallaxGenTask::PGResult;
 

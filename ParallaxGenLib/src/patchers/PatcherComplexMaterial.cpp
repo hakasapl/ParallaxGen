@@ -114,10 +114,7 @@ auto PatcherComplexMaterial::shouldApply(const std::array<std::wstring, NUM_TEXT
 }
 
 auto PatcherComplexMaterial::applyPatch(NiShape &NIFShape, const PatcherMatch &Match,
-                                        bool &NIFModified, bool &ShapeDeleted) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
-  // Prep
-  ShapeDeleted = false;
-
+                                        bool &NIFModified) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
   // Apply shader
   applyShader(NIFShape, NIFModified);
 

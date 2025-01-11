@@ -25,6 +25,7 @@
 - PBR slot commands will have "textures\\" added to the beginning automatically if not already there
 - Specular color will be set to white for complex material that has metalness
 - Crash dumps will be generated automatically upon crashing
+- PBR delete: true will now set alpha to 0 instead of deleting the shape
 
 ## [0.7.3] - 2024-12-09
 

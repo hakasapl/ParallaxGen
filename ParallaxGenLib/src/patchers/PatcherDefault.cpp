@@ -56,7 +56,7 @@ auto PatcherDefault::shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOT
 }
 
 auto PatcherDefault::applyPatch(nifly::NiShape &NIFShape, [[maybe_unused]] const PatcherMatch &Match,
-                                        [[maybe_unused]] bool &NIFModified, [[maybe_unused]] bool &ShapeDeleted) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
+                                        [[maybe_unused]] bool &NIFModified) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
   return getTextureSet(NIFShape);
 }
 

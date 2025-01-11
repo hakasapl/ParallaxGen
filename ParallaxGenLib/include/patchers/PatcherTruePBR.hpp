@@ -57,7 +57,8 @@ public:
   /**
    * @brief Get the Path Lookup Cache object
    *
-   * @return std::unordered_map<std::tuple<std::wstring, std::wstring>, bool, TupleStrHash>& Cache results for path lookups
+   * @return std::unordered_map<std::tuple<std::wstring, std::wstring>, bool, TupleStrHash>& Cache results for path
+   * lookups
    */
   static auto getPathLookupCache() -> std::unordered_map<std::tuple<std::wstring, std::wstring>, bool, TupleStrHash> &;
 
@@ -147,11 +148,10 @@ public:
    * @param NIFShape Shape to patch
    * @param Match Match to apply
    * @param[out] NIFModified Whether NIF was modified or not
-   * @param[out] ShapeDeleted Whether shape was deleted or not
    * @return std::array<std::wstring, NUM_TEXTURE_SLOTS> New slots of shape
    */
-  auto applyPatch(nifly::NiShape &NIFShape, const PatcherMatch &Match, bool &NIFModified,
-                  bool &ShapeDeleted) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
+  auto applyPatch(nifly::NiShape &NIFShape, const PatcherMatch &Match,
+                  bool &NIFModified) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
 
   /**
    * @brief Apply a match to slots
@@ -188,12 +188,10 @@ private:
    * @param TruePBRData Data to patch
    * @param MatchedPath Matched path (PBR prefix)
    * @param[out] NIFModified Whether NIF was modified
-   * @param[out] ShapeDeleted Whether shape was deleted
    * @param[out] NewSlots New slots of shape
    */
   void applyOnePatch(nifly::NiShape *NIFShape, nlohmann::json &TruePBRData, const std::wstring &MatchedPath,
-                     bool &NIFModified, bool &ShapeDeleted,
-                     std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots);
+                     bool &NIFModified, std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots);
 
   static void applyOnePatchSwapJSON(const nlohmann::json &TruePBRData, nlohmann::json &Output);
 
@@ -205,8 +203,7 @@ private:
    * @param MatchedPath Matched path (PBR prefix)
    * @return std::array<std::wstring, NUM_TEXTURE_SLOTS> New slots after patch
    */
-  static void applyOnePatchSlots(std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots,
-                                 const nlohmann::json &TruePBRData,
+  static void applyOnePatchSlots(std::array<std::wstring, NUM_TEXTURE_SLOTS> &Slots, const nlohmann::json &TruePBRData,
                                  const std::wstring &MatchedPath);
 
   /**
@@ -267,7 +264,8 @@ private:
    */
   static auto getSlotMatch(std::map<size_t, std::tuple<nlohmann::json, std::wstring>> &TruePBRData,
                            const std::wstring &TexName, const std::map<std::wstring, std::vector<size_t>> &Lookup,
-                           const std::wstring &SlotLabel, const std::wstring &NIFPath, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots) -> void;
+                           const std::wstring &SlotLabel, const std::wstring &NIFPath,
+                           const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots) -> void;
 
   /**
    * @brief Get path contains match for diffuse
@@ -277,7 +275,8 @@ private:
    * @param NIFPath NIF path to use
    */
   static auto getPathContainsMatch(std::map<size_t, std::tuple<nlohmann::json, std::wstring>> &TruePBRData,
-                                   const std::wstring &Diffuse, const std::wstring &NIFPath, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots) -> void;
+                                   const std::wstring &Diffuse, const std::wstring &NIFPath,
+                                   const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots) -> void;
 
   /**
    * @brief Inserts truepbr data if criteria is met
@@ -288,5 +287,6 @@ private:
    * @param NIFPath NIF path to use
    */
   static auto insertTruePBRData(std::map<size_t, std::tuple<nlohmann::json, std::wstring>> &TruePBRData,
-                                const std::wstring &TexName, size_t Cfg, const std::wstring &NIFPath, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots) -> void;
+                                const std::wstring &TexName, size_t Cfg, const std::wstring &NIFPath,
+                                const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots) -> void;
 };

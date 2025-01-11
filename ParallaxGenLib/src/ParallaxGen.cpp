@@ -331,17 +331,16 @@ auto ParallaxGen::processNIF(const std::filesystem::path &NIFFile, const vector<
     Logger::Prefix PrefixShape(ShapeIDStr);
 
     bool ShapeModified = false;
-    bool ShapeDeleted = false;
     NIFUtil::ShapeShader ShaderApplied = NIFUtil::ShapeShader::UNKNOWN;
 
     ParallaxGenTask::PGResult ShapeResult = ParallaxGenTask::PGResult::SUCCESS;
     if (ForceShaders != nullptr && OldShapeIndex < ForceShaders->size()) {
       // Force shaders
       auto ShaderForce = (*ForceShaders)[OldShapeIndex];
-      ShapeResult = processShape(NIFFile, NIF, NIFShape, OldShapeIndex, PatcherObjects, ShapeModified, ShapeDeleted,
+      ShapeResult = processShape(NIFFile, NIF, NIFShape, OldShapeIndex, PatcherObjects, ShapeModified,
                                  ShaderApplied, ConflictMods, &ShaderForce);
     } else {
-      ShapeResult = processShape(NIFFile, NIF, NIFShape, OldShapeIndex, PatcherObjects, ShapeModified, ShapeDeleted,
+      ShapeResult = processShape(NIFFile, NIF, NIFShape, OldShapeIndex, PatcherObjects, ShapeModified,
                                  ShaderApplied, ConflictMods);
     }
 
@@ -373,10 +372,7 @@ auto ParallaxGen::processNIF(const std::filesystem::path &NIFFile, const vector<
       }
     }
 
-    if (!ShapeDeleted) {
-      ShapeTracker.emplace_back(NIFShape, OldShapeIndex, -1);
-    }
-
+    ShapeTracker.emplace_back(NIFShape, OldShapeIndex, -1);
     OldShapeIndex++;
   }
 
@@ -438,7 +434,7 @@ auto ParallaxGen::processNIF(const std::filesystem::path &NIFFile, const vector<
   // Run global patchers
   for (const auto &GlobalPatcher : PatcherObjects.GlobalPatchers) {
     Logger::Prefix PrefixPatches(UTF8toUTF16(GlobalPatcher->getPatcherName()));
-    //GlobalPatcher->applyPatch(NIFModified);
+    GlobalPatcher->applyPatch(NIFModified);
   }
 
   if (!NIFModified) {
@@ -480,7 +476,7 @@ auto ParallaxGen::processNIF(const std::filesystem::path &NIFFile, const vector<
 }
 
 auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, NiShape *NIFShape, const int &ShapeIndex,
-                               PatcherUtil::PatcherObjectSet &Patchers, bool &ShapeModified, bool &ShapeDeleted,
+                               PatcherUtil::PatcherObjectSet &Patchers, bool &ShapeModified,
                                NIFUtil::ShapeShader &ShaderApplied, PatcherUtil::ConflictModResults *ConflictMods,
                                const NIFUtil::ShapeShader *ForceShader) -> ParallaxGenTask::PGResult {
 
@@ -648,11 +644,9 @@ auto ParallaxGen::processShape(const filesystem::path &NIFPath, NifFile &NIF, Ni
   // loop through patchers
   array<wstring, NUM_TEXTURE_SLOTS> NewSlots =
       Patchers.ShaderPatchers.at(WinningShaderMatch.Shader)
-          ->applyPatch(*NIFShape, WinningShaderMatch.Match, ShapeModified, ShapeDeleted);
+          ->applyPatch(*NIFShape, WinningShaderMatch.Match, ShapeModified);
 
-  if (!ShapeDeleted) {
-    ShaderApplied = WinningShaderMatch.Shader;
-  }
+  ShaderApplied = WinningShaderMatch.Shader;
 
   // Post warnings if any
   for (const auto &CurMatchedFrom : WinningShaderMatch.Match.MatchedFrom) {

@@ -4,10 +4,11 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <cstddef>
+#include <fstream>
 #include <memory>
 #include <nlohmann/json_fwd.hpp>
 #include <string>
-#include <fstream>
+
 
 #include "Logger.hpp"
 #include "NIFUtil.hpp"
@@ -119,14 +120,12 @@ void PatcherTruePBR::loadStatics(const std::vector<std::filesystem::path> &PBRJS
 }
 
 auto PatcherTruePBR::getFactory() -> PatcherShader::PatcherShaderFactory {
-  return [](const filesystem::path& NIFPath, nifly::NifFile *NIF) -> unique_ptr<PatcherShader> {
+  return [](const filesystem::path &NIFPath, nifly::NifFile *NIF) -> unique_ptr<PatcherShader> {
     return make_unique<PatcherTruePBR>(NIFPath, NIF);
   };
 }
 
-auto PatcherTruePBR::getShaderType() -> NIFUtil::ShapeShader {
-  return NIFUtil::ShapeShader::TRUEPBR;
-}
+auto PatcherTruePBR::getShaderType() -> NIFUtil::ShapeShader { return NIFUtil::ShapeShader::TRUEPBR; }
 
 auto PatcherTruePBR::canApply([[maybe_unused]] nifly::NiShape &NIFShape) -> bool {
   auto *const NIFShader = getNIF()->GetShader(&NIFShape);
@@ -179,10 +178,12 @@ auto PatcherTruePBR::shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOT
 
   map<size_t, tuple<nlohmann::json, wstring>> TruePBRData;
   // "match_normal" attribute: Binary search for normal map
-  getSlotMatch(TruePBRData, SearchPrefixes[1], getTruePBRNormalInverse(), L"match_normal", getNIFPath().wstring(), OldSlots);
+  getSlotMatch(TruePBRData, SearchPrefixes[1], getTruePBRNormalInverse(), L"match_normal", getNIFPath().wstring(),
+               OldSlots);
 
   // "match_diffuse" attribute: Binary search for diffuse map
-  getSlotMatch(TruePBRData, SearchPrefixes[0], getTruePBRDiffuseInverse(), L"match_diffuse", getNIFPath().wstring(), OldSlots);
+  getSlotMatch(TruePBRData, SearchPrefixes[0], getTruePBRDiffuseInverse(), L"match_diffuse", getNIFPath().wstring(),
+               OldSlots);
 
   // "path_contains" attribute: Linear search for path_contains
   getPathContainsMatch(TruePBRData, SearchPrefixes[0], getNIFPath().wstring(), OldSlots);
@@ -246,7 +247,8 @@ auto PatcherTruePBR::shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOT
     Matches.push_back(Match);
   }
 
-  // Sort matches by ExtraData key minimum value (this preserves order of JSONs to be 0 having priority if mod order does not exist)
+  // Sort matches by ExtraData key minimum value (this preserves order of JSONs to be 0 having priority if mod order
+  // does not exist)
   sort(Matches.begin(), Matches.end(), [](const PatcherMatch &A, const PatcherMatch &B) {
     return get<0>(*(static_pointer_cast<map<size_t, tuple<nlohmann::json, wstring>>>(A.ExtraData)->begin())) >
            get<0>(*(static_pointer_cast<map<size_t, tuple<nlohmann::json, wstring>>>(B.ExtraData)->begin()));
@@ -273,7 +275,8 @@ auto PatcherTruePBR::shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOT
 
 auto PatcherTruePBR::getSlotMatch(map<size_t, tuple<nlohmann::json, wstring>> &TruePBRData, const wstring &TexName,
                                   const map<wstring, vector<size_t>> &Lookup, const wstring &SlotLabel,
-                                  const wstring &NIFPath, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots) -> void {
+                                  const wstring &NIFPath,
+                                  const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots) -> void {
   // binary search for map
   auto MapReverse = boost::to_lower_copy(TexName);
   reverse(MapReverse.begin(), MapReverse.end());
@@ -334,7 +337,8 @@ auto PatcherTruePBR::getSlotMatch(map<size_t, tuple<nlohmann::json, wstring>> &T
 }
 
 auto PatcherTruePBR::getPathContainsMatch(std::map<size_t, std::tuple<nlohmann::json, std::wstring>> &TruePBRData,
-                                          const std::wstring &Diffuse, const wstring &NIFPath, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots) -> void {
+                                          const std::wstring &Diffuse, const wstring &NIFPath,
+                                          const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots) -> void {
   // "patch_contains" attribute: Linear search for path_contains
   auto &Cache = getPathLookupCache();
 
@@ -366,7 +370,8 @@ auto PatcherTruePBR::getPathContainsMatch(std::map<size_t, std::tuple<nlohmann::
 }
 
 auto PatcherTruePBR::insertTruePBRData(std::map<size_t, std::tuple<nlohmann::json, std::wstring>> &TruePBRData,
-                                       const wstring &TexName, size_t Cfg, const wstring &NIFPath, const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots) -> void {
+                                       const wstring &TexName, size_t Cfg, const wstring &NIFPath,
+                                       const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots) -> void {
   const auto CurCfg = getTruePBRConfigs()[Cfg];
 
   // Check if we should skip this due to nif filter (this is expsenive, so we do it last)
@@ -411,11 +416,11 @@ auto PatcherTruePBR::insertTruePBRData(std::map<size_t, std::tuple<nlohmann::jso
   TruePBRData.insert({Cfg, {CurCfg, MatchedPath}});
 }
 
-auto PatcherTruePBR::applyPatch(nifly::NiShape &NIFShape, const PatcherMatch &Match, bool &NIFModified,
-                                bool &ShapeDeleted) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
+auto PatcherTruePBR::applyPatch(nifly::NiShape &NIFShape, const PatcherMatch &Match, bool &NIFModified) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
   auto NewSlots = getTextureSet(NIFShape);
 
-  if (Match.MatchedPath == getNIFPath().wstring() || getPGD()->getTextureType(Match.MatchedPath) == NIFUtil::TextureType::RMAOS) {
+  if (Match.MatchedPath == getNIFPath().wstring() ||
+      getPGD()->getTextureType(Match.MatchedPath) == NIFUtil::TextureType::RMAOS) {
     // already has PBR, just add PBR prefix to the slots if not already there
     for (size_t I = 0; I < NUM_TEXTURE_SLOTS; I++) {
       if (boost::istarts_with(NewSlots[I], "textures\\") && !boost::istarts_with(NewSlots[I], "textures\\pbr\\")) {
@@ -432,7 +437,7 @@ auto PatcherTruePBR::applyPatch(nifly::NiShape &NIFShape, const PatcherMatch &Ma
     // apply one patch
     auto TruePBRData = get<0>(Data);
     auto MatchedPath = get<1>(Data);
-    applyOnePatch(&NIFShape, TruePBRData, MatchedPath, NIFModified, ShapeDeleted, NewSlots);
+    applyOnePatch(&NIFShape, TruePBRData, MatchedPath, NIFModified, NewSlots);
   }
 
   return NewSlots;
@@ -440,7 +445,8 @@ auto PatcherTruePBR::applyPatch(nifly::NiShape &NIFShape, const PatcherMatch &Ma
 
 auto PatcherTruePBR::applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
                                      const PatcherMatch &Match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
-  if (Match.MatchedPath == getNIFPath().wstring() || getPGD()->getTextureType(Match.MatchedPath) == NIFUtil::TextureType::RMAOS) {
+  if (Match.MatchedPath == getNIFPath().wstring() ||
+      getPGD()->getTextureType(Match.MatchedPath) == NIFUtil::TextureType::RMAOS) {
     // already has PBR, just add PBR prefix to the slots if not already there
     auto NewSlots = OldSlots;
     for (size_t I = 0; I < NUM_TEXTURE_SLOTS; I++) {
@@ -514,7 +520,7 @@ void PatcherTruePBR::applyOnePatchSwapJSON(const nlohmann::json &TruePBRData, nl
     Output["glintParameters"]["screenSpaceScale"] = TruePBRData["glint"]["screen_space_scale"];
   }
   // "innerLayerDisplacementOffset"
-  //if (TruePBRData.contains("inner_layer_displacement_offset")) {
+  // if (TruePBRData.contains("inner_layer_displacement_offset")) {
   //  Output["innerLayerDisplacementOffset"] = TruePBRData["inner_layer_displacement_offset"];
   //}
   // "roughnessScale"
@@ -536,7 +542,8 @@ void PatcherTruePBR::applyOnePatchSwapJSON(const nlohmann::json &TruePBRData, nl
 }
 
 void PatcherTruePBR::applyShader(nifly::NiShape &NIFShape, bool &NIFModified) {
-  // Contrary to the other patchers, this one is generic and is not called normally other than setting for plugins, later material swaps in CS are used
+  // Contrary to the other patchers, this one is generic and is not called normally other than setting for plugins,
+  // later material swaps in CS are used
 
   auto *NIFShader = getNIF()->GetShader(&NIFShape);
   auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
@@ -582,8 +589,7 @@ void PatcherTruePBR::processNewTXSTRecord(const PatcherMatch &Match, const std::
 }
 
 void PatcherTruePBR::applyOnePatch(NiShape *NIFShape, nlohmann::json &TruePBRData, const std::wstring &MatchedPath,
-                                   bool &NIFModified, bool &ShapeDeleted,
-                                   std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots) {
+                                   bool &NIFModified, std::array<std::wstring, NUM_TEXTURE_SLOTS> &NewSlots) {
 
   // Prep
   auto *NIFShader = getNIF()->GetShader(NIFShape);
@@ -593,9 +599,10 @@ void PatcherTruePBR::applyOnePatch(NiShape *NIFShape, nlohmann::json &TruePBRDat
 
   // "delete" attribute
   if (TruePBRData.contains("delete") && TruePBRData["delete"]) {
-    getNIF()->DeleteShape(NIFShape);
-    NIFModified = true;
-    ShapeDeleted = true;
+    if (NIFShader->GetAlpha() > 0.0) {
+      NIFShader->SetAlpha(0.0);
+      NIFModified = true;
+    }
     return;
   }
 
@@ -810,7 +817,7 @@ void PatcherTruePBR::applyOnePatchSlots(std::array<std::wstring, NUM_TEXTURE_SLO
       string NewSlot = TruePBRData[SlotName].get<string>();
       // add "textures\\" to the beginning of string if not there
       if (!boost::istarts_with(NewSlot, "textures\\")) {
-        NewSlot = "textures\\" + NewSlot;  // NOLINT(performance-inefficient-string-concatenation)
+        NewSlot = "textures\\" + NewSlot; // NOLINT(performance-inefficient-string-concatenation)
       }
 
       Slots[I] = ParallaxGenUtil::UTF8toUTF16(NewSlot);
@@ -945,7 +952,7 @@ void PatcherTruePBR::enableTruePBROnShape(NiShape *NIFShape, NiShader *NIFShader
       NIFUtil::setShaderFloat(NIFShaderBSLSP->parallaxInnerLayerTextureScale.v, GlintParams["density_randomization"],
                               NIFModified);
     }
-  } else if(TruePBRData.contains("fuzz")) {
+  } else if (TruePBRData.contains("fuzz")) {
     // fuzz is enabled
     const auto &FuzzParams = TruePBRData["fuzz"];
 
