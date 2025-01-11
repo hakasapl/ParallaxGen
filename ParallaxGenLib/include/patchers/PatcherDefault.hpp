@@ -74,8 +74,7 @@ public:
    * @param[out] ShapeDeleted Whether the shape was deleted (always false)
    * @return std::array<std::wstring, NUM_TEXTURE_SLOTS> New slots of shape
    */
-  auto applyPatch(nifly::NiShape &NIFShape, const PatcherMatch &Match, bool &NIFModified,
-                  bool &ShapeDeleted) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
+  auto applyPatch(nifly::NiShape &NIFShape, const PatcherMatch &Match, bool &NIFModified) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
 
   /**
    * @brief Apply a match to slots for parallax

@@ -25,6 +25,7 @@ find_package(cpptrace REQUIRED CONFIG)
 target_link_libraries(ParallaxGen PRIVATE
     ParallaxGenLib
     CLI11::CLI11
+    DbgHelp
     ${wxWidgets_LIBRARIES}
     cpptrace::cpptrace
 )

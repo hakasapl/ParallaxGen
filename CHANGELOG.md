@@ -4,6 +4,7 @@
 
 - Added pgtools.exe modding tools
 - Added pgtools patcher to convert particle lights to light placer lights
+- loadorder.txt is no longer required
 - Parallax maps included in the pbr subdirectory will be considered a different "height pbr" texture type
 - Closing mod sort dialog will now close the whole app
 - BSMeshLODTriShapes will also be patched now
@@ -22,8 +23,9 @@
 - Fixed deleted texture maps not actually deleting
 - Added additional help text to mod sort dialog
 - PBR slot commands will have "textures\\" added to the beginning automatically if not already there
-- Meshes that are already patched for complex material can be ignored depending on priority order
 - Specular color will be set to white for complex material that has metalness
+- Crash dumps will be generated automatically upon crashing
+- PBR delete: true will now set alpha to 0 instead of deleting the shape
 
 ## [0.7.3] - 2024-12-09
 

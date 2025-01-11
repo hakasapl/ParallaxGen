@@ -16,6 +16,7 @@
 #include <string>
 
 #include <boost/algorithm/string/join.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <cstdlib>
 
@@ -299,8 +300,44 @@ auto BethesdaGame::getPluginsFile() const -> filesystem::path {
 auto BethesdaGame::getActivePlugins(const bool &TrimExtension, const bool &Lowercase) const -> vector<wstring> {
   vector<wstring> OutputLO;
 
-  // Build set of plugins that are actually active
-  unordered_map<string, bool> ActivePlugins;
+  // Add base plugins
+  OutputLO.emplace_back(L"Skyrim.esm");
+  if (filesystem::exists(GameDataPath / "Update.esm")) {
+    OutputLO.emplace_back(L"Update.esm");
+  }
+  if (filesystem::exists(GameDataPath / "Dawnguard.esm")) {
+    OutputLO.emplace_back(L"Dawnguard.esm");
+  }
+  if (filesystem::exists(GameDataPath / "HearthFires.esm")) {
+    OutputLO.emplace_back(L"HearthFires.esm");
+  }
+  if (filesystem::exists(GameDataPath / "Dragonborn.esm")) {
+    OutputLO.emplace_back(L"Dragonborn.esm");
+  }
+
+  // Add cc plugins
+  filesystem::path CreationClubFile = getGamePath() / "Skyrim.ccc";
+  if (filesystem::exists(CreationClubFile)) {
+    ifstream CreationClubFileHandle(CreationClubFile, 1);
+    if (CreationClubFileHandle.is_open()) {
+      string Line;
+      while (getline(CreationClubFileHandle, Line)) {
+        if (Line.empty() || Line[0] == '#') {
+          continue;
+        }
+
+        if (!filesystem::exists(GameDataPath / Line)) {
+          continue;
+        }
+
+        OutputLO.push_back(ParallaxGenUtil::UTF8toUTF16(Line));
+      }
+    }
+  }
+
+  if (getGameType() == GameType::SKYRIM_VR) {
+    OutputLO.emplace_back(L"SkyrimVR.esm");
+  }
 
   // Get the plugins file
   const filesystem::path PluginsFile = getPluginsFile();
@@ -314,7 +351,7 @@ auto BethesdaGame::getActivePlugins(const bool &TrimExtension, const bool &Lower
     }
   }
 
-  // loop through each line of loadorder.txt
+  // loop through each line of plugins.txt
   string Line;
   while (getline(PluginsFileHandle, Line)) {
     // Ignore lines that start with '#', which are comment lines
@@ -325,56 +362,26 @@ auto BethesdaGame::getActivePlugins(const bool &TrimExtension, const bool &Lower
     if (Line.starts_with("*")) {
       // this is an active plugin
       Line = Line.substr(1);
-      ActivePlugins[Line] = true;
-    } else {
-      // this is not an active plugin
-      ActivePlugins[Line] = false;
+      OutputLO.push_back(ParallaxGenUtil::UTF8toUTF16(Line));
     }
   }
 
   // close file handle
   PluginsFileHandle.close();
 
-  // Get the loadorder file
-  const filesystem::path LoadOrderFile = getLoadOrderFile();
-  ifstream LoadOrderFileHandle(LoadOrderFile, 1);
-  if (!LoadOrderFileHandle.is_open()) {
-    if (Logging) {
-      spdlog::critical("Unable to open loadorder.txt");
-      exit(1);
-    } else {
-      throw runtime_error("Unable to open loadorder.txt");
+  if (TrimExtension) {
+    // Trim the extension from the plugin name
+    for (wstring &Plugin : OutputLO) {
+      Plugin = Plugin.substr(0, Plugin.find_last_of(L'.'));
     }
   }
 
-  // loop through each line of loadorder.txt
-  while (getline(LoadOrderFileHandle, Line)) {
-    // Ignore lines that start with '#', which are comment lines
-    if (Line.empty() || Line[0] == '#') {
-      continue;
+  if (Lowercase) {
+    // Convert the plugin name to lowercase
+    for (wstring &Plugin : OutputLO) {
+      boost::to_lower(Plugin);
     }
-
-    if (ActivePlugins.find(Line) != ActivePlugins.end() && !ActivePlugins[Line]) {
-      // this is not an active plugin
-      continue;
-    }
-
-    // Remove extension from line
-    if (TrimExtension) {
-      Line = Line.substr(0, Line.find_last_of('.'));
-    }
-
-    // Add to output list
-    auto OutputLOElem = ParallaxGenUtil::UTF8toUTF16(Line);
-    if (Lowercase) {
-      OutputLOElem = ParallaxGenUtil::ToLowerASCII(OutputLOElem);
-    }
-
-    OutputLO.push_back(OutputLOElem);
   }
-
-  // close file handle
-  LoadOrderFileHandle.close();
 
   if (Logging) {
     wstring LoadOrderStr = boost::algorithm::join(OutputLO, L",");

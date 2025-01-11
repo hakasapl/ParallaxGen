@@ -58,31 +58,15 @@ auto PatcherComplexMaterial::canApply(NiShape &NIFShape) -> bool {
 }
 
 auto PatcherComplexMaterial::shouldApply(nifly::NiShape &NIFShape, std::vector<PatcherMatch> &Matches) -> bool {
-  const auto OldSlots = getTextureSet(NIFShape);
-
-  Matches.clear();
-
   // Check for CM matches
-  shouldApply(OldSlots, Matches);
-
-  // check if env mapping is already enabled
-  if (getNIF()->GetShader(&NIFShape)->GetShaderType() == BSLSP_ENVMAP) {
-    // Mesh has env mapping, check if slot in old slots is CM
-    if (getPGD()->getTextureType(OldSlots[static_cast<size_t>(NIFUtil::TextureSlots::ENVMASK)]) == NIFUtil::TextureType::COMPLEXMATERIAL) {
-      // mesh is already patched for CM
-      Logger::trace(L"This shape already has ComplexMaterial");
-      PatcherMatch Match;
-      Match.MatchedPath = getNIFPath().wstring();
-      Matches.push_back(Match);
-    }
-  }
-
-  return !Matches.empty();
+  return shouldApply(getTextureSet(NIFShape), Matches);
 }
 
 auto PatcherComplexMaterial::shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
                                          std::vector<PatcherMatch> &Matches) -> bool {
   static const auto CMBaseMap = getPGD()->getTextureMapConst(NIFUtil::TextureSlots::ENVMASK);
+
+  Matches.clear();
 
   // Search prefixes
   const auto SearchPrefixes = NIFUtil::getSearchPrefixes(OldSlots);
@@ -130,15 +114,7 @@ auto PatcherComplexMaterial::shouldApply(const std::array<std::wstring, NUM_TEXT
 }
 
 auto PatcherComplexMaterial::applyPatch(NiShape &NIFShape, const PatcherMatch &Match,
-                                        bool &NIFModified, bool &ShapeDeleted) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
-  // Prep
-  ShapeDeleted = false;
-
-  if (Match.MatchedPath == getNIFPath().wstring()) {
-    // Do nothing if the match is the same as the current NIF
-    return getTextureSet(NIFShape);
-  }
-
+                                        bool &NIFModified) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
   // Apply shader
   applyShader(NIFShape, NIFModified);
 
@@ -162,11 +138,6 @@ auto PatcherComplexMaterial::applyPatch(NiShape &NIFShape, const PatcherMatch &M
 auto PatcherComplexMaterial::applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
                                              const PatcherMatch &Match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
   array<wstring, NUM_TEXTURE_SLOTS> NewSlots = OldSlots;
-
-  if (Match.MatchedPath == getNIFPath().wstring()) {
-    // Do nothing if the match is the same as the current NIF
-    return NewSlots;
-  }
 
   const auto MatchedPath = Match.MatchedPath;
 

@@ -80,8 +80,7 @@ public:
                            std::vector<PatcherMatch> &Matches) -> bool = 0;
 
   // Methods that apply the patch to a shape
-  virtual auto applyPatch(nifly::NiShape &NIFShape, const PatcherMatch &Match, bool &NIFModified,
-                          bool &ShapeDeleted) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> = 0;
+  virtual auto applyPatch(nifly::NiShape &NIFShape, const PatcherMatch &Match, bool &NIFModified) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> = 0;
 
   /// @brief apply the matched texture to the texture slots
   /// @param[in] OldSlots array of the slot textures
