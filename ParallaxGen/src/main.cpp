@@ -9,8 +9,6 @@
 #include <spdlog/spdlog.h>
 
 #include <boost/algorithm/string/join.hpp>
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/path.hpp>
 
 #include <cpptrace/from_current.hpp>
 
@@ -138,11 +136,11 @@ auto deployAssets(const filesystem::path &OutputDir, const filesystem::path &Exe
   const filesystem::path OutputCubemapPath = OutputDir / DynCubeMapPath.parent_path();
   filesystem::create_directories(OutputCubemapPath);
 
-  boost::filesystem::path AssetPath = boost::filesystem::path(ExePath) / "assets/dynamic1pxcubemap_black_ENB.dds";
-  boost::filesystem::path OutputPath = boost::filesystem::path(OutputDir) / DynCubeMapPath;
+  filesystem::path AssetPath = filesystem::path(ExePath) / "assets/dynamic1pxcubemap_black_ENB.dds";
+  filesystem::path OutputPath = filesystem::path(OutputDir) / DynCubeMapPath;
 
   // Move File
-  boost::filesystem::copy_file(AssetPath, OutputPath, boost::filesystem::copy_options::overwrite_existing);
+  filesystem::copy_file(AssetPath, OutputPath, filesystem::copy_options::overwrite_existing);
 }
 
 void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
