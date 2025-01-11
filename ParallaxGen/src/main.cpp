@@ -14,7 +14,10 @@
 
 #include <cpptrace/from_current.hpp>
 
+
 #include <windows.h>
+
+#include <DbgHelp.h>
 
 #include <chrono>
 #include <cstdlib>
@@ -35,16 +38,17 @@
 #include "ParallaxGenD3D.hpp"
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenPlugin.hpp"
+#include "ParallaxGenRunner.hpp"
 #include "ParallaxGenUtil.hpp"
 #include "ParallaxGenWarnings.hpp"
-#include "ParallaxGenRunner.hpp"
 #include "patchers/PatcherComplexMaterial.hpp"
+#include "patchers/PatcherDefault.hpp"
 #include "patchers/PatcherShader.hpp"
 #include "patchers/PatcherTruePBR.hpp"
 #include "patchers/PatcherUpgradeParallaxToCM.hpp"
 #include "patchers/PatcherUtil.hpp"
 #include "patchers/PatcherVanillaParallax.hpp"
-#include "patchers/PatcherDefault.hpp"
+
 
 #include "ParallaxGenUI.hpp"
 
@@ -52,6 +56,50 @@ constexpr unsigned MAX_LOG_SIZE = 5242880;
 constexpr unsigned MAX_LOG_FILES = 1000;
 
 using namespace std;
+
+// Global variables for crash handling
+std::atomic<bool> CrashLogged{false}; // NOLINT
+
+LONG WINAPI customExceptionHandler(EXCEPTION_POINTERS *ExceptionInfo) {
+  if (CrashLogged.exchange(true)) {
+    return EXCEPTION_CONTINUE_SEARCH;
+  }
+
+  // Find the path to save the dump file using timestamp
+  time_t T = time(nullptr);
+  tm Tm{};
+  localtime_s(&Tm, &T); // NOLINT
+  std::ostringstream Oss;
+  Oss << "log/pg_crash_" << std::put_time(&Tm, "%Y-%m-%d_%H-%M-%S") << ".dmp";
+  string DumpFilePath = Oss.str();
+  filesystem::create_directories("log");
+
+  // Post message to standard console
+  cerr << "Uh oh! Really bad things happened. ParallaxGen has crashed. Please wait while the crash dump \""
+       << DumpFilePath << "\" is generated. Please include this dump in your bug report." << endl;
+
+  // Open the file for writing the dump
+  HANDLE HFile =
+      CreateFileA(DumpFilePath.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+  if (HFile == INVALID_HANDLE_VALUE) {
+    std::cerr << "Failed to create dump file: " << GetLastError() << std::endl;
+    return EXCEPTION_CONTINUE_SEARCH;
+  }
+
+  // Write the dump
+  MINIDUMP_EXCEPTION_INFORMATION DumpExceptionInfo;
+  DumpExceptionInfo.ThreadId = GetCurrentThreadId();
+  DumpExceptionInfo.ExceptionPointers = ExceptionInfo;
+  DumpExceptionInfo.ClientPointers = TRUE;
+
+  MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), HFile, MiniDumpNormal, &DumpExceptionInfo,
+                    nullptr, nullptr);
+
+  CloseHandle(HFile);
+
+  // Continue searching or terminate the process
+  return EXCEPTION_EXECUTE_HANDLER;
+}
 
 struct ParallaxGenCLIArgs {
   int Verbosity = 0;
@@ -280,8 +328,7 @@ void mainRunner(ParallaxGenCLIArgs &Args, const filesystem::path &ExePath) {
       PGC.setModOrder(ModOrder);
     } else {
       // Find conflicts
-      const auto ModConflicts =
-          PG.findModConflicts(Params.Processing.Multithread, Params.Processing.PluginPatching);
+      const auto ModConflicts = PG.findModConflicts(Params.Processing.Multithread, Params.Processing.PluginPatching);
       const auto ExistingOrder = PGC.getModOrder();
 
       if (!ModConflicts.empty()) {
@@ -406,6 +453,8 @@ auto main(int ArgC, char **ArgV) -> int {
   cin.get();
 #endif
 
+  SetUnhandledExceptionFilter(customExceptionHandler);
+
   // This is what keeps the console window open after the program exits until user input
   if (atexit(exitBlocking) != 0) {
     cerr << "Failed to register exitBlocking function\n";
@@ -447,9 +496,8 @@ auto main(int ArgC, char **ArgV) -> int {
   initLogger(LogPath, Args);
 
   // Main Runner (Catches all exceptions)
-  CPPTRACE_TRY {
-    mainRunner(Args, ExePath);
-  } CPPTRACE_CATCH(const exception& E) {
+  CPPTRACE_TRY { mainRunner(Args, ExePath); }
+  CPPTRACE_CATCH(const exception &E) {
     ParallaxGenRunner::processException(E, cpptrace::from_current_exception().to_string());
 
     cout << "Press ENTER to abort...";

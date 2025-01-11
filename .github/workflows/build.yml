@@ -41,7 +41,7 @@ jobs:
       run: |
         cd ParallaxGenMutagenWrapper
         dotnet restore
-        msbuild /p:Configuration=Release
+        msbuild /p:Configuration=RelWithDebInfo
 
     - name: Configure CMake
       run: |
