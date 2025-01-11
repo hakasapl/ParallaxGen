@@ -47,15 +47,21 @@ jobs:
       run: |
         New-Item -ItemType Directory -Path "build" -Force
         cd build
-        cmake .. -G Ninja -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DCMAKE_INSTALL_PREFIX="./install" -DCMAKE_BUILD_TYPE=Release
+        cmake .. -G Ninja -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DCMAKE_INSTALL_PREFIX="../install" -DCMAKE_BUILD_TYPE=RelWithDebInfo
 
     - name: Build and Install ParallaxGen
       run: |
         cd build
-        cmake --build . --target install --config Release
+        cmake --build . --target install --config RelWithDebInfo
+
+    - name: Upload Release Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: parallaxgen-release-artifacts-${{ github.sha }}
+        path: install
 
     - name: Upload Build Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: parallaxgen-artifacts-${{ github.sha }}
-        path: build/install
+        name: parallaxgen-build-artifacts-${{ github.sha }}
+        path: build
