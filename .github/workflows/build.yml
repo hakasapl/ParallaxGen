@@ -54,6 +54,12 @@ jobs:
         cd build
         cmake --build . --target install --config RelWithDebInfo
 
+    - name: Copy ParallaxGenMutagenWrapper build
+      run: |
+        New-Item -ItemType Directory -Path "build\ParallaxGenMutagenWrapper" -Force
+        Copy-Item -Path ParallaxGenMutagenWrapper\bin -Destination build\ParallaxGenMutagenWrapper\ -Recurse -Force
+        Copy-Item -Path ParallaxGenMutagenWrapper\obj -Destination build\ParallaxGenMutagenWrapper\ -Recurse -Force
+
     - name: Upload Release Artifacts
       uses: actions/upload-artifact@v4
       with:

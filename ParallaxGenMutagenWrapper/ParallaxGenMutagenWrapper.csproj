@@ -16,7 +16,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|AnyCPU'">
   <Optimize>true</Optimize>
-    <DebugType>pdbonly</DebugType> <!-- or 'full' for full debugging -->
+    <DebugType>pdbonly</DebugType>
     <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
   <ItemGroup>
