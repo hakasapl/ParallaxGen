@@ -23,6 +23,7 @@
 - Added additional help text to mod sort dialog
 - PBR slot commands will have "textures\\" added to the beginning automatically if not already there
 - Specular color will be set to white for complex material that has metalness
+- loadorder.txt is no longer required
 
 ## [0.7.3] - 2024-12-09
 
