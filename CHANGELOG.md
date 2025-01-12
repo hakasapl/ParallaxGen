@@ -1,18 +1,19 @@
 # Changelog
 
-## [0.8.0] - UNRELEASED
+## [0.8.0] - 2025-01-12
 
 - Added pgtools.exe modding tools
 - Added pgtools patcher to convert particle lights to light placer lights
 - loadorder.txt is no longer required
-- Parallax maps included in the pbr subdirectory will be considered a different "height pbr" texture type
-- Closing mod sort dialog will now close the whole app
-- BSMeshLODTriShapes will also be patched now
+- Mods that do not have any special shader type can be prioritized now
 - Existing TXST records will no longer be patched, only new ones will be created
 - Added support for PBR fuzz
 - Added support for PBR hair
-- Mods that do not have any special shader type can be prioritized now
 - When mixing shaders with alternate texture records meshes will now be duplicated where required
+- Fixed 1PX black dynamic cubemap not being black which would cause really shiny surfaces in recent CS releases
+- Parallax maps included in the pbr subdirectory will be considered a different "height pbr" texture type
+- Closing mod sort dialog will now close the whole app
+- BSMeshLODTriShapes will also be patched now
 - Meshes that have higher priority than textures can be patched now
 - Plugin patching will also be considered when evaluating mods for conflicts now
 - Removed simplicity of snow warning as the mod is not inherently incompatible

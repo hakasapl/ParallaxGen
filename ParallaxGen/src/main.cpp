@@ -136,7 +136,7 @@ auto deployAssets(const filesystem::path &OutputDir, const filesystem::path &Exe
   const filesystem::path OutputCubemapPath = OutputDir / DynCubeMapPath.parent_path();
   filesystem::create_directories(OutputCubemapPath);
 
-  filesystem::path AssetPath = filesystem::path(ExePath) / "assets/dynamic1pxcubemap_black_ENB.dds";
+  filesystem::path AssetPath = filesystem::path(ExePath) / "assets/dynamic1pxcubemap_black.dds";
   filesystem::path OutputPath = filesystem::path(OutputDir) / DynCubeMapPath;
 
   // Move File
