@@ -1,4 +1,4 @@
-[center][b]ParallaxGen is in ALPHA. It has been successfully used by many but is still in development. Please be patient and file detailed bug reports if you encounter any.[/b][/center]
+[center][b]ParallaxGen is in BETA. It has been successfully used by many but is still in development. Please be patient and file detailed bug reports if you encounter any.[/b][/center]
 [center]The GitHub page for this open-source project can be found [url=https://github.com/hakasapl/ParallaxGen]here[/url].[/center]
 
 [b][size=6][center][color=#6aa84f]Requirements[/color][/center][/size][/b]
