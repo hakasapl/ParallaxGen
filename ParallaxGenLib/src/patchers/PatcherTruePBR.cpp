@@ -419,8 +419,7 @@ auto PatcherTruePBR::insertTruePBRData(std::map<size_t, std::tuple<nlohmann::jso
 auto PatcherTruePBR::applyPatch(nifly::NiShape &NIFShape, const PatcherMatch &Match, bool &NIFModified) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
   auto NewSlots = getTextureSet(NIFShape);
 
-  if (Match.MatchedPath == getNIFPath().wstring() ||
-      getPGD()->getTextureType(Match.MatchedPath) == NIFUtil::TextureType::RMAOS) {
+  if (Match.ExtraData == nullptr) {
     // already has PBR, just add PBR prefix to the slots if not already there
     for (size_t I = 0; I < NUM_TEXTURE_SLOTS; I++) {
       if (boost::istarts_with(NewSlots[I], "textures\\") && !boost::istarts_with(NewSlots[I], "textures\\pbr\\")) {
@@ -445,8 +444,7 @@ auto PatcherTruePBR::applyPatch(nifly::NiShape &NIFShape, const PatcherMatch &Ma
 
 auto PatcherTruePBR::applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
                                      const PatcherMatch &Match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
-  if (Match.MatchedPath == getNIFPath().wstring() ||
-      getPGD()->getTextureType(Match.MatchedPath) == NIFUtil::TextureType::RMAOS) {
+  if (Match.ExtraData == nullptr) {
     // already has PBR, just add PBR prefix to the slots if not already there
     auto NewSlots = OldSlots;
     for (size_t I = 0; I < NUM_TEXTURE_SLOTS; I++) {
@@ -569,6 +567,10 @@ void PatcherTruePBR::loadOptions(unordered_set<string> &OptionsStr) {
 void PatcherTruePBR::processNewTXSTRecord(const PatcherMatch &Match, const std::string &EDID) {
   // create texture swap json
   if (EDID.empty()) {
+    return;
+  }
+
+  if (Match.ExtraData == nullptr) {
     return;
   }
 
