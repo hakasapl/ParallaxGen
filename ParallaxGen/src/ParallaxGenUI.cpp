@@ -41,16 +41,12 @@ auto ParallaxGenUI::selectModOrder(
     const std::unordered_map<std::wstring, tuple<std::set<NIFUtil::ShapeShader>, unordered_set<wstring>>> &Conflicts,
     const std::vector<std::wstring> &ExistingMods) -> std::vector<std::wstring> {
 
-  vector<wstring> FinalModOrder;
-  if (ExistingMods.size() == 0) {
     std::vector<std::pair<NIFUtil::ShapeShader, std::wstring>> ModOrder;
     for (const auto &[Mod, Value] : Conflicts) {
-      const auto &ShaderSet = std::get<0>(Value);
-      if (!ShaderSet.empty()) {
+        const auto &ShaderSet = std::get<0>(Value);
         ModOrder.emplace_back(*prev(ShaderSet.end()), Mod); // Get the first shader
-      }
     }
-    // no existing load order, sort for defaults
+
     // Sort by ShapeShader first, and then by key name lexicographically
     std::sort(ModOrder.begin(), ModOrder.end(), [](const auto &Lhs, const auto &Rhs) {
       if (Lhs.first == Rhs.first) {
@@ -59,12 +55,17 @@ auto ParallaxGenUI::selectModOrder(
       return Lhs.first < Rhs.first; // Primary sort by ShapeShader
     });
 
+    vector<wstring> FinalModOrder;
+
+    // Add new mods
     for (const auto &[Shader, Mod] : ModOrder) {
-      FinalModOrder.push_back(Mod);
+        if (find(ExistingMods.begin(), ExistingMods.end(), Mod) == ExistingMods.end()) {
+            // add to new mods
+            FinalModOrder.push_back(Mod);
+        }
     }
-  } else {
-    vector<wstring> NewMods;
-    // Add existing mod order
+
+    // Add existing mods
     for (const auto &Mod : ExistingMods) {
       // check if existing mods contain the mod
       if (Conflicts.find(Mod) != Conflicts.end()) {
@@ -72,16 +73,6 @@ auto ParallaxGenUI::selectModOrder(
         FinalModOrder.push_back(Mod);
       }
     }
-
-    // Add new load mods
-    for (const auto &[Mod, Data] : Conflicts) {
-      // check if mod is in existing order
-      if (find(ExistingMods.begin(), ExistingMods.end(), Mod) == ExistingMods.end()) {
-        // add to new mods
-        FinalModOrder.insert(FinalModOrder.begin(), Mod);
-      }
-    }
-  }
 
   // split into vectors
   vector<wstring> ModStrs;

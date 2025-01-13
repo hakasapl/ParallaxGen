@@ -3,6 +3,7 @@
 ## [0.8.1] - UNRELEASED
 
 - Fixed repeated TXSTs not applying to STAT records on 2+ iterations
+- Fixed new mods not being sorted according to shader type (including no shader)
 
 ## [0.8.0] - 2025-01-12
 
