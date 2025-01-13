@@ -2,6 +2,7 @@
 
 ## [0.8.1] - UNRELEASED
 
+- Specular strength will be set to 1.0 for complex material
 - Fixed repeated TXSTs not applying to STAT records on 2+ iterations
 - Fixed new mods not being sorted according to shader type (including no shader)
 
