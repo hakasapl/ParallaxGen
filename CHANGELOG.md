@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.8.1] - UNRELEASED
+
+- Fixed repeated TXSTs not applying to STAT records on 2+ iterations
+
 ## [0.8.0] - 2025-01-12
 
 - Added pgtools.exe modding tools
