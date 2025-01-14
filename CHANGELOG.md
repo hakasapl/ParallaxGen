@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.8.1] - UNRELEASED
+## [0.8.1] - 2025-01-13
 
 - Specular strength will be set to 1.0 for complex material
 - Fixed repeated TXSTs not applying to STAT records on 2+ iterations
