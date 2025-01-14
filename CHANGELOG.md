@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.8.1] - 2025-01-13
+
+- Specular strength will be set to 1.0 for complex material
+- Fixed repeated TXSTs not applying to STAT records on 2+ iterations
+- Fixed new mods not being sorted according to shader type (including no shader)
+
 ## [0.8.0] - 2025-01-12
 
 - Added pgtools.exe modding tools

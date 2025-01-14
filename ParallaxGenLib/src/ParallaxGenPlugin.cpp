@@ -436,7 +436,8 @@ void ParallaxGenPlugin::processShape(const wstring &NIFPath, nifly::NiShape *NIF
         // Already modded
         spdlog::trace(L"Plugin Patching | {} | {} | {} | Already added, skipping", NIFPath, Name3D, Index3D);
         CurResult.TXSTIndex = CreatedTXSTs[NewSlots];
-        return;
+        Results.push_back(CurResult);
+        continue;
       }
 
       // Create a new TXST record
