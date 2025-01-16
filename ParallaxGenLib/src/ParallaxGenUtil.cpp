@@ -31,6 +31,66 @@ auto UTF16toASCII(const std::wstring &Str) -> std::string {
   return boost::locale::conv::from_utf<wchar_t>(Str, "US-ASCII");
 }
 
+auto utf8VectorToUTF16(const vector<string> &Vec) -> vector<wstring> {
+  vector<wstring> Out;
+  Out.reserve(Vec.size());
+  for (const auto &Item : Vec) {
+    Out.push_back(UTF8toUTF16(Item));
+  }
+
+  return Out;
+}
+
+auto utf16VectorToUTF8(const vector<wstring> &Vec) -> vector<string> {
+  vector<string> Out;
+  Out.reserve(Vec.size());
+  for (const auto &Item : Vec) {
+    Out.push_back(UTF16toUTF8(Item));
+  }
+
+  return Out;
+}
+
+auto windows1252VectorToUTF16(const vector<string> &Vec) -> vector<wstring> {
+  vector<wstring> Out;
+  Out.reserve(Vec.size());
+  for (const auto &Item : Vec) {
+    Out.push_back(Windows1252toUTF16(Item));
+  }
+
+  return Out;
+}
+
+auto utf16VectorToWindows1252(const vector<wstring> &Vec) -> vector<string> {
+  vector<string> Out;
+  Out.reserve(Vec.size());
+  for (const auto &Item : Vec) {
+    Out.push_back(UTF16toWindows1252(Item));
+  }
+
+  return Out;
+}
+
+auto asciiVectorToUTF16(const vector<string> &Vec) -> vector<wstring> {
+  vector<wstring> Out;
+  Out.reserve(Vec.size());
+  for (const auto &Item : Vec) {
+    Out.push_back(ASCIItoUTF16(Item));
+  }
+
+  return Out;
+}
+
+auto utf16VectorToASCII(const vector<wstring> &Vec) -> vector<string> {
+  vector<string> Out;
+  Out.reserve(Vec.size());
+  for (const auto &Item : Vec) {
+    Out.push_back(UTF16toASCII(Item));
+  }
+
+  return Out;
+}
+
 auto ToLowerASCII(const std::wstring& Str) -> std::wstring
 {
   return boost::to_lower_copy(Str, std::locale::classic());
