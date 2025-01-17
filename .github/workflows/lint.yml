@@ -29,7 +29,13 @@ jobs:
         tag: 'llvmorg-19.1.7'
         fileName: 'clang+llvm-19.1.7-x86_64-pc-windows-msvc.tar.xz'
         out-file-path: 'clang'
-        extract: true
+        extract: false
+
+    - name: Extract tgz
+      uses: ihiroky/extract-action@v1
+      with:
+        file_path: 'clang\\clang+llvm-19.1.7-x86_64-pc-windows-msvc.tar.xz'
+        extract_dir: 'clang'
 
     - name: Add LLVM Clang to PATH
       run: echo "clang\\clang+llvm-19.1.7-x86_64-pc-windows-msvc\\bin" >> $Env:GITHUB_PATH
