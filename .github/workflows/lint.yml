@@ -28,22 +28,15 @@ jobs:
         repository: 'llvm/llvm-project'
         tag: 'llvmorg-19.1.7'
         fileName: 'clang+llvm-19.1.7-x86_64-pc-windows-msvc.tar.xz'
-        out-file-path: '$Env:RUNNER_TEMP\\clang'
+        out-file-path: 'clang'
         extract: true
 
     - name: Add LLVM Clang to PATH
-      run: echo "$Env:RUNNER_TEMP\\clang\\clang+llvm-19.1.7-x86_64-pc-windows-msvc\\bin" >> $Env:GITHUB_PATH
+      run: echo "clang\\clang+llvm-19.1.7-x86_64-pc-windows-msvc\\bin" >> $Env:GITHUB_PATH
       shell: pwsh
 
     - name: Verify LLVM Clang Installation
       run: clangd --version
-
-    - name: Cache CLANG
-      uses: actions/cache@v3
-      with:
-        key: vcpkg-${{ runner.os }}-${{ hashFiles('$Env:RUNNER_TEMP\\clang+llvm-19.1.7-x86_64-pc-windows-msvc\\bin\\clang-format.exe', '$Env:RUNNER_TEMP\\clang+llvm-19.1.7-x86_64-pc-windows-msvc\\bin\\clang-tidy.exe') }}
-        path: |
-          build/vcpkg_installed
 
     - name: Configure CMake
       run: |
