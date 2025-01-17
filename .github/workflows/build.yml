@@ -23,6 +23,20 @@ jobs:
         submodules: true
         fetch-depth: 0
 
+    - name: Download LLVM Clang
+      run: curl -L -o clang.tar.xz https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.7/clang+llvm-19.1.7-x86_64-pc-windows-msvc.tar.xz
+
+    - name: Extract LLVM Clang
+      run: tar -xf clang.tar.xz -C $Env:RUNNER_TEMP
+      shell: pwsh
+
+    - name: Add LLVM Clang to PATH
+      run: echo "$Env:RUNNER_TEMP\\clang+llvm-19.1.7-x86_64-pc-windows-msvc\\bin" >> $Env:GITHUB_PATH
+      shell: pwsh
+
+    - name: Verify LLVM Clang Installation
+      run: clangd --version
+
     - name: Cache VCPKG
       uses: actions/cache@v3
       with:
