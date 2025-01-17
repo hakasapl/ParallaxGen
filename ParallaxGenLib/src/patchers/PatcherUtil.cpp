@@ -12,7 +12,7 @@ auto PatcherUtil::getWinningMatch(
     auto winningShaderMatch = PatcherUtil::ShaderPatcherMatch();
 
     for (const auto& match : matches) {
-        Logger::Prefix prefixMod(match.mod);
+        const Logger::Prefix prefixMod(match.mod);
         Logger::trace(L"Checking mod");
 
         int curPriority = -1;
@@ -35,8 +35,8 @@ auto PatcherUtil::getWinningMatch(
     return winningShaderMatch;
 }
 
-auto PatcherUtil::applyTransformIfNeeded(
-    const ShaderPatcherMatch& match, const PatcherObjectSet& patchers) -> ShaderPatcherMatch
+auto PatcherUtil::applyTransformIfNeeded(const ShaderPatcherMatch& match, const PatcherObjectSet& patchers)
+    -> ShaderPatcherMatch
 {
     auto transformedMatch = match;
 

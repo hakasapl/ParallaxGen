@@ -1,19 +1,21 @@
 repos:
-- repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.6.0
-  hooks:
-  - id: trailing-whitespace
-  - id: check-merge-conflict
-  - id: mixed-line-ending
-  - id: check-json
-  - id: pretty-format-json
-    args: [--autofix, --indent=2, --no-sort-keys]
-  - id: check-yaml
-  - id: end-of-file-fixer
-  - id: check-case-conflict
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+      - id: check-json
+      - id: pretty-format-json
+        args: [--autofix, --indent=2, --no-sort-keys]
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: check-case-conflict
 
-- repo: https://github.com/pre-commit/mirrors-clang-format
-  rev: v18.1.8
-  hooks:
-  - id: clang-format
-    files: ^(include/|src/)
+  - repo: https://github.com/cpp-linter/cpp-linter-hooks
+    rev: v0.6.0
+    hooks:
+      - id: clang-format
+        args: [--style=file, --version=19] # to load .clang-format
+      - id: clang-tidy
+        args: [--checks=.clang-tidy, --version=19, -p, build] # path/to/.clang-tidy

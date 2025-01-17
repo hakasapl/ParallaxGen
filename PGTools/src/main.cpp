@@ -24,6 +24,7 @@
 
 using namespace std;
 
+namespace {
 auto getExecutablePath() -> filesystem::path
 {
     array<wchar_t, MAX_PATH> buffer {};
@@ -193,8 +194,8 @@ void mainRunner(PGToolsCLIArgs& args)
             const filesystem::path outputCubemapPath = args.Patch.output / dynCubeMapPath.parent_path();
             filesystem::create_directories(outputCubemapPath);
 
-            filesystem::path assetPath = filesystem::path(exePath) / "assets/dynamic1pxcubemap_black_ENB.dds";
-            filesystem::path outputPath = filesystem::path(args.Patch.output) / dynCubeMapPath;
+            const filesystem::path assetPath = filesystem::path(exePath) / "assets/dynamic1pxcubemap_black_ENB.dds";
+            const filesystem::path outputPath = filesystem::path(args.Patch.output) / dynCubeMapPath;
 
             // Move File
             filesystem::copy_file(assetPath, outputPath, filesystem::copy_options::overwrite_existing);
@@ -226,6 +227,7 @@ void addArguments(CLI::App& app, PGToolsCLIArgs& args)
     args.Patch.subCommand->add_flag(
         "--map-textures-from-meshes", args.Patch.mapTexturesFromMeshes, "Map textures from meshes (default: false)");
     args.Patch.subCommand->add_flag("--high-mem", args.Patch.highMem, "High memory usage mode (default: false)");
+}
 }
 
 auto main(int argC, char** argV) -> int

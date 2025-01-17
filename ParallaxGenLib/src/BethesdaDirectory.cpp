@@ -113,7 +113,7 @@ void BethesdaDirectory::populateFileMap(bool includeBSAs)
 {
     // clear map before populating
     {
-        lock_guard<mutex> lock(m_fileMapMutex);
+        const lock_guard<mutex> lock(m_fileMapMutex);
         m_fileMap.clear();
     }
 
@@ -394,7 +394,7 @@ void BethesdaDirectory::addBSAToFileMap(const wstring& bsaName)
     }
 
     const bsa::tes4::version bsaVersion = bsaObj.read(bsaPath);
-    const BSAFile bsaStruct = { bsaPath, bsaVersion, bsaObj };
+    const BSAFile bsaStruct = { .path = bsaPath, .version = bsaVersion, .archive = bsaObj };
 
     const shared_ptr<BSAFile> bsaStructPtr = make_shared<BSAFile>(bsaStruct);
 
@@ -650,12 +650,12 @@ auto BethesdaDirectory::isPathAscii(const filesystem::path& path) -> bool
 
 auto BethesdaDirectory::getFileFromMap(const filesystem::path& filePath) -> BethesdaDirectory::BethesdaFile
 {
-    lock_guard<mutex> lock(m_fileMapMutex);
+    const lock_guard<mutex> lock(m_fileMapMutex);
 
     const filesystem::path lowerPath = getAsciiPathLower(filePath);
 
     if (m_fileMap.find(lowerPath) == m_fileMap.end()) {
-        return BethesdaFile { filesystem::path(), nullptr };
+        return BethesdaFile { .path = filesystem::path(), .bsaFile = nullptr };
     }
 
     return m_fileMap.at(lowerPath);
@@ -664,11 +664,12 @@ auto BethesdaDirectory::getFileFromMap(const filesystem::path& filePath) -> Beth
 void BethesdaDirectory::updateFileMap(const filesystem::path& filePath, shared_ptr<BethesdaDirectory::BSAFile> bsaFile,
     const wstring& mod, const bool& generated)
 {
-    lock_guard<mutex> lock(m_fileMapMutex);
+    const lock_guard<mutex> lock(m_fileMapMutex);
 
     const filesystem::path lowerPath = getAsciiPathLower(filePath);
 
-    const BethesdaFile newBFile = { filePath, std::move(bsaFile), mod, generated };
+    const BethesdaFile newBFile
+        = { .path = filePath, .bsaFile = std::move(bsaFile), .mod = mod, .generated = generated };
 
     m_fileMap[lowerPath] = newBFile;
 }
@@ -680,8 +681,8 @@ auto BethesdaDirectory::isFileInBSA(const filesystem::path& file, const std::vec
         std::filesystem::path const bsaFilepath = bethFile.bsaFile->path.filename();
         const std::wstring bsaFilename = bsaFilepath.wstring();
 
-        if (std::any_of(bsaFiles.begin(), bsaFiles.end(),
-                [&bsaFilename](std::wstring const& file) { return boost::iequals(file, bsaFilename); })) {
+        if (std::ranges::any_of(
+                bsaFiles, [&bsaFilename](std::wstring const& file) { return boost::iequals(file, bsaFilename); })) {
             return true;
         }
     }

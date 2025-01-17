@@ -12,8 +12,8 @@ using namespace std;
 std::vector<wstring> PatcherComplexMaterial::s_dynCubemapBlocklist;
 bool PatcherComplexMaterial::s_disableMLP;
 
-auto PatcherComplexMaterial::loadStatics(
-    const bool& disableMLP, const std::vector<std::wstring>& dynCubemapBlocklist) -> void
+auto PatcherComplexMaterial::loadStatics(const bool& disableMLP, const std::vector<std::wstring>& dynCubemapBlocklist)
+    -> void
 {
     PatcherComplexMaterial::s_dynCubemapBlocklist = dynCubemapBlocklist;
     PatcherComplexMaterial::s_disableMLP = disableMLP;
@@ -82,7 +82,7 @@ auto PatcherComplexMaterial::shouldApply(
     filesystem::path baseMap;
     vector<NIFUtil::PGTexture> foundMatches;
     NIFUtil::TextureSlots matchedFromSlot = NIFUtil::TextureSlots::NORMAL;
-    for (int slot : slotSearch) {
+    for (const int& slot : slotSearch) {
         baseMap = oldSlots.at(slot);
         if (baseMap.empty() || !getPGD()->isFile(baseMap)) {
             continue;
@@ -119,8 +119,8 @@ auto PatcherComplexMaterial::shouldApply(
     return !matches.empty();
 }
 
-auto PatcherComplexMaterial::applyPatch(
-    NiShape& nifShape, const PatcherMatch& match, bool& nifModified) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>
+auto PatcherComplexMaterial::applyPatch(NiShape& nifShape, const PatcherMatch& match, bool& nifModified)
+    -> std::array<std::wstring, NUM_TEXTURE_SLOTS>
 {
     // Apply shader
     applyShader(nifShape, nifModified);
@@ -152,7 +152,7 @@ auto PatcherComplexMaterial::applyPatchSlots(const std::array<std::wstring, NUM_
     newSlots[static_cast<size_t>(NIFUtil::TextureSlots::PARALLAX)] = L"";
     newSlots[static_cast<size_t>(NIFUtil::TextureSlots::ENVMASK)] = matchedPath;
 
-    bool enableDynCubemaps
+    const bool enableDynCubemaps
         = !(ParallaxGenDirectory::checkGlobMatchInVector(getNIFPath().wstring(), s_dynCubemapBlocklist)
             || ParallaxGenDirectory::checkGlobMatchInVector(matchedPath, s_dynCubemapBlocklist));
     if (enableDynCubemaps) {

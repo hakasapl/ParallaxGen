@@ -1,6 +1,7 @@
 #include "patchers/PatcherTruePBR.hpp"
 
 #include <Shaders.hpp>
+#include <algorithm>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <cstddef>
@@ -67,8 +68,8 @@ void PatcherTruePBR::loadStatics(const std::vector<std::filesystem::path>& pbrJS
         // check if Config is valid
         auto configFileBytes = getPGD()->getFile(config);
         std::string configFileStr;
-        std::transform(configFileBytes.begin(), configFileBytes.end(), std::back_inserter(configFileStr),
-            [](std::byte b) { return static_cast<char>(b); });
+        std::ranges::transform(
+            configFileBytes, std::back_inserter(configFileStr), [](std::byte b) { return static_cast<char>(b); });
 
         try {
             nlohmann::json j = nlohmann::json::parse(configFileStr);
@@ -107,7 +108,7 @@ void PatcherTruePBR::loadStatics(const std::vector<std::filesystem::path>& pbrJS
         if (config.second.contains("match_normal")) {
             auto revNormal = ParallaxGenUtil::utf8toUTF16(config.second["match_normal"].get<string>());
             revNormal = NIFUtil::getTexBase(revNormal);
-            reverse(revNormal.begin(), revNormal.end());
+            std::ranges::reverse(revNormal);
 
             getTruePBRNormalInverse()[boost::to_lower_copy(revNormal)].push_back(config.first);
             continue;
@@ -117,7 +118,7 @@ void PatcherTruePBR::loadStatics(const std::vector<std::filesystem::path>& pbrJS
         if (config.second.contains("match_diffuse")) {
             auto revDiffuse = ParallaxGenUtil::utf8toUTF16(config.second["match_diffuse"].get<string>());
             revDiffuse = NIFUtil::getTexBase(revDiffuse);
-            reverse(revDiffuse.begin(), revDiffuse.end());
+            std::ranges::reverse(revDiffuse);
 
             getTruePBRDiffuseInverse()[boost::to_lower_copy(revDiffuse)].push_back(config.first);
         }
@@ -172,7 +173,7 @@ auto PatcherTruePBR::shouldApply(nifly::NiShape& nifShape, std::vector<PatcherMa
 
     if (NIFUtil::hasShaderFlag(nifShaderBSLSP, SLSF2_UNUSED01)) {
         // Check if RMAOS exists
-        const auto rmaosPath = oldSlots[static_cast<size_t>(NIFUtil::TextureSlots::ENVMASK)];
+        const auto& rmaosPath = oldSlots[static_cast<size_t>(NIFUtil::TextureSlots::ENVMASK)];
         if (!rmaosPath.empty() && getPGD()->isFile(rmaosPath)) {
             Logger::trace(L"This shape already has PBR");
             PatcherMatch match;
@@ -181,7 +182,7 @@ auto PatcherTruePBR::shouldApply(nifly::NiShape& nifShape, std::vector<PatcherMa
         }
     }
 
-    return matches.size() > 0;
+    return !matches.empty();
 }
 
 auto PatcherTruePBR::shouldApply(
@@ -261,7 +262,7 @@ auto PatcherTruePBR::shouldApply(
 
     // Sort matches by ExtraData key minimum value (this preserves order of JSONs to be 0 having priority if mod order
     // does not exist)
-    sort(matches.begin(), matches.end(), [](const PatcherMatch& a, const PatcherMatch& b) {
+    std::ranges::sort(matches, [](const PatcherMatch& a, const PatcherMatch& b) {
         return get<0>(*(static_pointer_cast<map<size_t, tuple<nlohmann::json, wstring>>>(a.extraData)->begin()))
             > get<0>(*(static_pointer_cast<map<size_t, tuple<nlohmann::json, wstring>>>(b.extraData)->begin()));
     });
@@ -282,7 +283,7 @@ auto PatcherTruePBR::shouldApply(
         }
     }
 
-    return matches.size() > 0;
+    return !matches.empty();
 }
 
 void PatcherTruePBR::getSlotMatch(map<size_t, tuple<nlohmann::json, wstring>>& truePBRData, const wstring& texName,
@@ -290,7 +291,7 @@ void PatcherTruePBR::getSlotMatch(map<size_t, tuple<nlohmann::json, wstring>>& t
 {
     // binary search for map
     auto mapReverse = boost::to_lower_copy(texName);
-    reverse(mapReverse.begin(), mapReverse.end());
+    std::ranges::reverse(mapReverse);
     auto it = lookup.lower_bound(mapReverse);
 
     // get the first element of the reverse path
@@ -418,7 +419,7 @@ auto PatcherTruePBR::insertTruePBRData(std::map<size_t, std::tuple<nlohmann::jso
 
     // Check if named_field is a directory
     wstring matchedPath = boost::to_lower_copy(texPath + matchedField);
-    bool enableTruePBR = (!curCfg.contains("pbr") || curCfg["pbr"]) && !matchedPath.empty();
+    const bool enableTruePBR = (!curCfg.contains("pbr") || curCfg["pbr"]) && !matchedPath.empty();
     if (!enableTruePBR) {
         matchedPath = L"";
     }
@@ -427,8 +428,8 @@ auto PatcherTruePBR::insertTruePBRData(std::map<size_t, std::tuple<nlohmann::jso
     truePBRData.insert({ cfg, { curCfg, matchedPath } });
 }
 
-auto PatcherTruePBR::applyPatch(nifly::NiShape& nifShape, const PatcherMatch& match,
-    bool& nifModified) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>
+auto PatcherTruePBR::applyPatch(nifly::NiShape& nifShape, const PatcherMatch& match, bool& nifModified)
+    -> std::array<std::wstring, NUM_TEXTURE_SLOTS>
 {
     auto newSlots = getTextureSet(nifShape);
 
@@ -602,8 +603,8 @@ void PatcherTruePBR::processNewTXSTRecord(const PatcherMatch& match, const std::
     }
 
     // write to file
-    filesystem::path relOutputJSONPath = "PBRTextureSets/" + edid + ".json";
-    filesystem::path outputJSON = getPGD()->getGeneratedPath() / relOutputJSONPath;
+    const filesystem::path relOutputJSONPath = "PBRTextureSets/" + edid + ".json";
+    const filesystem::path outputJSON = getPGD()->getGeneratedPath() / relOutputJSONPath;
     filesystem::create_directories(outputJSON.parent_path());
     ofstream out(outputJSON);
     out << textureSwap.dump(2);
@@ -1030,8 +1031,8 @@ void PatcherTruePBR::enableTruePBROnShape(NiShape* nifShape, NiShader* nifShader
 auto PatcherTruePBR::abs2(Vector2 v) -> Vector2 { return { abs(v.u), abs(v.v) }; }
 
 // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers)
-auto PatcherTruePBR::autoUVScale(
-    const vector<Vector2>* uvs, const vector<Vector3>* verts, vector<Triangle>& tris) -> Vector2
+auto PatcherTruePBR::autoUVScale(const vector<Vector2>* uvs, const vector<Vector3>* verts, vector<Triangle>& tris)
+    -> Vector2
 {
     Vector2 scale;
     for (const Triangle& t : tris) {

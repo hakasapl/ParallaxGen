@@ -29,8 +29,8 @@ private:
     struct TupleStrHash {
         auto operator()(const std::tuple<std::wstring, std::wstring>& t) const -> std::size_t
         {
-            std::size_t hash1 = std::hash<std::wstring> {}(std::get<0>(t));
-            std::size_t hash2 = std::hash<std::wstring> {}(std::get<1>(t));
+            const std::size_t hash1 = std::hash<std::wstring> {}(std::get<0>(t));
+            const std::size_t hash2 = std::hash<std::wstring> {}(std::get<1>(t));
 
             // Combine the two hash values
             return hash1 ^ (hash2 << 1);
@@ -140,8 +140,8 @@ public:
      * @return true Found matches
      * @return false Didn't find matches
      */
-    auto shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots,
-        std::vector<PatcherMatch>& matches) -> bool override;
+    auto shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots, std::vector<PatcherMatch>& matches)
+        -> bool override;
 
     /**
      * @brief Applies a match to a shape
@@ -151,8 +151,8 @@ public:
      * @param[out] nifModified Whether NIF was modified or not
      * @return std::array<std::wstring, NUM_TEXTURE_SLOTS> New slots of shape
      */
-    auto applyPatch(nifly::NiShape& nifShape, const PatcherMatch& match,
-        bool& nifModified) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
+    auto applyPatch(nifly::NiShape& nifShape, const PatcherMatch& match, bool& nifModified)
+        -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
 
     /**
      * @brief Apply a match to slots
@@ -161,8 +161,8 @@ public:
      * @param[out] match Match to apply
      * @return std::array<std::wstring, NUM_TEXTURE_SLOTS> New slots
      */
-    auto applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots,
-        const PatcherMatch& match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
+    auto applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots, const PatcherMatch& match)
+        -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
 
     /**
      * @brief Apply pbr shader to a shape

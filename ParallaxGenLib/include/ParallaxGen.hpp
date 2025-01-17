@@ -29,7 +29,7 @@ private:
     ParallaxGenD3D* m_pgd3D;
 
     // sort blocks enabled, optimize disabled (for now)
-    nifly::NifSaveOptions m_nifSaveOptions = { false, false };
+    nifly::NifSaveOptions m_nifSaveOptions = { .optimize = false, .sortBlocks = false };
 
     struct ShapeKey {
         std::wstring nifPath;
@@ -51,8 +51,8 @@ private:
         auto operator()(const ShapeKey& key) const -> size_t
         {
             // Hash the nifPath and ShapeIndex individually
-            std::size_t h1 = std::hash<std::wstring> {}(key.nifPath);
-            std::size_t h2 = std::hash<int> {}(key.shapeIndex);
+            const std::size_t h1 = std::hash<std::wstring> {}(key.nifPath);
+            const std::size_t h2 = std::hash<int> {}(key.shapeIndex);
 
             return h1 ^ (h2 << 1); // shifting to reduce collisions
         }
@@ -74,10 +74,9 @@ public:
     // enables parallax on relevant meshes
     void patchMeshes(const bool& multiThread = true, const bool& patchPlugin = true);
     // Dry run for finding potential matches (used with mod manager integration)
-    [[nodiscard]] auto findModConflicts(const bool& multiThread = true,
-        const bool& patchPlugin
-        = true) -> std::unordered_map<std::wstring,
-                    std::tuple<std::set<NIFUtil::ShapeShader>, std::unordered_set<std::wstring>>>;
+    [[nodiscard]] auto findModConflicts(const bool& multiThread = true, const bool& patchPlugin = true)
+        -> std::unordered_map<std::wstring,
+            std::tuple<std::set<NIFUtil::ShapeShader>, std::unordered_set<std::wstring>>>;
     // zips all meshes and removes originals
     void zipMeshes() const;
     // deletes entire output folder

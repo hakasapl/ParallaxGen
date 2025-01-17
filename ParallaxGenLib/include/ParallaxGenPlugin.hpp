@@ -14,10 +14,10 @@
 #include "ParallaxGenDirectory.hpp"
 #include "patchers/PatcherUtil.hpp"
 
-#define LOG_POLL_INTERVAL 1000
-
 class ParallaxGenPlugin {
 private:
+    static constexpr int LOG_POLL_INTERVAL = 1000;
+
     static std::mutex s_libMutex;
     static void libLogMessageIfExists();
     static void libThrowExceptionIfExists();
@@ -31,8 +31,8 @@ private:
     /// @param[in] name3D "3D name" - name of the shape
     /// @param[in] index3D "3D index" - index of the shape in the nif
     /// @return TXST objects, pairs of (texture set index,alternate textures ids)
-    static auto libGetMatchingTXSTObjs(const std::wstring& nifName, const std::wstring& name3D,
-        const int& index3D) -> std::vector<std::tuple<int, int>>;
+    static auto libGetMatchingTXSTObjs(const std::wstring& nifName, const std::wstring& name3D, const int& index3D)
+        -> std::vector<std::tuple<int, int>>;
 
     /// @brief get the assigned textures of all slots in a texture set
     /// @param[in] txstIndex index of the texture set
@@ -80,7 +80,7 @@ private:
             std::size_t hash = 0;
             for (const auto& str : arr) {
                 // Convert string to lowercase and hash
-                std::wstring lowerStr = boost::to_lower_copy(str);
+                const std::wstring lowerStr = boost::to_lower_copy(str);
                 boost::hash_combine(hash, boost::hash<std::wstring>()(lowerStr));
             }
             return hash;

@@ -21,7 +21,7 @@ std::unordered_set<std::tuple<std::filesystem::path, NIFUtil::ShapeShader, NIFUt
 
 void PatcherShaderTransform::postError(const std::filesystem::path& file)
 {
-    std::lock_guard<std::mutex> lock(s_errorTrackerMutex);
+    const std::lock_guard<std::mutex> lock(s_errorTrackerMutex);
 
     if (s_errorTracker.insert({ file, m_fromShader, m_toShader }).second) {
         spdlog::error(L"Failed to transform from {} to {} for {}",
@@ -32,7 +32,7 @@ void PatcherShaderTransform::postError(const std::filesystem::path& file)
 
 auto PatcherShaderTransform::alreadyTried(const std::filesystem::path& file) -> bool
 {
-    std::lock_guard<std::mutex> lock(s_errorTrackerMutex);
+    const std::lock_guard<std::mutex> lock(s_errorTrackerMutex);
 
     return s_errorTracker.contains({ file, m_fromShader, m_toShader });
 }

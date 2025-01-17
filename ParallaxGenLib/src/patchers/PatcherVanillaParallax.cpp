@@ -94,7 +94,7 @@ auto PatcherVanillaParallax::shouldApply(
     filesystem::path baseMap;
     vector<NIFUtil::PGTexture> foundMatches;
     NIFUtil::TextureSlots matchedFromSlot = NIFUtil::TextureSlots::NORMAL;
-    for (int slot : slotSearch) {
+    for (const int& slot : slotSearch) {
         baseMap = oldSlots.at(slot);
         if (baseMap.empty() || !getPGD()->isFile(baseMap)) {
             continue;
@@ -132,8 +132,8 @@ auto PatcherVanillaParallax::shouldApply(
     return !matches.empty();
 }
 
-auto PatcherVanillaParallax::applyPatch(nifly::NiShape& nifShape, const PatcherMatch& match,
-    bool& nifModified) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>
+auto PatcherVanillaParallax::applyPatch(nifly::NiShape& nifShape, const PatcherMatch& match, bool& nifModified)
+    -> std::array<std::wstring, NUM_TEXTURE_SLOTS>
 {
     // Apply shader
     applyShader(nifShape, nifModified);

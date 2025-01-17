@@ -593,7 +593,7 @@ void LauncherWindow::onGameTypeChange([[maybe_unused]] wxCommandEvent& event)
 void LauncherWindow::onModManagerChange([[maybe_unused]] wxCommandEvent& event)
 {
     // Show MO2 options only if the MO2 radio button is selected
-    bool isMO2Selected
+    const bool isMO2Selected
         = (event.GetEventObject() == m_modManagerRadios[ModManagerDirectory::ModManagerType::ModOrganizer2]);
     m_mo2OptionsSizer->Show(isMO2Selected);
     Layout(); // Refresh layout to apply visibility changes
@@ -627,7 +627,7 @@ void LauncherWindow::onAdvancedOptionsChange([[maybe_unused]] wxCommandEvent& ev
 
 void LauncherWindow::updateAdvanced()
 {
-    bool advancedVisible = m_advancedOptionsCheckbox->GetValue();
+    const bool advancedVisible = m_advancedOptionsCheckbox->GetValue();
 
     m_advancedOptionsSizer->Show(advancedVisible);
     m_processingOptionsSizer->Show(advancedVisible);
@@ -751,12 +751,12 @@ void LauncherWindow::onTextureRulesMapsChangeStart([[maybe_unused]] wxMouseEvent
         wxPossibleTexTypes.Add(texType);
     }
 
-    wxPoint pos = event.GetPosition();
+    const wxPoint pos = event.GetPosition();
     int flags = 0;
-    long item = m_textureRulesMaps->HitTest(pos, flags);
+    const long item = m_textureRulesMaps->HitTest(pos, flags);
 
     if (item != wxNOT_FOUND && ((flags & wxLIST_HITTEST_ONITEM) != 0)) {
-        int column = getColumnAtPosition(pos, item);
+        const int column = getColumnAtPosition(pos, item);
         if (column == 0) {
             // Start editing the first column
             m_textureRulesMaps->EditLabel(item);
@@ -769,7 +769,7 @@ void LauncherWindow::onTextureRulesMapsChangeStart([[maybe_unused]] wxMouseEvent
                 wxPossibleTexTypes, wxCB_DROPDOWN | wxCB_READONLY);
             m_textureMapTypeCombo->SetFocus();
             m_textureMapTypeCombo->Popup();
-            m_textureMapTypeCombo->Bind(wxEVT_COMBOBOX, [=, this](wxCommandEvent&) {
+            m_textureMapTypeCombo->Bind(wxEVT_COMBOBOX, [item, column, this](wxCommandEvent&) {
                 m_textureRulesMaps->SetItem(item, column, m_textureMapTypeCombo->GetValue());
                 m_textureMapTypeCombo->Show(false);
 
@@ -780,7 +780,7 @@ void LauncherWindow::onTextureRulesMapsChangeStart([[maybe_unused]] wxMouseEvent
             });
 
             m_textureMapTypeCombo->Bind(
-                wxEVT_KILL_FOCUS, [=, this](wxFocusEvent&) { m_textureMapTypeCombo->Show(false); });
+                wxEVT_KILL_FOCUS, [this](wxFocusEvent&) { m_textureMapTypeCombo->Show(false); });
         }
     } else {
         event.Skip();
@@ -1061,7 +1061,7 @@ void LauncherWindow::onSaveConfigButtonPressed([[maybe_unused]] wxCommandEvent& 
 
 void LauncherWindow::onLoadConfigButtonPressed([[maybe_unused]] wxCommandEvent& event)
 {
-    int response
+    const int response
         = wxMessageBox("Are you sure you want to load the config from the file? This action will overwrite all "
                        "current unsaved settings.",
             "Confirm Load Config", wxYES_NO | wxICON_WARNING, this);
@@ -1079,8 +1079,9 @@ void LauncherWindow::onLoadConfigButtonPressed([[maybe_unused]] wxCommandEvent& 
 void LauncherWindow::onRestoreDefaultsButtonPressed([[maybe_unused]] wxCommandEvent& event)
 {
     // Show a confirmation dialog
-    int response = wxMessageBox("Are you sure you want to restore the default settings? This action cannot be undone.",
-        "Confirm Restore Defaults", wxYES_NO | wxICON_WARNING, this);
+    const int response
+        = wxMessageBox("Are you sure you want to restore the default settings? This action cannot be undone.",
+            "Confirm Restore Defaults", wxYES_NO | wxICON_WARNING, this);
 
     if (response != wxYES) {
         return;

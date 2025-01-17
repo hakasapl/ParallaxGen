@@ -200,8 +200,8 @@ auto ParallaxGenDirectory::checkGlobMatchInVector(const wstring& check, const ve
     return std::ranges::any_of(list, [&](const wstring& glob) { return PathMatchSpecW(checkCstr, glob.c_str()); });
 }
 
-auto ParallaxGenDirectory::mapTexturesFromNIF(
-    const filesystem::path& nifPath, const bool& cacheNIFs) -> ParallaxGenTask::PGResult
+auto ParallaxGenDirectory::mapTexturesFromNIF(const filesystem::path& nifPath, const bool& cacheNIFs)
+    -> ParallaxGenTask::PGResult
 {
     auto result = ParallaxGenTask::PGResult::SUCCESS;
 
@@ -406,7 +406,7 @@ auto ParallaxGenDirectory::updateUnconfirmedTexturesMap(
     const filesystem::path& path, const NIFUtil::TextureSlots& slot, const NIFUtil::TextureType& type) -> void
 {
     // Use mutex to make this thread safe
-    lock_guard<mutex> lock(m_unconfirmedTexturesMutex);
+    const lock_guard<mutex> lock(m_unconfirmedTexturesMutex);
 
     // Check if texture is already in map
     if (m_unconfirmedTextures.find(path) != m_unconfirmedTextures.end()) {
@@ -424,15 +424,15 @@ auto ParallaxGenDirectory::addToTextureMaps(const filesystem::path& path, const 
     const auto& slotInt = static_cast<size_t>(slot);
 
     // Add to texture map
-    NIFUtil::PGTexture newPGTexture = { path, type };
+    const NIFUtil::PGTexture newPGTexture = { .path = path, .type = type };
     {
-        lock_guard<mutex> lock(m_textureMapsMutex);
+        const lock_guard<mutex> lock(m_textureMapsMutex);
         m_textureMaps.at(slotInt)[base].insert(newPGTexture);
     }
 
     {
-        lock_guard<mutex> lock(m_textureTypesMutex);
-        const TextureDetails details = { type, attributes };
+        const lock_guard<mutex> lock(m_textureTypesMutex);
+        const TextureDetails details = { .type = type, .attributes = attributes };
         m_textureTypes[path] = details;
     }
 }
@@ -440,14 +440,14 @@ auto ParallaxGenDirectory::addToTextureMaps(const filesystem::path& path, const 
 auto ParallaxGenDirectory::addMesh(const filesystem::path& path) -> void
 {
     // Use mutex to make this thread safe
-    lock_guard<mutex> lock(m_meshesMutex);
+    const lock_guard<mutex> lock(m_meshesMutex);
 
     // Add mesh to set
     m_meshes.insert(path);
 }
 
-auto ParallaxGenDirectory::getTextureMap(
-    const NIFUtil::TextureSlots& slot) -> map<wstring, unordered_set<NIFUtil::PGTexture, NIFUtil::PGTextureHasher>>&
+auto ParallaxGenDirectory::getTextureMap(const NIFUtil::TextureSlots& slot)
+    -> map<wstring, unordered_set<NIFUtil::PGTexture, NIFUtil::PGTextureHasher>>&
 {
     return m_textureMaps.at(static_cast<size_t>(slot));
 }
@@ -462,10 +462,10 @@ auto ParallaxGenDirectory::getMeshes() const -> const unordered_set<filesystem::
 
 auto ParallaxGenDirectory::getPBRJSONs() const -> const vector<filesystem::path>& { return m_pbrJSONs; }
 
-auto ParallaxGenDirectory::addTextureAttribute(
-    const filesystem::path& path, const NIFUtil::TextureAttribute& attribute) -> bool
+auto ParallaxGenDirectory::addTextureAttribute(const filesystem::path& path, const NIFUtil::TextureAttribute& attribute)
+    -> bool
 {
-    lock_guard<mutex> lock(m_textureTypesMutex);
+    const lock_guard<mutex> lock(m_textureTypesMutex);
 
     if (m_textureTypes.find(path) != m_textureTypes.end()) {
         return m_textureTypes.at(path).attributes.insert(attribute).second;
@@ -477,7 +477,7 @@ auto ParallaxGenDirectory::addTextureAttribute(
 auto ParallaxGenDirectory::removeTextureAttribute(
     const filesystem::path& path, const NIFUtil::TextureAttribute& attribute) -> bool
 {
-    lock_guard<mutex> lock(m_textureTypesMutex);
+    const lock_guard<mutex> lock(m_textureTypesMutex);
 
     if (m_textureTypes.find(path) != m_textureTypes.end()) {
         return m_textureTypes.at(path).attributes.erase(attribute) > 0;
@@ -486,10 +486,10 @@ auto ParallaxGenDirectory::removeTextureAttribute(
     return false;
 }
 
-auto ParallaxGenDirectory::hasTextureAttribute(
-    const filesystem::path& path, const NIFUtil::TextureAttribute& attribute) -> bool
+auto ParallaxGenDirectory::hasTextureAttribute(const filesystem::path& path, const NIFUtil::TextureAttribute& attribute)
+    -> bool
 {
-    lock_guard<mutex> lock(m_textureTypesMutex);
+    const lock_guard<mutex> lock(m_textureTypesMutex);
 
     if (m_textureTypes.find(path) != m_textureTypes.end()) {
         return m_textureTypes.at(path).attributes.find(attribute) != m_textureTypes.at(path).attributes.end();
@@ -498,10 +498,10 @@ auto ParallaxGenDirectory::hasTextureAttribute(
     return false;
 }
 
-auto ParallaxGenDirectory::getTextureAttributes(
-    const filesystem::path& path) -> unordered_set<NIFUtil::TextureAttribute>
+auto ParallaxGenDirectory::getTextureAttributes(const filesystem::path& path)
+    -> unordered_set<NIFUtil::TextureAttribute>
 {
-    lock_guard<mutex> lock(m_textureTypesMutex);
+    const lock_guard<mutex> lock(m_textureTypesMutex);
 
     if (m_textureTypes.find(path) != m_textureTypes.end()) {
         return m_textureTypes.at(path).attributes;
@@ -512,14 +512,14 @@ auto ParallaxGenDirectory::getTextureAttributes(
 
 void ParallaxGenDirectory::setTextureType(const filesystem::path& path, const NIFUtil::TextureType& type)
 {
-    lock_guard<mutex> lock(m_textureTypesMutex);
+    const lock_guard<mutex> lock(m_textureTypesMutex);
 
     m_textureTypes[path].type = type;
 }
 
 auto ParallaxGenDirectory::getTextureType(const filesystem::path& path) -> NIFUtil::TextureType
 {
-    lock_guard<mutex> lock(m_textureTypesMutex);
+    const lock_guard<mutex> lock(m_textureTypesMutex);
 
     if (m_textureTypes.find(path) != m_textureTypes.end()) {
         return m_textureTypes.at(path).type;

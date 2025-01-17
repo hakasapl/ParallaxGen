@@ -149,8 +149,8 @@ public:
      * @param relPath path to the file relative to the data directory
      * @return std::vector<std::byte> vector of bytes of the file
      */
-    [[nodiscard]] auto getFile(
-        const std::filesystem::path& relPath, const bool& cacheFile = false) -> std::vector<std::byte>;
+    [[nodiscard]] auto getFile(const std::filesystem::path& relPath, const bool& cacheFile = false)
+        -> std::vector<std::byte>;
 
     /**
      * @brief Get the Mod that has the winning version of the file
@@ -251,8 +251,8 @@ public:
      * @param file File to check
      * @param bsaFiles List of BSA files to check against
      */
-    [[nodiscard]] auto isFileInBSA(
-        const std::filesystem::path& file, const std::vector<std::wstring>& bsaFiles) -> bool;
+    [[nodiscard]] auto isFileInBSA(const std::filesystem::path& file, const std::vector<std::wstring>& bsaFiles)
+        -> bool;
 
     /**
      * @brief Get the lowercase path of a path using the "C" locale, i.e. only ASCII characters are converted
@@ -280,8 +280,8 @@ public:
      * @return true if any component is in the path
      * @return false if no component is in the path
      */
-    static auto checkIfAnyComponentIs(
-        const std::filesystem::path& path, const std::vector<std::wstring>& components) -> bool;
+    static auto checkIfAnyComponentIs(const std::filesystem::path& path, const std::vector<std::wstring>& components)
+        -> bool;
 
     /**
      * @brief Check if any glob in list matches string. Globs are basic MS-DOS wildcards, a * represents any number of
@@ -370,8 +370,8 @@ private:
      * @param original original list of wstrings to convert
      * @return std::vector<LPCWSTR> list of LPCWSTRs
      */
-    [[nodiscard]] static auto convertWStringToLPCWSTRVector(
-        const std::vector<std::wstring>& original) -> std::vector<LPCWSTR>;
+    [[nodiscard]] static auto convertWStringToLPCWSTRVector(const std::vector<std::wstring>& original)
+        -> std::vector<LPCWSTR>;
 
     /**
      * @brief Checks whether a glob matches a provided list of globs

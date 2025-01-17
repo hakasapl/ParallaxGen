@@ -132,6 +132,7 @@ auto PatcherParticleLightsToLP::applyPatch(bool& nifModified) -> bool
         if (applySinglePatch(billboardNode, shape, effectShader)) {
             // Delete block if patch was applied
             nifModified = true;
+            appliedPatch = true;
             const auto nifBlockRef = nifly::NiRef(getNIF()->GetBlockID(nifBlock));
             getNIF()->GetHeader().DeleteBlock(nifBlockRef);
         }
@@ -185,7 +186,7 @@ auto PatcherParticleLightsToLP::applySinglePatch(
 
     // set color
     auto baseColor = effectShader->baseColor;
-    bool getColorFromVertex = abs(baseColor.r - 1.0) < MIN_VALUE && abs(baseColor.g - 1.0) < MIN_VALUE
+    const bool getColorFromVertex = abs(baseColor.r - 1.0) < MIN_VALUE && abs(baseColor.g - 1.0) < MIN_VALUE
         && abs(baseColor.b - 1.0) < MIN_VALUE && shape->HasVertexColors();
     if (getColorFromVertex) {
         // Reset basecolor
@@ -245,15 +246,15 @@ auto PatcherParticleLightsToLP::applySinglePatch(
 
     // Save JSON
     {
-        lock_guard<mutex> lock(s_lpJsonDataMutex);
+        const lock_guard<mutex> lock(s_lpJsonDataMutex);
         PatcherParticleLightsToLP::s_lpJsonData.push_back(lpJson);
     }
 
     return true;
 }
 
-auto PatcherParticleLightsToLP::getControllerJSON(
-    nifly::NiTimeController* controller, string& jsonField) -> nlohmann::json
+auto PatcherParticleLightsToLP::getControllerJSON(nifly::NiTimeController* controller, string& jsonField)
+    -> nlohmann::json
 {
     nlohmann::json controllerJson = nlohmann::json::object();
 
@@ -378,7 +379,7 @@ auto PatcherParticleLightsToLP::getControllerJSON(
 
 void PatcherParticleLightsToLP::finalize()
 {
-    lock_guard<mutex> lock(s_lpJsonDataMutex);
+    const lock_guard<mutex> lock(s_lpJsonDataMutex);
 
     // Check if output JSON is empty
     if (s_lpJsonData.empty()) {
@@ -390,12 +391,12 @@ void PatcherParticleLightsToLP::finalize()
 
     // Merge all lights into a single JSON object
     for (auto& obj : s_lpJsonData) {
-        std::string modelsKey = obj["models"].dump();
+        const std::string modelsKey = obj["models"].dump();
 
         auto& dataGroup = modelsToDataPoints[modelsKey];
 
         for (auto& light : obj["lights"]) {
-            std::string dataKey = light["data"].dump();
+            const std::string dataKey = light["data"].dump();
             for (auto& p : light["points"]) {
                 dataGroup[dataKey].push_back(p);
             }
@@ -408,13 +409,13 @@ void PatcherParticleLightsToLP::finalize()
         const auto& modelsKey = kv.first;
         const auto& dataGroup = kv.second;
 
-        nlohmann::json modelsJson = nlohmann::json::parse(modelsKey);
+        const nlohmann::json modelsJson = nlohmann::json::parse(modelsKey);
 
         nlohmann::json lightsArray = nlohmann::json::array();
 
         for (const auto& dataKv : dataGroup) {
-            std::string dataKey = dataKv.first;
-            nlohmann::json dataObj = nlohmann::json::parse(dataKey);
+            const std::string dataKey = dataKv.first;
+            const nlohmann::json dataObj = nlohmann::json::parse(dataKey);
 
             const auto& allPoints = dataKv.second; // vector<json>
 
@@ -445,6 +446,6 @@ void PatcherParticleLightsToLP::finalize()
 
     // Save JSON to file
     ofstream lpJsonFile(outputJSON);
-    lpJsonFile << mergedOutput.dump(2) << endl;
+    lpJsonFile << mergedOutput.dump(2) << "\n";
     lpJsonFile.close();
 }

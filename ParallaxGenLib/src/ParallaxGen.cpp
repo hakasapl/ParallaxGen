@@ -3,6 +3,7 @@
 #include <DirectXTex.h>
 #include <Geometry.hpp>
 #include <NifFile.hpp>
+#include <algorithm>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio.hpp>
@@ -90,12 +91,12 @@ void ParallaxGen::patchMeshes(const bool& multiThread, const bool& patchPlugin)
     spdlog::info("Saving diff JSON file...");
     const filesystem::path diffJSONPath = m_outputDir / getDiffJSONName();
     ofstream diffJSONFile(diffJSONPath);
-    diffJSONFile << diffJSON << endl;
+    diffJSONFile << diffJSON << "\n";
     diffJSONFile.close();
 }
 
-auto ParallaxGen::findModConflicts(const bool& multiThread,
-    const bool& patchPlugin) -> unordered_map<wstring, tuple<set<NIFUtil::ShapeShader>, unordered_set<wstring>>>
+auto ParallaxGen::findModConflicts(const bool& multiThread, const bool& patchPlugin)
+    -> unordered_map<wstring, tuple<set<NIFUtil::ShapeShader>, unordered_set<wstring>>>
 {
     auto meshes = m_pgd->getMeshes();
 
@@ -192,7 +193,7 @@ auto ParallaxGen::processNIF(const filesystem::path& nifFile, nlohmann::json* di
 {
     auto result = ParallaxGenTask::PGResult::SUCCESS;
 
-    Logger::Prefix prefixNIF(nifFile.wstring());
+    const Logger::Prefix prefixNIF(nifFile.wstring());
     Logger::trace(L"Starting processing");
 
     // Determine output path for patched NIF
@@ -338,7 +339,7 @@ auto ParallaxGen::processNIF(const std::filesystem::path& nifFile, const vector<
         const auto shapeBlockID = nif.GetBlockID(nifShape);
         const auto shapeName = asciitoUTF16(nifShape->name.get());
         const auto shapeIDStr = to_wstring(shapeBlockID) + L" / " + shapeName;
-        Logger::Prefix prefixShape(shapeIDStr);
+        const Logger::Prefix prefixShape(shapeIDStr);
 
         bool shapeModified = false;
         NIFUtil::ShapeShader shaderApplied = NIFUtil::ShapeShader::UNKNOWN;
@@ -444,7 +445,7 @@ auto ParallaxGen::processNIF(const std::filesystem::path& nifFile, const vector<
 
     // Run global patchers
     for (const auto& globalPatcher : patcherObjects.globalPatchers) {
-        Logger::Prefix prefixPatches(utf8toUTF16(globalPatcher->getPatcherName()));
+        const Logger::Prefix prefixPatches(utf8toUTF16(globalPatcher->getPatcherName()));
         globalPatcher->applyPatch(nifModified);
     }
 
@@ -467,8 +468,7 @@ auto ParallaxGen::processNIF(const std::filesystem::path& nifFile, const vector<
         }
 
         // Sort ShapeTracker by new block id
-        sort(shapeTracker.begin(), shapeTracker.end(),
-            [](const auto& a, const auto& b) { return get<2>(a) < get<2>(b); });
+        std::ranges::sort(shapeTracker, [](const auto& a, const auto& b) { return get<2>(a) < get<2>(b); });
 
         // Find new 3d index for each shape
         for (int i = 0; i < shapeTracker.size(); i++) {
@@ -499,7 +499,7 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
 
     // Check for exclusions
     // only allow BSLightingShaderProperty blocks
-    string nifShapeName = nifShape->GetBlockName();
+    const string nifShapeName = nifShape->GetBlockName();
     if (nifShapeName != "NiTriShape" && nifShapeName != "BSTriShape" && nifShapeName != "BSLODTriShape"
         && nifShapeName != "BSMeshLODTriShape") {
         Logger::trace(L"Rejecting: Incorrect shape block type");
@@ -521,7 +521,7 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
     }
 
     // check that NIFShader is a BSLightingShaderProperty
-    string nifShaderName = nifShader->GetBlockName();
+    const string nifShaderName = nifShader->GetBlockName();
     if (nifShaderName != "BSLightingShaderProperty") {
         Logger::trace(L"Rejecting: Incorrect NIFShader block type");
         return result;
@@ -556,7 +556,7 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
 
     // Restore cache if exists
     {
-        lock_guard<mutex> lock(m_allowedShadersCacheMutex);
+        const lock_guard<mutex> lock(m_allowedShadersCacheMutex);
 
         // Check if shape has already been processed
         if (m_allowedShadersCache.find(cacheKey) != m_allowedShadersCache.end()) {
@@ -570,7 +570,7 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
     if (!cacheExists) {
         for (const auto& [shader, patcher] : patchers.shaderPatchers) {
             // note: name is defined in source code in UTF8-encoded files
-            Logger::Prefix prefixPatches(utf8toUTF16(patcher->getPatcherName()));
+            const Logger::Prefix prefixPatches(utf8toUTF16(patcher->getPatcherName()));
 
             // Check if shader should be applied
             vector<PatcherShader::PatcherMatch> curMatches;
@@ -609,7 +609,7 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
 
         {
             // write to cache
-            lock_guard<mutex> lock(m_allowedShadersCacheMutex);
+            const lock_guard<mutex> lock(m_allowedShadersCacheMutex);
             m_allowedShadersCache[cacheKey] = matches;
         }
     }
@@ -623,7 +623,7 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
     // Populate conflict mods if set
     if (conflictMods != nullptr) {
         if (modSet.size() > 1) {
-            lock_guard<mutex> lock(conflictMods->mutex);
+            const lock_guard<mutex> lock(conflictMods->mutex);
 
             // add mods to conflict set
             for (const auto& match : matches) {

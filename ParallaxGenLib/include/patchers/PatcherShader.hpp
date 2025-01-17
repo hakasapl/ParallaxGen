@@ -78,18 +78,21 @@ public:
     /// @param[out] matches vector of matches for the given textures
     /// @return if any match was found
     virtual auto shouldApply(
-        const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots, std::vector<PatcherMatch>& matches) -> bool = 0;
+        const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots, std::vector<PatcherMatch>& matches) -> bool
+        = 0;
 
     // Methods that apply the patch to a shape
-    virtual auto applyPatch(nifly::NiShape& nifShape, const PatcherMatch& match,
-        bool& nifModified) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> = 0;
+    virtual auto applyPatch(nifly::NiShape& nifShape, const PatcherMatch& match, bool& nifModified)
+        -> std::array<std::wstring, NUM_TEXTURE_SLOTS>
+        = 0;
 
     /// @brief apply the matched texture to the texture slots
     /// @param[in] oldSlots array of the slot textures
     /// @param[in] match matching texture
     /// @return new array containing the applied matched texture
-    virtual auto applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots,
-        const PatcherMatch& match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> = 0;
+    virtual auto applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots, const PatcherMatch& match)
+        -> std::array<std::wstring, NUM_TEXTURE_SLOTS>
+        = 0;
 
     virtual void processNewTXSTRecord(const PatcherMatch& match, const std::string& edid = {}) = 0;
 

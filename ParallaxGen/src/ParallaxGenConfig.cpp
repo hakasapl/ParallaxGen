@@ -6,6 +6,7 @@
 #include "NIFUtil.hpp"
 #include "ParallaxGenUtil.hpp"
 
+#include <algorithm>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/split.hpp>
@@ -78,7 +79,7 @@ auto ParallaxGenConfig::getDefaultParams() -> PGParams
 
 void ParallaxGenConfig::loadConfig()
 {
-    Logger::Prefix prefix("PGC/loadConfig");
+    const Logger::Prefix prefix("PGC/loadConfig");
 
     bool loadedConfig = false;
     if (filesystem::exists(getUserConfigFile())) {
@@ -272,13 +273,13 @@ void ParallaxGenConfig::replaceForwardSlashes(nlohmann::json& json)
 
 auto ParallaxGenConfig::getModOrder() -> vector<wstring>
 {
-    lock_guard<mutex> lock(m_modOrderMutex);
+    const lock_guard<mutex> lock(m_modOrderMutex);
     return m_modOrder;
 }
 
 auto ParallaxGenConfig::getModPriority(const wstring& mod) -> int
 {
-    lock_guard<mutex> lock(m_modOrderMutex);
+    const lock_guard<mutex> lock(m_modOrderMutex);
     if (m_modPriority.contains(mod)) {
         return m_modPriority[mod];
     }
@@ -288,13 +289,13 @@ auto ParallaxGenConfig::getModPriority(const wstring& mod) -> int
 
 auto ParallaxGenConfig::getModPriorityMap() -> unordered_map<wstring, int>
 {
-    lock_guard<mutex> lock(m_modOrderMutex);
+    const lock_guard<mutex> lock(m_modOrderMutex);
     return m_modPriority;
 }
 
 void ParallaxGenConfig::setModOrder(const vector<wstring>& modOrder)
 {
-    lock_guard<mutex> lock(m_modOrderMutex);
+    const lock_guard<mutex> lock(m_modOrderMutex);
     this->m_modOrder = modOrder;
 
     m_modPriority.clear();
@@ -337,7 +338,7 @@ auto ParallaxGenConfig::validateParams(const PGParams& params, vector<string>& e
 
         // Check if the MO2 profile exists
         const auto profiles = ModManagerDirectory::getMO2ProfilesFromInstanceDir(params.ModManager.mo2InstanceDir);
-        if (find(profiles.begin(), profiles.end(), params.ModManager.mo2Profile) == profiles.end()) {
+        if (std::ranges::find(profiles, params.ModManager.mo2Profile) == profiles.end()) {
             errors.emplace_back("MO2 Profile does not exist");
         }
     }
@@ -492,7 +493,7 @@ void ParallaxGenConfig::saveUserConfig()
     // write to file
     try {
         ofstream outFile(getUserConfigFile());
-        outFile << j.dump(2) << endl;
+        outFile << j.dump(2) << "\n";
         outFile.close();
     } catch (const exception& e) {
         spdlog::error("Failed to save user config: {}", e.what());

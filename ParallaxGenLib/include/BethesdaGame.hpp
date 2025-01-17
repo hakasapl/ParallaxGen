@@ -18,10 +18,10 @@ constexpr unsigned REG_BUFFER_SIZE = 1024;
 class BethesdaGame {
 public:
     // GameType enum
-    enum class GameType { SKYRIM_SE, SKYRIM_GOG, SKYRIM_VR, SKYRIM, ENDERAL, ENDERAL_SE };
+    enum class GameType : uint8_t { SKYRIM_SE, SKYRIM_GOG, SKYRIM_VR, SKYRIM, ENDERAL, ENDERAL_SE };
 
     // StoreType enum (for now only Steam is used)
-    enum class StoreType { STEAM, WINDOWS_STORE, EPIC_GAMES_STORE, GOG };
+    enum class StoreType : uint8_t { STEAM, WINDOWS_STORE, EPIC_GAMES_STORE, GOG };
 
     // struct that stores location of ini and custom ini file for a game
     struct ININame {
@@ -63,8 +63,8 @@ public:
     [[nodiscard]] auto getPluginsFile() const -> std::filesystem::path;
 
     // Get number of active plugins including Bethesda master files
-    [[nodiscard]] auto getActivePlugins(
-        const bool& trimExtension = false, const bool& lowercase = false) const -> std::vector<std::wstring>;
+    [[nodiscard]] auto getActivePlugins(const bool& trimExtension = false, const bool& lowercase = false) const
+        -> std::vector<std::wstring>;
 
     // Helpers
     [[nodiscard]] static auto getGameTypes() -> std::vector<GameType>;

@@ -49,7 +49,7 @@ void ParallaxGenPlugin::libLogMessageIfExists()
     GetLogMessage(&message, &level);
 
     while (message != nullptr) {
-        wstring messageOut(message);
+        const wstring messageOut(message);
         LocalFree(static_cast<HGLOBAL>(message)); // Only free if memory was allocated.
         message = nullptr;
 
@@ -89,7 +89,7 @@ void ParallaxGenPlugin::libThrowExceptionIfExists()
         return;
     }
 
-    wstring messageOut(message);
+    const wstring messageOut(message);
     LocalFree(static_cast<HGLOBAL>(message)); // Only free if memory was allocated.
 
     throw runtime_error("ParallaxGenMutagenWrapper.dll: " + ParallaxGenUtil::utf16toASCII(messageOut));
@@ -98,7 +98,7 @@ void ParallaxGenPlugin::libThrowExceptionIfExists()
 void ParallaxGenPlugin::libInitialize(
     const int& gameType, const wstring& dataPath, const wstring& outputPlugin, const vector<wstring>& loadOrder)
 {
-    lock_guard<mutex> lock(s_libMutex);
+    const lock_guard<mutex> lock(s_libMutex);
 
     // Use vector to manage the memory for LoadOrderArr
     vector<const wchar_t*> loadOrderArr;
@@ -119,7 +119,7 @@ void ParallaxGenPlugin::libInitialize(
 
 void ParallaxGenPlugin::libPopulateObjs()
 {
-    lock_guard<mutex> lock(s_libMutex);
+    const lock_guard<mutex> lock(s_libMutex);
 
     PopulateObjs();
     libLogMessageIfExists();
@@ -128,17 +128,17 @@ void ParallaxGenPlugin::libPopulateObjs()
 
 void ParallaxGenPlugin::libFinalize(const filesystem::path& outputPath, const bool& esmify)
 {
-    lock_guard<mutex> lock(s_libMutex);
+    const lock_guard<mutex> lock(s_libMutex);
 
     Finalize(outputPath.c_str(), static_cast<int>(esmify));
     libLogMessageIfExists();
     libThrowExceptionIfExists();
 }
 
-auto ParallaxGenPlugin::libGetMatchingTXSTObjs(
-    const wstring& nifName, const wstring& name3D, const int& index3D) -> vector<tuple<int, int>>
+auto ParallaxGenPlugin::libGetMatchingTXSTObjs(const wstring& nifName, const wstring& name3D, const int& index3D)
+    -> vector<tuple<int, int>>
 {
-    lock_guard<mutex> lock(s_libMutex);
+    const lock_guard<mutex> lock(s_libMutex);
 
     int length = 0;
     GetMatchingTXSTObjs(nifName.c_str(), name3D.c_str(), index3D, nullptr, nullptr, &length);
@@ -161,7 +161,7 @@ auto ParallaxGenPlugin::libGetMatchingTXSTObjs(
 
 auto ParallaxGenPlugin::libGetTXSTSlots(const int& txstIndex) -> array<wstring, NUM_TEXTURE_SLOTS>
 {
-    lock_guard<mutex> lock(s_libMutex);
+    const lock_guard<mutex> lock(s_libMutex);
 
     array<wchar_t*, NUM_TEXTURE_SLOTS> slotsArray = { nullptr };
     auto outputArray = array<wstring, NUM_TEXTURE_SLOTS>();
@@ -188,7 +188,7 @@ auto ParallaxGenPlugin::libGetTXSTSlots(const int& txstIndex) -> array<wstring, 
 
 void ParallaxGenPlugin::libCreateTXSTPatch(const int& txstIndex, const array<wstring, NUM_TEXTURE_SLOTS>& slots)
 {
-    lock_guard<mutex> lock(s_libMutex);
+    const lock_guard<mutex> lock(s_libMutex);
 
     // Prepare the array of const wchar_t* pointers from the Slots array
     array<const wchar_t*, NUM_TEXTURE_SLOTS> slotsArray = { nullptr };
@@ -205,7 +205,7 @@ void ParallaxGenPlugin::libCreateTXSTPatch(const int& txstIndex, const array<wst
 auto ParallaxGenPlugin::libCreateNewTXSTPatch(
     const int& altTexIndex, const array<wstring, NUM_TEXTURE_SLOTS>& slots, const string& newEDID) -> int
 {
-    lock_guard<mutex> lock(s_libMutex);
+    const lock_guard<mutex> lock(s_libMutex);
 
     // Prepare the array of const wchar_t* pointers from the Slots array
     array<const wchar_t*, NUM_TEXTURE_SLOTS> slotsArray = { nullptr };
@@ -224,7 +224,7 @@ auto ParallaxGenPlugin::libCreateNewTXSTPatch(
 
 void ParallaxGenPlugin::libSetModelAltTex(const int& altTexIndex, const int& txstIndex)
 {
-    lock_guard<mutex> lock(s_libMutex);
+    const lock_guard<mutex> lock(s_libMutex);
 
     SetModelAltTex(altTexIndex, txstIndex);
     libLogMessageIfExists();
@@ -233,7 +233,7 @@ void ParallaxGenPlugin::libSetModelAltTex(const int& altTexIndex, const int& txs
 
 void ParallaxGenPlugin::libSet3DIndex(const int& altTexIndex, const int& index3D)
 {
-    lock_guard<mutex> lock(s_libMutex);
+    const lock_guard<mutex> lock(s_libMutex);
 
     Set3DIndex(altTexIndex, index3D);
     libLogMessageIfExists();
@@ -242,7 +242,7 @@ void ParallaxGenPlugin::libSet3DIndex(const int& altTexIndex, const int& index3D
 
 auto ParallaxGenPlugin::libGetTXSTFormID(const int& txstIndex) -> tuple<unsigned int, wstring>
 {
-    lock_guard<mutex> lock(s_libMutex);
+    const lock_guard<mutex> lock(s_libMutex);
 
     wchar_t* pluginName = nullptr;
     unsigned int formID = 0;
@@ -264,7 +264,7 @@ auto ParallaxGenPlugin::libGetTXSTFormID(const int& txstIndex) -> tuple<unsigned
 
 auto ParallaxGenPlugin::libGetModelRecHandleFromAltTexHandle(const int& altTexIndex) -> int
 {
-    lock_guard<mutex> lock(s_libMutex);
+    const lock_guard<mutex> lock(s_libMutex);
 
     int modelRecHandle = 0;
     GetModelRecHandleFromAltTexHandle(altTexIndex, &modelRecHandle);
@@ -276,7 +276,7 @@ auto ParallaxGenPlugin::libGetModelRecHandleFromAltTexHandle(const int& altTexIn
 
 void ParallaxGenPlugin::libSetModelRecNIF(const int& modelRecHandle, const wstring& nifPath)
 {
-    lock_guard<mutex> lock(s_libMutex);
+    const lock_guard<mutex> lock(s_libMutex);
 
     SetModelRecNIF(modelRecHandle, nifPath.c_str());
     libLogMessageIfExists();
@@ -324,7 +324,7 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
     const int& index3D, PatcherUtil::PatcherObjectSet& patchers, vector<TXSTResult>& results,
     PatcherUtil::ConflictModResults* conflictMods)
 {
-    lock_guard<mutex> lock(s_processShapeMutex);
+    const lock_guard<mutex> lock(s_processShapeMutex);
 
     const auto matches = libGetMatchingTXSTObjs(nifPath, name3D, index3D);
 
@@ -354,7 +354,7 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
         unordered_set<wstring> modSet;
         for (const auto& [shader, patcher] : patchers.shaderPatchers) {
             // note: name is defined in source code in UTF8-encoded files
-            Logger::Prefix prefixPatches(ParallaxGenUtil::utf8toUTF16(patcher->getPatcherName()));
+            const Logger::Prefix prefixPatches(ParallaxGenUtil::utf8toUTF16(patcher->getPatcherName()));
 
             // Check if shader should be applied
             vector<PatcherShader::PatcherMatch> curMatches;
@@ -400,7 +400,7 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
         // Populate conflict mods if set
         if (conflictMods != nullptr) {
             if (modSet.size() > 1) {
-                lock_guard<mutex> lock(conflictMods->mutex);
+                const lock_guard<mutex> lock(conflictMods->mutex);
 
                 // add mods to conflict set
                 for (const auto& match : matches) {
@@ -456,7 +456,7 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
         curResult.modelRecHandle = libGetModelRecHandleFromAltTexHandle(altTexIndex);
 
         {
-            lock_guard<mutex> lock(s_createdTXSTMutex);
+            const lock_guard<mutex> lock(s_createdTXSTMutex);
 
             // Check if we need to make a new TXST record
             if (s_createdTXSTs.contains(newSlots)) {
@@ -470,7 +470,7 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
             // Create a new TXST record
             spdlog::trace(
                 L"Plugin Patching | {} | {} | {} | Creating a new TXST record and patching", nifPath, name3D, index3D);
-            string newEDID = fmt::format("PGTXST{:05d}", s_edidCounter++);
+            const string newEDID = fmt::format("PGTXST{:05d}", s_edidCounter++);
             curResult.txstIndex = libCreateNewTXSTPatch(altTexIndex, newSlots, newEDID);
             patchers.shaderPatchers.at(winningShaderMatch.shader)
                 ->processNewTXSTRecord(winningShaderMatch.match, newEDID);
@@ -484,9 +484,9 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
 
 void ParallaxGenPlugin::assignMesh(const wstring& nifPath, const vector<TXSTResult>& result)
 {
-    lock_guard<mutex> lock(s_processShapeMutex);
+    const lock_guard<mutex> lock(s_processShapeMutex);
 
-    Logger::Prefix prefix(L"assignMesh");
+    const Logger::Prefix prefix(L"assignMesh");
 
     // Loop through results
     for (const auto& curResult : result) {
@@ -501,9 +501,9 @@ void ParallaxGenPlugin::assignMesh(const wstring& nifPath, const vector<TXSTResu
 void ParallaxGenPlugin::set3DIndices(
     const wstring& nifPath, const vector<tuple<nifly::NiShape*, int, int>>& shapeTracker)
 {
-    lock_guard<mutex> lock(s_processShapeMutex);
+    const lock_guard<mutex> lock(s_processShapeMutex);
 
-    Logger::Prefix prefix(L"set3DIndices");
+    const Logger::Prefix prefix(L"set3DIndices");
 
     // Loop through shape tracker
     for (const auto& [shape, oldIndex3D, newIndex3D] : shapeTracker) {

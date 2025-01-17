@@ -98,27 +98,27 @@ auto BethesdaGame::isGamePathValid(const std::filesystem::path& gamePath, const 
 auto BethesdaGame::getINILocations() const -> ININame
 {
     if (m_objGameType == BethesdaGame::GameType::SKYRIM_SE) {
-        return ININame { "skyrim.ini", "skyrimprefs.ini", "skyrimcustom.ini" };
+        return ININame { .ini = "skyrim.ini", .iniPrefs = "skyrimprefs.ini", .iniCustom = "skyrimcustom.ini" };
     }
 
     if (m_objGameType == BethesdaGame::GameType::SKYRIM_GOG) {
-        return ININame { "skyrim.ini", "skyrimprefs.ini", "skyrimcustom.ini" };
+        return ININame { .ini = "skyrim.ini", .iniPrefs = "skyrimprefs.ini", .iniCustom = "skyrimcustom.ini" };
     }
 
     if (m_objGameType == BethesdaGame::GameType::SKYRIM_VR) {
-        return ININame { "skyrim.ini", "skyrimprefs.ini", "skyrimcustom.ini" };
+        return ININame { .ini = "skyrim.ini", .iniPrefs = "skyrimprefs.ini", .iniCustom = "skyrimcustom.ini" };
     }
 
     if (m_objGameType == BethesdaGame::GameType::SKYRIM) {
-        return ININame { "skyrim.ini", "skyrimprefs.ini", "skyrimcustom.ini" };
+        return ININame { .ini = "skyrim.ini", .iniPrefs = "skyrimprefs.ini", .iniCustom = "skyrimcustom.ini" };
     }
 
     if (m_objGameType == BethesdaGame::GameType::ENDERAL) {
-        return ININame { "enderal.ini", "enderalprefs.ini", "enderalcustom.ini" };
+        return ININame { .ini = "enderal.ini", .iniPrefs = "enderalprefs.ini", .iniCustom = "enderalcustom.ini" };
     }
 
     if (m_objGameType == BethesdaGame::GameType::ENDERAL_SE) {
-        return ININame { "enderal.ini", "enderalprefs.ini", "enderalcustom.ini" };
+        return ININame { .ini = "enderal.ini", .iniPrefs = "enderalprefs.ini", .iniCustom = "enderalcustom.ini" };
     }
 
     return {};
@@ -277,7 +277,7 @@ auto BethesdaGame::findGamePathFromSteam(const GameType& type) -> filesystem::pa
     std::vector<char> data(REG_BUFFER_SIZE, '\0');
     DWORD dataSize = REG_BUFFER_SIZE;
 
-    LONG result
+    const LONG result
         = RegGetValueA(baseHKey, regPath.c_str(), "Installed Path", RRF_RT_REG_SZ, nullptr, data.data(), &dataSize);
     if (result == ERROR_SUCCESS) {
         return { data.data() };
@@ -325,7 +325,7 @@ auto BethesdaGame::getActivePlugins(const bool& trimExtension, const bool& lower
     }
 
     // Add cc plugins
-    filesystem::path creationClubFile = getGamePath() / "Skyrim.ccc";
+    const filesystem::path creationClubFile = getGamePath() / "Skyrim.ccc";
     if (filesystem::exists(creationClubFile)) {
         ifstream creationClubFileHandle(creationClubFile, 1);
         if (creationClubFileHandle.is_open()) {

@@ -27,7 +27,7 @@ PatcherShader::PatcherShader(filesystem::path nifPath, nifly::NifFile* nif, stri
 
 auto PatcherShader::getTextureSet(nifly::NiShape& nifShape) -> array<wstring, NUM_TEXTURE_SLOTS>
 {
-    lock_guard<mutex> lock(s_patchedTextureSetsMutex);
+    const lock_guard<mutex> lock(s_patchedTextureSetsMutex);
 
     auto* const nifShader = getNIF()->GetShader(&nifShape);
     const auto texturesetBlockID = getNIF()->GetBlockID(getNIF()->GetHeader().GetBlock(nifShader->TextureSetRef()));
@@ -45,7 +45,7 @@ auto PatcherShader::getTextureSet(nifly::NiShape& nifShape) -> array<wstring, NU
 auto PatcherShader::setTextureSet(
     nifly::NiShape& nifShape, const array<wstring, NUM_TEXTURE_SLOTS>& textures, bool& nifModified) -> void
 {
-    lock_guard<mutex> lock(s_patchedTextureSetsMutex);
+    const lock_guard<mutex> lock(s_patchedTextureSetsMutex);
 
     auto* const nifShader = getNIF()->GetShader(&nifShape);
     const auto textureSetBlockID = getNIF()->GetBlockID(getNIF()->GetHeader().GetBlock(nifShader->TextureSetRef()));
@@ -81,7 +81,7 @@ auto PatcherShader::setTextureSet(
         }
 
         auto* const nifShaderBSLSP = dynamic_cast<nifly::BSLightingShaderProperty*>(nifShader);
-        NiBlockRef<BSShaderTextureSet> newBlockRef(newBlockID);
+        const NiBlockRef<BSShaderTextureSet> newBlockRef(newBlockID);
         nifShaderBSLSP->textureSetRef = newBlockRef;
 
         s_patchedTextureSets[nifShapeKey].patchResults[newBlockID] = textures;

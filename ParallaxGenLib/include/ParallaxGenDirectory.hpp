@@ -75,8 +75,8 @@ public:
 private:
     auto findFiles() -> void;
 
-    auto mapTexturesFromNIF(
-        const std::filesystem::path& nifPath, const bool& cacheNIF = false) -> ParallaxGenTask::PGResult;
+    auto mapTexturesFromNIF(const std::filesystem::path& nifPath, const bool& cacheNIF = false)
+        -> ParallaxGenTask::PGResult;
 
     auto updateUnconfirmedTexturesMap(
         const std::filesystem::path& path, const NIFUtil::TextureSlots& slot, const NIFUtil::TextureType& type) -> void;
@@ -128,8 +128,8 @@ public:
     [[nodiscard]] auto hasTextureAttribute(
         const std::filesystem::path& path, const NIFUtil::TextureAttribute& attribute) -> bool;
 
-    [[nodiscard]] auto getTextureAttributes(
-        const std::filesystem::path& path) -> std::unordered_set<NIFUtil::TextureAttribute>;
+    [[nodiscard]] auto getTextureAttributes(const std::filesystem::path& path)
+        -> std::unordered_set<NIFUtil::TextureAttribute>;
 
     void setTextureType(const std::filesystem::path& path, const NIFUtil::TextureType& type);
 

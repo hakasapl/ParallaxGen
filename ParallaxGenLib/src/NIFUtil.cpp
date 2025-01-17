@@ -153,8 +153,8 @@ auto NIFUtil::getSlotFromTexType(const TextureType& type) -> TextureSlots
     return texTypeToSlotMap[TextureType::UNKNOWN];
 }
 
-auto NIFUtil::getDefaultsFromSuffix(
-    const std::filesystem::path& path) -> tuple<NIFUtil::TextureSlots, NIFUtil::TextureType>
+auto NIFUtil::getDefaultsFromSuffix(const std::filesystem::path& path)
+    -> tuple<NIFUtil::TextureSlots, NIFUtil::TextureType>
 {
     const auto& suffixMap = getTexSuffixMap();
 
@@ -239,14 +239,14 @@ auto NIFUtil::setShaderVec2(nifly::Vector2& value, const nifly::Vector2& newValu
 }
 
 // Shader flag helpers
-auto NIFUtil::hasShaderFlag(
-    nifly::BSShaderProperty* nifShaderBSLSP, const nifly::SkyrimShaderPropertyFlags1& flag) -> bool
+auto NIFUtil::hasShaderFlag(nifly::BSShaderProperty* nifShaderBSLSP, const nifly::SkyrimShaderPropertyFlags1& flag)
+    -> bool
 {
     return (nifShaderBSLSP->shaderFlags1 & flag) != 0U;
 }
 
-auto NIFUtil::hasShaderFlag(
-    nifly::BSShaderProperty* nifShaderBSLSP, const nifly::SkyrimShaderPropertyFlags2& flag) -> bool
+auto NIFUtil::hasShaderFlag(nifly::BSShaderProperty* nifShaderBSLSP, const nifly::SkyrimShaderPropertyFlags2& flag)
+    -> bool
 {
     return (nifShaderBSLSP->shaderFlags2 & flag) != 0U;
 }

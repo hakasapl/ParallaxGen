@@ -35,7 +35,7 @@ PatcherUpgradeParallaxToCM::PatcherUpgradeParallaxToCM(std::filesystem::path nif
 auto PatcherUpgradeParallaxToCM::transform(
     const PatcherShader::PatcherMatch& fromMatch, PatcherShader::PatcherMatch& result) -> bool
 {
-    lock_guard<mutex> lock(s_upgradeCMMutex);
+    const lock_guard<mutex> lock(s_upgradeCMMutex);
 
     const auto heightMap = fromMatch.matchedPath;
 

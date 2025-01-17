@@ -14,7 +14,7 @@ using TextureSet = std::array<std::wstring, NUM_TEXTURE_SLOTS>;
 static constexpr float MIN_FLOAT_COMPARISON = 10e-05F;
 
 // These need to be in the order of worst shader to best shader
-enum class ShapeShader { NONE, UNKNOWN, VANILLAPARALLAX, COMPLEXMATERIAL, TRUEPBR };
+enum class ShapeShader : uint8_t { NONE, UNKNOWN, VANILLAPARALLAX, COMPLEXMATERIAL, TRUEPBR };
 
 /// @brief get a string that represents the given shader
 /// @param[in] shader shader type
@@ -23,7 +23,7 @@ auto getStrFromShader(const ShapeShader& shader) -> std::string;
 
 /// @brief zero-based index of texture in BSShaderTextureSet
 /// there can be more than one type of textures assigned to a a texture slot, the slot name describes the default one
-enum class TextureSlots : unsigned int {
+enum class TextureSlots : uint8_t {
     DIFFUSE,
     NORMAL,
     GLOW,
@@ -37,7 +37,7 @@ enum class TextureSlots : unsigned int {
 };
 
 /// @brief All known types of textures
-enum class TextureType {
+enum class TextureType : uint8_t {
     DIFFUSE,
     NORMAL,
     MODELSPACENORMAL,
@@ -60,7 +60,7 @@ enum class TextureType {
     UNKNOWN
 };
 
-enum class TextureAttribute { CM_ENVMASK, CM_GLOSSINESS, CM_METALNESS, CM_HEIGHT };
+enum class TextureAttribute : uint8_t { CM_ENVMASK, CM_GLOSSINESS, CM_METALNESS, CM_HEIGHT };
 
 auto getStrFromTexType(const TextureType& type) -> std::string;
 
@@ -82,8 +82,8 @@ struct PGTextureHasher {
     auto operator()(const PGTexture& texture) const -> size_t
     {
         // Hash the path and the texture type, and combine them
-        std::size_t pathHash = std::hash<std::filesystem::path>()(texture.path);
-        std::size_t typeHash = std::hash<int>()(static_cast<int>(texture.type));
+        const std::size_t pathHash = std::hash<std::filesystem::path>()(texture.path);
+        const std::size_t typeHash = std::hash<int>()(static_cast<int>(texture.type));
 
         // Combine the hashes using bitwise XOR and bit shifting
         return pathHash ^ (typeHash << 1);
@@ -115,8 +115,8 @@ auto getDefaultsFromSuffix(const std::filesystem::path& path) -> std::tuple<Text
 /// @param nifShader the shader
 /// @param[in] type type that is set
 /// @param[out] changed false if the type was already set, true otherwise
-auto setShaderType(
-    nifly::NiShader* nifShader, const nifly::BSLightingShaderPropertyShaderType& type, bool& changed) -> void;
+auto setShaderType(nifly::NiShader* nifShader, const nifly::BSLightingShaderPropertyShaderType& type, bool& changed)
+    -> void;
 
 /// @brief set a new value for a float value
 /// @param value the value to change
@@ -244,13 +244,13 @@ auto getTexMatch(const std::wstring& base, const TextureType& desiredType,
 /// @param[in] nif the nif
 /// @param nifShape the shape
 /// @return array of texture names without suffixes
-auto getSearchPrefixes(
-    nifly::NifFile const& nif, nifly::NiShape* nifShape) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;
+auto getSearchPrefixes(nifly::NifFile const& nif, nifly::NiShape* nifShape)
+    -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;
 
 /// @brief Gets all the texture prefixes for a texture set. ie. _n.dds is removed etc. for each slot
 /// @param[in] oldSlots
 /// @return array of texture names without suffixes
-auto getSearchPrefixes(
-    const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;
+auto getSearchPrefixes(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots)
+    -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;
 
 } // namespace NIFUtil

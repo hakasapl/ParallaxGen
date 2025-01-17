@@ -76,8 +76,8 @@ public:
      * @return true Match found
      * @return false No match found
      */
-    auto shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots,
-        std::vector<PatcherMatch>& matches) -> bool override;
+    auto shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots, std::vector<PatcherMatch>& matches)
+        -> bool override;
 
     /**
      * @brief Apply the CM shader to the shape
@@ -88,8 +88,8 @@ public:
      * @param[out] shapeDeleted If shape was deleted
      * @return std::array<std::wstring, NUM_TEXTURE_SLOTS> New slots after patching
      */
-    auto applyPatch(nifly::NiShape& nifShape, const PatcherMatch& match,
-        bool& nifModified) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
+    auto applyPatch(nifly::NiShape& nifShape, const PatcherMatch& match, bool& nifModified)
+        -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
 
     /**
      * @brief Apply the CM shader to the slots
@@ -98,8 +98,8 @@ public:
      * @param match Match to apply
      * @return std::array<std::wstring, NUM_TEXTURE_SLOTS> New slots after patching
      */
-    auto applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots,
-        const PatcherMatch& match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
+    auto applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots, const PatcherMatch& match)
+        -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
 
     void processNewTXSTRecord(const PatcherMatch& match, const std::string& edid = {}) override;
 

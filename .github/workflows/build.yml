@@ -1,4 +1,4 @@
-name: Build and Publish Artifacts
+name: Check and Build
 
 on:
   push:
@@ -48,6 +48,11 @@ jobs:
         New-Item -ItemType Directory -Path "build" -Force
         cd build
         cmake .. -G Ninja -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DCMAKE_INSTALL_PREFIX="../install" -DCMAKE_BUILD_TYPE=RelWithDebInfo
+
+    - name: Set up python
+      uses: actions/setup-python@v3
+    - name: Linting checks
+      uses: pre-commit/action@v3.0.1
 
     - name: Build and Install ParallaxGen
       run: |

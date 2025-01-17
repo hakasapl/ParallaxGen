@@ -4,13 +4,13 @@
 #include <string>
 #include <unordered_map>
 
-#define FULL_PERCENTAGE 100
-
 class ParallaxGenTask {
 public:
-    enum class PGResult { SUCCESS, SUCCESS_WITH_WARNINGS, FAILURE };
+    enum class PGResult : uint8_t { SUCCESS, SUCCESS_WITH_WARNINGS, FAILURE };
 
 private:
+    static constexpr int FULL_PERCENTAGE = 100;
+
     int m_progressPrintModulo;
 
     std::string m_taskName;

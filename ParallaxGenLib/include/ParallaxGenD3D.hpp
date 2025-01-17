@@ -82,8 +82,8 @@ public:
     /// @param[in] ddsPath1 relative path of the first file in the data directory
     /// @param[in] ddsPath2 relative path of the second file in the data directory
     /// @return if the aspect ratio matches
-    auto checkIfAspectRatioMatches(
-        const std::filesystem::path& ddsPath1, const std::filesystem::path& ddsPath2) -> bool;
+    auto checkIfAspectRatioMatches(const std::filesystem::path& ddsPath1, const std::filesystem::path& ddsPath2)
+        -> bool;
 
     /// @brief  Gets the error message from an HRESULT for logging
     /// @param hr the HRESULT to check
@@ -97,21 +97,21 @@ private:
     // GPU functions
     void initShaders();
 
-    auto compileShader(const std::filesystem::path& filename,
-        Microsoft::WRL::ComPtr<ID3DBlob>& shaderBlob) const -> ParallaxGenTask::PGResult;
+    auto compileShader(const std::filesystem::path& filename, Microsoft::WRL::ComPtr<ID3DBlob>& shaderBlob) const
+        -> ParallaxGenTask::PGResult;
 
-    auto createComputeShader(const std::wstring& shaderPath,
-        Microsoft::WRL::ComPtr<ID3D11ComputeShader>& shaderDest) -> ParallaxGenTask::PGResult;
+    auto createComputeShader(const std::wstring& shaderPath, Microsoft::WRL::ComPtr<ID3D11ComputeShader>& shaderDest)
+        -> ParallaxGenTask::PGResult;
 
     // GPU Helpers
-    auto createTexture2D(const DirectX::ScratchImage& texture,
-        Microsoft::WRL::ComPtr<ID3D11Texture2D>& dest) const -> ParallaxGenTask::PGResult;
+    auto createTexture2D(const DirectX::ScratchImage& texture, Microsoft::WRL::ComPtr<ID3D11Texture2D>& dest) const
+        -> ParallaxGenTask::PGResult;
 
     auto createTexture2D(Microsoft::WRL::ComPtr<ID3D11Texture2D>& existingTexture,
         Microsoft::WRL::ComPtr<ID3D11Texture2D>& dest) const -> ParallaxGenTask::PGResult;
 
-    auto createTexture2D(
-        D3D11_TEXTURE2D_DESC& desc, Microsoft::WRL::ComPtr<ID3D11Texture2D>& dest) const -> ParallaxGenTask::PGResult;
+    auto createTexture2D(D3D11_TEXTURE2D_DESC& desc, Microsoft::WRL::ComPtr<ID3D11Texture2D>& dest) const
+        -> ParallaxGenTask::PGResult;
 
     auto createShaderResourceView(const Microsoft::WRL::ComPtr<ID3D11Texture2D>& texture,
         Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& dest) const -> ParallaxGenTask::PGResult;
@@ -120,20 +120,20 @@ private:
         Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView>& dest) const -> ParallaxGenTask::PGResult;
 
     auto createUnorderedAccessView(const Microsoft::WRL::ComPtr<ID3D11Resource>& gpuResource,
-        const D3D11_UNORDERED_ACCESS_VIEW_DESC& desc,
-        Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView>& dest) const -> ParallaxGenTask::PGResult;
+        const D3D11_UNORDERED_ACCESS_VIEW_DESC& desc, Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView>& dest) const
+        -> ParallaxGenTask::PGResult;
 
-    auto createBuffer(const void* data, D3D11_BUFFER_DESC& desc,
-        Microsoft::WRL::ComPtr<ID3D11Buffer>& dest) const -> ParallaxGenTask::PGResult;
+    auto createBuffer(const void* data, D3D11_BUFFER_DESC& desc, Microsoft::WRL::ComPtr<ID3D11Buffer>& dest) const
+        -> ParallaxGenTask::PGResult;
 
-    auto createConstantBuffer(const void* data, const UINT& size,
-        Microsoft::WRL::ComPtr<ID3D11Buffer>& dest) const -> ParallaxGenTask::PGResult;
+    auto createConstantBuffer(const void* data, const UINT& size, Microsoft::WRL::ComPtr<ID3D11Buffer>& dest) const
+        -> ParallaxGenTask::PGResult;
 
-    [[nodiscard]] auto blockingDispatch(
-        UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ) const -> ParallaxGenTask::PGResult;
+    [[nodiscard]] auto blockingDispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ) const
+        -> ParallaxGenTask::PGResult;
 
-    [[nodiscard]] auto readBack(const Microsoft::WRL::ComPtr<ID3D11Texture2D>& gpuResource,
-        const int& channels) const -> std::vector<unsigned char>;
+    [[nodiscard]] auto readBack(const Microsoft::WRL::ComPtr<ID3D11Texture2D>& gpuResource, const int& channels) const
+        -> std::vector<unsigned char>;
 
     template <typename T>
     [[nodiscard]] auto readBack(const Microsoft::WRL::ComPtr<ID3D11Buffer>& gpuResource) const -> std::vector<T>;
@@ -141,8 +141,8 @@ private:
     // Texture Helpers
     auto getDDS(const std::filesystem::path& ddsPath, DirectX::ScratchImage& dds) const -> ParallaxGenTask::PGResult;
 
-    auto getDDSMetadata(
-        const std::filesystem::path& ddsPath, DirectX::TexMetadata& ddsMeta) -> ParallaxGenTask::PGResult;
+    auto getDDSMetadata(const std::filesystem::path& ddsPath, DirectX::TexMetadata& ddsMeta)
+        -> ParallaxGenTask::PGResult;
 
     static auto loadRawPixelsToScratchImage(const std::vector<unsigned char>& rawPixels, const size_t& width,
         const size_t& height, const size_t& mips, DXGI_FORMAT format) -> DirectX::ScratchImage;

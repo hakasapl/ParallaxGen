@@ -1,303 +1,318 @@
-#include "BethesdaGame.hpp"
+#pragma warning(push)
+#pragma warning(disable : 4834)
+
 #include "BethesdaDirectory.hpp"
+#include "BethesdaGame.hpp"
 #include "CommonTests.hpp"
-#include "ParallaxGenPlugin.hpp"
-#include "ParallaxGenUtil.hpp"
 
 #include <gtest/gtest.h>
 
 #include <boost/algorithm/string/predicate.hpp>
 
 #include <algorithm>
+#include <cwctype>
 #include <filesystem>
 #include <memory>
-#include <cwctype>
 
 using namespace std;
 
+// NOLINTBEGIN(misc-non-private-member-variables-in-classes,cppcoreguidelines-non-private-member-variables-in-classes)
 class BethesdaDirectoryTest : public ::testing::TestWithParam<PGTesting::TestEnvGameParams> {
 protected:
-  // Set up code for each test
-  void SetUp() override {
-    auto &Params = GetParam();
+    // Set up code for each test
+    void SetUp() override
+    {
+        const auto& params = GetParam();
 
-    BG = make_unique<BethesdaGame>(Params.GameType, false, Params.GamePath, Params.AppDataPath, Params.DocumentPath); // no logging
-    BD = make_unique<BethesdaDirectory>(BG.get(), "", nullptr, false); // no logging
-  }
+        m_bg = make_unique<BethesdaGame>(
+            params.GameType, false, params.GamePath, params.AppDataPath, params.DocumentPath); // no logging
+        m_bd = make_unique<BethesdaDirectory>(m_bg.get(), "", nullptr, false); // no logging
+    }
 
-  // Tear down code for each test
-  void TearDown() override {
-    // Clean up after each test
-  }
-  std::unique_ptr<BethesdaGame> BG;
-  std::unique_ptr<BethesdaDirectory> BD;
+    // Tear down code for each test
+    void TearDown() override
+    {
+        // Clean up after each test
+    }
+
+    std::unique_ptr<BethesdaGame> m_bg;
+    std::unique_ptr<BethesdaDirectory> m_bd;
 };
+// NOLINTEND(misc-non-private-member-variables-in-classes,cppcoreguidelines-non-private-member-variables-in-classes)
 
-TEST_P(BethesdaDirectoryTest, Initialization) {
-  auto &Params = GetParam();
-  EXPECT_TRUE(std::filesystem::equivalent(BD->getDataPath(), Params.GamePath / "Data"));
+TEST_P(BethesdaDirectoryTest, Initialization)
+{
+    const auto& params = GetParam();
+    EXPECT_TRUE(std::filesystem::equivalent(m_bd->getDataPath(), params.GamePath / "Data"));
 }
 
-TEST_P(BethesdaDirectoryTest, Path) {
-  EXPECT_FALSE(BD->isPathAscii({L"textures\\texture\u00a1"}));
-  EXPECT_TRUE(BD->isPathAscii({L"textures\\texture~"}));
-  EXPECT_FALSE(BD->isPathAscii({L"textures\\texture�~"}));
+TEST_P(BethesdaDirectoryTest, Path)
+{
+    EXPECT_FALSE(m_bd->isPathAscii({ L"textures\\texture\u00a1" }));
+    EXPECT_TRUE(m_bd->isPathAscii({ L"textures\\texture~" }));
+    EXPECT_FALSE(m_bd->isPathAscii({ L"textures\\texture�~" }));
 
-  EXPECT_FALSE(BD->isPathAscii({"textures\\texture�~"}));
-  EXPECT_TRUE(BD->isPathAscii({"textures\\texture~"}));
+    EXPECT_FALSE(m_bd->isPathAscii({ "textures\\texture�~" }));
+    EXPECT_TRUE(m_bd->isPathAscii({ "textures\\texture~" }));
 
-  EXPECT_TRUE(BD->getAsciiPathLower({L"Textures\\Texture"}) == L"textures\\texture");
+    EXPECT_TRUE(m_bd->getAsciiPathLower({ L"Textures\\Texture" }) == L"textures\\texture");
 
-  EXPECT_TRUE(BD->pathEqualityIgnoreCase({L"Textures\\Texture"}, {L"textures\\texture"}));
-  EXPECT_FALSE(BD->pathEqualityIgnoreCase({L"Textures\\Texture1"}, {L"textures\\texture2"}));
-  EXPECT_FALSE(BD->pathEqualityIgnoreCase({L"textures\\texture1"}, {L"texture\\texture2"}));
+    EXPECT_TRUE(m_bd->pathEqualityIgnoreCase({ L"Textures\\Texture" }, { L"textures\\texture" }));
+    EXPECT_FALSE(m_bd->pathEqualityIgnoreCase({ L"Textures\\Texture1" }, { L"textures\\texture2" }));
+    EXPECT_FALSE(m_bd->pathEqualityIgnoreCase({ L"textures\\texture1" }, { L"texture\\texture2" }));
 
-  // path separator
-  EXPECT_TRUE(BD->pathEqualityIgnoreCase({L"Textures\\Texture"}, {L"textures/texture"}));
-  EXPECT_FALSE(BD->pathEqualityIgnoreCase({L"Textures\\Texture1"}, {L"textures/texture2"}));
-  EXPECT_FALSE(BD->pathEqualityIgnoreCase({L"textures\\texture1"}, {L"textures/texture2"}));
+    // path separator
+    EXPECT_TRUE(m_bd->pathEqualityIgnoreCase({ L"Textures\\Texture" }, { L"textures/texture" }));
+    EXPECT_FALSE(m_bd->pathEqualityIgnoreCase({ L"Textures\\Texture1" }, { L"textures/texture2" }));
+    EXPECT_FALSE(m_bd->pathEqualityIgnoreCase({ L"textures\\texture1" }, { L"textures/texture2" }));
 
-  EXPECT_TRUE(BD->checkIfAnyComponentIs(L"meshes\\landscape\\bridges\\bridge01.nif", {L"landscape", L"architecture"}));
-  EXPECT_FALSE(BD->checkIfAnyComponentIs(L"meshes\\landscape\\bridges\\bridge01.nif", {L"architecture"}));
+    EXPECT_TRUE(
+        m_bd->checkIfAnyComponentIs(L"meshes\\landscape\\bridges\\bridge01.nif", { L"landscape", L"architecture" }));
+    EXPECT_FALSE(m_bd->checkIfAnyComponentIs(L"meshes\\landscape\\bridges\\bridge01.nif", { L"architecture" }));
 }
 
-TEST_P(BethesdaDirectoryTest, Glob) {
-    std::vector<wstring> GlobList{L"textures\\texture*.dds", L"meshes\\*.nif"};
-    EXPECT_TRUE(BD->checkGlob(L"textures\\texture0.dds", GlobList));
-    EXPECT_TRUE(BD->checkGlob(L"meshes\\mesh0.nif", GlobList));
-    EXPECT_TRUE(BD->checkGlob(L"meshes\\architecture/mesh1.nif", GlobList));
-    EXPECT_FALSE(BD->checkGlob(L"textures\\architecture\\texture1.dds", GlobList));
-    EXPECT_FALSE(BD->checkGlob(L"scripts\\script1.pex", GlobList));
-    EXPECT_FALSE(BD->checkGlob(L"textures\\texture0.png", GlobList));
+TEST_P(BethesdaDirectoryTest, Glob)
+{
+    const std::vector<wstring> globList { L"textures\\texture*.dds", L"meshes\\*.nif" };
+    EXPECT_TRUE(m_bd->checkGlob(L"textures\\texture0.dds", globList));
+    EXPECT_TRUE(m_bd->checkGlob(L"meshes\\mesh0.nif", globList));
+    EXPECT_TRUE(m_bd->checkGlob(L"meshes\\architecture/mesh1.nif", globList));
+    EXPECT_FALSE(m_bd->checkGlob(L"textures\\architecture\\texture1.dds", globList));
+    EXPECT_FALSE(m_bd->checkGlob(L"scripts\\script1.pex", globList));
+    EXPECT_FALSE(m_bd->checkGlob(L"textures\\texture0.png", globList));
 
-    std::vector<wstring> GlobListCfg {L"*\\cameras\\*" };
-    EXPECT_TRUE(BD->checkGlob(L"meshes\\cameras\\camera1.nif", GlobListCfg));
-    EXPECT_TRUE(BD->checkGlob(L"meshes\\submeshes\\cameras\\camera1.nif", GlobListCfg));
-    EXPECT_TRUE(BD->checkGlob(L"meshes\\Cameras\\camera1.nif", GlobListCfg));
-    EXPECT_FALSE(BD->checkGlob(L"cameras\\camera1.nif", GlobListCfg));
-    EXPECT_FALSE(BD->checkGlob(L"camera1.nif", GlobListCfg));
-    EXPECT_FALSE(BD->checkGlob(L"cameras1.nif", GlobListCfg));
+    const std::vector<wstring> globListCfg { L"*\\cameras\\*" };
+    EXPECT_TRUE(m_bd->checkGlob(L"meshes\\cameras\\camera1.nif", globListCfg));
+    EXPECT_TRUE(m_bd->checkGlob(L"meshes\\submeshes\\cameras\\camera1.nif", globListCfg));
+    EXPECT_TRUE(m_bd->checkGlob(L"meshes\\Cameras\\camera1.nif", globListCfg));
+    EXPECT_FALSE(m_bd->checkGlob(L"cameras\\camera1.nif", globListCfg));
+    EXPECT_FALSE(m_bd->checkGlob(L"camera1.nif", globListCfg));
+    EXPECT_FALSE(m_bd->checkGlob(L"cameras1.nif", globListCfg));
 
     // upper case
-    std::vector<wstring> GlobListCfgU{L"*\\cameras\\*"};
-    EXPECT_TRUE(BD->checkGlob(L"meshes\\cameras\\camera1.nif", GlobListCfgU));
-    EXPECT_TRUE(BD->checkGlob(L"meshes\\submeshes\\cameras\\camera1.nif", GlobListCfgU));
-    EXPECT_TRUE(BD->checkGlob(L"meshes\\Cameras\\camera1.nif", GlobListCfgU));
+    const std::vector<wstring> globListCfgU { L"*\\cameras\\*" };
+    EXPECT_TRUE(m_bd->checkGlob(L"meshes\\cameras\\camera1.nif", globListCfgU));
+    EXPECT_TRUE(m_bd->checkGlob(L"meshes\\submeshes\\cameras\\camera1.nif", globListCfgU));
+    EXPECT_TRUE(m_bd->checkGlob(L"meshes\\Cameras\\camera1.nif", globListCfgU));
 
     // TODO: really needed on windows? forward slashes in glob
-    std::vector<wstring> GlobListCfgSL{L"*/Cameras/*"};
-    EXPECT_TRUE(BD->checkGlob(L"meshes/cameras/camera1.nif", GlobListCfgSL));
-    EXPECT_TRUE(BD->checkGlob(L"meshes/submeshes/cameras/camera1.nif", GlobListCfgSL));
-    EXPECT_TRUE(BD->checkGlob(L"meshes/Cameras/camera1.nif", GlobListCfgSL));
+    const std::vector<wstring> globListCfgSL { L"*/Cameras/*" };
+    EXPECT_TRUE(m_bd->checkGlob(L"meshes/cameras/camera1.nif", globListCfgSL));
+    EXPECT_TRUE(m_bd->checkGlob(L"meshes/submeshes/cameras/camera1.nif", globListCfgSL));
+    EXPECT_TRUE(m_bd->checkGlob(L"meshes/Cameras/camera1.nif", globListCfgSL));
 }
 
-TEST_P(BethesdaDirectoryTest, Files) {
-  const std::filesystem::path Bridge01Path{"textures\\landscape\\roads\\bridge01.dds"};
+TEST_P(BethesdaDirectoryTest, Files)
+{
+    const std::filesystem::path bridge01Path { R"(textures\landscape\roads\bridge01.dds)" };
 
-  const std::vector<wstring> LoadOrderBSAs{L"Skyrim - Textures5.bsa", L"Skyrim - Misc.bsa",
-                                                  L"unofficial skyrim special edition patch - textures.bsa",
-                                                  L"Skyrim - Meshes1.bsa"};
+    const std::vector<wstring> loadOrderBSAs { L"Skyrim - Textures5.bsa", L"Skyrim - Misc.bsa",
+        L"unofficial skyrim special edition patch - textures.bsa", L"Skyrim - Meshes1.bsa" };
 
-  const std::vector<wstring> NotLoadOrderBSAs{L"Skyrim - Textures0.bsa"};
+    const std::vector<wstring> notLoadOrderBSAs { L"Skyrim - Textures0.bsa" };
 
-  // functions throw exceptions if called before populating
-  EXPECT_THROW(BD->isBSAFile(Bridge01Path), runtime_error);
-  EXPECT_THROW(BD->isFile(Bridge01Path), runtime_error);
-  EXPECT_THROW(BD->isLooseFile(Bridge01Path), runtime_error);
-  EXPECT_THROW(BD->isBSAFile(Bridge01Path), runtime_error);
+    // functions throw exceptions if called before populating
+    EXPECT_THROW(m_bd->isBSAFile(bridge01Path), runtime_error);
+    EXPECT_THROW(m_bd->isFile(bridge01Path), runtime_error);
+    EXPECT_THROW(m_bd->isLooseFile(bridge01Path), runtime_error);
+    EXPECT_THROW(m_bd->isBSAFile(bridge01Path), runtime_error);
 
-  // loose files only
-  BD->populateFileMap(false);
-  auto &FileMapLoose = BD->getFileMap();
-  const std::filesystem::path WRCarpet01Path{L"textures\\architecture\\whiterun\\wrcarpet01.dds"};
-  EXPECT_TRUE(BD->isFile(WRCarpet01Path));
-  EXPECT_TRUE(BD->isLooseFile(WRCarpet01Path));
-  EXPECT_FALSE(BD->isBSAFile(WRCarpet01Path));
+    // loose files only
+    m_bd->populateFileMap(false);
+    const auto& fileMapLoose = m_bd->getFileMap();
+    const std::filesystem::path wrCarpet01Path { L"textures\\architecture\\whiterun\\wrcarpet01.dds" };
+    EXPECT_TRUE(m_bd->isFile(wrCarpet01Path));
+    EXPECT_TRUE(m_bd->isLooseFile(wrCarpet01Path));
+    EXPECT_FALSE(m_bd->isBSAFile(wrCarpet01Path));
 
-  EXPECT_TRUE(FileMapLoose.at(WRCarpet01Path).BSAFile == nullptr);
+    EXPECT_TRUE(fileMapLoose.at(wrCarpet01Path).bsaFile == nullptr);
 
-  EXPECT_TRUE(!BD->getFile(WRCarpet01Path, false).empty());
-  EXPECT_TRUE(!BD->getFile(WRCarpet01Path, true).empty());
+    EXPECT_TRUE(!m_bd->getFile(wrCarpet01Path, false).empty());
+    EXPECT_TRUE(!m_bd->getFile(wrCarpet01Path, true).empty());
 
-  EXPECT_FALSE(BD->isFileInBSA(WRCarpet01Path, LoadOrderBSAs)); // no BSA was loaded, so function must return false
+    EXPECT_FALSE(m_bd->isFileInBSA(wrCarpet01Path, loadOrderBSAs)); // no BSA was loaded, so function must return false
 
-  // Skyrim - Textures5.bsa from env
-  EXPECT_FALSE(BD->isFile(Bridge01Path));
-  EXPECT_FALSE(BD->isLooseFile(Bridge01Path));
-  EXPECT_FALSE(BD->isBSAFile(Bridge01Path));
+    // Skyrim - Textures5.bsa from env
+    EXPECT_FALSE(m_bd->isFile(bridge01Path));
+    EXPECT_FALSE(m_bd->isLooseFile(bridge01Path));
+    EXPECT_FALSE(m_bd->isBSAFile(bridge01Path));
 
-  EXPECT_THROW(BD->getFile(Bridge01Path, false), runtime_error);
-  EXPECT_THROW(BD->getFile(Bridge01Path, true), runtime_error);
+    EXPECT_THROW(m_bd->getFile(bridge01Path, false), runtime_error);
+    EXPECT_THROW(m_bd->getFile(bridge01Path, true), runtime_error);
 
-  EXPECT_FALSE(BD->isFileInBSA(Bridge01Path, LoadOrderBSAs));
-  EXPECT_FALSE(BD->isFileInBSA(Bridge01Path, NotLoadOrderBSAs));
+    EXPECT_FALSE(m_bd->isFileInBSA(bridge01Path, loadOrderBSAs));
+    EXPECT_FALSE(m_bd->isFileInBSA(bridge01Path, notLoadOrderBSAs));
 
-  // all files
-  BD->populateFileMap(true);
-  auto &FileMap = BD->getFileMap();
+    // all files
+    m_bd->populateFileMap(true);
+    const auto& fileMap = m_bd->getFileMap();
 
-  // Sycerscote.bsa
-  EXPECT_FALSE(BD->isFile(L"meshes\\syerscote\\goldpot01Ã,Â°.nif"));
+    // Sycerscote.bsa
+    EXPECT_FALSE(m_bd->isFile(L"meshes\\syerscote\\goldpot01Ã,Â°.nif"));
 
-  // Skyrim - Textures5.bsa from env
-  EXPECT_TRUE(BD->isFile(Bridge01Path));
-  EXPECT_FALSE(BD->isLooseFile(Bridge01Path));
-  EXPECT_TRUE(BD->isBSAFile(Bridge01Path));
+    // Skyrim - Textures5.bsa from env
+    EXPECT_TRUE(m_bd->isFile(bridge01Path));
+    EXPECT_FALSE(m_bd->isLooseFile(bridge01Path));
+    EXPECT_TRUE(m_bd->isBSAFile(bridge01Path));
 
-  EXPECT_TRUE(FileMap.at(Bridge01Path).BSAFile != nullptr);
-  EXPECT_TRUE(FileMap.at(Bridge01Path).BSAFile->Path.filename() == std::filesystem::path{L"Skyrim - Textures5.bsa"});
-  EXPECT_TRUE(FileMap.at(Bridge01Path).Path == Bridge01Path);
+    EXPECT_TRUE(fileMap.at(bridge01Path).bsaFile != nullptr);
+    EXPECT_TRUE(
+        fileMap.at(bridge01Path).bsaFile->path.filename() == std::filesystem::path { L"Skyrim - Textures5.bsa" });
+    EXPECT_TRUE(fileMap.at(bridge01Path).path == bridge01Path);
 
-  EXPECT_TRUE(!BD->getFile(Bridge01Path, false).empty());
-  EXPECT_TRUE(!BD->getFile(Bridge01Path,true).empty());
+    EXPECT_TRUE(!m_bd->getFile(bridge01Path, false).empty());
+    EXPECT_TRUE(!m_bd->getFile(bridge01Path, true).empty());
 
-  EXPECT_TRUE(BD->isFileInBSA(Bridge01Path, LoadOrderBSAs));
-  EXPECT_FALSE(BD->isFileInBSA(Bridge01Path, NotLoadOrderBSAs));
+    EXPECT_TRUE(m_bd->isFileInBSA(bridge01Path, loadOrderBSAs));
+    EXPECT_FALSE(m_bd->isFileInBSA(bridge01Path, notLoadOrderBSAs));
 
-  // Skyrim - Misc.bsa
-  const std::filesystem::path AbForSwornScriptPath{L"scripts\\abforswornbriarheartscript.pex"};
-  EXPECT_TRUE(BD->isFile(AbForSwornScriptPath));
-  EXPECT_FALSE(BD->isLooseFile(AbForSwornScriptPath));
-  EXPECT_TRUE(BD->isBSAFile(AbForSwornScriptPath));
+    // Skyrim - Misc.bsa
+    const std::filesystem::path abForSwornScriptPath { L"scripts\\abforswornbriarheartscript.pex" };
+    EXPECT_TRUE(m_bd->isFile(abForSwornScriptPath));
+    EXPECT_FALSE(m_bd->isLooseFile(abForSwornScriptPath));
+    EXPECT_TRUE(m_bd->isBSAFile(abForSwornScriptPath));
 
-  EXPECT_TRUE(FileMap.at(AbForSwornScriptPath).BSAFile != nullptr);
-  EXPECT_TRUE(FileMap.at(AbForSwornScriptPath).BSAFile->Path.filename() == std::filesystem::path{L"Skyrim - Misc.bsa"});
-  EXPECT_TRUE(FileMap.at(AbForSwornScriptPath).Path == AbForSwornScriptPath);
+    EXPECT_TRUE(fileMap.at(abForSwornScriptPath).bsaFile != nullptr);
+    EXPECT_TRUE(
+        fileMap.at(abForSwornScriptPath).bsaFile->path.filename() == std::filesystem::path { L"Skyrim - Misc.bsa" });
+    EXPECT_TRUE(fileMap.at(abForSwornScriptPath).path == abForSwornScriptPath);
 
-  EXPECT_TRUE(!BD->getFile(AbForSwornScriptPath, false).empty());
-  EXPECT_TRUE(!BD->getFile(AbForSwornScriptPath, true).empty());
+    EXPECT_TRUE(!m_bd->getFile(abForSwornScriptPath, false).empty());
+    EXPECT_TRUE(!m_bd->getFile(abForSwornScriptPath, true).empty());
 
-  EXPECT_TRUE(BD->isFileInBSA(AbForSwornScriptPath, LoadOrderBSAs));
-  EXPECT_FALSE(BD->isFileInBSA(AbForSwornScriptPath, NotLoadOrderBSAs));
+    EXPECT_TRUE(m_bd->isFileInBSA(abForSwornScriptPath, loadOrderBSAs));
+    EXPECT_FALSE(m_bd->isFileInBSA(abForSwornScriptPath, notLoadOrderBSAs));
 
-  // unofficial skyrim special edition patch - textures.bsa
-  const std::filesystem::path StoneQuarry01Path{L"textures\\_byoh\\clutter\\resources/stonequarry01.dds"};
-  EXPECT_TRUE(BD->isFile(StoneQuarry01Path));
-  EXPECT_FALSE(BD->isLooseFile(StoneQuarry01Path));
-  EXPECT_TRUE(BD->isBSAFile(StoneQuarry01Path));
+    // unofficial skyrim special edition patch - textures.bsa
+    const std::filesystem::path stoneQuarry01Path { L"textures\\_byoh\\clutter\\resources/stonequarry01.dds" };
+    EXPECT_TRUE(m_bd->isFile(stoneQuarry01Path));
+    EXPECT_FALSE(m_bd->isLooseFile(stoneQuarry01Path));
+    EXPECT_TRUE(m_bd->isBSAFile(stoneQuarry01Path));
 
-  EXPECT_TRUE(FileMap.at(StoneQuarry01Path).BSAFile != nullptr);
-  EXPECT_TRUE(FileMap.at(StoneQuarry01Path).BSAFile->Path.filename() == std::filesystem::path{L"unofficial skyrim special edition patch - textures.bsa"});
-  EXPECT_TRUE(FileMap.at(StoneQuarry01Path).Path == StoneQuarry01Path);
+    EXPECT_TRUE(fileMap.at(stoneQuarry01Path).bsaFile != nullptr);
+    EXPECT_TRUE(fileMap.at(stoneQuarry01Path).bsaFile->path.filename()
+        == std::filesystem::path { L"unofficial skyrim special edition patch - textures.bsa" });
+    EXPECT_TRUE(fileMap.at(stoneQuarry01Path).path == stoneQuarry01Path);
 
-  EXPECT_TRUE(!BD->getFile(StoneQuarry01Path, false).empty());
-  EXPECT_TRUE(!BD->getFile(StoneQuarry01Path, true).empty());
+    EXPECT_TRUE(!m_bd->getFile(stoneQuarry01Path, false).empty());
+    EXPECT_TRUE(!m_bd->getFile(stoneQuarry01Path, true).empty());
 
-  EXPECT_TRUE(BD->isFileInBSA(StoneQuarry01Path, LoadOrderBSAs));
-  EXPECT_FALSE(BD->isFileInBSA(StoneQuarry01Path, NotLoadOrderBSAs));
+    EXPECT_TRUE(m_bd->isFileInBSA(stoneQuarry01Path, loadOrderBSAs));
+    EXPECT_FALSE(m_bd->isFileInBSA(stoneQuarry01Path, notLoadOrderBSAs));
 
-  // Skyrim - Meshes1.bsa
-  const std::filesystem::path Road3way01Path{L"meshes\\landscape\\roads\\road3way01.nif"};
-  EXPECT_TRUE(BD->isFile(Road3way01Path));
-  EXPECT_FALSE(BD->isLooseFile(Road3way01Path));
-  EXPECT_TRUE(BD->isBSAFile(Road3way01Path));
+    // Skyrim - Meshes1.bsa
+    const std::filesystem::path road3way01Path { L"meshes\\landscape\\roads\\road3way01.nif" };
+    EXPECT_TRUE(m_bd->isFile(road3way01Path));
+    EXPECT_FALSE(m_bd->isLooseFile(road3way01Path));
+    EXPECT_TRUE(m_bd->isBSAFile(road3way01Path));
 
-  EXPECT_TRUE(FileMap.at(Road3way01Path).BSAFile != nullptr);
-  EXPECT_TRUE(FileMap.at(Road3way01Path).BSAFile->Path.filename() == std::filesystem::path{L"Skyrim - Meshes1.bsa"});
-  EXPECT_TRUE(FileMap.at(Road3way01Path).Path == Road3way01Path);
+    EXPECT_TRUE(fileMap.at(road3way01Path).bsaFile != nullptr);
+    EXPECT_TRUE(
+        fileMap.at(road3way01Path).bsaFile->path.filename() == std::filesystem::path { L"Skyrim - Meshes1.bsa" });
+    EXPECT_TRUE(fileMap.at(road3way01Path).path == road3way01Path);
 
-  EXPECT_TRUE(!BD->getFile(Road3way01Path).empty());
-  EXPECT_TRUE(!BD->getFile(Road3way01Path, true).empty());
+    EXPECT_TRUE(!m_bd->getFile(road3way01Path).empty());
+    EXPECT_TRUE(!m_bd->getFile(road3way01Path, true).empty());
 
-  EXPECT_TRUE(BD->isFileInBSA(StoneQuarry01Path, LoadOrderBSAs));
-  EXPECT_FALSE(BD->isFileInBSA(StoneQuarry01Path, NotLoadOrderBSAs));
+    EXPECT_TRUE(m_bd->isFileInBSA(stoneQuarry01Path, loadOrderBSAs));
+    EXPECT_FALSE(m_bd->isFileInBSA(stoneQuarry01Path, notLoadOrderBSAs));
 
-  // loose file overwriting BSA file
-  EXPECT_TRUE(BD->isFile(WRCarpet01Path));
-  EXPECT_TRUE(BD->isLooseFile(WRCarpet01Path));
-  EXPECT_FALSE(BD->isBSAFile(WRCarpet01Path));
+    // loose file overwriting BSA file
+    EXPECT_TRUE(m_bd->isFile(wrCarpet01Path));
+    EXPECT_TRUE(m_bd->isLooseFile(wrCarpet01Path));
+    EXPECT_FALSE(m_bd->isBSAFile(wrCarpet01Path));
 
-  EXPECT_TRUE(FileMap.at(WRCarpet01Path).BSAFile == nullptr);
+    EXPECT_TRUE(fileMap.at(wrCarpet01Path).bsaFile == nullptr);
 
-  EXPECT_TRUE(!BD->getFile(WRCarpet01Path, false).empty());
-  EXPECT_TRUE(!BD->getFile(WRCarpet01Path, true).empty());
+    EXPECT_TRUE(!m_bd->getFile(wrCarpet01Path, false).empty());
+    EXPECT_TRUE(!m_bd->getFile(wrCarpet01Path, true).empty());
 
-  EXPECT_TRUE(BD->isFileInBSA(Bridge01Path, LoadOrderBSAs));
+    EXPECT_TRUE(m_bd->isFileInBSA(bridge01Path, loadOrderBSAs));
 
-  // check if files can still be retrieved after clearing cache
-  BD->clearCache();
-  EXPECT_TRUE(!BD->getFile(Bridge01Path).empty());
-  EXPECT_TRUE(!BD->getFile(AbForSwornScriptPath).empty());
-  EXPECT_TRUE(!BD->getFile(StoneQuarry01Path).empty());
-  EXPECT_TRUE(!BD->getFile(Road3way01Path).empty());
-  EXPECT_TRUE(!BD->getFile(WRCarpet01Path).empty());
+    // check if files can still be retrieved after clearing cache
+    m_bd->clearCache();
+    EXPECT_TRUE(!m_bd->getFile(bridge01Path).empty());
+    EXPECT_TRUE(!m_bd->getFile(abForSwornScriptPath).empty());
+    EXPECT_TRUE(!m_bd->getFile(stoneQuarry01Path).empty());
+    EXPECT_TRUE(!m_bd->getFile(road3way01Path).empty());
+    EXPECT_TRUE(!m_bd->getFile(wrCarpet01Path).empty());
 
-  // file from Skyrim - Textures0, not in env
-  const std::filesystem::path AlduinPath{L"textures\\actors\\alduin\\alduin.dds"};
-  EXPECT_FALSE(BD->isBSAFile(AlduinPath));
-  EXPECT_FALSE(BD->isFile(AlduinPath));
-  EXPECT_FALSE(BD->isLooseFile(AlduinPath));
+    // file from Skyrim - Textures0, not in env
+    const std::filesystem::path alduinPath { L"textures\\actors\\alduin\\alduin.dds" };
+    EXPECT_FALSE(m_bd->isBSAFile(alduinPath));
+    EXPECT_FALSE(m_bd->isFile(alduinPath));
+    EXPECT_FALSE(m_bd->isLooseFile(alduinPath));
 
-  // upper case path
-  //  Skyrim - Textures5.bsa from env
-  const std::filesystem::path Bridge01PathUpper{L"TEXTURES\\LANDSCAPE\\ROADS\\bridge01.dds"};
-  EXPECT_THROW(FileMap.at(Bridge01PathUpper), out_of_range);
-  auto Bridge01PathLower = BD->getAsciiPathLower(Bridge01Path);
-  EXPECT_TRUE(FileMap.at(Bridge01PathLower).Path == Bridge01PathLower); // original path from BSA is lower case
+    // upper case path
+    //  Skyrim - Textures5.bsa from env
+    const std::filesystem::path bridge01PathUpper { L"TEXTURES\\LANDSCAPE\\ROADS\\bridge01.dds" };
+    EXPECT_THROW(fileMap.at(bridge01PathUpper), out_of_range);
+    auto bridge01PathLower = BethesdaDirectory::getAsciiPathLower(bridge01Path);
+    EXPECT_TRUE(fileMap.at(bridge01PathLower).path == bridge01PathLower); // original path from BSA is lower case
 
-  // file is same with and without cache
-  auto BridgeFileWOCache = BD->getFile(Bridge01Path, false);
-  auto BridgeFileWCache = BD->getFile(Bridge01Path, true);
-  EXPECT_TRUE(BridgeFileWOCache == BridgeFileWCache);
-  BD->clearCache();
-  BridgeFileWOCache = BD->getFile(Bridge01Path, false);
-  EXPECT_TRUE(BridgeFileWOCache == BridgeFileWCache);
+    // file is same with and without cache
+    auto bridgeFileWOCache = m_bd->getFile(bridge01Path, false);
+    auto bridgeFileWCache = m_bd->getFile(bridge01Path, true);
+    EXPECT_TRUE(bridgeFileWOCache == bridgeFileWCache);
+    m_bd->clearCache();
+    bridgeFileWOCache = m_bd->getFile(bridge01Path, false);
+    EXPECT_TRUE(bridgeFileWOCache == bridgeFileWCache);
 }
 
-TEST_P(BethesdaDirectoryTest, LoadOrder) {
-  auto &Params = GetParam();
+TEST_P(BethesdaDirectoryTest, LoadOrder)
+{
+    auto loadOrder = m_bd->getBSALoadOrder();
+    EXPECT_TRUE(loadOrder.size() == 7);
 
-  auto LoadOrder = BD->getBSALoadOrder();
-  EXPECT_TRUE(LoadOrder.size() == 7);
-
-  EXPECT_TRUE(std::find(LoadOrder.begin(), LoadOrder.end(), L"Skyrim - Meshes1.bsa") != LoadOrder.end());
-  EXPECT_TRUE(std::find(LoadOrder.begin(), LoadOrder.end(), L"Skyrim - Textures5.bsa") != LoadOrder.end());
-  EXPECT_TRUE(std::find(LoadOrder.begin(), LoadOrder.end(), L"Skyrim - Misc.bsa") != LoadOrder.end());
-  EXPECT_TRUE(std::find(LoadOrder.begin(), LoadOrder.end(), L"ccBGSSSE037-Curios.bsa") != LoadOrder.end());
-  EXPECT_TRUE(std::find(LoadOrder.begin(), LoadOrder.end(), L"unofficial skyrim special edition patch - textures.bsa") != LoadOrder.end());
-  EXPECT_TRUE(std::find(LoadOrder.begin(), LoadOrder.end(), L"unofficial skyrim special edition patch.bsa") != LoadOrder.end());
+    EXPECT_TRUE(std::ranges::find(loadOrder, L"Skyrim - Meshes1.bsa") != loadOrder.end());
+    EXPECT_TRUE(std::ranges::find(loadOrder, L"Skyrim - Textures5.bsa") != loadOrder.end());
+    EXPECT_TRUE(std::ranges::find(loadOrder, L"Skyrim - Misc.bsa") != loadOrder.end());
+    EXPECT_TRUE(std::ranges::find(loadOrder, L"ccBGSSSE037-Curios.bsa") != loadOrder.end());
+    EXPECT_TRUE(
+        std::ranges::find(loadOrder, L"unofficial skyrim special edition patch - textures.bsa") != loadOrder.end());
+    EXPECT_TRUE(std::ranges::find(loadOrder, L"unofficial skyrim special edition patch.bsa") != loadOrder.end());
 }
 
-TEST_P(BethesdaDirectoryTest, FileMap) {
-  auto &Params = GetParam();
+TEST_P(BethesdaDirectoryTest, FileMap)
+{
+    // only loose files
+    m_bd->populateFileMap(false);
+    const auto& fileMapNoBSA = m_bd->getFileMap();
+    EXPECT_TRUE(!fileMapNoBSA.empty());
 
-  // only loose files
-  BD->populateFileMap(false);
-  auto& FileMapNoBSA = BD->getFileMap();
-  EXPECT_TRUE(!FileMapNoBSA.empty());
+    // all files
+    m_bd->populateFileMap(true);
+    const auto& fileMap = m_bd->getFileMap();
 
-  // all files
-  BD->populateFileMap(true);
-  auto& FileMap = BD->getFileMap();
+    ASSERT_TRUE(!fileMap.empty());
+    cout << fileMap.size();
 
-  ASSERT_TRUE(!FileMap.empty());
-  auto File = FileMap.begin();
-  cout << FileMap.size();
+    // ASSERT_ is used here to stop on the first error and prevent the log spammed with thousands of error messages
+    for (const auto& mapEntry : fileMap) {
+        auto pathStr = mapEntry.first.wstring();
 
-  // ASSERT_ is used here to stop on the first error and prevent the log spammed with thousands of error messages
-  for (auto &MapEntry : FileMap) {
-    auto PathStr = MapEntry.first.wstring();
+        const auto upperChars
+            = std::count_if(pathStr.begin(), pathStr.end(), [](wchar_t c) { return std::iswupper(c); });
+        ASSERT_TRUE(upperChars == 0);
+        ASSERT_TRUE(boost::iequals(pathStr, mapEntry.second.path.wstring()));
 
-    const int upperChars = std::count_if(PathStr.begin(), PathStr.end(), [](wchar_t c) { return std::iswupper(c); });
-    ASSERT_TRUE(upperChars == 0);
+        auto bsaFile = mapEntry.second.bsaFile;
 
-    ASSERT_TRUE(boost::iequals(PathStr, MapEntry.second.Path.wstring()));
-
-    auto BSAFile = MapEntry.second.BSAFile;
-
-    if ( !(BSAFile == nullptr) ) {
-        ASSERT_TRUE(std::filesystem::exists(BSAFile->Path));
-        ASSERT_FALSE(BD->isLooseFile(MapEntry.first));
-        ASSERT_TRUE(BD->isBSAFile(MapEntry.first));
-    } else {
-        ASSERT_TRUE(BD->isLooseFile(MapEntry.first));
+        if (!(bsaFile == nullptr)) {
+            ASSERT_TRUE(std::filesystem::exists(bsaFile->path));
+            ASSERT_FALSE(m_bd->isLooseFile(mapEntry.first));
+            ASSERT_TRUE(m_bd->isBSAFile(mapEntry.first));
+        } else {
+            ASSERT_TRUE(m_bd->isLooseFile(mapEntry.first));
+        }
     }
-  }
 
-  // clear file cache
-  BD->clearCache();
-  auto &FileMapAfterClearCache = BD->getFileMap();
-  EXPECT_FALSE(FileMapAfterClearCache.empty());
+    // clear file cache
+    m_bd->clearCache();
+    const auto& fileMapAfterClearCache = m_bd->getFileMap();
+    EXPECT_FALSE(fileMapAfterClearCache.empty());
 }
 
-INSTANTIATE_TEST_SUITE_P(GameParametersSE, BethesdaDirectoryTest, ::testing::Values(PGTestEnvs::TESTENVSkyrimSE));
+INSTANTIATE_TEST_SUITE_P(GameParametersSE, BethesdaDirectoryTest, ::testing::Values(PGTestEnvs::s_testENVSkyrimSE));
+
+#pragma warning(pop)

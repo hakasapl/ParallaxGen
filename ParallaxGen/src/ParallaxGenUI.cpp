@@ -1,5 +1,6 @@
 #include "ParallaxGenUI.hpp"
 
+#include <algorithm>
 #include <boost/algorithm/string/join.hpp>
 #include <wx/app.h>
 #include <wx/arrstr.h>
@@ -49,7 +50,7 @@ auto ParallaxGenUI::selectModOrder(
     }
 
     // Sort by ShapeShader first, and then by key name lexicographically
-    std::sort(modOrder.begin(), modOrder.end(), [](const auto& lhs, const auto& rhs) {
+    std::ranges::sort(modOrder, [](const auto& lhs, const auto& rhs) {
         if (lhs.first == rhs.first) {
             return lhs.second < rhs.second; // Secondary sort by wstring key
         }
@@ -60,7 +61,7 @@ auto ParallaxGenUI::selectModOrder(
 
     // Add new mods
     for (const auto& [shader, mod] : modOrder) {
-        if (find(existingMods.begin(), existingMods.end(), mod) == existingMods.end()) {
+        if (std::ranges::find(existingMods, mod) == existingMods.end()) {
             // add to new mods
             finalModOrder.push_back(mod);
         }
@@ -105,7 +106,7 @@ auto ParallaxGenUI::selectModOrder(
         shaderCombinedStrs.push_back(shaderStr);
 
         // check if mod is in existing order
-        isNew.push_back(find(existingMods.begin(), existingMods.end(), mod) == existingMods.end());
+        isNew.push_back(std::ranges::find(existingMods, mod) == existingMods.end());
 
         // add to conflict tracker
         conflictTracker.insert({ mod, get<1>(conflicts.at(mod)) });

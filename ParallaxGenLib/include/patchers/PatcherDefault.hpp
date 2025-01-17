@@ -62,8 +62,8 @@ public:
      * @return true Found matches
      * @return false No matches found
      */
-    auto shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots,
-        std::vector<PatcherMatch>& matches) -> bool override;
+    auto shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots, std::vector<PatcherMatch>& matches)
+        -> bool override;
 
     /**
      * @brief Apply a match to a shape for parallax
@@ -74,8 +74,8 @@ public:
      * @param[out] shapeDeleted Whether the shape was deleted (always false)
      * @return std::array<std::wstring, NUM_TEXTURE_SLOTS> New slots of shape
      */
-    auto applyPatch(nifly::NiShape& nifShape, const PatcherMatch& match,
-        bool& nifModified) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
+    auto applyPatch(nifly::NiShape& nifShape, const PatcherMatch& match, bool& nifModified)
+        -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
 
     /**
      * @brief Apply a match to slots for parallax
@@ -84,8 +84,8 @@ public:
      * @param match Match to apply
      * @return std::array<std::wstring, NUM_TEXTURE_SLOTS> New slots
      */
-    auto applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots,
-        const PatcherMatch& match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
+    auto applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots, const PatcherMatch& match)
+        -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
 
     void processNewTXSTRecord(const PatcherMatch& match, const std::string& edid = {}) override;
 

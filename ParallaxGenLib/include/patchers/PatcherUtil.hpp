@@ -73,6 +73,6 @@ public:
      * @param Patchers Patcher set to use
      * @return ShaderPatcherMatch Transformed match
      */
-    static auto applyTransformIfNeeded(
-        const ShaderPatcherMatch& match, const PatcherObjectSet& patchers) -> ShaderPatcherMatch;
+    static auto applyTransformIfNeeded(const ShaderPatcherMatch& match, const PatcherObjectSet& patchers)
+        -> ShaderPatcherMatch;
 };

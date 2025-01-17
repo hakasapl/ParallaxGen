@@ -86,7 +86,7 @@ void ModManagerDirectory::populateModFileMapMO2(
     spdlog::info("Populating mods from Mod Organizer 2");
 
     // First read modorganizer.ini in the instance folder to get the profiles and mods folders
-    filesystem::path mo2IniFile = instanceDir / L"modorganizer.ini";
+    const filesystem::path mo2IniFile = instanceDir / L"modorganizer.ini";
     if (!filesystem::exists(mo2IniFile)) {
         throw runtime_error(
             "Mod Organizer 2 ini file does not exist: " + ParallaxGenUtil::utf16toUTF8(mo2IniFile.wstring()));
@@ -200,7 +200,7 @@ void ModManagerDirectory::populateModFileMapMO2(
                         L"Path {} in directory {} contains non-ASCII characters", relPath.wstring(), modDir.wstring());
                 }
 
-                filesystem::path relPathLower = ParallaxGenUtil::toLowerASCII(relPath.wstring());
+                const filesystem::path relPathLower = ParallaxGenUtil::toLowerASCII(relPath.wstring());
                 // check if already in map
                 if (m_modFileMap.contains(relPathLower)) {
                     continue;
@@ -249,7 +249,7 @@ auto ModManagerDirectory::getModManagerTypeFromStr(const string& type) -> ModMan
 auto ModManagerDirectory::getMO2ProfilesFromInstanceDir(const filesystem::path& instanceDir) -> vector<wstring>
 {
     // First read modorganizer.ini in the instance folder to get the profiles and mods folders
-    filesystem::path mo2IniFile = instanceDir / L"modorganizer.ini";
+    const filesystem::path mo2IniFile = instanceDir / L"modorganizer.ini";
     if (!filesystem::exists(mo2IniFile)) {
         return {};
     }

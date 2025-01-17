@@ -57,7 +57,7 @@ void ParallaxGenRunner::runTasks()
                 CPPTRACE_CATCH(const class exception& e)
                 {
                     if (!exceptionThrown.load()) {
-                        lock_guard<mutex> lock(exceptionMutex);
+                        const lock_guard<mutex> lock(exceptionMutex);
                         exception = e;
                         exceptionStackTrace = cpptrace::from_current_exception().to_string();
                         exceptionThrown.store(true);
