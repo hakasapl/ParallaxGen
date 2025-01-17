@@ -2,20 +2,25 @@
 
 using namespace std;
 
-ParallaxGenDirectory *Patcher::PGD = nullptr;
-ParallaxGenD3D *Patcher::PGD3D = nullptr;
+ParallaxGenDirectory* Patcher::s_pgd = nullptr;
+ParallaxGenD3D* Patcher::s_pgd3d = nullptr;
 
-auto Patcher::loadStatics(ParallaxGenDirectory &PGD, ParallaxGenD3D &PGD3D) -> void {
-  Patcher::PGD = &PGD;
-  Patcher::PGD3D = &PGD3D;
+auto Patcher::loadStatics(ParallaxGenDirectory& pgd, ParallaxGenD3D& pgd3d) -> void
+{
+    Patcher::s_pgd = &pgd;
+    Patcher::s_pgd3d = &pgd3d;
 }
 
-Patcher::Patcher(filesystem::path NIFPath, nifly::NifFile *NIF, string PatcherName)
-    : NIFPath(std::move(NIFPath)), NIF(NIF), PatcherName(std::move(PatcherName)) {}
+Patcher::Patcher(filesystem::path nifPath, nifly::NifFile* nif, string patcherName)
+    : m_nifPath(std::move(nifPath))
+    , m_nif(nif)
+    , m_patcherName(std::move(patcherName))
+{
+}
 
-auto Patcher::getNIFPath() const -> filesystem::path { return NIFPath; }
-auto Patcher::getNIF() const -> nifly::NifFile * { return NIF; }
-auto Patcher::getPatcherName() const -> string { return PatcherName; }
+auto Patcher::getNIFPath() const -> filesystem::path { return m_nifPath; }
+auto Patcher::getNIF() const -> nifly::NifFile* { return m_nif; }
+auto Patcher::getPatcherName() const -> string { return m_patcherName; }
 
-auto Patcher::getPGD() -> ParallaxGenDirectory * { return PGD; }
-auto Patcher::getPGD3D() -> ParallaxGenD3D * { return PGD3D; }
+auto Patcher::getPGD() -> ParallaxGenDirectory* { return s_pgd; }
+auto Patcher::getPGD3D() -> ParallaxGenD3D* { return s_pgd3d; }

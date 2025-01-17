@@ -12,487 +12,517 @@
 #include "ParallaxGenWarnings.hpp"
 #include "patchers/PatcherUtil.hpp"
 
-#include <format>
-
 using namespace std;
 
 namespace {
-void dnne_failure(enum failure_type type, int error_code) {
-  if (type == failure_type::failure_load_runtime) {
-    if (error_code == 0x80008096) { // FrameworkMissingFailure from
-                                    // https://github.com/dotnet/runtime/blob/main/src/native/corehost/error_codes.h
-      spdlog::critical("The required .NET runtime is missing");
-    } else {
-      spdlog::critical("Could not load .NET runtime, error code {:#X}", error_code);
+void dnneFailure(enum failure_type type, int errorCode)
+{
+    static constexpr unsigned int FAIL_CODE = 0x80008096;
+
+    if (type == failure_type::failure_load_runtime) {
+        if (errorCode == FAIL_CODE) { // FrameworkMissingFailure from
+                                      // https://github.com/dotnet/runtime/blob/main/src/native/corehost/error_codes.h
+            spdlog::critical("The required .NET runtime is missing");
+        } else {
+            spdlog::critical("Could not load .NET runtime, error code {:#X}", errorCode);
+        }
+    } else if (type == failure_type::failure_load_export) {
+        spdlog::critical("Could not load .NET exports, error code {:#X}", errorCode);
     }
-  } else if (type == failure_type::failure_load_export) {
-    spdlog::critical("Could not load .NET exports, error code {:#X}", error_code);
-  }
-  exit(1);
+    exit(1);
 }
 } // namespace
 
-mutex ParallaxGenPlugin::LibMutex;
+mutex ParallaxGenPlugin::s_libMutex;
 
-void ParallaxGenPlugin::libLogMessageIfExists() {
-  int Level = 0;
-  wchar_t *Message = nullptr;
-  GetLogMessage(&Message, &Level);
+void ParallaxGenPlugin::libLogMessageIfExists()
+{
+    static constexpr unsigned int TRACE_LOG = 0;
+    static constexpr unsigned int DEBUG_LOG = 1;
+    static constexpr unsigned int INFO_LOG = 2;
+    static constexpr unsigned int WARN_LOG = 3;
+    static constexpr unsigned int ERROR_LOG = 4;
+    static constexpr unsigned int CRITICAL_LOG = 5;
 
-  while (Message != nullptr) {
-    wstring MessageOut(Message);
-    LocalFree(static_cast<HGLOBAL>(Message)); // Only free if memory was allocated.
-    Message = nullptr;
+    int level = 0;
+    wchar_t* message = nullptr;
+    GetLogMessage(&message, &level);
 
-    // log the message
-    switch (Level) {
-    case 0:
-      spdlog::trace(MessageOut);
-      break;
-    case 1:
-      spdlog::debug(MessageOut);
-      break;
-    case 2:
-      spdlog::info(MessageOut);
-      break;
-    case 3:
-      spdlog::warn(MessageOut);
-      break;
-    case 4:
-      spdlog::error(MessageOut);
-      break;
-    case 5:
-      spdlog::critical(MessageOut);
-      break;
+    while (message != nullptr) {
+        wstring messageOut(message);
+        LocalFree(static_cast<HGLOBAL>(message)); // Only free if memory was allocated.
+        message = nullptr;
+
+        // log the message
+        switch (level) {
+        case TRACE_LOG:
+            spdlog::trace(messageOut);
+            break;
+        case DEBUG_LOG:
+            spdlog::debug(messageOut);
+            break;
+        case INFO_LOG:
+            spdlog::info(messageOut);
+            break;
+        case WARN_LOG:
+            spdlog::warn(messageOut);
+            break;
+        case ERROR_LOG:
+            spdlog::error(messageOut);
+            break;
+        case CRITICAL_LOG:
+            spdlog::critical(messageOut);
+            break;
+        }
+
+        // Get the next message
+        GetLogMessage(&message, &level);
+    }
+}
+
+void ParallaxGenPlugin::libThrowExceptionIfExists()
+{
+    wchar_t* message = nullptr;
+    GetLastException(&message);
+
+    if (message == nullptr) {
+        return;
     }
 
-    // Get the next message
-    GetLogMessage(&Message, &Level);
-  }
+    wstring messageOut(message);
+    LocalFree(static_cast<HGLOBAL>(message)); // Only free if memory was allocated.
+
+    throw runtime_error("ParallaxGenMutagenWrapper.dll: " + ParallaxGenUtil::utf16toASCII(messageOut));
 }
 
-void ParallaxGenPlugin::libThrowExceptionIfExists() {
-  wchar_t *Message = nullptr;
-  GetLastException(&Message);
+void ParallaxGenPlugin::libInitialize(
+    const int& gameType, const wstring& dataPath, const wstring& outputPlugin, const vector<wstring>& loadOrder)
+{
+    lock_guard<mutex> lock(s_libMutex);
 
-  if (Message == nullptr) {
-    return;
-  }
-
-  wstring MessageOut(Message);
-  LocalFree(static_cast<HGLOBAL>(Message)); // Only free if memory was allocated.
-
-  throw runtime_error("ParallaxGenMutagenWrapper.dll: " + ParallaxGenUtil::UTF16toASCII(MessageOut));
-}
-
-void ParallaxGenPlugin::libInitialize(const int &GameType, const wstring &DataPath, const wstring &OutputPlugin,
-                                      const vector<wstring> &LoadOrder) {
-  lock_guard<mutex> Lock(LibMutex);
-
-  // Use vector to manage the memory for LoadOrderArr
-  vector<const wchar_t *> LoadOrderArr;
-  if (!LoadOrder.empty()) {
-    LoadOrderArr.reserve(LoadOrder.size()); // Pre-allocate the vector size
-    for (const auto &Mod : LoadOrder) {
-      LoadOrderArr.push_back(Mod.c_str()); // Populate the vector with the c_str pointers
+    // Use vector to manage the memory for LoadOrderArr
+    vector<const wchar_t*> loadOrderArr;
+    if (!loadOrder.empty()) {
+        loadOrderArr.reserve(loadOrder.size()); // Pre-allocate the vector size
+        for (const auto& mod : loadOrder) {
+            loadOrderArr.push_back(mod.c_str()); // Populate the vector with the c_str pointers
+        }
     }
-  }
 
-  // Add the null terminator to the end
-  LoadOrderArr.push_back(nullptr);
+    // Add the null terminator to the end
+    loadOrderArr.push_back(nullptr);
 
-  Initialize(GameType, DataPath.c_str(), OutputPlugin.c_str(), LoadOrderArr.data());
-  libLogMessageIfExists();
-  libThrowExceptionIfExists();
+    Initialize(gameType, dataPath.c_str(), outputPlugin.c_str(), loadOrderArr.data());
+    libLogMessageIfExists();
+    libThrowExceptionIfExists();
 }
 
-void ParallaxGenPlugin::libPopulateObjs() {
-  lock_guard<mutex> Lock(LibMutex);
+void ParallaxGenPlugin::libPopulateObjs()
+{
+    lock_guard<mutex> lock(s_libMutex);
 
-  PopulateObjs();
-  libLogMessageIfExists();
-  libThrowExceptionIfExists();
+    PopulateObjs();
+    libLogMessageIfExists();
+    libThrowExceptionIfExists();
 }
 
-void ParallaxGenPlugin::libFinalize(const filesystem::path &OutputPath, const bool &ESMify) {
-  lock_guard<mutex> Lock(LibMutex);
+void ParallaxGenPlugin::libFinalize(const filesystem::path& outputPath, const bool& esmify)
+{
+    lock_guard<mutex> lock(s_libMutex);
 
-  Finalize(OutputPath.c_str(), static_cast<int>(ESMify));
-  libLogMessageIfExists();
-  libThrowExceptionIfExists();
+    Finalize(outputPath.c_str(), static_cast<int>(esmify));
+    libLogMessageIfExists();
+    libThrowExceptionIfExists();
 }
 
-auto ParallaxGenPlugin::libGetMatchingTXSTObjs(const wstring &NIFName, const wstring &Name3D,
-                                               const int &Index3D) -> vector<tuple<int, int>> {
-  lock_guard<mutex> Lock(LibMutex);
+auto ParallaxGenPlugin::libGetMatchingTXSTObjs(
+    const wstring& nifName, const wstring& name3D, const int& index3D) -> vector<tuple<int, int>>
+{
+    lock_guard<mutex> lock(s_libMutex);
 
-  int Length = 0;
-  GetMatchingTXSTObjs(NIFName.c_str(), Name3D.c_str(), Index3D, nullptr, nullptr, &Length);
-  libLogMessageIfExists();
-  libThrowExceptionIfExists();
+    int length = 0;
+    GetMatchingTXSTObjs(nifName.c_str(), name3D.c_str(), index3D, nullptr, nullptr, &length);
+    libLogMessageIfExists();
+    libThrowExceptionIfExists();
 
-  vector<int> TXSTIdArray(Length);
-  vector<int> AltTexIdArray(Length);
-  GetMatchingTXSTObjs(NIFName.c_str(), Name3D.c_str(), Index3D, TXSTIdArray.data(), AltTexIdArray.data(), nullptr);
-  libLogMessageIfExists();
-  libThrowExceptionIfExists();
+    vector<int> txstIdArray(length);
+    vector<int> altTexIdArray(length);
+    GetMatchingTXSTObjs(nifName.c_str(), name3D.c_str(), index3D, txstIdArray.data(), altTexIdArray.data(), nullptr);
+    libLogMessageIfExists();
+    libThrowExceptionIfExists();
 
-  vector<tuple<int, int>> OutputArray(Length);
-  for (int I = 0; I < Length; ++I) {
-    OutputArray[I] = {TXSTIdArray[I], AltTexIdArray[I]};
-  }
-
-  return OutputArray;
-}
-
-auto ParallaxGenPlugin::libGetTXSTSlots(const int &TXSTIndex) -> array<wstring, NUM_TEXTURE_SLOTS> {
-  lock_guard<mutex> Lock(LibMutex);
-
-  wchar_t *SlotsArray[NUM_TEXTURE_SLOTS] = {nullptr};
-  auto OutputArray = array<wstring, NUM_TEXTURE_SLOTS>();
-
-  // Call the function
-  GetTXSTSlots(TXSTIndex, SlotsArray);
-  libLogMessageIfExists();
-  libThrowExceptionIfExists();
-
-  // Process the slots
-  for (int I = 0; I < NUM_TEXTURE_SLOTS; ++I) {
-    if (SlotsArray[I] != nullptr) {
-      // Convert to C-style string (Ansi)
-      const auto *SlotStr = static_cast<const wchar_t *>(SlotsArray[I]);
-      OutputArray[I] = SlotStr;
-
-      // Free the unmanaged memory allocated by Marshal.StringToHGlobalAnsi
-      LocalFree(static_cast<HGLOBAL>(SlotsArray[I]));
+    vector<tuple<int, int>> outputArray(length);
+    for (int i = 0; i < length; ++i) {
+        outputArray[i] = { txstIdArray[i], altTexIdArray[i] };
     }
-  }
 
-  return OutputArray;
+    return outputArray;
 }
 
-void ParallaxGenPlugin::libCreateTXSTPatch(const int &TXSTIndex, const array<wstring, NUM_TEXTURE_SLOTS> &Slots) {
-  lock_guard<mutex> Lock(LibMutex);
+auto ParallaxGenPlugin::libGetTXSTSlots(const int& txstIndex) -> array<wstring, NUM_TEXTURE_SLOTS>
+{
+    lock_guard<mutex> lock(s_libMutex);
 
-  // Prepare the array of const wchar_t* pointers from the Slots array
-  const wchar_t *SlotsArray[NUM_TEXTURE_SLOTS] = {nullptr};
-  for (int I = 0; I < NUM_TEXTURE_SLOTS; ++I) {
-    SlotsArray[I] = Slots[I].c_str(); // Point to the internal wide string data of each wstring
-  }
+    array<wchar_t*, NUM_TEXTURE_SLOTS> slotsArray = { nullptr };
+    auto outputArray = array<wstring, NUM_TEXTURE_SLOTS>();
 
-  // Call the CreateTXSTPatch function with TXSTIndex and the array of wide string pointers
-  CreateTXSTPatch(TXSTIndex, SlotsArray);
-  libLogMessageIfExists();
-  libThrowExceptionIfExists();
+    // Call the function
+    GetTXSTSlots(txstIndex, slotsArray.data());
+    libLogMessageIfExists();
+    libThrowExceptionIfExists();
+
+    // Process the slots
+    for (int i = 0; i < NUM_TEXTURE_SLOTS; ++i) {
+        if (slotsArray.at(i) != nullptr) {
+            // Convert to C-style string (Ansi)
+            const auto* slotStr = static_cast<const wchar_t*>(slotsArray.at(i));
+            outputArray.at(i) = slotStr;
+
+            // Free the unmanaged memory allocated by Marshal.StringToHGlobalAnsi
+            LocalFree(static_cast<HGLOBAL>(slotsArray.at(i)));
+        }
+    }
+
+    return outputArray;
 }
 
-auto ParallaxGenPlugin::libCreateNewTXSTPatch(const int &AltTexIndex,
-                                              const array<wstring, NUM_TEXTURE_SLOTS> &Slots, const string &NewEDID) -> int {
-  lock_guard<mutex> Lock(LibMutex);
+void ParallaxGenPlugin::libCreateTXSTPatch(const int& txstIndex, const array<wstring, NUM_TEXTURE_SLOTS>& slots)
+{
+    lock_guard<mutex> lock(s_libMutex);
 
-  // Prepare the array of const wchar_t* pointers from the Slots array
-  const wchar_t *SlotsArray[NUM_TEXTURE_SLOTS] = {nullptr};
-  for (int I = 0; I < NUM_TEXTURE_SLOTS; ++I) {
-    SlotsArray[I] = Slots[I].c_str(); // Point to the internal wide string data of each wstring
-  }
+    // Prepare the array of const wchar_t* pointers from the Slots array
+    array<const wchar_t*, NUM_TEXTURE_SLOTS> slotsArray = { nullptr };
+    for (int i = 0; i < NUM_TEXTURE_SLOTS; ++i) {
+        slotsArray.at(i) = slots.at(i).c_str(); // Point to the internal wide string data of each wstring
+    }
 
-  // Call the CreateNewTXSTPatch function with AltTexIndex and the array of wide string pointers
-  int NewTXSTId = 0;
-  CreateNewTXSTPatch(AltTexIndex, SlotsArray, NewEDID.c_str(), &NewTXSTId);
-  libLogMessageIfExists();
-  libThrowExceptionIfExists();
-
-  return NewTXSTId;
+    // Call the CreateTXSTPatch function with TXSTIndex and the array of wide string pointers
+    CreateTXSTPatch(txstIndex, slotsArray.data());
+    libLogMessageIfExists();
+    libThrowExceptionIfExists();
 }
 
-void ParallaxGenPlugin::libSetModelAltTex(const int &AltTexIndex, const int &TXSTIndex) {
-  lock_guard<mutex> Lock(LibMutex);
+auto ParallaxGenPlugin::libCreateNewTXSTPatch(
+    const int& altTexIndex, const array<wstring, NUM_TEXTURE_SLOTS>& slots, const string& newEDID) -> int
+{
+    lock_guard<mutex> lock(s_libMutex);
 
-  SetModelAltTex(AltTexIndex, TXSTIndex);
-  libLogMessageIfExists();
-  libThrowExceptionIfExists();
+    // Prepare the array of const wchar_t* pointers from the Slots array
+    array<const wchar_t*, NUM_TEXTURE_SLOTS> slotsArray = { nullptr };
+    for (int i = 0; i < NUM_TEXTURE_SLOTS; ++i) {
+        slotsArray.at(i) = slots.at(i).c_str(); // Point to the internal wide string data of each wstring
+    }
+
+    // Call the CreateNewTXSTPatch function with AltTexIndex and the array of wide string pointers
+    int newTXSTId = 0;
+    CreateNewTXSTPatch(altTexIndex, slotsArray.data(), newEDID.c_str(), &newTXSTId);
+    libLogMessageIfExists();
+    libThrowExceptionIfExists();
+
+    return newTXSTId;
 }
 
-void ParallaxGenPlugin::libSet3DIndex(const int &AltTexIndex, const int &Index3D) {
-  lock_guard<mutex> Lock(LibMutex);
+void ParallaxGenPlugin::libSetModelAltTex(const int& altTexIndex, const int& txstIndex)
+{
+    lock_guard<mutex> lock(s_libMutex);
 
-  Set3DIndex(AltTexIndex, Index3D);
-  libLogMessageIfExists();
-  libThrowExceptionIfExists();
+    SetModelAltTex(altTexIndex, txstIndex);
+    libLogMessageIfExists();
+    libThrowExceptionIfExists();
 }
 
-auto ParallaxGenPlugin::libGetTXSTFormID(const int &TXSTIndex) -> tuple<unsigned int, wstring> {
-  lock_guard<mutex> Lock(LibMutex);
+void ParallaxGenPlugin::libSet3DIndex(const int& altTexIndex, const int& index3D)
+{
+    lock_guard<mutex> lock(s_libMutex);
 
-  wchar_t *PluginName = nullptr;
-  unsigned int FormID = 0;
-  GetTXSTFormID(TXSTIndex, &FormID, &PluginName);
-  libLogMessageIfExists();
-  libThrowExceptionIfExists();
-
-  wstring PluginNameString;
-  if (PluginName != nullptr) {
-    PluginNameString = wstring(PluginName);
-    LocalFree(static_cast<HGLOBAL>(PluginName)); // Only free if memory was allocated.
-  } else {
-    // Handle the case where PluginName is null (e.g., log an error, throw an exception, etc.).
-    PluginNameString = L"Unknown";
-  }
-
-  return make_tuple(FormID, PluginNameString);
+    Set3DIndex(altTexIndex, index3D);
+    libLogMessageIfExists();
+    libThrowExceptionIfExists();
 }
 
-auto ParallaxGenPlugin::libGetModelRecHandleFromAltTexHandle(const int &AltTexIndex) -> int {
-  lock_guard<mutex> Lock(LibMutex);
+auto ParallaxGenPlugin::libGetTXSTFormID(const int& txstIndex) -> tuple<unsigned int, wstring>
+{
+    lock_guard<mutex> lock(s_libMutex);
 
-  int ModelRecHandle = 0;
-  GetModelRecHandleFromAltTexHandle(AltTexIndex, &ModelRecHandle);
-  libLogMessageIfExists();
-  libThrowExceptionIfExists();
+    wchar_t* pluginName = nullptr;
+    unsigned int formID = 0;
+    GetTXSTFormID(txstIndex, &formID, &pluginName);
+    libLogMessageIfExists();
+    libThrowExceptionIfExists();
 
-  return ModelRecHandle;
+    wstring pluginNameString;
+    if (pluginName != nullptr) {
+        pluginNameString = wstring(pluginName);
+        LocalFree(static_cast<HGLOBAL>(pluginName)); // Only free if memory was allocated.
+    } else {
+        // Handle the case where PluginName is null (e.g., log an error, throw an exception, etc.).
+        pluginNameString = L"Unknown";
+    }
+
+    return make_tuple(formID, pluginNameString);
 }
 
-void ParallaxGenPlugin::libSetModelRecNIF(const int &ModelRecHandle, const wstring &NIFPath) {
-  lock_guard<mutex> Lock(LibMutex);
+auto ParallaxGenPlugin::libGetModelRecHandleFromAltTexHandle(const int& altTexIndex) -> int
+{
+    lock_guard<mutex> lock(s_libMutex);
 
-  SetModelRecNIF(ModelRecHandle, NIFPath.c_str());
-  libLogMessageIfExists();
-  libThrowExceptionIfExists();
+    int modelRecHandle = 0;
+    GetModelRecHandleFromAltTexHandle(altTexIndex, &modelRecHandle);
+    libLogMessageIfExists();
+    libThrowExceptionIfExists();
+
+    return modelRecHandle;
+}
+
+void ParallaxGenPlugin::libSetModelRecNIF(const int& modelRecHandle, const wstring& nifPath)
+{
+    lock_guard<mutex> lock(s_libMutex);
+
+    SetModelRecNIF(modelRecHandle, nifPath.c_str());
+    libLogMessageIfExists();
+    libThrowExceptionIfExists();
 }
 
 // Statics
-mutex ParallaxGenPlugin::CreatedTXSTMutex;
+mutex ParallaxGenPlugin::s_createdTXSTMutex;
 unordered_map<array<wstring, NUM_TEXTURE_SLOTS>, int, ParallaxGenPlugin::ArrayHash, ParallaxGenPlugin::ArrayEqual>
-    ParallaxGenPlugin::CreatedTXSTs;
+    ParallaxGenPlugin::s_createdTXSTs;
 
-mutex ParallaxGenPlugin::EDIDCounterMutex;
-int ParallaxGenPlugin::EDIDCounter = 0;
+mutex ParallaxGenPlugin::s_edidCounterMutex;
+int ParallaxGenPlugin::s_edidCounter = 0;
 
-ParallaxGenDirectory *ParallaxGenPlugin::PGD;
+ParallaxGenDirectory* ParallaxGenPlugin::s_pgd;
 
-mutex ParallaxGenPlugin::ProcessShapeMutex;
+mutex ParallaxGenPlugin::s_processShapeMutex;
 
-void ParallaxGenPlugin::loadStatics(ParallaxGenDirectory *PGD) { ParallaxGenPlugin::PGD = PGD; }
+void ParallaxGenPlugin::loadStatics(ParallaxGenDirectory* pgd) { ParallaxGenPlugin::s_pgd = pgd; }
 
-unordered_map<wstring, int> *ParallaxGenPlugin::ModPriority;
+unordered_map<wstring, int>* ParallaxGenPlugin::s_modPriority;
 
-void ParallaxGenPlugin::loadModPriorityMap(std::unordered_map<std::wstring, int> *ModPriority) {
-  ParallaxGenPlugin::ModPriority = ModPriority;
+void ParallaxGenPlugin::loadModPriorityMap(std::unordered_map<std::wstring, int>* modPriority)
+{
+    ParallaxGenPlugin::s_modPriority = modPriority;
 }
 
-void ParallaxGenPlugin::initialize(const BethesdaGame &Game) {
-  set_failure_callback(dnne_failure);
+void ParallaxGenPlugin::initialize(const BethesdaGame& game)
+{
+    set_failure_callback(dnneFailure);
 
-  // Maps BethesdaGame::GameType to Mutagen game type
-  static const unordered_map<BethesdaGame::GameType, int> MutagenGameTypeMap = {
-      {BethesdaGame::GameType::SKYRIM, 1},     {BethesdaGame::GameType::SKYRIM_SE, 2},
-      {BethesdaGame::GameType::SKYRIM_VR, 3},  {BethesdaGame::GameType::ENDERAL, 5},
-      {BethesdaGame::GameType::ENDERAL_SE, 6}, {BethesdaGame::GameType::SKYRIM_GOG, 7}};
+    // Maps BethesdaGame::GameType to Mutagen game type
+    static const unordered_map<BethesdaGame::GameType, int> mutagenGameTypeMap
+        = { { BethesdaGame::GameType::SKYRIM, 1 }, { BethesdaGame::GameType::SKYRIM_SE, 2 },
+              { BethesdaGame::GameType::SKYRIM_VR, 3 }, { BethesdaGame::GameType::ENDERAL, 5 },
+              { BethesdaGame::GameType::ENDERAL_SE, 6 }, { BethesdaGame::GameType::SKYRIM_GOG, 7 } };
 
-  libInitialize(MutagenGameTypeMap.at(Game.getGameType()), Game.getGameDataPath().wstring(), L"ParallaxGen.esp",
-                Game.getActivePlugins());
+    libInitialize(mutagenGameTypeMap.at(game.getGameType()), game.getGameDataPath().wstring(), L"ParallaxGen.esp",
+        game.getActivePlugins());
 }
 
 void ParallaxGenPlugin::populateObjs() { libPopulateObjs(); }
 
-void ParallaxGenPlugin::processShape(const wstring &NIFPath, nifly::NiShape *NIFShape, const wstring &Name3D,
-                                     const int &Index3D, PatcherUtil::PatcherObjectSet &Patchers,
-                                     vector<TXSTResult> &Results, PatcherUtil::ConflictModResults *ConflictMods) {
-  lock_guard<mutex> Lock(ProcessShapeMutex);
+void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nifShape, const wstring& name3D,
+    const int& index3D, PatcherUtil::PatcherObjectSet& patchers, vector<TXSTResult>& results,
+    PatcherUtil::ConflictModResults* conflictMods)
+{
+    lock_guard<mutex> lock(s_processShapeMutex);
 
-  const auto Matches = libGetMatchingTXSTObjs(NIFPath, Name3D, Index3D);
+    const auto matches = libGetMatchingTXSTObjs(nifPath, name3D, index3D);
 
-  Results.clear();
+    results.clear();
 
-  // loop through matches
-  for (const auto &[TXSTIndex, AltTexIndex] : Matches) {
-    // TODO! caching (central location)
-    //  Allowed shaders from result of patchers
-    vector<PatcherUtil::ShaderPatcherMatch> Matches;
+    // loop through matches
+    for (const auto& [txstIndex, altTexIndex] : matches) {
+        //  Allowed shaders from result of patchers
+        vector<PatcherUtil::ShaderPatcherMatch> matches;
 
-    // Output information
-    TXSTResult CurResult;
+        // Output information
+        TXSTResult curResult;
 
-    // Get TXST slots
-    auto OldSlots = libGetTXSTSlots(TXSTIndex);
-    auto BaseSlots = OldSlots;
-    for (auto &Slot : BaseSlots) {
-      // Remove PBR from beginning if its there so that we can actually process it
-      if (boost::istarts_with(Slot, L"textures\\pbr\\")) {
-        Slot.replace(0, 13, L"textures\\");
-      }
-    }
+        // Get TXST slots
+        auto oldSlots = libGetTXSTSlots(txstIndex);
+        auto baseSlots = oldSlots;
+        for (auto& slot : baseSlots) {
+            // Remove PBR from beginning if its there so that we can actually process it
+            static constexpr const char* PBR_PREFIX = "textures\\pbr\\";
 
-    // Loop through each shader
-    unordered_set<wstring> ModSet;
-    for (const auto &[Shader, Patcher] : Patchers.ShaderPatchers) {
-      // note: name is defined in source code in UTF8-encoded files
-      Logger::Prefix PrefixPatches(ParallaxGenUtil::UTF8toUTF16(Patcher->getPatcherName()));
-
-      // Check if shader should be applied
-      vector<PatcherShader::PatcherMatch> CurMatches;
-      if (!Patcher->shouldApply(BaseSlots, CurMatches)) {
-        Logger::trace(L"Rejecting: Shader not applicable");
-        continue;
-      }
-
-      for (const auto &Match : CurMatches) {
-        PatcherUtil::ShaderPatcherMatch CurMatch;
-        CurMatch.Mod = PGD->getMod(Match.MatchedPath);
-        CurMatch.Shader = Shader;
-        CurMatch.Match = Match;
-        CurMatch.ShaderTransformTo = NIFUtil::ShapeShader::NONE;
-
-        // See if transform is possible
-        if (Patchers.ShaderTransformPatchers.contains(Shader)) {
-          const auto &AvailableTransforms = Patchers.ShaderTransformPatchers.at(Shader);
-          // loop from highest element of map to 0
-          for (const auto &AvailableTransform : ranges::reverse_view(AvailableTransforms)) {
-            if (Patchers.ShaderPatchers.at(AvailableTransform.first)->canApply(*NIFShape)) {
-              // Found a transform that can apply, set the transform in the match
-              CurMatch.ShaderTransformTo = AvailableTransform.first;
-              break;
+            if (boost::istarts_with(slot, PBR_PREFIX)) {
+                slot.replace(0, strlen(PBR_PREFIX), L"textures\\");
             }
-          }
         }
 
-        // Add to matches if shader can apply (or if transform shader exists and can apply)
-        if (Patcher->canApply(*NIFShape) || CurMatch.ShaderTransformTo != NIFUtil::ShapeShader::NONE) {
-          Matches.push_back(CurMatch);
-          ModSet.insert(CurMatch.Mod);
+        // Loop through each shader
+        unordered_set<wstring> modSet;
+        for (const auto& [shader, patcher] : patchers.shaderPatchers) {
+            // note: name is defined in source code in UTF8-encoded files
+            Logger::Prefix prefixPatches(ParallaxGenUtil::utf8toUTF16(patcher->getPatcherName()));
+
+            // Check if shader should be applied
+            vector<PatcherShader::PatcherMatch> curMatches;
+            if (!patcher->shouldApply(baseSlots, curMatches)) {
+                Logger::trace(L"Rejecting: Shader not applicable");
+                continue;
+            }
+
+            for (const auto& match : curMatches) {
+                PatcherUtil::ShaderPatcherMatch curMatch;
+                curMatch.mod = s_pgd->getMod(match.matchedPath);
+                curMatch.shader = shader;
+                curMatch.match = match;
+                curMatch.shaderTransformTo = NIFUtil::ShapeShader::NONE;
+
+                // See if transform is possible
+                if (patchers.shaderTransformPatchers.contains(shader)) {
+                    const auto& availableTransforms = patchers.shaderTransformPatchers.at(shader);
+                    // loop from highest element of map to 0
+                    for (const auto& availableTransform : ranges::reverse_view(availableTransforms)) {
+                        if (patchers.shaderPatchers.at(availableTransform.first)->canApply(*nifShape)) {
+                            // Found a transform that can apply, set the transform in the match
+                            curMatch.shaderTransformTo = availableTransform.first;
+                            break;
+                        }
+                    }
+                }
+
+                // Add to matches if shader can apply (or if transform shader exists and can apply)
+                if (patcher->canApply(*nifShape) || curMatch.shaderTransformTo != NIFUtil::ShapeShader::NONE) {
+                    matches.push_back(curMatch);
+                    modSet.insert(curMatch.mod);
+                }
+            }
         }
-      }
-    }
 
-    if (Matches.empty()) {
-      // no shaders to apply
-      Logger::trace(L"Rejecting: No shaders to apply");
-      return;
-    }
-
-    // Populate conflict mods if set
-    if (ConflictMods != nullptr) {
-      if (ModSet.size() > 1) {
-        lock_guard<mutex> Lock(ConflictMods->Mutex);
-
-        // add mods to conflict set
-        for (const auto &Match : Matches) {
-          if (ConflictMods->Mods.find(Match.Mod) == ConflictMods->Mods.end()) {
-            ConflictMods->Mods.insert({Match.Mod, {set<NIFUtil::ShapeShader>(), unordered_set<wstring>()}});
-          }
-
-          get<0>(ConflictMods->Mods[Match.Mod]).insert(Match.Shader);
-          get<1>(ConflictMods->Mods[Match.Mod]).insert(ModSet.begin(), ModSet.end());
+        if (matches.empty()) {
+            // no shaders to apply
+            Logger::trace(L"Rejecting: No shaders to apply");
+            return;
         }
-      }
 
-      return;
+        // Populate conflict mods if set
+        if (conflictMods != nullptr) {
+            if (modSet.size() > 1) {
+                lock_guard<mutex> lock(conflictMods->mutex);
+
+                // add mods to conflict set
+                for (const auto& match : matches) {
+                    if (conflictMods->mods.find(match.mod) == conflictMods->mods.end()) {
+                        conflictMods->mods.insert(
+                            { match.mod, { set<NIFUtil::ShapeShader>(), unordered_set<wstring>() } });
+                    }
+
+                    get<0>(conflictMods->mods[match.mod]).insert(match.shader);
+                    get<1>(conflictMods->mods[match.mod]).insert(modSet.begin(), modSet.end());
+                }
+            }
+
+            return;
+        }
+
+        // Get winning match
+        auto winningShaderMatch = PatcherUtil::getWinningMatch(matches, s_modPriority);
+
+        // Apply transforms
+        winningShaderMatch = PatcherUtil::applyTransformIfNeeded(winningShaderMatch, patchers);
+        curResult.shader = winningShaderMatch.shader;
+
+        // loop through patchers
+        NIFUtil::TextureSet newSlots = patchers.shaderPatchers.at(winningShaderMatch.shader)
+                                           ->applyPatchSlots(baseSlots, winningShaderMatch.match);
+
+        // Post warnings if any
+        for (const auto& curMatchedFrom : winningShaderMatch.match.matchedFrom) {
+            ParallaxGenWarnings::mismatchWarn(
+                winningShaderMatch.match.matchedPath, newSlots.at(static_cast<int>(curMatchedFrom)));
+        }
+
+        ParallaxGenWarnings::meshWarn(winningShaderMatch.match.matchedPath, nifPath);
+
+        // Check if oldprefix is the same as newprefix
+        bool foundDiff = false;
+        for (int i = 0; i < NUM_TEXTURE_SLOTS; ++i) {
+            if (!boost::iequals(oldSlots.at(i), newSlots.at(i))) {
+                foundDiff = true;
+                break;
+            }
+        }
+
+        if (!foundDiff) {
+            // No need to patch
+            spdlog::trace(
+                L"Plugin Patching | {} | {} | {} | Not patching because nothing to change", nifPath, name3D, index3D);
+            continue;
+        }
+
+        curResult.altTexIndex = altTexIndex;
+        curResult.modelRecHandle = libGetModelRecHandleFromAltTexHandle(altTexIndex);
+
+        {
+            lock_guard<mutex> lock(s_createdTXSTMutex);
+
+            // Check if we need to make a new TXST record
+            if (s_createdTXSTs.contains(newSlots)) {
+                // Already modded
+                spdlog::trace(L"Plugin Patching | {} | {} | {} | Already added, skipping", nifPath, name3D, index3D);
+                curResult.txstIndex = s_createdTXSTs[newSlots];
+                results.push_back(curResult);
+                continue;
+            }
+
+            // Create a new TXST record
+            spdlog::trace(
+                L"Plugin Patching | {} | {} | {} | Creating a new TXST record and patching", nifPath, name3D, index3D);
+            string newEDID = fmt::format("PGTXST{:05d}", s_edidCounter++);
+            curResult.txstIndex = libCreateNewTXSTPatch(altTexIndex, newSlots, newEDID);
+            patchers.shaderPatchers.at(winningShaderMatch.shader)
+                ->processNewTXSTRecord(winningShaderMatch.match, newEDID);
+            s_createdTXSTs[newSlots] = curResult.txstIndex;
+        }
+
+        // add to result
+        results.push_back(curResult);
     }
-
-    // Get winning match
-    auto WinningShaderMatch = PatcherUtil::getWinningMatch(Matches, ModPriority);
-
-    // Apply transforms
-    WinningShaderMatch = PatcherUtil::applyTransformIfNeeded(WinningShaderMatch, Patchers);
-    CurResult.Shader = WinningShaderMatch.Shader;
-
-    // loop through patchers
-    NIFUtil::TextureSet NewSlots =
-        Patchers.ShaderPatchers.at(WinningShaderMatch.Shader)->applyPatchSlots(BaseSlots, WinningShaderMatch.Match);
-
-    // Post warnings if any
-    for (const auto &CurMatchedFrom : WinningShaderMatch.Match.MatchedFrom) {
-      ParallaxGenWarnings::mismatchWarn(WinningShaderMatch.Match.MatchedPath,
-                                        NewSlots[static_cast<int>(CurMatchedFrom)]);
-    }
-
-    ParallaxGenWarnings::meshWarn(WinningShaderMatch.Match.MatchedPath, NIFPath);
-
-    // Check if oldprefix is the same as newprefix
-    bool FoundDiff = false;
-    for (int I = 0; I < NUM_TEXTURE_SLOTS; ++I) {
-      if (!boost::iequals(OldSlots[I], NewSlots[I])) {
-        FoundDiff = true;
-        break;
-      }
-    }
-
-    if (!FoundDiff) {
-      // No need to patch
-      spdlog::trace(L"Plugin Patching | {} | {} | {} | Not patching because nothing to change", NIFPath, Name3D,
-                    Index3D);
-      continue;
-    }
-
-    CurResult.AltTexIndex = AltTexIndex;
-    CurResult.ModelRecHandle = libGetModelRecHandleFromAltTexHandle(AltTexIndex);
-
-    {
-      lock_guard<mutex> Lock(CreatedTXSTMutex);
-
-      // Check if we need to make a new TXST record
-      if (CreatedTXSTs.contains(NewSlots)) {
-        // Already modded
-        spdlog::trace(L"Plugin Patching | {} | {} | {} | Already added, skipping", NIFPath, Name3D, Index3D);
-        CurResult.TXSTIndex = CreatedTXSTs[NewSlots];
-        Results.push_back(CurResult);
-        continue;
-      }
-
-      // Create a new TXST record
-      spdlog::trace(L"Plugin Patching | {} | {} | {} | Creating a new TXST record and patching", NIFPath, Name3D,
-                    Index3D);
-      string NewEDID = fmt::format("PGTXST{:05d}", EDIDCounter++);
-      CurResult.TXSTIndex = libCreateNewTXSTPatch(AltTexIndex, NewSlots, NewEDID);
-      Patchers.ShaderPatchers.at(WinningShaderMatch.Shader)->processNewTXSTRecord(WinningShaderMatch.Match, NewEDID);
-      CreatedTXSTs[NewSlots] = CurResult.TXSTIndex;
-    }
-
-    // add to result
-    Results.push_back(CurResult);
-  }
 }
 
-void ParallaxGenPlugin::assignMesh(const wstring &NIFPath, const vector<TXSTResult> &Result) {
-  lock_guard<mutex> Lock(ProcessShapeMutex);
+void ParallaxGenPlugin::assignMesh(const wstring& nifPath, const vector<TXSTResult>& result)
+{
+    lock_guard<mutex> lock(s_processShapeMutex);
 
-  Logger::Prefix Prefix(L"assignMesh");
+    Logger::Prefix prefix(L"assignMesh");
 
-  // Loop through results
-  for (const auto &CurResult : Result) {
-    // Set model rec handle
-    libSetModelRecNIF(CurResult.AltTexIndex, NIFPath);
+    // Loop through results
+    for (const auto& curResult : result) {
+        // Set model rec handle
+        libSetModelRecNIF(curResult.altTexIndex, nifPath);
 
-    // Set model alt tex
-    libSetModelAltTex(CurResult.AltTexIndex, CurResult.TXSTIndex);
-  }
-}
-
-void ParallaxGenPlugin::set3DIndices(const wstring &NIFPath,
-                                     const vector<tuple<nifly::NiShape *, int, int>> &ShapeTracker) {
-  lock_guard<mutex> Lock(ProcessShapeMutex);
-
-  Logger::Prefix Prefix(L"set3DIndices");
-
-  // Loop through shape tracker
-  for (const auto &[Shape, OldIndex3D, NewIndex3D] : ShapeTracker) {
-    const auto ShapeName = ParallaxGenUtil::ASCIItoUTF16(Shape->name.get());
-
-    // find matches
-    const auto Matches = libGetMatchingTXSTObjs(NIFPath, ShapeName, OldIndex3D);
-
-    // Set indices
-    for (const auto &[TXSTIndex, AltTexIndex] : Matches) {
-      if (OldIndex3D == NewIndex3D) {
-        // No change
-        continue;
-      }
-
-      Logger::trace(L"Setting 3D index for AltTex {} to {}", AltTexIndex, NewIndex3D);
-      libSet3DIndex(AltTexIndex, NewIndex3D);
+        // Set model alt tex
+        libSetModelAltTex(curResult.altTexIndex, curResult.txstIndex);
     }
-  }
 }
 
-void ParallaxGenPlugin::savePlugin(const filesystem::path &OutputDir, bool ESMify) { libFinalize(OutputDir, ESMify); }
+void ParallaxGenPlugin::set3DIndices(
+    const wstring& nifPath, const vector<tuple<nifly::NiShape*, int, int>>& shapeTracker)
+{
+    lock_guard<mutex> lock(s_processShapeMutex);
+
+    Logger::Prefix prefix(L"set3DIndices");
+
+    // Loop through shape tracker
+    for (const auto& [shape, oldIndex3D, newIndex3D] : shapeTracker) {
+        const auto shapeName = ParallaxGenUtil::asciitoUTF16(shape->name.get());
+
+        // find matches
+        const auto matches = libGetMatchingTXSTObjs(nifPath, shapeName, oldIndex3D);
+
+        // Set indices
+        for (const auto& [txstIndex, altTexIndex] : matches) {
+            if (oldIndex3D == newIndex3D) {
+                // No change
+                continue;
+            }
+
+            Logger::trace(L"Setting 3D index for AltTex {} to {}", altTexIndex, newIndex3D);
+            libSet3DIndex(altTexIndex, newIndex3D);
+        }
+    }
+}
+
+void ParallaxGenPlugin::savePlugin(const filesystem::path& outputDir, bool esmify) { libFinalize(outputDir, esmify); }

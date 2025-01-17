@@ -98,7 +98,7 @@ auto ParallaxGenUI::selectModOrder(
                 continue;
             }
 
-            shaderStrs.insert(shaderStrs.begin(), ParallaxGenUtil::UTF8toUTF16(NIFUtil::getStrFromShader(shader)));
+            shaderStrs.insert(shaderStrs.begin(), ParallaxGenUtil::utf8toUTF16(NIFUtil::getStrFromShader(shader)));
         }
 
         auto shaderStr = boost::join(shaderStrs, L",");

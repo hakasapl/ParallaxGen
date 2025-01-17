@@ -3,69 +3,69 @@
 #include <Geometry.hpp>
 #include <boost/algorithm/string.hpp>
 
-#include "Logger.hpp"
 #include "NIFUtil.hpp"
 
 using namespace std;
 
-auto PatcherDefault::getFactory() -> PatcherShader::PatcherShaderFactory {
-  return [](const filesystem::path& NIFPath, nifly::NifFile *NIF) -> unique_ptr<PatcherShader> {
-    return make_unique<PatcherDefault>(NIFPath, NIF);
-  };
+auto PatcherDefault::getFactory() -> PatcherShader::PatcherShaderFactory
+{
+    return [](const filesystem::path& nifPath, nifly::NifFile* nif) -> unique_ptr<PatcherShader> {
+        return make_unique<PatcherDefault>(nifPath, nif);
+    };
 }
 
-auto PatcherDefault::getShaderType() -> NIFUtil::ShapeShader {
-  return NIFUtil::ShapeShader::NONE;
+auto PatcherDefault::getShaderType() -> NIFUtil::ShapeShader { return NIFUtil::ShapeShader::NONE; }
+
+PatcherDefault::PatcherDefault(filesystem::path nifPath, nifly::NifFile* nif)
+    : PatcherShader(std::move(nifPath), nif, "Default")
+{
 }
 
-PatcherDefault::PatcherDefault(filesystem::path NIFPath, nifly::NifFile *NIF)
-    : PatcherShader(std::move(NIFPath), NIF, "Default") {
+auto PatcherDefault::canApply([[maybe_unused]] NiShape& nifShape) -> bool { return true; }
+
+auto PatcherDefault::shouldApply(nifly::NiShape& nifShape, std::vector<PatcherMatch>& matches) -> bool
+{
+    return shouldApply(getTextureSet(nifShape), matches);
 }
 
-auto PatcherDefault::canApply([[maybe_unused]] NiShape &NIFShape) -> bool {
-  return true;
-}
+auto PatcherDefault::shouldApply(
+    const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots, std::vector<PatcherMatch>& matches) -> bool
+{
+    matches.clear();
 
-auto PatcherDefault::shouldApply(nifly::NiShape &NIFShape, std::vector<PatcherMatch> &Matches) -> bool {
-  return shouldApply(getTextureSet(NIFShape), Matches);
-}
+    // Loop through slots (only diffuse and normal)
+    for (size_t slot = 0; slot <= 1; slot++) {
+        if (oldSlots.at(slot).empty()) {
+            continue;
+        }
 
-auto PatcherDefault::shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
-                                         std::vector<PatcherMatch> &Matches) -> bool {
-  Matches.clear();
+        // Check if file exists
+        if (!getPGD()->isFile(oldSlots.at(slot))) {
+            continue;
+        }
 
-  // Loop through slots (only diffuse and normal)
-  for (size_t Slot = 0; Slot <= 1; Slot++) {
-    if (OldSlots[Slot].empty()) {
-      continue;
+        // Add match
+        PatcherMatch curMatch;
+        curMatch.matchedPath = oldSlots.at(slot);
+        curMatch.matchedFrom.insert(static_cast<NIFUtil::TextureSlots>(slot));
+        matches.push_back(curMatch);
     }
 
-    // Check if file exists
-    if (!getPGD()->isFile(OldSlots[Slot])) {
-      continue;
-    }
-
-    // Add match
-    PatcherMatch CurMatch;
-    CurMatch.MatchedPath = OldSlots[Slot];
-    CurMatch.MatchedFrom.insert(static_cast<NIFUtil::TextureSlots>(Slot));
-    Matches.push_back(CurMatch);
-  }
-
-  return !Matches.empty();
+    return !matches.empty();
 }
 
-auto PatcherDefault::applyPatch(nifly::NiShape &NIFShape, [[maybe_unused]] const PatcherMatch &Match,
-                                        [[maybe_unused]] bool &NIFModified) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
-  return getTextureSet(NIFShape);
+auto PatcherDefault::applyPatch(nifly::NiShape& nifShape, [[maybe_unused]] const PatcherMatch& match,
+    [[maybe_unused]] bool& nifModified) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>
+{
+    return getTextureSet(nifShape);
 }
 
-auto PatcherDefault::applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
-                                             [[maybe_unused]] const PatcherMatch &Match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
-  return OldSlots;
+auto PatcherDefault::applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots,
+    [[maybe_unused]] const PatcherMatch& match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>
+{
+    return oldSlots;
 }
 
-void PatcherDefault::processNewTXSTRecord(const PatcherMatch &Match, const std::string &EDID) {}
+void PatcherDefault::processNewTXSTRecord(const PatcherMatch& match, const std::string& edid) { }
 
-void PatcherDefault::applyShader(nifly::NiShape &NIFShape, bool &NIFModified) {
-}
+void PatcherDefault::applyShader(nifly::NiShape& nifShape, bool& nifModified) { }

@@ -6,138 +6,141 @@
 using namespace std;
 
 // statics
-ParallaxGenDirectory *ParallaxGenWarnings::PGD = nullptr;
-const std::unordered_map<std::wstring, int> *ParallaxGenWarnings::ModPriority = nullptr;
+ParallaxGenDirectory* ParallaxGenWarnings::s_pgd = nullptr;
+const std::unordered_map<std::wstring, int>* ParallaxGenWarnings::s_modPriority = nullptr;
 
-unordered_map<wstring, unordered_set<wstring>> ParallaxGenWarnings::MismatchWarnTracker;
-mutex ParallaxGenWarnings::MismatchWarnTrackerMutex;
+unordered_map<wstring, unordered_set<wstring>> ParallaxGenWarnings::s_mismatchWarnTracker;
+mutex ParallaxGenWarnings::s_mismatchWarnTrackerMutex;
 
 unordered_map<std::wstring, unordered_set<pair<wstring, wstring>, ParallaxGenWarnings::PairHash>>
-    ParallaxGenWarnings::MismatchWarnDebugTracker;
-mutex ParallaxGenWarnings::MismatchWarnDebugTrackerMutex;
+    ParallaxGenWarnings::s_mismatchWarnDebugTracker;
+mutex ParallaxGenWarnings::s_mismatchWarnDebugTrackerMutex;
 
-unordered_set<pair<wstring, wstring>, ParallaxGenWarnings::PairHash> ParallaxGenWarnings::MeshWarnTracker;
-mutex ParallaxGenWarnings::MeshWarnTrackerMutex;
-unordered_set<pair<wstring, wstring>, ParallaxGenWarnings::PairHash> ParallaxGenWarnings::MeshWarnDebugTracker;
-mutex ParallaxGenWarnings::MeshWarnDebugTrackerMutex;
+unordered_set<pair<wstring, wstring>, ParallaxGenWarnings::PairHash> ParallaxGenWarnings::s_meshWarnTracker;
+mutex ParallaxGenWarnings::s_meshWarnTrackerMutex;
+unordered_set<pair<wstring, wstring>, ParallaxGenWarnings::PairHash> ParallaxGenWarnings::s_meshWarnDebugTracker;
+mutex ParallaxGenWarnings::s_meshWarnDebugTrackerMutex;
 
-void ParallaxGenWarnings::init(ParallaxGenDirectory *PGD, const unordered_map<wstring, int> *ModPriority) {
-  ParallaxGenWarnings::PGD = PGD;
-  ParallaxGenWarnings::ModPriority = ModPriority;
+void ParallaxGenWarnings::init(ParallaxGenDirectory* pgd, const unordered_map<wstring, int>* modPriority)
+{
+    ParallaxGenWarnings::s_pgd = pgd;
+    ParallaxGenWarnings::s_modPriority = modPriority;
 
-  MismatchWarnTracker.clear();
-  MismatchWarnDebugTracker.clear();
-  MeshWarnTracker.clear();
-  MeshWarnDebugTracker.clear();
+    s_mismatchWarnTracker.clear();
+    s_mismatchWarnDebugTracker.clear();
+    s_meshWarnTracker.clear();
+    s_meshWarnDebugTracker.clear();
 }
 
-void ParallaxGenWarnings::mismatchWarn(const wstring &MatchedPath, const wstring &BaseTex) {
-  // construct key
-  auto MatchedPathMod = PGD->getMod(MatchedPath);
-  auto BaseTexMod = PGD->getMod(BaseTex);
+void ParallaxGenWarnings::mismatchWarn(const wstring& matchedPath, const wstring& baseTex)
+{
+    // construct key
+    auto matchedPathMod = s_pgd->getMod(matchedPath);
+    auto baseTexMod = s_pgd->getMod(baseTex);
 
-  if (BaseTexMod.empty())
-    BaseTexMod = L"Vanilla Game";
+    if (baseTexMod.empty()) {
+        baseTexMod = L"Vanilla Game";
+    }
 
-  if (MatchedPathMod.empty() || BaseTexMod.empty()) {
-    return;
-  }
+    if (matchedPathMod.empty() || baseTexMod.empty()) {
+        return;
+    }
 
-  if (MatchedPathMod == BaseTexMod) {
-    return;
-  }
+    if (matchedPathMod == baseTexMod) {
+        return;
+    }
 
-  {
-    const lock_guard<mutex> Lock(MismatchWarnDebugTrackerMutex);
-    MismatchWarnDebugTracker[MatchedPathMod].insert(std::make_pair(MatchedPath,BaseTex));
-  }
+    {
+        const lock_guard<mutex> lock(s_mismatchWarnDebugTrackerMutex);
+        s_mismatchWarnDebugTracker[matchedPathMod].insert(std::make_pair(matchedPath, baseTex));
+    }
 
-  {
-    const lock_guard<mutex> Lock2(MismatchWarnTrackerMutex);
-    MismatchWarnTracker[MatchedPathMod].insert(BaseTexMod);
-  }
+    {
+        const lock_guard<mutex> lock2(s_mismatchWarnTrackerMutex);
+        s_mismatchWarnTracker[matchedPathMod].insert(baseTexMod);
+    }
 }
 
-void ParallaxGenWarnings::printWarnings() {
-  if (!MismatchWarnTracker.empty()) {
-    spdlog::warn("Potential Texture mismatches were found, there may be visual issues, Please verify for each warning if "
-                 "this is intended, address them and re-run ParallaxGen if needed.");
-    spdlog::warn("See https://github.com/hakasapl/ParallaxGen/wiki/FAQ for further information");
-    spdlog::warn("************************************************************");
-  }
-  for (auto MatchedMod : MismatchWarnTracker) {
-    spdlog::warn(L"\"{}\" assets are used with:", MatchedMod.first);
-    for (auto BaseMod : MatchedMod.second) {
-      spdlog::warn(L"  - diffuse/normal textures from \"{}\"", BaseMod);
+void ParallaxGenWarnings::printWarnings()
+{
+    if (!s_mismatchWarnTracker.empty()) {
+        spdlog::warn(
+            "Potential Texture mismatches were found, there may be visual issues, Please verify for each warning if "
+            "this is intended, address them and re-run ParallaxGen if needed.");
+        spdlog::warn("See https://github.com/hakasapl/ParallaxGen/wiki/FAQ for further information");
+        spdlog::warn("************************************************************");
     }
-    spdlog::warn("");
-  }
-  if (!MismatchWarnTracker.empty()) {
-    spdlog::warn("************************************************************");
-  }
-
-  if (!MismatchWarnDebugTracker.empty())
-  {
-    spdlog::debug("Potential texture mismatches:");
-  }
-  for (auto MatchedMod : MismatchWarnDebugTracker)
-  {
-    spdlog::debug(L"Mod \"{}\":", MatchedMod.first);
-
-    for (auto TexturePair : MatchedMod.second) {
-      auto BaseTexMod = PGD->getMod(TexturePair.second);
-      spdlog::debug(L"  - {} used with {} from \"{}\"",
-                    TexturePair.first, TexturePair.second, BaseTexMod);
+    for (const auto& matchedMod : s_mismatchWarnTracker) {
+        spdlog::warn(L"\"{}\" assets are used with:", matchedMod.first);
+        for (auto baseMod : matchedMod.second) {
+            spdlog::warn(L"  - diffuse/normal textures from \"{}\"", baseMod);
+        }
+        spdlog::warn("");
     }
-  }
+    if (!s_mismatchWarnTracker.empty()) {
+        spdlog::warn("************************************************************");
+    }
+
+    if (!s_mismatchWarnDebugTracker.empty()) {
+        spdlog::debug("Potential texture mismatches:");
+    }
+    for (auto& matchedMod : s_mismatchWarnDebugTracker) {
+        spdlog::debug(L"Mod \"{}\":", matchedMod.first);
+
+        for (auto texturePair : matchedMod.second) {
+            auto baseTexMod = s_pgd->getMod(texturePair.second);
+            spdlog::debug(L"  - {} used with {} from \"{}\"", texturePair.first, texturePair.second, baseTexMod);
+        }
+    }
 }
 
-void ParallaxGenWarnings::meshWarn(const wstring &MatchedPath, const wstring &NIFPath) {
-  // construct key
-  auto MatchedPathMod = PGD->getMod(MatchedPath);
-  auto NIFPathMod = PGD->getMod(NIFPath);
+void ParallaxGenWarnings::meshWarn(const wstring& matchedPath, const wstring& nifPath)
+{
+    // construct key
+    auto matchedPathMod = s_pgd->getMod(matchedPath);
+    auto nifPathMod = s_pgd->getMod(nifPath);
 
-  if (MatchedPathMod.empty() || NIFPathMod.empty()) {
-    return;
-  }
-
-  if (MatchedPathMod == NIFPathMod) {
-    return;
-  }
-
-  int Priority = 0;
-  if (ModPriority != nullptr && ModPriority->find(NIFPathMod) != ModPriority->end()) {
-    Priority = ModPriority->at(NIFPathMod);
-  }
-
-  if (Priority < 0) {
-    return;
-  }
-
-  auto Key = make_pair(MatchedPathMod, NIFPathMod);
-
-  // Issue debug log
-  {
-    auto KeyDebug = make_pair(MatchedPath, NIFPath);
-    const lock_guard<mutex> Lock(MeshWarnDebugTrackerMutex);
-    if (MeshWarnDebugTracker.find(KeyDebug) != MeshWarnDebugTracker.end()) {
-      return;
+    if (matchedPathMod.empty() || nifPathMod.empty()) {
+        return;
     }
 
-    MeshWarnDebugTracker.insert(KeyDebug);
-
-    spdlog::debug(L"[Potential Mesh Mismatch] Matched path {} from mod {} were used on mesh {} from mod {}", MatchedPath, MatchedPathMod, NIFPath,
-                  NIFPathMod);
-  }
-
-  // check if warning was already issued
-  {
-    const lock_guard<mutex> Lock(MeshWarnTrackerMutex);
-    if (MeshWarnTracker.find(Key) != MeshWarnTracker.end()) {
-      return;
+    if (matchedPathMod == nifPathMod) {
+        return;
     }
 
-    // add to tracker if not
-    MeshWarnTracker.insert(Key);
-  }
+    int priority = 0;
+    if (s_modPriority != nullptr && s_modPriority->find(nifPathMod) != s_modPriority->end()) {
+        priority = s_modPriority->at(nifPathMod);
+    }
+
+    if (priority < 0) {
+        return;
+    }
+
+    auto key = make_pair(matchedPathMod, nifPathMod);
+
+    // Issue debug log
+    {
+        auto keyDebug = make_pair(matchedPath, nifPath);
+        const lock_guard<mutex> lock(s_meshWarnDebugTrackerMutex);
+        if (s_meshWarnDebugTracker.find(keyDebug) != s_meshWarnDebugTracker.end()) {
+            return;
+        }
+
+        s_meshWarnDebugTracker.insert(keyDebug);
+
+        spdlog::debug(L"[Potential Mesh Mismatch] Matched path {} from mod {} were used on mesh {} from mod {}",
+            matchedPath, matchedPathMod, nifPath, nifPathMod);
+    }
+
+    // check if warning was already issued
+    {
+        const lock_guard<mutex> lock(s_meshWarnTrackerMutex);
+        if (s_meshWarnTracker.find(key) != s_meshWarnTracker.end()) {
+            return;
+        }
+
+        // add to tracker if not
+        s_meshWarnTracker.insert(key);
+    }
 }

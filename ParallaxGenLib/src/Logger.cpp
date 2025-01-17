@@ -7,35 +7,37 @@
 using namespace std;
 
 // Static thread-local variable
-thread_local vector<wstring> Logger::PrefixStack;
+thread_local vector<wstring> Logger::s_prefixStack;
 
 // Helper function to build the full prefix string
-auto Logger::buildPrefixWString() -> wstring {
-  wstringstream FullPrefix;
-  for (const auto &Block : Logger::PrefixStack) {
-    FullPrefix << L"[" << Block << L"] ";
-  }
-  return FullPrefix.str();
+auto Logger::buildPrefixWString() -> wstring
+{
+    wstringstream fullPrefix;
+    for (const auto& block : Logger::s_prefixStack) {
+        fullPrefix << L"[" << block << L"] ";
+    }
+    return fullPrefix.str();
 }
 
-auto Logger::buildPrefixString() -> string {
-  return ParallaxGenUtil::UTF16toUTF8(buildPrefixWString());
-}
+auto Logger::buildPrefixString() -> string { return ParallaxGenUtil::utf16toUTF8(buildPrefixWString()); }
 
 // ScopedPrefix class implementation
-Logger::Prefix::Prefix(const wstring &Prefix) {
-  // Add the new prefix block to the stack
-  PrefixStack.push_back(Prefix);
+Logger::Prefix::Prefix(const wstring& prefix)
+{
+    // Add the new prefix block to the stack
+    s_prefixStack.push_back(prefix);
 }
 
-Logger::Prefix::Prefix(const string &Prefix) {
-  // Add the new prefix block to the stack
-  PrefixStack.push_back(ParallaxGenUtil::UTF8toUTF16(Prefix));
+Logger::Prefix::Prefix(const string& prefix)
+{
+    // Add the new prefix block to the stack
+    s_prefixStack.push_back(ParallaxGenUtil::utf8toUTF16(prefix));
 }
 
-Logger::Prefix::~Prefix() {
-  // Remove the last prefix block
-  if (!PrefixStack.empty()) {
-    PrefixStack.pop_back();
-  }
+Logger::Prefix::~Prefix()
+{
+    // Remove the last prefix block
+    if (!s_prefixStack.empty()) {
+        s_prefixStack.pop_back();
+    }
 }

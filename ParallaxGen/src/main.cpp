@@ -222,25 +222,25 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
 
     // Create patcher factory
     PatcherUtil::PatcherSet patchers;
-    patchers.ShaderPatchers.emplace(PatcherDefault::getShaderType(), PatcherDefault::getFactory());
+    patchers.shaderPatchers.emplace(PatcherDefault::getShaderType(), PatcherDefault::getFactory());
     if (params.ShaderPatcher.parallax) {
         Logger::debug("Adding Parallax shader patcher");
-        patchers.ShaderPatchers.emplace(PatcherVanillaParallax::getShaderType(), PatcherVanillaParallax::getFactory());
+        patchers.shaderPatchers.emplace(PatcherVanillaParallax::getShaderType(), PatcherVanillaParallax::getFactory());
     }
     if (params.ShaderPatcher.complexMaterial) {
         Logger::debug("Adding Complex Material shader patcher");
-        patchers.ShaderPatchers.emplace(PatcherComplexMaterial::getShaderType(), PatcherComplexMaterial::getFactory());
+        patchers.shaderPatchers.emplace(PatcherComplexMaterial::getShaderType(), PatcherComplexMaterial::getFactory());
         PatcherComplexMaterial::loadStatics(
             params.PrePatcher.disableMLP, params.ShaderPatcher.ShaderPatcherComplexMaterial.listsDyncubemapBlocklist);
     }
     if (params.ShaderPatcher.truePBR) {
         Logger::debug("Adding True PBR shader patcher");
-        patchers.ShaderPatchers.emplace(PatcherTruePBR::getShaderType(), PatcherTruePBR::getFactory());
+        patchers.shaderPatchers.emplace(PatcherTruePBR::getShaderType(), PatcherTruePBR::getFactory());
         PatcherTruePBR::loadStatics(pgd.getPBRJSONs());
     }
     if (params.ShaderTransforms.parallaxToCM) {
         Logger::debug("Adding Parallax to Complex Material shader transform patcher");
-        patchers.ShaderTransformPatchers[PatcherUpgradeParallaxToCM::getFromShader()].emplace(
+        patchers.shaderTransformPatchers[PatcherUpgradeParallaxToCM::getFromShader()].emplace(
             PatcherUpgradeParallaxToCM::getToShader(), PatcherUpgradeParallaxToCM::getFactory());
     }
 

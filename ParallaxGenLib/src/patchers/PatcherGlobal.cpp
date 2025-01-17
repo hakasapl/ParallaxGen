@@ -2,5 +2,7 @@
 
 using namespace std;
 
-PatcherGlobal::PatcherGlobal(std::filesystem::path NIFPath, nifly::NifFile *NIF, std::string PatcherName)
-    : Patcher(std::move(NIFPath), NIF, std::move(PatcherName)) {}
+PatcherGlobal::PatcherGlobal(std::filesystem::path nifPath, nifly::NifFile* nif, std::string patcherName)
+    : Patcher(std::move(nifPath), nif, std::move(patcherName))
+{
+}

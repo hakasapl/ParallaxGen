@@ -1,5 +1,4 @@
 #include "patchers/PatcherParticleLightsToLP.hpp"
-#include "NIFUtil.hpp"
 #include "ParallaxGenUtil.hpp"
 #include "patchers/PatcherGlobal.hpp"
 
@@ -22,438 +21,430 @@
 using namespace std;
 
 // statics
-nlohmann::json PatcherParticleLightsToLP::LPJsonData;
-mutex PatcherParticleLightsToLP::LPJsonDataMutex;
+nlohmann::json PatcherParticleLightsToLP::s_lpJsonData;
+mutex PatcherParticleLightsToLP::s_lpJsonDataMutex;
 
-PatcherParticleLightsToLP::PatcherParticleLightsToLP(std::filesystem::path NIFPath, nifly::NifFile *NIF)
-    : PatcherGlobal(std::move(NIFPath), NIF, "ParticleLightsToLP") {}
-
-auto PatcherParticleLightsToLP::getFactory() -> PatcherGlobal::PatcherGlobalFactory {
-  return [](const filesystem::path &NIFPath, nifly::NifFile *NIF) -> unique_ptr<PatcherGlobal> {
-    return make_unique<PatcherParticleLightsToLP>(NIFPath, NIF);
-  };
+PatcherParticleLightsToLP::PatcherParticleLightsToLP(std::filesystem::path nifPath, nifly::NifFile* nif)
+    : PatcherGlobal(std::move(nifPath), nif, "ParticleLightsToLP")
+{
 }
 
-auto PatcherParticleLightsToLP::applyPatch(bool &NIFModified) -> bool {
-  // Loop through all blocks to find alpha properties
-  // Determine if NIF has attached havok animations
-  vector<NiObject *> NIFBlockTree;
-  getNIF()->GetTree(NIFBlockTree);
-
-  bool AppliedPatch = false;
-
-  for (NiObject *NIFBlock : NIFBlockTree) {
-    if (!boost::iequals(NIFBlock->GetBlockName(), "NiBillboardNode")) {
-      continue;
-    }
-    auto *const BillboardNode = dynamic_cast<nifly::NiBillboardNode *>(NIFBlock);
-
-    // Get children
-    set<NiRef *> ChildRefs;
-    BillboardNode->GetChildRefs(ChildRefs);
-
-    if (ChildRefs.empty()) {
-      // no children
-      continue;
-    }
-
-    // get relevant objects
-    nifly::NiShape *Shape = nullptr;
-    nifly::NiAlphaProperty *AlphaProperty = nullptr;
-    nifly::BSEffectShaderProperty *EffectShader = nullptr;
-    nifly::NiParticleSystem *ParticleSystem = nullptr;
-
-    // Loop through children and assign whatever is found
-    for (auto *ChildRef : ChildRefs) {
-      if (Shape == nullptr) {
-        Shape = getNIF()->GetHeader().GetBlock<NiShape>(ChildRef);
-      }
-
-      if (ParticleSystem == nullptr) {
-        ParticleSystem = getNIF()->GetHeader().GetBlock<NiParticleSystem>(ChildRef);
-      }
-    }
-
-    if (Shape == nullptr) {
-      // No shape available
-      continue;
-    }
-
-    if (ParticleSystem != nullptr) {
-      // This node has a particle system
-      // Find the alpha property and effect shader from particle system
-      const auto PSAlphaPropertyRef = ParticleSystem->alphaPropertyRef;
-      if (!PSAlphaPropertyRef.IsEmpty() && AlphaProperty == nullptr) {
-        AlphaProperty = getNIF()->GetHeader().GetBlock<NiAlphaProperty>(PSAlphaPropertyRef);
-      }
-
-      const auto PSShaderPropertyRef = ParticleSystem->shaderPropertyRef;
-      if (!PSShaderPropertyRef.IsEmpty() && EffectShader == nullptr) {
-        EffectShader = getNIF()->GetHeader().GetBlock<BSEffectShaderProperty>(PSShaderPropertyRef);
-      }
-    }
-
-    if (ParticleSystem == nullptr) {
-      // This node does not have a particle system
-      // Find the alpha property and effect shader from shape
-      auto *const ShapeAlphaPropertyRef = Shape->AlphaPropertyRef();
-      if (!ShapeAlphaPropertyRef->IsEmpty() && AlphaProperty == nullptr) {
-        AlphaProperty = getNIF()->GetHeader().GetBlock<NiAlphaProperty>(ShapeAlphaPropertyRef);
-      }
-
-      auto *const ShapeShaderPropertyRef = Shape->ShaderPropertyRef();
-      if (!ShapeShaderPropertyRef->IsEmpty() && EffectShader == nullptr) {
-        EffectShader = getNIF()->GetHeader().GetBlock<BSEffectShaderProperty>(ShapeShaderPropertyRef);
-      }
-    }
-
-    if (AlphaProperty == nullptr || EffectShader == nullptr) {
-      // No alpha property or effect shader
-      continue;
-    }
-
-    // Validate that all parameters are met for a particle light
-    if (AlphaProperty->flags != 4109) {
-      // no additive blending
-      continue;
-    }
-
-    if ((EffectShader->shaderFlags1 & SLSF1_SOFT_EFFECT) == 0U) {
-      // no soft effect shader flag
-      continue;
-    }
-
-    Logger::trace(L"Found Particle Light: {}", ParallaxGenUtil::ASCIItoUTF16(NIFBlock->GetBlockName()));
-
-    // Apply patch to this particle light
-    if (applySinglePatch(BillboardNode, Shape, EffectShader)) {
-      // Delete block if patch was applied
-      NIFModified = true;
-      const auto NIFBlockRef = nifly::NiRef(getNIF()->GetBlockID(NIFBlock));
-      getNIF()->GetHeader().DeleteBlock(NIFBlockRef);
-    }
-  }
-
-  return AppliedPatch;
+auto PatcherParticleLightsToLP::getFactory() -> PatcherGlobal::PatcherGlobalFactory
+{
+    return [](const filesystem::path& nifPath, nifly::NifFile* nif) -> unique_ptr<PatcherGlobal> {
+        return make_unique<PatcherParticleLightsToLP>(nifPath, nif);
+    };
 }
 
-auto PatcherParticleLightsToLP::applySinglePatch(nifly::NiBillboardNode *Node, nifly::NiShape *Shape,
-                                                 nifly::BSEffectShaderProperty *EffectShader) -> bool {
-  // Start generating LP JSON
-  nlohmann::json LPJson;
+auto PatcherParticleLightsToLP::applyPatch(bool& nifModified) -> bool
+{
+    // Loop through all blocks to find alpha properties
+    // Determine if NIF has attached havok animations
+    vector<NiObject*> nifBlockTree;
+    getNIF()->GetTree(nifBlockTree);
 
-  // Set model path
-  LPJson["models"] = nlohmann::json::array();
+    bool appliedPatch = false;
 
-  // Remove "meshes\\" from start of path
-  const auto NIFPath = boost::ireplace_first_copy(getNIFPath().string(), "meshes\\", "");
-  LPJson["models"].push_back(NIFPath);
+    for (NiObject* nifBlock : nifBlockTree) {
+        if (!boost::iequals(nifBlock->GetBlockName(), "NiBillboardNode")) {
+            continue;
+        }
+        auto* const billboardNode = dynamic_cast<nifly::NiBillboardNode*>(nifBlock);
 
-  // Create lights array
-  LPJson["lights"] = nlohmann::json::array();
+        // Get children
+        set<NiRef*> childRefs;
+        billboardNode->GetChildRefs(childRefs);
 
-  // LightEntry will hold all JSON data for light
-  nlohmann::json LightEntry;
-  LightEntry["data"] = nlohmann::json::object();
+        if (childRefs.empty()) {
+            // no children
+            continue;
+        }
 
-  // Set position
-  MatTransform GlobalPosition;
-  getNIF()->GetNodeTransformToGlobal(Node->name.get(), GlobalPosition);
+        // get relevant objects
+        nifly::NiShape* shape = nullptr;
+        nifly::NiAlphaProperty* alphaProperty = nullptr;
+        nifly::BSEffectShaderProperty* effectShader = nullptr;
+        nifly::NiParticleSystem* particleSystem = nullptr;
 
-  // Setup points array
-  LightEntry["points"] = nlohmann::json::array();
-  LightEntry["points"].push_back(nlohmann::json::array({round(GlobalPosition.translation.x * 100.0) / 100.0,
-                                                        round(GlobalPosition.translation.y * 100.0) / 100.0,
-                                                        round(GlobalPosition.translation.z * 100.0) / 100.0}));
+        // Loop through children and assign whatever is found
+        for (auto* childRef : childRefs) {
+            if (shape == nullptr) {
+                shape = getNIF()->GetHeader().GetBlock<NiShape>(childRef);
+            }
 
-  // Set Light
-  LightEntry["data"]["light"] = "MagicLightWhite01"; // Placeholder light that will be overridden
+            if (particleSystem == nullptr) {
+                particleSystem = getNIF()->GetHeader().GetBlock<NiParticleSystem>(childRef);
+            }
+        }
 
-  // BSTriShape conversion
-  auto *const ShapeBSTriShape = dynamic_cast<nifly::BSTriShape *>(Shape);
-  if (ShapeBSTriShape == nullptr) {
-    // not a BSTriShape
-    // TODO support other shape types?
-    return false;
-  }
+        if (shape == nullptr) {
+            // No shape available
+            continue;
+        }
 
-  const auto VertData = ShapeBSTriShape->vertData;
-  const auto NumVerts = VertData.size();
+        if (particleSystem != nullptr) {
+            // This node has a particle system
+            // Find the alpha property and effect shader from particle system
+            const auto psAlphaPropertyRef = particleSystem->alphaPropertyRef;
+            if (!psAlphaPropertyRef.IsEmpty() && alphaProperty == nullptr) {
+                alphaProperty = getNIF()->GetHeader().GetBlock<NiAlphaProperty>(psAlphaPropertyRef);
+            }
 
-  // set color
-  auto BaseColor = EffectShader->baseColor;
-  bool GetColorFromVertex = abs(BaseColor.r - 1.0) < 1e-5 && abs(BaseColor.g - 1.0) < 1e-5 &&
-                            abs(BaseColor.b - 1.0) < 1e-5 && Shape->HasVertexColors();
-  if (GetColorFromVertex) {
-    // Reset basecolor
-    BaseColor = {0, 0, 0, 0};
+            const auto psShaderPropertyRef = particleSystem->shaderPropertyRef;
+            if (!psShaderPropertyRef.IsEmpty() && effectShader == nullptr) {
+                effectShader = getNIF()->GetHeader().GetBlock<BSEffectShaderProperty>(psShaderPropertyRef);
+            }
+        }
 
-    // Get color from vertex
-    for (const auto &Vertex : VertData) {
-      BaseColor.r += static_cast<float>(Vertex.colorData[0]);
-      BaseColor.g += static_cast<float>(Vertex.colorData[1]);
-      BaseColor.b += static_cast<float>(Vertex.colorData[2]);
+        if (particleSystem == nullptr) {
+            // This node does not have a particle system
+            // Find the alpha property and effect shader from shape
+            auto* const shapeAlphaPropertyRef = shape->AlphaPropertyRef();
+            if (!shapeAlphaPropertyRef->IsEmpty() && alphaProperty == nullptr) {
+                alphaProperty = getNIF()->GetHeader().GetBlock<NiAlphaProperty>(shapeAlphaPropertyRef);
+            }
+
+            auto* const shapeShaderPropertyRef = shape->ShaderPropertyRef();
+            if (!shapeShaderPropertyRef->IsEmpty() && effectShader == nullptr) {
+                effectShader = getNIF()->GetHeader().GetBlock<BSEffectShaderProperty>(shapeShaderPropertyRef);
+            }
+        }
+
+        if (alphaProperty == nullptr || effectShader == nullptr) {
+            // No alpha property or effect shader
+            continue;
+        }
+
+        // Validate that all parameters are met for a particle light
+        if (alphaProperty->flags != PARTICLE_LIGHT_FLAGS) {
+            // no additive blending
+            continue;
+        }
+
+        if ((effectShader->shaderFlags1 & SLSF1_SOFT_EFFECT) == 0U) {
+            // no soft effect shader flag
+            continue;
+        }
+
+        Logger::trace(L"Found Particle Light: {}", ParallaxGenUtil::asciitoUTF16(nifBlock->GetBlockName()));
+
+        // Apply patch to this particle light
+        if (applySinglePatch(billboardNode, shape, effectShader)) {
+            // Delete block if patch was applied
+            nifModified = true;
+            const auto nifBlockRef = nifly::NiRef(getNIF()->GetBlockID(nifBlock));
+            getNIF()->GetHeader().DeleteBlock(nifBlockRef);
+        }
     }
 
-    BaseColor.r /= static_cast<float>(NumVerts);
-    BaseColor.g /= static_cast<float>(NumVerts);
-    BaseColor.b /= static_cast<float>(NumVerts);
-  } else {
-    // Convert to 0-255
-    BaseColor *= 255.0;
-  }
-
-  LightEntry["data"]["color"] = nlohmann::json::array(
-      {static_cast<int>(BaseColor.r), static_cast<int>(BaseColor.g), static_cast<int>(BaseColor.b)});
-
-  // Calculate radius from average of vertex distances
-  double Radius = 0.0;
-  for (const auto &Vertex : VertData) {
-    // Find distance with pythagorean theorem
-    const auto CurDistance = sqrt(pow(Vertex.vert.x, 2) + pow(Vertex.vert.y, 2) + pow(Vertex.vert.z, 2));
-    // update radius with average
-    Radius += CurDistance;
-  }
-
-  Radius /= static_cast<double>(NumVerts);
-
-  LightEntry["data"]["radius"] = static_cast<int>(Radius);
-
-  LightEntry["data"]["fade"] = round(EffectShader->baseColorScale * 100.0) / 100.0;
-
-  // Get controllers
-  auto ControllerRef = EffectShader->controllerRef;
-  while (!ControllerRef.IsEmpty()) {
-    auto *const Controller = getNIF()->GetHeader().GetBlock(ControllerRef);
-    if (Controller == nullptr) {
-      break;
-    }
-
-    string JSONField;
-    const auto ControllerJson = getControllerJSON(Controller, JSONField);
-    if (!ControllerJson.empty()) {
-      LightEntry["data"][JSONField] = ControllerJson;
-    }
-
-    ControllerRef = Controller->nextControllerRef;
-  }
-
-  LPJson["lights"].push_back(LightEntry);
-
-  // Save JSON
-  {
-    lock_guard<mutex> Lock(LPJsonDataMutex);
-    PatcherParticleLightsToLP::LPJsonData.push_back(LPJson);
-  }
-
-  return true;
+    return appliedPatch;
 }
 
-auto PatcherParticleLightsToLP::getControllerJSON(nifly::NiTimeController *Controller,
-                                                  string &JSONField) -> nlohmann::json {
-  nlohmann::json ControllerJson = nlohmann::json::object();
+auto PatcherParticleLightsToLP::applySinglePatch(
+    nifly::NiBillboardNode* node, nifly::NiShape* shape, nifly::BSEffectShaderProperty* effectShader) -> bool
+{
+    // Start generating LP JSON
+    nlohmann::json lpJson;
 
-  if (Controller == nullptr) {
-    return ControllerJson;
-  }
+    // Set model path
+    lpJson["models"] = nlohmann::json::array();
 
-  auto *const FloatController = dynamic_cast<nifly::BSEffectShaderPropertyFloatController *>(Controller);
-  NiBlockRef<NiInterpController> InterpRef;
-  if (FloatController != nullptr) {
-    if (FloatController->typeOfControlledVariable != 0) {
-      // We don't care about this controller (not controlling emissive mult)
-      return ControllerJson;
+    // Remove "meshes\\" from start of path
+    const auto nifPath = boost::ireplace_first_copy(getNIFPath().string(), "meshes\\", "");
+    lpJson["models"].push_back(nifPath);
+
+    // Create lights array
+    lpJson["lights"] = nlohmann::json::array();
+
+    // LightEntry will hold all JSON data for light
+    nlohmann::json lightEntry;
+    lightEntry["data"] = nlohmann::json::object();
+
+    // Set position
+    MatTransform globalPosition;
+    getNIF()->GetNodeTransformToGlobal(node->name.get(), globalPosition);
+
+    // Setup points array
+    lightEntry["points"] = nlohmann::json::array();
+    lightEntry["points"].push_back(nlohmann::json::array({ round(globalPosition.translation.x * 100.0) / 100.0,
+        round(globalPosition.translation.y * 100.0) / 100.0, round(globalPosition.translation.z * 100.0) / 100.0 }));
+
+    // Set Light
+    lightEntry["data"]["light"] = "MagicLightWhite01"; // Placeholder light that will be overridden
+
+    // BSTriShape conversion
+    auto* const shapeBSTriShape = dynamic_cast<nifly::BSTriShape*>(shape);
+    if (shapeBSTriShape == nullptr) {
+        // not a BSTriShape
+        // TODO support other shape types?
+        return false;
     }
 
-    InterpRef = FloatController->interpolatorRef;
+    const auto vertData = shapeBSTriShape->vertData;
+    const auto numVerts = vertData.size();
 
-    JSONField = "fadeController";
-  }
+    // set color
+    auto baseColor = effectShader->baseColor;
+    bool getColorFromVertex = abs(baseColor.r - 1.0) < MIN_VALUE && abs(baseColor.g - 1.0) < MIN_VALUE
+        && abs(baseColor.b - 1.0) < MIN_VALUE && shape->HasVertexColors();
+    if (getColorFromVertex) {
+        // Reset basecolor
+        baseColor = { 0, 0, 0, 0 };
 
-  auto *const ColorController = dynamic_cast<nifly::BSEffectShaderPropertyColorController *>(Controller);
-  if (ColorController != nullptr) {
-    InterpRef = ColorController->interpolatorRef;
+        // Get color from vertex
+        for (const auto& vertex : vertData) {
+            baseColor.r += static_cast<float>(vertex.colorData[0]);
+            baseColor.g += static_cast<float>(vertex.colorData[1]);
+            baseColor.b += static_cast<float>(vertex.colorData[2]);
+        }
 
-    JSONField = "colorController";
-  }
-
-  if ((FloatController == nullptr && ColorController == nullptr) ||
-      (FloatController != nullptr && ColorController != nullptr)) {
-    // We don't care about this controller
-    return ControllerJson;
-  }
-
-  if (InterpRef.IsEmpty()) {
-    return ControllerJson;
-  }
-
-  // Find data block
-  nifly::NiFloatData *FadeDataBlock = nullptr;
-  nifly::NiPosData *ColorDataBlock = nullptr;
-
-  auto *const FloatInterpolator = getNIF()->GetHeader().GetBlock<NiFloatInterpolator>(InterpRef);
-  if (FloatInterpolator != nullptr) {
-    const auto DataRef = FloatInterpolator->dataRef;
-    FadeDataBlock = getNIF()->GetHeader().GetBlock<nifly::NiFloatData>(DataRef);
-  }
-
-  auto *const NiPoint3Interpolator = dynamic_cast<nifly::NiPoint3Interpolator *>(FloatInterpolator);
-  if (NiPoint3Interpolator != nullptr) {
-    const auto DataRef = NiPoint3Interpolator->dataRef;
-    ColorDataBlock = getNIF()->GetHeader().GetBlock<nifly::NiPosData>(DataRef);
-  }
-
-  if ((FadeDataBlock == nullptr && FloatController != nullptr) ||
-      (ColorDataBlock == nullptr && ColorController != nullptr)) {
-    // Could not find data block
-    return ControllerJson;
-  }
-
-  ControllerJson["keys"] = nlohmann::json::array();
-
-  nifly::NiKeyType InterpolationType = nifly::NiKeyType::LINEAR_KEY;
-  if (FloatController != nullptr) {
-    InterpolationType = FadeDataBlock->data.GetInterpolationType();
-  } else if (ColorController != nullptr) {
-    InterpolationType = ColorDataBlock->data.GetInterpolationType();
-  }
-
-  // Get interpolation method
-  switch (InterpolationType) {
-  case nifly::NiKeyType::LINEAR_KEY:
-    ControllerJson["interpolation"] = "Linear";
-    break;
-  case nifly::NiKeyType::QUADRATIC_KEY:
-    ControllerJson["interpolation"] = "Cubic";
-    break;
-  case nifly::NiKeyType::NO_INTERP:
-    ControllerJson["interpolation"] = "Step";
-    break;
-  default:
-    // Linear interpolation default
-    ControllerJson["interpolation"] = "Linear";
-    break;
-  }
-
-  // Add keys to JSON
-  uint32_t NumKeys = 0;
-  if (FloatController != nullptr) {
-    NumKeys = FadeDataBlock->data.GetNumKeys();
-  } else if (ColorController != nullptr) {
-    NumKeys = ColorDataBlock->data.GetNumKeys();
-  }
-
-  for (uint32_t I = 0; I < NumKeys; I++) {
-    if (FloatController != nullptr) {
-      const auto CurKey = FadeDataBlock->data.GetKey(static_cast<int>(I));
-
-      ControllerJson["keys"].push_back(
-          nlohmann::json::object({{"time", round(CurKey.time * 1000000.0) / 1000000.0},
-                                  {"value", round(CurKey.value * 1000000.0) / 1000000.0},
-                                  {"forward", round(CurKey.forward * 1000000.0) / 1000000.0},
-                                  {"backward", round(CurKey.backward * 1000000.0) / 1000000.0}}));
-    } else if (ColorController != nullptr) {
-      const auto CurKey = ColorDataBlock->data.GetKey(static_cast<int>(I));
-
-      ControllerJson["keys"].push_back(nlohmann::json::object(
-          {{"time", round(CurKey.time * 1000000.0) / 1000000.0},
-           {"color", nlohmann::json::array({static_cast<int>(CurKey.value.x), static_cast<int>(CurKey.value.y),
-                                            static_cast<int>(CurKey.value.z)})},
-           {"forward", nlohmann::json::array({static_cast<int>(CurKey.forward.x), static_cast<int>(CurKey.forward.y),
-                                              static_cast<int>(CurKey.forward.z)})},
-           {"backward", nlohmann::json::array({static_cast<int>(CurKey.backward.x), static_cast<int>(CurKey.backward.y),
-                                               static_cast<int>(CurKey.backward.z)})}}));
+        baseColor.r /= static_cast<float>(numVerts);
+        baseColor.g /= static_cast<float>(numVerts);
+        baseColor.b /= static_cast<float>(numVerts);
+    } else {
+        // Convert to 0-255
+        baseColor *= WHITE_COLOR;
     }
-  }
 
-  return ControllerJson;
+    lightEntry["data"]["color"] = nlohmann::json::array(
+        { static_cast<int>(baseColor.r), static_cast<int>(baseColor.g), static_cast<int>(baseColor.b) });
+
+    // Calculate radius from average of vertex distances
+    double radius = 0.0;
+    for (const auto& vertex : vertData) {
+        // Find distance with pythagorean theorem
+        const auto curDistance = sqrt(pow(vertex.vert.x, 2) + pow(vertex.vert.y, 2) + pow(vertex.vert.z, 2));
+        // update radius with average
+        radius += curDistance;
+    }
+
+    radius /= static_cast<double>(numVerts);
+
+    lightEntry["data"]["radius"] = static_cast<int>(radius);
+
+    lightEntry["data"]["fade"] = round(effectShader->baseColorScale * 100.0) / 100.0;
+
+    // Get controllers
+    auto controllerRef = effectShader->controllerRef;
+    while (!controllerRef.IsEmpty()) {
+        auto* const controller = getNIF()->GetHeader().GetBlock(controllerRef);
+        if (controller == nullptr) {
+            break;
+        }
+
+        string jsonField;
+        const auto controllerJson = getControllerJSON(controller, jsonField);
+        if (!controllerJson.empty()) {
+            lightEntry["data"][jsonField] = controllerJson;
+        }
+
+        controllerRef = controller->nextControllerRef;
+    }
+
+    lpJson["lights"].push_back(lightEntry);
+
+    // Save JSON
+    {
+        lock_guard<mutex> lock(s_lpJsonDataMutex);
+        PatcherParticleLightsToLP::s_lpJsonData.push_back(lpJson);
+    }
+
+    return true;
 }
 
-void PatcherParticleLightsToLP::finalize() {
-  lock_guard<mutex> Lock(LPJsonDataMutex);
+auto PatcherParticleLightsToLP::getControllerJSON(
+    nifly::NiTimeController* controller, string& jsonField) -> nlohmann::json
+{
+    nlohmann::json controllerJson = nlohmann::json::object();
 
-  // Check if output JSON is empty
-  if (LPJsonData.empty()) {
-    return;
-  }
-
-  // Key type for grouping: the stringified "models" array.
-  std::unordered_map<std::string, std::unordered_map<std::string, std::vector<nlohmann::json>>> ModelsToDataPoints;
-
-  // --- Step 1: Group by "models". ---
-  for (auto &Obj : LPJsonData) {
-    // Convert the entire "models" array to a string key for grouping.
-    std::string ModelsKey = Obj["models"].dump();
-
-    // Retrieve or create the DataGroup for these models.
-    auto &DataGroup = ModelsToDataPoints[ModelsKey];
-
-    // --- Step 2: For each light, group by "data". ---
-    for (auto &Light : Obj["lights"]) {
-      // The entire "data" object as a string key:
-      std::string DataKey = Light["data"].dump();
-
-      // The "points" array might have multiple points,
-      // but typically in your example there's only one per object.
-      // We'll append them all to the vector in dataGroup.
-      for (auto &P : Light["points"]) {
-        DataGroup[DataKey].push_back(P);
-      }
-    }
-  }
-
-  // --- Step 3: Build the merged output. ---
-  // We'll produce a JSON array of objects, each with "models" and "lights".
-  nlohmann::json MergedOutput = nlohmann::json::array();
-
-  for (auto &Kv : ModelsToDataPoints) {
-    const auto &ModelsKey = Kv.first;
-    const auto &DataGroup = Kv.second;
-
-    // Reconstruct the "models" array from the key.
-    nlohmann::json ModelsJson = nlohmann::json::parse(ModelsKey);
-
-    // Build "lights" by iterating over each distinct dataKey
-    nlohmann::json LightsArray = nlohmann::json::array();
-
-    for (const auto &DataKv : DataGroup) {
-      std::string DataKey = DataKv.first;
-      // Reconstruct the data object from string
-      nlohmann::json DataObj = nlohmann::json::parse(DataKey);
-
-      // The merged points for this data
-      const auto &AllPoints = DataKv.second; // vector<json>
-
-      // Create the light entry
-      nlohmann::json LightEntry;
-      LightEntry["data"] = DataObj;
-      LightEntry["points"] = nlohmann::json::array();
-
-      // Append all points
-      for (const auto &Pt : AllPoints) {
-        LightEntry["points"].push_back(Pt);
-      }
-
-      // Add this light entry to the lights array
-      LightsArray.push_back(LightEntry);
+    if (controller == nullptr) {
+        return controllerJson;
     }
 
-    // Now assemble the final group object
-    nlohmann::json GroupObj;
-    GroupObj["models"] = ModelsJson;
-    GroupObj["lights"] = LightsArray;
+    auto* const floatController = dynamic_cast<nifly::BSEffectShaderPropertyFloatController*>(controller);
+    NiBlockRef<NiInterpController> interpRef;
+    if (floatController != nullptr) {
+        if (floatController->typeOfControlledVariable != 0) {
+            // We don't care about this controller (not controlling emissive mult)
+            return controllerJson;
+        }
 
-    // Add to the final merged output
-    MergedOutput.push_back(GroupObj);
-  }
+        interpRef = floatController->interpolatorRef;
 
-  const auto OutputJSON = getPGD()->getGeneratedPath() / "LightPlacer/parallaxgen.json";
+        jsonField = "fadeController";
+    }
 
-  // Create directories for parent path
-  filesystem::create_directories(OutputJSON.parent_path());
+    auto* const colorController = dynamic_cast<nifly::BSEffectShaderPropertyColorController*>(controller);
+    if (colorController != nullptr) {
+        interpRef = colorController->interpolatorRef;
 
-  // Save JSON to file
-  ofstream LPJsonFile(OutputJSON);
-  LPJsonFile << MergedOutput.dump(2) << endl;
-  LPJsonFile.close();
+        jsonField = "colorController";
+    }
+
+    if ((floatController == nullptr && colorController == nullptr)
+        || (floatController != nullptr && colorController != nullptr)) {
+        // We don't care about this controller
+        return controllerJson;
+    }
+
+    if (interpRef.IsEmpty()) {
+        return controllerJson;
+    }
+
+    // Find data block
+    nifly::NiFloatData* fadeDataBlock = nullptr;
+    nifly::NiPosData* colorDataBlock = nullptr;
+
+    auto* const floatInterpolator = getNIF()->GetHeader().GetBlock<NiFloatInterpolator>(interpRef);
+    if (floatInterpolator != nullptr) {
+        const auto dataRef = floatInterpolator->dataRef;
+        fadeDataBlock = getNIF()->GetHeader().GetBlock<nifly::NiFloatData>(dataRef);
+    }
+
+    auto* const niPoint3Interpolator = dynamic_cast<nifly::NiPoint3Interpolator*>(floatInterpolator);
+    if (niPoint3Interpolator != nullptr) {
+        const auto dataRef = niPoint3Interpolator->dataRef;
+        colorDataBlock = getNIF()->GetHeader().GetBlock<nifly::NiPosData>(dataRef);
+    }
+
+    if ((fadeDataBlock == nullptr && floatController != nullptr)
+        || (colorDataBlock == nullptr && colorController != nullptr)) {
+        // Could not find data block
+        return controllerJson;
+    }
+
+    controllerJson["keys"] = nlohmann::json::array();
+
+    nifly::NiKeyType interpolationType = nifly::NiKeyType::LINEAR_KEY;
+    if (floatController != nullptr) {
+        interpolationType = fadeDataBlock->data.GetInterpolationType();
+    } else if (colorController != nullptr) {
+        interpolationType = colorDataBlock->data.GetInterpolationType();
+    }
+
+    // Get interpolation method
+    switch (interpolationType) {
+    case nifly::NiKeyType::LINEAR_KEY:
+        controllerJson["interpolation"] = "Linear";
+        break;
+    case nifly::NiKeyType::QUADRATIC_KEY:
+        controllerJson["interpolation"] = "Cubic";
+        break;
+    case nifly::NiKeyType::NO_INTERP:
+        controllerJson["interpolation"] = "Step";
+        break;
+    default:
+        // Linear interpolation default
+        controllerJson["interpolation"] = "Linear";
+        break;
+    }
+
+    // Add keys to JSON
+    uint32_t numKeys = 0;
+    if (floatController != nullptr) {
+        numKeys = fadeDataBlock->data.GetNumKeys();
+    } else if (colorController != nullptr) {
+        numKeys = colorDataBlock->data.GetNumKeys();
+    }
+
+    for (uint32_t i = 0; i < numKeys; i++) {
+        if (floatController != nullptr) {
+            const auto curKey = fadeDataBlock->data.GetKey(static_cast<int>(i));
+
+            controllerJson["keys"].push_back(
+                nlohmann::json::object({ { "time", round(curKey.time * ROUNDING_VALUE) / ROUNDING_VALUE },
+                    { "value", round(curKey.value * ROUNDING_VALUE) / ROUNDING_VALUE },
+                    { "forward", round(curKey.forward * ROUNDING_VALUE) / ROUNDING_VALUE },
+                    { "backward", round(curKey.backward * ROUNDING_VALUE) / ROUNDING_VALUE } }));
+        } else if (colorController != nullptr) {
+            const auto curKey = colorDataBlock->data.GetKey(static_cast<int>(i));
+
+            controllerJson["keys"].push_back(
+                nlohmann::json::object({ { "time", round(curKey.time * ROUNDING_VALUE) / ROUNDING_VALUE },
+                    { "color",
+                        nlohmann::json::array({ static_cast<int>(curKey.value.x), static_cast<int>(curKey.value.y),
+                            static_cast<int>(curKey.value.z) }) },
+                    { "forward",
+                        nlohmann::json::array({ static_cast<int>(curKey.forward.x), static_cast<int>(curKey.forward.y),
+                            static_cast<int>(curKey.forward.z) }) },
+                    { "backward",
+                        nlohmann::json::array({ static_cast<int>(curKey.backward.x),
+                            static_cast<int>(curKey.backward.y), static_cast<int>(curKey.backward.z) }) } }));
+        }
+    }
+
+    return controllerJson;
+}
+
+void PatcherParticleLightsToLP::finalize()
+{
+    lock_guard<mutex> lock(s_lpJsonDataMutex);
+
+    // Check if output JSON is empty
+    if (s_lpJsonData.empty()) {
+        return;
+    }
+
+    // Key type for grouping: the stringified "models" array.
+    std::unordered_map<std::string, std::unordered_map<std::string, std::vector<nlohmann::json>>> modelsToDataPoints;
+
+    // Merge all lights into a single JSON object
+    for (auto& obj : s_lpJsonData) {
+        std::string modelsKey = obj["models"].dump();
+
+        auto& dataGroup = modelsToDataPoints[modelsKey];
+
+        for (auto& light : obj["lights"]) {
+            std::string dataKey = light["data"].dump();
+            for (auto& p : light["points"]) {
+                dataGroup[dataKey].push_back(p);
+            }
+        }
+    }
+
+    nlohmann::json mergedOutput = nlohmann::json::array();
+
+    for (auto& kv : modelsToDataPoints) {
+        const auto& modelsKey = kv.first;
+        const auto& dataGroup = kv.second;
+
+        nlohmann::json modelsJson = nlohmann::json::parse(modelsKey);
+
+        nlohmann::json lightsArray = nlohmann::json::array();
+
+        for (const auto& dataKv : dataGroup) {
+            std::string dataKey = dataKv.first;
+            nlohmann::json dataObj = nlohmann::json::parse(dataKey);
+
+            const auto& allPoints = dataKv.second; // vector<json>
+
+            nlohmann::json lightEntry;
+            lightEntry["data"] = dataObj;
+            lightEntry["points"] = nlohmann::json::array();
+
+            for (const auto& pt : allPoints) {
+                lightEntry["points"].push_back(pt);
+            }
+
+            lightsArray.push_back(lightEntry);
+        }
+
+        // Now assemble the final group object
+        nlohmann::json groupObj;
+        groupObj["models"] = modelsJson;
+        groupObj["lights"] = lightsArray;
+
+        // Add to the final merged output
+        mergedOutput.push_back(groupObj);
+    }
+
+    const auto outputJSON = getPGD()->getGeneratedPath() / "LightPlacer/parallaxgen.json";
+
+    // Create directories for parent path
+    filesystem::create_directories(outputJSON.parent_path());
+
+    // Save JSON to file
+    ofstream lpJsonFile(outputJSON);
+    lpJsonFile << mergedOutput.dump(2) << endl;
+    lpJsonFile.close();
 }

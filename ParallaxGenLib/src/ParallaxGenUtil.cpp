@@ -15,153 +15,167 @@ namespace ParallaxGenUtil {
 
 constexpr unsigned ASCII_UPPER_BOUND = 127;
 
-auto Windows1252toUTF16(const std::string &Str) -> std::wstring {
-  return boost::locale::conv::to_utf<wchar_t>(Str, "windows-1252");
-}
-
-auto UTF16toWindows1252(const std::wstring &Str) -> std::string {
-  return boost::locale::conv::from_utf<wchar_t>(Str, "windows-1252");
-}
-
-auto ASCIItoUTF16(const std::string &Str) -> std::wstring {
-  return boost::locale::conv::to_utf<wchar_t>(Str, "US-ASCII");
-}
-
-auto UTF16toASCII(const std::wstring &Str) -> std::string {
-  return boost::locale::conv::from_utf<wchar_t>(Str, "US-ASCII");
-}
-
-auto utf8VectorToUTF16(const vector<string> &Vec) -> vector<wstring> {
-  vector<wstring> Out;
-  Out.reserve(Vec.size());
-  for (const auto &Item : Vec) {
-    Out.push_back(UTF8toUTF16(Item));
-  }
-
-  return Out;
-}
-
-auto utf16VectorToUTF8(const vector<wstring> &Vec) -> vector<string> {
-  vector<string> Out;
-  Out.reserve(Vec.size());
-  for (const auto &Item : Vec) {
-    Out.push_back(UTF16toUTF8(Item));
-  }
-
-  return Out;
-}
-
-auto windows1252VectorToUTF16(const vector<string> &Vec) -> vector<wstring> {
-  vector<wstring> Out;
-  Out.reserve(Vec.size());
-  for (const auto &Item : Vec) {
-    Out.push_back(Windows1252toUTF16(Item));
-  }
-
-  return Out;
-}
-
-auto utf16VectorToWindows1252(const vector<wstring> &Vec) -> vector<string> {
-  vector<string> Out;
-  Out.reserve(Vec.size());
-  for (const auto &Item : Vec) {
-    Out.push_back(UTF16toWindows1252(Item));
-  }
-
-  return Out;
-}
-
-auto asciiVectorToUTF16(const vector<string> &Vec) -> vector<wstring> {
-  vector<wstring> Out;
-  Out.reserve(Vec.size());
-  for (const auto &Item : Vec) {
-    Out.push_back(ASCIItoUTF16(Item));
-  }
-
-  return Out;
-}
-
-auto utf16VectorToASCII(const vector<wstring> &Vec) -> vector<string> {
-  vector<string> Out;
-  Out.reserve(Vec.size());
-  for (const auto &Item : Vec) {
-    Out.push_back(UTF16toASCII(Item));
-  }
-
-  return Out;
-}
-
-auto ToLowerASCII(const std::wstring& Str) -> std::wstring
+auto windows1252toUTF16(const std::string& str) -> std::wstring
 {
-  return boost::to_lower_copy(Str, std::locale::classic());
+    return boost::locale::conv::to_utf<wchar_t>(str, "windows-1252");
 }
 
-auto UTF8toUTF16(const string &Str) -> wstring {
-  // Just return empty string if empty
-  if (Str.empty()) {
-    return {};
-  }
-
-  // Convert string > wstring
-  const int SizeNeeded = MultiByteToWideChar(CP_UTF8, 0, Str.c_str(), (int)Str.length(), nullptr, 0);
-  std::wstring WStr(SizeNeeded, 0);
-  MultiByteToWideChar(CP_UTF8, 0, Str.data(), (int)Str.length(), WStr.data(), SizeNeeded);
-
-  return WStr;
+auto utf16toWindows1252(const std::wstring& str) -> std::string
+{
+    return boost::locale::conv::from_utf<wchar_t>(str, "windows-1252");
 }
 
-auto UTF16toUTF8(const wstring &WStr) -> string {
-  // Just return empty string if empty
-  if (WStr.empty()) {
-    return {};
-  }
-
-  // Convert wstring > string
-  const int SizeNeeded = WideCharToMultiByte(CP_UTF8, 0, WStr.data(), (int)WStr.size(), nullptr, 0, nullptr, nullptr);
-  string Str(SizeNeeded, 0);
-  WideCharToMultiByte(CP_UTF8, 0, WStr.data(), (int)WStr.size(), Str.data(), SizeNeeded, nullptr, nullptr);
-
-  return Str;
+auto asciitoUTF16(const std::string& str) -> std::wstring
+{
+    return boost::locale::conv::to_utf<wchar_t>(str, "US-ASCII");
 }
 
-auto ContainsOnlyAscii(const std::string &Str) -> bool {
-  return std::ranges::all_of(Str, [](char WC) { return WC <= ASCII_UPPER_BOUND; });
+auto utf16toASCII(const std::wstring& str) -> std::string
+{
+    return boost::locale::conv::from_utf<wchar_t>(str, "US-ASCII");
 }
 
-auto ContainsOnlyAscii(const std::wstring &Str) -> bool {
-  return std::ranges::all_of(Str, [](wchar_t WC) { return WC <= ASCII_UPPER_BOUND; });
+auto utf8VectorToUTF16(const vector<string>& vec) -> vector<wstring>
+{
+    vector<wstring> out;
+    out.reserve(vec.size());
+    for (const auto& item : vec) {
+        out.push_back(utf8toUTF16(item));
+    }
+
+    return out;
 }
 
-auto getFileBytes(const filesystem::path &FilePath) -> vector<std::byte> {
-  ifstream InputFile(FilePath, ios::binary | ios::ate);
-  if (!InputFile.is_open()) {
-    // Unable to open file
-    return {};
-  }
+auto utf16VectorToUTF8(const vector<wstring>& vec) -> vector<string>
+{
+    vector<string> out;
+    out.reserve(vec.size());
+    for (const auto& item : vec) {
+        out.push_back(utf16toUTF8(item));
+    }
 
-  auto Length = InputFile.tellg();
-  if (Length == -1) {
-    // Unable to find length
-    InputFile.close();
-    return {};
-  }
-
-  InputFile.seekg(0, ios::beg);
-
-  // Make a buffer of the exact size of the file and read the data into it.
-  vector<std::byte> Buffer(Length);
-  InputFile.read(reinterpret_cast<char *>(Buffer.data()), Length); // NOLINT
-
-  InputFile.close();
-
-  return Buffer;
+    return out;
 }
 
-auto getThreadID() -> string {
-  // Get the current thread ID
-    std::ostringstream OSS;
-    OSS << std::this_thread::get_id();
-    return OSS.str();
+auto windows1252VectorToUTF16(const vector<string>& vec) -> vector<wstring>
+{
+    vector<wstring> out;
+    out.reserve(vec.size());
+    for (const auto& item : vec) {
+        out.push_back(windows1252toUTF16(item));
+    }
+
+    return out;
+}
+
+auto utf16VectorToWindows1252(const vector<wstring>& vec) -> vector<string>
+{
+    vector<string> out;
+    out.reserve(vec.size());
+    for (const auto& item : vec) {
+        out.push_back(utf16toWindows1252(item));
+    }
+
+    return out;
+}
+
+auto asciiVectorToUTF16(const vector<string>& vec) -> vector<wstring>
+{
+    vector<wstring> out;
+    out.reserve(vec.size());
+    for (const auto& item : vec) {
+        out.push_back(asciitoUTF16(item));
+    }
+
+    return out;
+}
+
+auto utf16VectorToASCII(const vector<wstring>& vec) -> vector<string>
+{
+    vector<string> out;
+    out.reserve(vec.size());
+    for (const auto& item : vec) {
+        out.push_back(utf16toASCII(item));
+    }
+
+    return out;
+}
+
+auto toLowerASCII(const std::wstring& str) -> std::wstring { return boost::to_lower_copy(str, std::locale::classic()); }
+
+auto utf8toUTF16(const string& str) -> wstring
+{
+    // Just return empty string if empty
+    if (str.empty()) {
+        return {};
+    }
+
+    // Convert string > wstring
+    const int sizeNeeded = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.length(), nullptr, 0);
+    std::wstring wStr(sizeNeeded, 0);
+    MultiByteToWideChar(CP_UTF8, 0, str.data(), (int)str.length(), wStr.data(), sizeNeeded);
+
+    return wStr;
+}
+
+auto utf16toUTF8(const wstring& wStr) -> string
+{
+    // Just return empty string if empty
+    if (wStr.empty()) {
+        return {};
+    }
+
+    // Convert wstring > string
+    const int sizeNeeded = WideCharToMultiByte(CP_UTF8, 0, wStr.data(), (int)wStr.size(), nullptr, 0, nullptr, nullptr);
+    string str(sizeNeeded, 0);
+    WideCharToMultiByte(CP_UTF8, 0, wStr.data(), (int)wStr.size(), str.data(), sizeNeeded, nullptr, nullptr);
+
+    return str;
+}
+
+auto containsOnlyAscii(const std::string& str) -> bool
+{
+    return std::ranges::all_of(str, [](char wc) { return wc <= ASCII_UPPER_BOUND; });
+}
+
+auto containsOnlyAscii(const std::wstring& str) -> bool
+{
+    return std::ranges::all_of(str, [](wchar_t wc) { return wc <= ASCII_UPPER_BOUND; });
+}
+
+auto getFileBytes(const filesystem::path& filePath) -> vector<std::byte>
+{
+    ifstream inputFile(filePath, ios::binary | ios::ate);
+    if (!inputFile.is_open()) {
+        // Unable to open file
+        return {};
+    }
+
+    auto length = inputFile.tellg();
+    if (length == -1) {
+        // Unable to find length
+        inputFile.close();
+        return {};
+    }
+
+    inputFile.seekg(0, ios::beg);
+
+    // Make a buffer of the exact size of the file and read the data into it.
+    vector<std::byte> buffer(length);
+    inputFile.read(
+        reinterpret_cast<char*>(buffer.data()), length); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+
+    inputFile.close();
+
+    return buffer;
+}
+
+auto getThreadID() -> string
+{
+    // Get the current thread ID
+    std::ostringstream oss;
+    oss << std::this_thread::get_id();
+    return oss.str();
 }
 
 } // namespace ParallaxGenUtil

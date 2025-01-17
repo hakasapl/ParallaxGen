@@ -4,53 +4,55 @@
 
 using namespace std;
 
-auto PatcherUtil::getWinningMatch(const vector<ShaderPatcherMatch> &Matches,
-                                  const unordered_map<wstring, int> *ModPriority) -> ShaderPatcherMatch {
-  // Find winning mod
-  int MaxPriority = -1;
-  auto WinningShaderMatch = PatcherUtil::ShaderPatcherMatch();
+auto PatcherUtil::getWinningMatch(
+    const vector<ShaderPatcherMatch>& matches, const unordered_map<wstring, int>* modPriority) -> ShaderPatcherMatch
+{
+    // Find winning mod
+    int maxPriority = -1;
+    auto winningShaderMatch = PatcherUtil::ShaderPatcherMatch();
 
-  for (const auto &Match : Matches) {
-    Logger::Prefix PrefixMod(Match.Mod);
-    Logger::trace(L"Checking mod");
+    for (const auto& match : matches) {
+        Logger::Prefix prefixMod(match.mod);
+        Logger::trace(L"Checking mod");
 
-    int CurPriority = -1;
-    if (ModPriority != nullptr && ModPriority->find(Match.Mod) != ModPriority->end()) {
-      CurPriority = ModPriority->at(Match.Mod);
+        int curPriority = -1;
+        if (modPriority != nullptr && modPriority->find(match.mod) != modPriority->end()) {
+            curPriority = modPriority->at(match.mod);
+        }
+
+        if (curPriority < maxPriority) {
+            // skip mods with lower priority than current winner
+            Logger::trace(L"Rejecting: Mod has lower priority than current winner");
+            continue;
+        }
+
+        Logger::trace(L"Mod accepted");
+        maxPriority = curPriority;
+        winningShaderMatch = match;
     }
 
-    if (CurPriority < MaxPriority) {
-      // skip mods with lower priority than current winner
-      Logger::trace(L"Rejecting: Mod has lower priority than current winner");
-      continue;
-    }
-
-    Logger::trace(L"Mod accepted");
-    MaxPriority = CurPriority;
-    WinningShaderMatch = Match;
-  }
-
-  Logger::trace(L"Winning mod: {}", WinningShaderMatch.Mod);
-  return WinningShaderMatch;
+    Logger::trace(L"Winning mod: {}", winningShaderMatch.mod);
+    return winningShaderMatch;
 }
 
-auto PatcherUtil::applyTransformIfNeeded(const ShaderPatcherMatch &Match,
-                                         const PatcherObjectSet &Patchers) -> ShaderPatcherMatch {
-  auto TransformedMatch = Match;
+auto PatcherUtil::applyTransformIfNeeded(
+    const ShaderPatcherMatch& match, const PatcherObjectSet& patchers) -> ShaderPatcherMatch
+{
+    auto transformedMatch = match;
 
-  // Transform if required
-  if (Match.ShaderTransformTo != NIFUtil::ShapeShader::NONE) {
-    // Find transform object
-    auto *const Transform = Patchers.ShaderTransformPatchers.at(Match.Shader).at(Match.ShaderTransformTo).get();
+    // Transform if required
+    if (match.shaderTransformTo != NIFUtil::ShapeShader::NONE) {
+        // Find transform object
+        auto* const transform = patchers.shaderTransformPatchers.at(match.shader).at(match.shaderTransformTo).get();
 
-    // Transform Shader
-    if (Transform->transform(Match.Match, TransformedMatch.Match)) {
-      // Reset Transform
-      TransformedMatch.Shader = Match.ShaderTransformTo;
+        // Transform Shader
+        if (transform->transform(match.match, transformedMatch.match)) {
+            // Reset Transform
+            transformedMatch.shader = match.shaderTransformTo;
+        }
+
+        transformedMatch.shaderTransformTo = NIFUtil::ShapeShader::NONE;
     }
 
-    TransformedMatch.ShaderTransformTo = NIFUtil::ShapeShader::NONE;
-  }
-
-  return TransformedMatch;
+    return transformedMatch;
 }
