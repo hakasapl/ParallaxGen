@@ -25,7 +25,7 @@ jobs:
 
     - uses: robinraju/release-downloader@v1
       with:
-        repository: 'https://github.com/llvm/llvm-project/releases/tag/llvmorg-19.1.7'
+        repository: 'llvm/llvm-project'
         tag: 'llvmorg-19.1.7'
         fileName: 'clang+llvm-19.1.7-x86_64-pc-windows-msvc.tar.xz'
         out-file-path: '$Env:RUNNER_TEMP\\clang'
