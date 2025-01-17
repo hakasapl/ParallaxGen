@@ -1,0 +1,56 @@
+name: Linting
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: amd64
+
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        submodules: true
+        fetch-depth: 0
+
+    - name: Download LLVM Clang
+      run: curl -L -o clang.tar.xz https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.7/clang+llvm-19.1.7-x86_64-pc-windows-msvc.tar.xz
+
+    - name: Extract LLVM Clang
+      run: tar -xf clang.tar.xz -C $Env:RUNNER_TEMP
+      shell: pwsh
+
+    - name: Add LLVM Clang to PATH
+      run: echo "$Env:RUNNER_TEMP\\clang+llvm-19.1.7-x86_64-pc-windows-msvc\\bin" >> $Env:GITHUB_PATH
+      shell: pwsh
+
+    - name: Verify LLVM Clang Installation
+      run: clangd --version
+
+    - name: Cache CLANG
+      uses: actions/cache@v3
+      with:
+        key: vcpkg-${{ runner.os }}-${{ hashFiles('$Env:RUNNER_TEMP\\clang+llvm-19.1.7-x86_64-pc-windows-msvc\\bin\\clang-format.exe', '$Env:RUNNER_TEMP\\clang+llvm-19.1.7-x86_64-pc-windows-msvc\\bin\\clang-tidy.exe') }}
+        path: |
+          build/vcpkg_installed
+
+    - name: Configure CMake
+      run: |
+        New-Item -ItemType Directory -Path "build" -Force
+        cd build
+        cmake .. -G Ninja -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DCMAKE_INSTALL_PREFIX="../install" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+    - name: Set up python
+      uses: actions/setup-python@v3
+    - name: Linting checks
+      uses: pre-commit/action@v3.0.1
