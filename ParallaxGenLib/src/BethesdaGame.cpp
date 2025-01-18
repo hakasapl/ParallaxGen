@@ -9,6 +9,7 @@
 #include <objbase.h>
 #include <windows.h>
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -323,6 +324,9 @@ auto BethesdaGame::getActivePlugins(const bool& trimExtension, const bool& lower
     if (filesystem::exists(m_gameDataPath / "Dragonborn.esm")) {
         outputLO.emplace_back(L"Dragonborn.esm");
     }
+    if (getGameType() == GameType::SKYRIM_VR && filesystem::exists(m_gameDataPath / "SkyrimVR.esm")) {
+        outputLO.emplace_back(L"SkyrimVR.esm");
+    }
 
     // Add cc plugins
     const filesystem::path creationClubFile = getGamePath() / "Skyrim.ccc";
@@ -339,13 +343,13 @@ auto BethesdaGame::getActivePlugins(const bool& trimExtension, const bool& lower
                     continue;
                 }
 
-                outputLO.push_back(ParallaxGenUtil::utf8toUTF16(line));
+                // check if already exists in outputLO
+                if (std::ranges::find(outputLO, ParallaxGenUtil::utf8toUTF16(line)) == outputLO.end()
+                    && filesystem::exists(m_gameDataPath / line)) {
+                    outputLO.push_back(ParallaxGenUtil::utf8toUTF16(line));
+                }
             }
         }
-    }
-
-    if (getGameType() == GameType::SKYRIM_VR) {
-        outputLO.emplace_back(L"SkyrimVR.esm");
     }
 
     // Get the plugins file
@@ -371,7 +375,11 @@ auto BethesdaGame::getActivePlugins(const bool& trimExtension, const bool& lower
         if (line.starts_with("*")) {
             // this is an active plugin
             line = line.substr(1);
-            outputLO.push_back(ParallaxGenUtil::utf8toUTF16(line));
+
+            if (std::ranges::find(outputLO, ParallaxGenUtil::utf8toUTF16(line)) == outputLO.end()
+                && filesystem::exists(m_gameDataPath / line)) {
+                outputLO.push_back(ParallaxGenUtil::utf8toUTF16(line));
+            }
         }
     }
 
