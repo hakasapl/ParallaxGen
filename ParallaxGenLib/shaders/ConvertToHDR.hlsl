@@ -15,7 +15,7 @@ void main(uint3 id : SV_DispatchThreadID)
     float4 newPixel = Input.Load(uint3(id.xy, 0));
 
     // luminance
-    newPixel *= luminanceMultiplier;
+    newPixel.rgb *= luminanceMultiplier;
 
     Output[id.xy] = newPixel;
 }
