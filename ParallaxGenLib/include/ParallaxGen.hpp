@@ -43,7 +43,8 @@ private:
     };
 
     // Runner vars
-    PatcherUtil::PatcherSet m_patchers;
+    PatcherUtil::PatcherTextureSet m_texPatchers;
+    PatcherUtil::PatcherMeshSet m_meshPatchers;
     std::unordered_map<std::wstring, int>* m_modPriority;
 
     // Define a hash function for ShapeKey
@@ -69,10 +70,11 @@ public:
     // constructor
     ParallaxGen(std::filesystem::path outputDir, ParallaxGenDirectory* pgd, ParallaxGenD3D* pgd3D,
         const bool& optimizeMeshes = false);
-    void loadPatchers(const PatcherUtil::PatcherSet& patchers);
+    void loadPatchers(
+        const PatcherUtil::PatcherMeshSet& meshPatchers, const PatcherUtil::PatcherTextureSet& texPatchers);
     void loadModPriorityMap(std::unordered_map<std::wstring, int>* modPriority);
     // enables parallax on relevant meshes
-    void patchMeshes(const bool& multiThread = true, const bool& patchPlugin = true);
+    void patch(const bool& multiThread = true, const bool& patchPlugin = true);
     // Dry run for finding potential matches (used with mod manager integration)
     [[nodiscard]] auto findModConflicts(const bool& multiThread = true, const bool& patchPlugin = true)
         -> std::unordered_map<std::wstring,
@@ -114,9 +116,11 @@ private:
 
     // processes a shape within a NIF file
     auto processShape(const std::filesystem::path& nifPath, nifly::NifFile& nif, nifly::NiShape* nifShape,
-        const int& shapeIndex, PatcherUtil::PatcherObjectSet& patchers, bool& shapeModified,
+        const int& shapeIndex, PatcherUtil::PatcherMeshObjectSet& patchers, bool& shapeModified,
         NIFUtil::ShapeShader& shaderApplied, PatcherUtil::ConflictModResults* conflictMods = nullptr,
         const NIFUtil::ShapeShader* forceShader = nullptr) -> ParallaxGenTask::PGResult;
+
+    auto processDDS(const std::filesystem::path& ddsFile) -> ParallaxGenTask::PGResult;
 
     // Zip methods
     void addFileToZip(

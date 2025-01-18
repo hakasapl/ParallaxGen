@@ -11,15 +11,11 @@ auto Patcher::loadStatics(ParallaxGenDirectory& pgd, ParallaxGenD3D& pgd3d) -> v
     Patcher::s_pgd3d = &pgd3d;
 }
 
-Patcher::Patcher(filesystem::path nifPath, nifly::NifFile* nif, string patcherName)
-    : m_nifPath(std::move(nifPath))
-    , m_nif(nif)
-    , m_patcherName(std::move(patcherName))
+Patcher::Patcher(string patcherName)
+    : m_patcherName(std::move(patcherName))
 {
 }
 
-auto Patcher::getNIFPath() const -> filesystem::path { return m_nifPath; }
-auto Patcher::getNIF() const -> nifly::NifFile* { return m_nif; }
 auto Patcher::getPatcherName() const -> string { return m_patcherName; }
 
 auto Patcher::getPGD() -> ParallaxGenDirectory* { return s_pgd; }

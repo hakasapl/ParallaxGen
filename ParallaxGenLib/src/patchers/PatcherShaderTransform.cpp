@@ -8,7 +8,7 @@
 
 PatcherShaderTransform::PatcherShaderTransform(std::filesystem::path nifPath, nifly::NifFile* nif,
     std::string patcherName, const NIFUtil::ShapeShader& from, const NIFUtil::ShapeShader& to)
-    : Patcher(std::move(nifPath), nif, std::move(patcherName))
+    : PatcherMesh(std::move(nifPath), nif, std::move(patcherName))
     , m_fromShader(from)
     , m_toShader(to)
 {

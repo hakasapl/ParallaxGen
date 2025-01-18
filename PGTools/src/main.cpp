@@ -18,8 +18,10 @@
 #include "patchers/Patcher.hpp"
 #include "patchers/PatcherComplexMaterial.hpp"
 #include "patchers/PatcherParticleLightsToLP.hpp"
+#include "patchers/PatcherTextureGlobalConvertToHDR.hpp"
 #include "patchers/PatcherTruePBR.hpp"
 #include "patchers/PatcherUpgradeParallaxToCM.hpp"
+#include "patchers/PatcherUtil.hpp"
 #include "patchers/PatcherVanillaParallax.hpp"
 
 using namespace std;
@@ -120,7 +122,7 @@ void mainRunner(PGToolsCLIArgs& args)
         pgd.mapFiles({}, {}, {}, {}, args.Patch.mapTexturesFromMeshes, args.multithreading, args.Patch.highMem);
 
         // Split patchers into names and options
-        unordered_map<string, unordered_set<string>> patcherDefs;
+        unordered_map<string, unordered_map<string, string>> patcherDefs;
         for (const auto& patcher : args.Patch.patchers) {
             auto openBracket = patcher.find('[');
             auto closeBracket = patcher.find(']');
@@ -132,9 +134,17 @@ void mainRunner(PGToolsCLIArgs& args)
             // Get substring between brackets
             auto options = patcher.substr(openBracket + 1, closeBracket - openBracket - 1);
             // Split options by | into unordered set
-            unordered_set<string> optionSet;
+            unordered_map<string, string> optionSet;
             for (const auto& option : options | views::split('|')) {
-                optionSet.insert(string(option.begin(), option.end()));
+                // check if = in option string
+                const auto optionStr = string(option.begin(), option.end());
+                const auto eqPos = optionStr.find('=');
+                if (eqPos != string::npos) {
+                    optionSet[optionStr.substr(0, eqPos)] = optionStr.substr(eqPos + 1);
+                    continue;
+                }
+
+                optionSet[optionStr] = "";
             }
 
             // Add to set
@@ -149,31 +159,37 @@ void mainRunner(PGToolsCLIArgs& args)
         }
 
         // Create patcher factory
-        PatcherUtil::PatcherSet patchers;
+        PatcherUtil::PatcherMeshSet meshPatchers;
         if (patcherDefs.contains("parallax")) {
-            patchers.shaderPatchers.emplace(
+            meshPatchers.shaderPatchers.emplace(
                 PatcherVanillaParallax::getShaderType(), PatcherVanillaParallax::getFactory());
         }
         if (patcherDefs.contains("complexmaterial")) {
-            patchers.shaderPatchers.emplace(
+            meshPatchers.shaderPatchers.emplace(
                 PatcherComplexMaterial::getShaderType(), PatcherComplexMaterial::getFactory());
             PatcherComplexMaterial::loadStatics(args.Patch.patchers.contains("disablemlp"), {});
         }
         if (patcherDefs.contains("truepbr")) {
-            patchers.shaderPatchers.emplace(PatcherTruePBR::getShaderType(), PatcherTruePBR::getFactory());
+            meshPatchers.shaderPatchers.emplace(PatcherTruePBR::getShaderType(), PatcherTruePBR::getFactory());
             PatcherTruePBR::loadStatics(pgd.getPBRJSONs());
             PatcherTruePBR::loadOptions(patcherDefs["truepbr"]);
         }
         if (patcherDefs.contains("parallaxtocm")) {
-            patchers.shaderTransformPatchers[PatcherUpgradeParallaxToCM::getFromShader()].emplace(
+            meshPatchers.shaderTransformPatchers[PatcherUpgradeParallaxToCM::getFromShader()].emplace(
                 PatcherUpgradeParallaxToCM::getToShader(), PatcherUpgradeParallaxToCM::getFactory());
         }
         if (patcherDefs.contains("particlelightstolp")) {
-            patchers.globalPatchers.emplace_back(PatcherParticleLightsToLP::getFactory());
+            meshPatchers.globalPatchers.emplace_back(PatcherParticleLightsToLP::getFactory());
         }
 
-        pg.loadPatchers(patchers);
-        pg.patchMeshes(args.multithreading, false);
+        PatcherUtil::PatcherTextureSet texPatchers;
+        if (patcherDefs.contains("converttohdr")) {
+            texPatchers.globalPatchers.emplace_back(PatcherTextureGlobalConvertToHDR::getFactory());
+            PatcherTextureGlobalConvertToHDR::loadOptions(patcherDefs["converttohdr"]);
+        }
+
+        pg.loadPatchers(meshPatchers, texPatchers);
+        pg.patch(args.multithreading, false);
 
         // Finalize step
         if (patcherDefs.contains("particlelightstolp")) {

@@ -5,6 +5,7 @@
 #include "ParallaxGenTask.hpp"
 #include "ParallaxGenUtil.hpp"
 
+#include <dxgiformat.h>
 #include <spdlog/spdlog.h>
 
 #include <DirectXMath.h>
@@ -357,6 +358,13 @@ void ParallaxGenD3D::initShaders()
     ParallaxGenTask::PGResult pgResult {};
 
     // TODO don't repeat error handling code
+    // ConvertToHDR.hlsl
+    pgResult = createComputeShader(L"ConvertToHDR.hlsl", m_shaderConvertToHDR);
+    if (pgResult != ParallaxGenTask::PGResult::SUCCESS) {
+        spdlog::critical("Failed to create compute shader. Exiting.");
+        exit(1);
+    }
+
     // MergeToComplexMaterial.hlsl
     pgResult = createComputeShader(L"MergeToComplexMaterial.hlsl", m_shaderMergeToComplexMaterial);
     if (pgResult != ParallaxGenTask::PGResult::SUCCESS) {
@@ -377,9 +385,10 @@ auto ParallaxGenD3D::compileShader(const std::filesystem::path& filename, ComPtr
 {
     spdlog::trace(L"Starting compiling shader: {}", filename.wstring());
 
+#if defined(_DEBUG)
+    const DWORD dwShaderFlags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_DEBUG;
+#else
     const DWORD dwShaderFlags = D3DCOMPILE_ENABLE_STRICTNESS;
-#if defined(DEBUG) || defined(_DEBUG)
-    dwShaderFlags |= D3DCOMPILE_DEBUG;
 #endif
 
     const filesystem::path shaderAbsPath = m_exePath / "shaders" / filename;
@@ -435,7 +444,7 @@ auto ParallaxGenD3D::upgradeToComplexMaterial(
         throw runtime_error("GPU was not initialized");
     }
 
-    const lock_guard<mutex> lock(m_upgradeCMMutex);
+    const lock_guard<mutex> lock(m_gpuOperationMutex);
 
     ParallaxGenTask::PGResult pgResult {};
 
@@ -670,7 +679,7 @@ auto ParallaxGenD3D::upgradeToComplexMaterial(
     auto outputBufferData = readBack<UINT>(outputBuffer);
 
     // Read back texture (DEBUG)
-    auto outputTextureData = readBack(outputTexture, 4);
+    auto outputTextureData = readBack(outputTexture);
 
     // More cleaning
     outputTexture.Reset();
@@ -696,6 +705,128 @@ auto ParallaxGenD3D::upgradeToComplexMaterial(
     }
 
     return compressedImage;
+}
+
+void ParallaxGenD3D::convertToHDR(
+    DirectX::ScratchImage* dds, bool& ddsModified, const float& luminanceMult, const DXGI_FORMAT& outputFormat)
+{
+    if (!m_useGPU) {
+        throw runtime_error("GPU needed to upgrade to complex material");
+    }
+
+    if ((m_ptrContext == nullptr) || (m_ptrDevice == nullptr) || (m_shaderMergeToComplexMaterial == nullptr)) {
+        throw runtime_error("GPU was not initialized");
+    }
+
+    if (dds == nullptr) {
+        throw runtime_error("DDS image is null");
+    }
+
+    const lock_guard<mutex> lock(m_gpuOperationMutex);
+
+    const DirectX::TexMetadata inputMeta = dds->GetMetadata();
+
+    // Load texture on GPU
+    ComPtr<ID3D11Texture2D> inputDDSGPU;
+    if (createTexture2D(*dds, inputDDSGPU) != ParallaxGenTask::PGResult::SUCCESS) {
+        return;
+    }
+
+    // Create shader resource view
+    ComPtr<ID3D11ShaderResourceView> inputDDSSRV;
+    if (createShaderResourceView(inputDDSGPU, inputDDSSRV) != ParallaxGenTask::PGResult::SUCCESS) {
+        return;
+    }
+
+    // Create constant parameter buffer
+    ShaderConvertToHDRParams shaderParams {};
+    shaderParams.luminanceMult = luminanceMult;
+
+    ComPtr<ID3D11Buffer> constantBuffer;
+    if (createConstantBuffer(&shaderParams, sizeof(ShaderConvertToHDRParams), constantBuffer)
+        != ParallaxGenTask::PGResult::SUCCESS) {
+        return;
+    }
+
+    // Create output texture
+    D3D11_TEXTURE2D_DESC outputDDSDesc = {};
+    inputDDSGPU->GetDesc(&outputDDSDesc);
+    outputDDSDesc.Format = outputFormat;
+    outputDDSDesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
+
+    ComPtr<ID3D11Texture2D> outputDDSGPU;
+    if (createTexture2D(outputDDSDesc, outputDDSGPU) != ParallaxGenTask::PGResult::SUCCESS) {
+        return;
+    }
+
+    ComPtr<ID3D11UnorderedAccessView> outputDDSUAV;
+    if (createUnorderedAccessView(outputDDSGPU, outputDDSUAV) != ParallaxGenTask::PGResult::SUCCESS) {
+        return;
+    }
+
+    // Dispatch shader
+    m_ptrContext->CSSetShader(m_shaderConvertToHDR.Get(), nullptr, 0);
+    m_ptrContext->CSSetConstantBuffers(0, 1, constantBuffer.GetAddressOf());
+    m_ptrContext->CSSetShaderResources(0, 1, inputDDSSRV.GetAddressOf());
+    m_ptrContext->CSSetUnorderedAccessViews(0, 1, outputDDSUAV.GetAddressOf(), nullptr);
+
+    if (blockingDispatch(static_cast<UINT>(inputMeta.width), static_cast<UINT>(inputMeta.height), 1)
+        != ParallaxGenTask::PGResult::SUCCESS) {
+        return;
+    }
+
+    // Clean up shader resources
+    array<ID3D11Buffer*, 1> nullBuffer = { nullptr };
+    m_ptrContext->CSSetConstantBuffers(0, 1, nullBuffer.data());
+    array<ID3D11ShaderResourceView*, 1> nullSRV = { nullptr };
+    m_ptrContext->CSSetShaderResources(0, 1, nullSRV.data());
+    array<ID3D11UnorderedAccessView*, 1> nullUAV = { nullptr };
+    m_ptrContext->CSSetUnorderedAccessViews(0, 1, nullUAV.data(), nullptr);
+    m_ptrContext->CSSetShader(nullptr, nullptr, 0);
+
+    // Release some objects
+    inputDDSGPU.Reset();
+    inputDDSSRV.Reset();
+    constantBuffer.Reset();
+
+    // Generate mips
+    D3D11_TEXTURE2D_DESC outputDDSMipsDesc = {};
+    outputDDSGPU->GetDesc(&outputDDSMipsDesc);
+    outputDDSMipsDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+    outputDDSMipsDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
+    ComPtr<ID3D11Texture2D> outputDDSMipsGPU;
+    if (createTexture2D(outputDDSMipsDesc, outputDDSMipsGPU) != ParallaxGenTask::PGResult::SUCCESS) {
+        return;
+    }
+
+    ComPtr<ID3D11ShaderResourceView> outputMipsSRV;
+    if (createShaderResourceView(outputDDSMipsGPU, outputMipsSRV) != ParallaxGenTask::PGResult::SUCCESS) {
+        return;
+    }
+
+    // Copy texture
+    m_ptrContext->CopyResource(outputDDSMipsGPU.Get(), outputDDSGPU.Get());
+    m_ptrContext->GenerateMips(outputMipsSRV.Get());
+    m_ptrContext->CopyResource(outputDDSGPU.Get(), outputDDSMipsGPU.Get());
+
+    // cleanup
+    outputDDSMipsGPU.Reset();
+    outputMipsSRV.Reset();
+
+    // Read back texture
+    auto outputTextureData = readBack(outputDDSGPU);
+
+    // More cleaning
+    outputDDSGPU.Reset();
+    outputDDSUAV.Reset();
+
+    // Flush GPU to avoid leaks
+    m_ptrContext->Flush();
+
+    // Import into directx scratchimage
+    *dds = loadRawPixelsToScratchImage(
+        outputTextureData, inputMeta.width, inputMeta.height, inputMeta.mipLevels, outputFormat);
+    ddsModified = true;
 }
 
 //
@@ -910,8 +1041,7 @@ auto ParallaxGenD3D::blockingDispatch(UINT threadGroupCountX, UINT threadGroupCo
     return ParallaxGenTask::PGResult::SUCCESS;
 }
 
-auto ParallaxGenD3D::readBack(const ComPtr<ID3D11Texture2D>& gpuResource, const int& channels) const
-    -> vector<unsigned char>
+auto ParallaxGenD3D::readBack(const ComPtr<ID3D11Texture2D>& gpuResource) const -> vector<unsigned char>
 {
     // Error object
     HRESULT hr {};
@@ -927,6 +1057,97 @@ auto ParallaxGenD3D::readBack(const ComPtr<ID3D11Texture2D>& gpuResource, const 
     stagingTex2DDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
     stagingTex2DDesc.BindFlags = 0;
     stagingTex2DDesc.MiscFlags = 0;
+
+    // Find bytes per pixel based on format
+    UINT bytesPerChannel = 1; // Default to 8-bit
+    UINT numChannels = 4; // Default to RGBA
+    switch (stagingTex2DDesc.Format) {
+    case DXGI_FORMAT_R32G32B32A32_TYPELESS:
+    case DXGI_FORMAT_R32G32B32A32_FLOAT:
+    case DXGI_FORMAT_R32G32B32A32_UINT:
+    case DXGI_FORMAT_R32G32B32A32_SINT:
+        bytesPerChannel = 4; // 32 bits per channel
+        numChannels = 4; // RGBA
+        break;
+    case DXGI_FORMAT_R32G32B32_TYPELESS:
+    case DXGI_FORMAT_R32G32B32_FLOAT:
+    case DXGI_FORMAT_R32G32B32_UINT:
+    case DXGI_FORMAT_R32G32B32_SINT:
+        bytesPerChannel = 4; // 32 bits per channel
+        numChannels = 3; // RGB
+        break;
+    case DXGI_FORMAT_R32G32_TYPELESS:
+    case DXGI_FORMAT_R32G32_FLOAT:
+    case DXGI_FORMAT_R32G32_UINT:
+    case DXGI_FORMAT_R32G32_SINT:
+        bytesPerChannel = 4; // 32 bits per channel
+        numChannels = 2; // RG
+        break;
+    case DXGI_FORMAT_R32_TYPELESS:
+    case DXGI_FORMAT_R32_FLOAT:
+    case DXGI_FORMAT_R32_UINT:
+    case DXGI_FORMAT_R32_SINT:
+        bytesPerChannel = 4; // 32 bits per channel
+        numChannels = 1; // R
+        break;
+    case DXGI_FORMAT_R16G16B16A16_TYPELESS:
+    case DXGI_FORMAT_R16G16B16A16_FLOAT:
+    case DXGI_FORMAT_R16G16B16A16_UNORM:
+    case DXGI_FORMAT_R16G16B16A16_UINT:
+    case DXGI_FORMAT_R16G16B16A16_SNORM:
+    case DXGI_FORMAT_R16G16B16A16_SINT:
+        bytesPerChannel = 2; // 16 bits per channel
+        numChannels = 4; // RGBA
+        break;
+    case DXGI_FORMAT_R16G16_TYPELESS:
+    case DXGI_FORMAT_R16G16_FLOAT:
+    case DXGI_FORMAT_R16G16_UNORM:
+    case DXGI_FORMAT_R16G16_UINT:
+    case DXGI_FORMAT_R16G16_SNORM:
+    case DXGI_FORMAT_R16G16_SINT:
+        bytesPerChannel = 2; // 16 bits per channel
+        numChannels = 2; // RG
+        break;
+    case DXGI_FORMAT_R16_TYPELESS:
+    case DXGI_FORMAT_R16_FLOAT:
+    case DXGI_FORMAT_R16_UNORM:
+    case DXGI_FORMAT_R16_UINT:
+    case DXGI_FORMAT_R16_SNORM:
+    case DXGI_FORMAT_R16_SINT:
+        bytesPerChannel = 2; // 16 bits per channel
+        numChannels = 1; // R
+        break;
+    case DXGI_FORMAT_R8G8B8A8_TYPELESS:
+    case DXGI_FORMAT_R8G8B8A8_UNORM:
+    case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+    case DXGI_FORMAT_R8G8B8A8_UINT:
+    case DXGI_FORMAT_R8G8B8A8_SNORM:
+    case DXGI_FORMAT_R8G8B8A8_SINT:
+        bytesPerChannel = 1; // 8 bits per channel
+        numChannels = 4; // RGBA
+        break;
+    case DXGI_FORMAT_R8G8_TYPELESS:
+    case DXGI_FORMAT_R8G8_UNORM:
+    case DXGI_FORMAT_R8G8_UINT:
+    case DXGI_FORMAT_R8G8_SNORM:
+    case DXGI_FORMAT_R8G8_SINT:
+        bytesPerChannel = 1; // 8 bits per channel
+        numChannels = 2; // RG
+        break;
+    case DXGI_FORMAT_R8_TYPELESS:
+    case DXGI_FORMAT_R8_UNORM:
+    case DXGI_FORMAT_R8_UINT:
+    case DXGI_FORMAT_R8_SNORM:
+    case DXGI_FORMAT_R8_SINT:
+        bytesPerChannel = 1; // 8 bits per channel
+        numChannels = 1; // R
+        break;
+    // Add more cases for other formats if needed
+    default:
+        bytesPerChannel = 1; // Assume 8-bit for unsupported formats
+        numChannels = 4; // Assume RGBA for unsupported formats
+    }
+    const UINT bytesPerPixel = bytesPerChannel * numChannels;
 
     // Create staging texture
     ComPtr<ID3D11Texture2D> stagingTex2D;
@@ -960,7 +1181,7 @@ auto ParallaxGenD3D::readBack(const ComPtr<ID3D11Texture2D>& gpuResource, const 
         auto* srcData = reinterpret_cast<unsigned char*>(mappedResource.pData);
         for (UINT row = 0; row < mipHeight; ++row) {
             unsigned char* rowStart = srcData + (row * mappedResource.RowPitch);
-            outputData.insert(outputData.end(), rowStart, rowStart + (mipWidth * channels));
+            outputData.insert(outputData.end(), rowStart, rowStart + (mipWidth * bytesPerPixel));
         }
 
         // Unmap the resource for this mip level
@@ -1134,6 +1355,19 @@ auto ParallaxGenD3D::getHRESULTErrorMessage(HRESULT hr) -> string
     // Get error message
     const _com_error err(hr);
     return err.ErrorMessage();
+}
+
+auto ParallaxGenD3D::getDXGIFormatFromString(const string& format) -> DXGI_FORMAT
+{
+    if (format == "rgba16f") {
+        return DXGI_FORMAT_R16G16B16A16_FLOAT;
+    }
+
+    if (format == "rgba32f") {
+        return DXGI_FORMAT_R32G32B32A32_FLOAT;
+    }
+
+    return DXGI_FORMAT_UNKNOWN;
 }
 
 // NOLINTEND(cppcoreguidelines-pro-type-union-access,cppcoreguidelines-pro-type-reinterpret-cast,cppcoreguidelines-pro-bounds-pointer-arithmetic)

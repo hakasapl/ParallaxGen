@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.8.2] - UNRELEASED
+
+- Added `converttohdr` patcher for pgtools
+
 ## [0.8.1] - 2025-01-13
 
 - Specular strength will be set to 1.0 for complex material

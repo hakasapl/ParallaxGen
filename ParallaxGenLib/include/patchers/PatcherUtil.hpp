@@ -5,6 +5,7 @@
 #include "patchers/PatcherGlobal.hpp"
 #include "patchers/PatcherShader.hpp"
 #include "patchers/PatcherShaderTransform.hpp"
+#include "patchers/PatcherTextureGlobal.hpp"
 
 #include "NIFUtil.hpp"
 
@@ -18,7 +19,7 @@ public:
      * @struct PatcherObjectSet
      * @brief Stores the patcher objects for a given run
      */
-    struct PatcherObjectSet {
+    struct PatcherMeshObjectSet {
         std::vector<PatcherGlobal::PatcherGlobalObject> globalPatchers;
         std::unordered_map<NIFUtil::ShapeShader, PatcherShader::PatcherShaderObject> shaderPatchers;
         std::unordered_map<NIFUtil::ShapeShader,
@@ -30,12 +31,20 @@ public:
      * @struct PatcherSet
      * @brief Stores the patcher factories for a given run
      */
-    struct PatcherSet {
+    struct PatcherMeshSet {
         std::vector<PatcherGlobal::PatcherGlobalFactory> globalPatchers;
         std::unordered_map<NIFUtil::ShapeShader, PatcherShader::PatcherShaderFactory> shaderPatchers;
         std::unordered_map<NIFUtil::ShapeShader,
             std::map<NIFUtil::ShapeShader, PatcherShaderTransform::PatcherShaderTransformFactory>>
             shaderTransformPatchers;
+    };
+
+    struct PatcherTextureObjectSet {
+        std::vector<PatcherTextureGlobal::PatcherGlobalObject> globalPatchers;
+    };
+
+    struct PatcherTextureSet {
+        std::vector<PatcherTextureGlobal::PatcherGlobalFactory> globalPatchers;
     };
 
     /**
@@ -73,6 +82,6 @@ public:
      * @param Patchers Patcher set to use
      * @return ShaderPatcherMatch Transformed match
      */
-    static auto applyTransformIfNeeded(const ShaderPatcherMatch& match, const PatcherObjectSet& patchers)
+    static auto applyTransformIfNeeded(const ShaderPatcherMatch& match, const PatcherMeshObjectSet& patchers)
         -> ShaderPatcherMatch;
 };

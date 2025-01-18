@@ -124,7 +124,7 @@ public:
     };
 
     static void processShape(const std::wstring& nifPath, nifly::NiShape* nifShape, const std::wstring& name3D,
-        const int& index3D, PatcherUtil::PatcherObjectSet& patchers, std::vector<TXSTResult>& results,
+        const int& index3D, PatcherUtil::PatcherMeshObjectSet& patchers, std::vector<TXSTResult>& results,
         PatcherUtil::ConflictModResults* conflictMods = nullptr);
 
     static void assignMesh(const std::wstring& nifPath, const std::vector<TXSTResult>& result);

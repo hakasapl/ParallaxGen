@@ -2,6 +2,7 @@
 
 #include <DirectXTex.h>
 #include <d3d11.h>
+#include <dxgiformat.h>
 #include <wrl/client.h>
 
 #include <cstddef>
@@ -49,10 +50,15 @@ private:
     };
     Microsoft::WRL::ComPtr<ID3D11ComputeShader> m_shaderCountAlphaValues;
 
+    struct ShaderConvertToHDRParams {
+        float luminanceMult;
+    };
+    Microsoft::WRL::ComPtr<ID3D11ComputeShader> m_shaderConvertToHDR;
+
     std::unordered_map<std::filesystem::path, DirectX::TexMetadata> m_ddsMetaDataCache;
     std::mutex m_ddsMetaDataMutex;
 
-    std::mutex m_upgradeCMMutex;
+    std::mutex m_gpuOperationMutex;
 
 public:
     /// @brief Constructor
@@ -78,6 +84,9 @@ public:
     [[nodiscard]] auto upgradeToComplexMaterial(
         const std::filesystem::path& parallaxMap, const std::filesystem::path& envMap) -> DirectX::ScratchImage;
 
+    void convertToHDR(DirectX::ScratchImage* dds, bool& ddsModified, const float& luminanceMult,
+        const DXGI_FORMAT& outputFormat = DXGI_FORMAT_R16G16B16A16_FLOAT);
+
     /// @brief Checks if the aspect ratio of two DDS files match
     /// @param[in] ddsPath1 relative path of the first file in the data directory
     /// @param[in] ddsPath2 relative path of the second file in the data directory
@@ -89,6 +98,11 @@ public:
     /// @param hr the HRESULT to check
     /// @return error message
     static auto getHRESULTErrorMessage(HRESULT hr) -> std::string;
+
+    static auto getDXGIFormatFromString(const std::string& format) -> DXGI_FORMAT;
+
+    // Texture helpers
+    auto getDDS(const std::filesystem::path& ddsPath, DirectX::ScratchImage& dds) const -> ParallaxGenTask::PGResult;
 
 private:
     auto checkIfCM(const std::filesystem::path& ddsPath, bool& result, bool& hasMetalness) -> ParallaxGenTask::PGResult;
@@ -132,15 +146,13 @@ private:
     [[nodiscard]] auto blockingDispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ) const
         -> ParallaxGenTask::PGResult;
 
-    [[nodiscard]] auto readBack(const Microsoft::WRL::ComPtr<ID3D11Texture2D>& gpuResource, const int& channels) const
+    [[nodiscard]] auto readBack(const Microsoft::WRL::ComPtr<ID3D11Texture2D>& gpuResource) const
         -> std::vector<unsigned char>;
 
     template <typename T>
     [[nodiscard]] auto readBack(const Microsoft::WRL::ComPtr<ID3D11Buffer>& gpuResource) const -> std::vector<T>;
 
     // Texture Helpers
-    auto getDDS(const std::filesystem::path& ddsPath, DirectX::ScratchImage& dds) const -> ParallaxGenTask::PGResult;
-
     auto getDDSMetadata(const std::filesystem::path& ddsPath, DirectX::TexMetadata& ddsMeta)
         -> ParallaxGenTask::PGResult;
 

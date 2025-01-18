@@ -45,12 +45,14 @@ private:
         m_textureMaps;
     std::unordered_map<std::filesystem::path, TextureDetails> m_textureTypes;
     std::unordered_set<std::filesystem::path> m_meshes;
+    std::unordered_set<std::filesystem::path> m_textures;
     std::vector<std::filesystem::path> m_pbrJSONs;
 
     // Mutexes
     std::mutex m_textureMapsMutex;
     std::mutex m_textureTypesMutex;
     std::mutex m_meshesMutex;
+    std::mutex m_texturesMutex;
 
 public:
     // constructor - calls the BethesdaDirectory constructor
@@ -118,6 +120,8 @@ public:
         -> const std::map<std::wstring, std::unordered_set<NIFUtil::PGTexture, NIFUtil::PGTextureHasher>>&;
 
     [[nodiscard]] auto getMeshes() const -> const std::unordered_set<std::filesystem::path>&;
+
+    [[nodiscard]] auto getTextures() const -> const std::unordered_set<std::filesystem::path>&;
 
     [[nodiscard]] auto getPBRJSONs() const -> const std::vector<std::filesystem::path>&;
 
