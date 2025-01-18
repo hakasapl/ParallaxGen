@@ -1,4 +1,4 @@
-name: Build
+name: Build and Publish Artifacts
 
 on:
   push:
@@ -36,6 +36,12 @@ jobs:
         key: externals-${{ runner.os }}-${{ hashFiles('.gitmodules') }}
         path: |
           build/external
+
+    - name: Build ParallaxGenMutagenWrapper
+      run: |
+        cd ParallaxGenMutagenWrapper
+        dotnet restore
+        msbuild /p:Configuration=RelWithDebInfo
 
     - name: Configure CMake
       run: |
