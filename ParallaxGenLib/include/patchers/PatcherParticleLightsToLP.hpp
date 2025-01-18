@@ -15,57 +15,65 @@
  */
 class PatcherParticleLightsToLP : public PatcherGlobal {
 private:
-  static nlohmann::json LPJsonData; /** < LP JSON data */
-  static std::mutex LPJsonDataMutex; /** < Mutex for LP JSON data */
+    static nlohmann::json s_lpJsonData; /** < LP JSON data */
+    static std::mutex s_lpJsonDataMutex; /** < Mutex for LP JSON data */
+
+    static constexpr int PARTICLE_LIGHT_FLAGS = 4109; /** < Particle light flags */
+    static constexpr int WHITE_COLOR = 255; /** < White color */
+    static constexpr double MIN_VALUE = 1e-5; /** < Minimum value */
+    static constexpr float ROUNDING_VALUE = 1000000.0; /** < Rounding value */
 
 public:
-  /**
-   * @brief Get the Factory object
-   *
-   * @return PatcherShaderTransform::PatcherShaderTransformFactory
-   */
-  static auto getFactory() -> PatcherGlobal::PatcherGlobalFactory;
+    /**
+     * @brief Get the Factory object
+     *
+     * @return PatcherShaderTransform::PatcherShaderTransformFactory
+     */
+    static auto getFactory() -> PatcherGlobal::PatcherGlobalFactory;
 
-  /**
-   * @brief Construct a new PrePatcher Particle Lights To LP patcher
-   *
-   * @param NIFPath NIF path to be patched
-   * @param NIF NIF object to be patched
-   */
-  PatcherParticleLightsToLP(std::filesystem::path NIFPath, nifly::NifFile *NIF);
+    /**
+     * @brief Construct a new PrePatcher Particle Lights To LP patcher
+     *
+     * @param nifPath NIF path to be patched
+     * @param nif NIF object to be patched
+     */
+    PatcherParticleLightsToLP(std::filesystem::path nifPath, nifly::NifFile* nif);
 
-  /**
-   * @brief Apply this patcher to shape
-   *
-   * @param NIFShape Shape to patch
-   * @param NIFModified Whether NIF was modified
-   * @param ShapeDeleted Whether shape was deleted
-   * @return true Shape was patched
-   * @return false Shape was not patched
-   */
-  auto applyPatch(bool &NIFModified) -> bool override;
+    /**
+     * @brief Apply this patcher to shape
+     *
+     * @param nifShape Shape to patch
+     * @param nifModified Whether NIF was modified
+     * @param shapeDeleted Whether shape was deleted
+     * @return true Shape was patched
+     * @return false Shape was not patched
+     */
+    auto applyPatch(bool& nifModified) -> bool override;
 
-  /**
-   * @brief Save output JSON
-   */
-  static void finalize();
+    /**
+     * @brief Save output JSON
+     */
+    static void finalize();
 
 private:
-  /**
-   * @brief Apply patch to single particle light in mesh
-   *
-   * @param NiAlphaProperty Alpha property to patch
-   * @return true patch was applied
-   * @return false patch was not applied
-   */
-  auto applySinglePatch(nifly::NiBillboardNode *Node, nifly::NiShape *Shape, nifly::BSEffectShaderProperty *EffectShader) -> bool;
+    /**
+     * @brief Apply a single LP patch
+     *
+     * @param node billboard node
+     * @param shape shape
+     * @param effectShader effect shader
+     * @return true if patch was applied
+     * @return false if patch was not applied
+     */
+    auto applySinglePatch(
+        nifly::NiBillboardNode* node, nifly::NiShape* shape, nifly::BSEffectShaderProperty* effectShader) -> bool;
 
-  /**
-   * @brief Get LP JSON for a specific NIF controller
-   *
-   * @param Controller Controller to get JSON for
-   * @param JSONField JSON field to store controller JSON in LP
-   * @return nlohmann::json JSON for controller
-   */
-  auto getControllerJSON(nifly::NiTimeController *Controller, std::string &JSONField) -> nlohmann::json;
+    /**
+     * @brief Get LP JSON for a specific NIF controller
+     *
+     * @param controller Controller to get JSON for
+     * @param jsonField JSON field to store controller JSON in LP
+     * @return nlohmann::json JSON for controller
+     */
+    auto getControllerJSON(nifly::NiTimeController* controller, std::string& jsonField) -> nlohmann::json;
 };

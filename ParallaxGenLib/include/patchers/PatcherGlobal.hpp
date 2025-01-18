@@ -11,26 +11,26 @@
  */
 class PatcherGlobal : public Patcher {
 public:
-  // type definitions
-  using PatcherGlobalFactory = std::function<std::unique_ptr<PatcherGlobal>(std::filesystem::path, nifly::NifFile *)>;
-  using PatcherGlobalObject = std::unique_ptr<PatcherGlobal>;
+    // type definitions
+    using PatcherGlobalFactory = std::function<std::unique_ptr<PatcherGlobal>(std::filesystem::path, nifly::NifFile*)>;
+    using PatcherGlobalObject = std::unique_ptr<PatcherGlobal>;
 
-  // Constructors
-  PatcherGlobal(std::filesystem::path NIFPath, nifly::NifFile *NIF, std::string PatcherName);
-  virtual ~PatcherGlobal() = default;
-  PatcherGlobal(const PatcherGlobal &Other) = default;
-  auto operator=(const PatcherGlobal &Other) -> PatcherGlobal & = default;
-  PatcherGlobal(PatcherGlobal &&Other) noexcept = default;
-  auto operator=(PatcherGlobal &&Other) noexcept -> PatcherGlobal & = default;
+    // Constructors
+    PatcherGlobal(std::filesystem::path nifPath, nifly::NifFile* nif, std::string patcherName);
+    virtual ~PatcherGlobal() = default;
+    PatcherGlobal(const PatcherGlobal& other) = default;
+    auto operator=(const PatcherGlobal& other) -> PatcherGlobal& = default;
+    PatcherGlobal(PatcherGlobal&& other) noexcept = default;
+    auto operator=(PatcherGlobal&& other) noexcept -> PatcherGlobal& = default;
 
-  /**
-   * @brief Apply the patch to the NIFShape if able
-   *
-   * @param NIFShape Shape to apply patch to
-   * @param NIFModified Whether the NIF was modified
-   * @param ShapeDeleted Whether the shape was deleted
-   * @return true Patch was applied
-   * @return false Patch was not applied
-   */
-  virtual auto applyPatch(bool &NIFModified) -> bool = 0;
+    /**
+     * @brief Apply the patch to the NIFShape if able
+     *
+     * @param nifShape Shape to apply patch to
+     * @param nifModified Whether the NIF was modified
+     * @param shapeDeleted Whether the shape was deleted
+     * @return true Patch was applied
+     * @return false Patch was not applied
+     */
+    virtual auto applyPatch(bool& nifModified) -> bool = 0;
 };

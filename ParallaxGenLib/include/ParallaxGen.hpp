@@ -1,7 +1,6 @@
 #pragma once
 
 #include <NifFile.hpp>
-#include <cstdint>
 #include <filesystem>
 #include <miniz.h>
 #include <mutex>
@@ -18,107 +17,110 @@
 #include "ParallaxGenTask.hpp"
 #include "patchers/PatcherUtil.hpp"
 
-#define MESHES_LENGTH 7
-
 class ParallaxGen {
 private:
-  std::filesystem::path OutputDir; // ParallaxGen output directory
+    static constexpr int MESHES_LENGTH = 7;
+    static constexpr int PROGRESS_INTERVAL_CONFLICTS = 10;
 
-  // Dependency objects
-  ParallaxGenDirectory *PGD;
-  ParallaxGenD3D *PGD3D;
+    std::filesystem::path m_outputDir; // ParallaxGen output directory
 
-  // sort blocks enabled, optimize disabled (for now)
-  nifly::NifSaveOptions NIFSaveOptions = {false, false};
+    // Dependency objects
+    ParallaxGenDirectory* m_pgd;
+    ParallaxGenD3D* m_pgd3D;
 
-  struct ShapeKey {
-    std::wstring NIFPath;
-    int ShapeIndex;
+    // sort blocks enabled, optimize disabled (for now)
+    nifly::NifSaveOptions m_nifSaveOptions = { .optimize = false, .sortBlocks = false };
 
-    // Equality operator to compare two ShapeKey objects
-    auto operator==(const ShapeKey &Other) const -> bool {
-      return NIFPath == Other.NIFPath && ShapeIndex == Other.ShapeIndex;
-    }
-  };
+    struct ShapeKey {
+        std::wstring nifPath;
+        int shapeIndex;
 
-  // Runner vars
-  PatcherUtil::PatcherSet Patchers;
-  std::unordered_map<std::wstring, int> *ModPriority;
+        // Equality operator to compare two ShapeKey objects
+        auto operator==(const ShapeKey& other) const -> bool
+        {
+            return nifPath == other.nifPath && shapeIndex == other.shapeIndex;
+        }
+    };
 
-  // Define a hash function for ShapeKey
-  struct ShapeKeyHash {
-    auto operator()(const ShapeKey &Key) const -> size_t {
-      // Hash the NIFPath and ShapeIndex individually
-      std::size_t H1 = std::hash<std::wstring>{}(Key.NIFPath);
-      std::size_t H2 = std::hash<int>{}(Key.ShapeIndex);
+    // Runner vars
+    PatcherUtil::PatcherSet m_patchers;
+    std::unordered_map<std::wstring, int>* m_modPriority;
 
-      return H1 ^ (H2 << 1); // shifting to reduce collisions
-    }
-  };
+    // Define a hash function for ShapeKey
+    struct ShapeKeyHash {
+        auto operator()(const ShapeKey& key) const -> size_t
+        {
+            // Hash the nifPath and ShapeIndex individually
+            const std::size_t h1 = std::hash<std::wstring> {}(key.nifPath);
+            const std::size_t h2 = std::hash<int> {}(key.shapeIndex);
 
-  std::unordered_map<ShapeKey, std::vector<PatcherUtil::ShaderPatcherMatch>, ShapeKeyHash> AllowedShadersCache;
-  std::mutex AllowedShadersCacheMutex;
+            return h1 ^ (h2 << 1); // shifting to reduce collisions
+        }
+    };
+
+    std::unordered_map<ShapeKey, std::vector<PatcherUtil::ShaderPatcherMatch>, ShapeKeyHash> m_allowedShadersCache;
+    std::mutex m_allowedShadersCacheMutex;
 
 public:
-  //
-  // The following methods are called from main.cpp and are public facing
-  //
+    //
+    // The following methods are called from main.cpp and are public facing
+    //
 
-  // constructor
-  ParallaxGen(std::filesystem::path OutputDir, ParallaxGenDirectory *PGD, ParallaxGenD3D *PGD3D,
-              const bool &OptimizeMeshes = false);
-  void loadPatchers(const PatcherUtil::PatcherSet &Patchers);
-  void loadModPriorityMap(std::unordered_map<std::wstring, int> *ModPriority);
-  // enables parallax on relevant meshes
-  void patchMeshes(const bool &MultiThread = true, const bool &PatchPlugin = true);
-  // Dry run for finding potential matches (used with mod manager integration)
-  [[nodiscard]] auto findModConflicts(const bool &MultiThread = true, const bool &PatchPlugin = true)
-      -> std::unordered_map<std::wstring, std::tuple<std::set<NIFUtil::ShapeShader>, std::unordered_set<std::wstring>>>;
-  // zips all meshes and removes originals
-  void zipMeshes() const;
-  // deletes entire output folder
-  void deleteOutputDir(const bool &PreOutput = true) const;
-  // get output zip name
-  [[nodiscard]] static auto getOutputZipName() -> std::filesystem::path;
-  // get diff json name
-  [[nodiscard]] static auto getDiffJSONName() -> std::filesystem::path;
+    // constructor
+    ParallaxGen(std::filesystem::path outputDir, ParallaxGenDirectory* pgd, ParallaxGenD3D* pgd3D,
+        const bool& optimizeMeshes = false);
+    void loadPatchers(const PatcherUtil::PatcherSet& patchers);
+    void loadModPriorityMap(std::unordered_map<std::wstring, int>* modPriority);
+    // enables parallax on relevant meshes
+    void patchMeshes(const bool& multiThread = true, const bool& patchPlugin = true);
+    // Dry run for finding potential matches (used with mod manager integration)
+    [[nodiscard]] auto findModConflicts(const bool& multiThread = true, const bool& patchPlugin = true)
+        -> std::unordered_map<std::wstring,
+            std::tuple<std::set<NIFUtil::ShapeShader>, std::unordered_set<std::wstring>>>;
+    // zips all meshes and removes originals
+    void zipMeshes() const;
+    // deletes entire output folder
+    void deleteOutputDir(const bool& preOutput = true) const;
+    // get output zip name
+    [[nodiscard]] static auto getOutputZipName() -> std::filesystem::path;
+    // get diff json name
+    [[nodiscard]] static auto getDiffJSONName() -> std::filesystem::path;
 
 private:
-  // Helper structs
-  struct VectorHash {
-    auto operator()(const std::vector<NIFUtil::ShapeShader> &Vec) const -> std::size_t {
-      std::size_t Hash = 0;
-      for (const auto &Shader : Vec) {
-        boost::hash_combine(Hash, static_cast<int>(Shader));
-      }
-      return Hash;
-    }
-  };
+    // Helper structs
+    struct VectorHash {
+        auto operator()(const std::vector<NIFUtil::ShapeShader>& vec) const -> std::size_t
+        {
+            std::size_t hash = 0;
+            for (const auto& shader : vec) {
+                boost::hash_combine(hash, static_cast<int>(shader));
+            }
+            return hash;
+        }
+    };
 
-  // thread safe JSON update
-  std::mutex JSONUpdateMutex;
-  void threadSafeJSONUpdate(const std::function<void(nlohmann::json &)> &Operation, nlohmann::json &DiffJSON);
+    // thread safe JSON update
+    std::mutex m_jsonUpdateMutex;
+    void threadSafeJSONUpdate(const std::function<void(nlohmann::json&)>& operation, nlohmann::json& diffJSON);
 
-  // processes a NIF file (enable parallax if needed)
-  auto processNIF(const std::filesystem::path &NIFFile, nlohmann::json *DiffJSON, const bool &PatchPlugin = true,
-                  PatcherUtil::ConflictModResults *ConflictMods = nullptr) -> ParallaxGenTask::PGResult;
+    // processes a NIF file (enable parallax if needed)
+    auto processNIF(const std::filesystem::path& nifFile, nlohmann::json* diffJSON, const bool& patchPlugin = true,
+        PatcherUtil::ConflictModResults* conflictMods = nullptr) -> ParallaxGenTask::PGResult;
 
-  auto processNIF(const std::filesystem::path &NIFFile, const std::vector<std::byte> &NIFBytes, bool &NIFModified,
-                  const std::vector<NIFUtil::ShapeShader> *ForceShaders = nullptr,
-                  std::vector<std::pair<std::filesystem::path, nifly::NifFile>> *DupNIFs = nullptr,
-                  const bool &PatchPlugin = true,
-                  PatcherUtil::ConflictModResults *ConflictMods = nullptr) -> nifly::NifFile;
+    auto processNIF(const std::filesystem::path& nifFile, const std::vector<std::byte>& nifBytes, bool& nifModified,
+        const std::vector<NIFUtil::ShapeShader>* forceShaders = nullptr,
+        std::vector<std::pair<std::filesystem::path, nifly::NifFile>>* dupNIFs = nullptr,
+        const bool& patchPlugin = true, PatcherUtil::ConflictModResults* conflictMods = nullptr) -> nifly::NifFile;
 
-  // processes a shape within a NIF file
-  auto processShape(const std::filesystem::path &NIFPath, nifly::NifFile &NIF, nifly::NiShape *NIFShape,
-                    const int &ShapeIndex, PatcherUtil::PatcherObjectSet &Patchers, bool &ShapeModified,
-                    NIFUtil::ShapeShader &ShaderApplied,
-                    PatcherUtil::ConflictModResults *ConflictMods = nullptr,
-                    const NIFUtil::ShapeShader *ForceShader = nullptr) -> ParallaxGenTask::PGResult;
+    // processes a shape within a NIF file
+    auto processShape(const std::filesystem::path& nifPath, nifly::NifFile& nif, nifly::NiShape* nifShape,
+        const int& shapeIndex, PatcherUtil::PatcherObjectSet& patchers, bool& shapeModified,
+        NIFUtil::ShapeShader& shaderApplied, PatcherUtil::ConflictModResults* conflictMods = nullptr,
+        const NIFUtil::ShapeShader* forceShader = nullptr) -> ParallaxGenTask::PGResult;
 
-  // Zip methods
-  void addFileToZip(mz_zip_archive &Zip, const std::filesystem::path &FilePath,
-                    const std::filesystem::path &ZipPath) const;
+    // Zip methods
+    void addFileToZip(
+        mz_zip_archive& zip, const std::filesystem::path& filePath, const std::filesystem::path& zipPath) const;
 
-  void zipDirectory(const std::filesystem::path &DirPath, const std::filesystem::path &ZipPath) const;
+    void zipDirectory(const std::filesystem::path& dirPath, const std::filesystem::path& zipPath) const;
 };

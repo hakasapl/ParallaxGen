@@ -6,28 +6,33 @@
 
 #include <spdlog/spdlog.h>
 
-PatcherShaderTransform::PatcherShaderTransform(std::filesystem::path NIFPath, nifly::NifFile *NIF,
-                                               std::string PatcherName, const NIFUtil::ShapeShader &From,
-                                               const NIFUtil::ShapeShader &To)
-    : Patcher(std::move(NIFPath), NIF, std::move(PatcherName)), FromShader(From), ToShader(To) {}
-
-std::mutex PatcherShaderTransform::ErrorTrackerMutex;
-std::unordered_set<std::tuple<std::filesystem::path, NIFUtil::ShapeShader, NIFUtil::ShapeShader>,
-                   PatcherShaderTransform::ErrorTrackerHasher>
-    PatcherShaderTransform::ErrorTracker;
-
-void PatcherShaderTransform::postError(const std::filesystem::path &File) {
-  std::lock_guard<std::mutex> Lock(ErrorTrackerMutex);
-
-  if (ErrorTracker.insert({File, FromShader, ToShader}).second) {
-    spdlog::error(L"Failed to transform from {} to {} for {}",
-                  ParallaxGenUtil::ASCIItoUTF16(NIFUtil::getStrFromShader(FromShader)),
-                  ParallaxGenUtil::ASCIItoUTF16(NIFUtil::getStrFromShader(ToShader)), File.wstring());
-  }
+PatcherShaderTransform::PatcherShaderTransform(std::filesystem::path nifPath, nifly::NifFile* nif,
+    std::string patcherName, const NIFUtil::ShapeShader& from, const NIFUtil::ShapeShader& to)
+    : Patcher(std::move(nifPath), nif, std::move(patcherName))
+    , m_fromShader(from)
+    , m_toShader(to)
+{
 }
 
-auto PatcherShaderTransform::alreadyTried(const std::filesystem::path &File) -> bool {
-  std::lock_guard<std::mutex> Lock(ErrorTrackerMutex);
+std::mutex PatcherShaderTransform::s_errorTrackerMutex;
+std::unordered_set<std::tuple<std::filesystem::path, NIFUtil::ShapeShader, NIFUtil::ShapeShader>,
+    PatcherShaderTransform::ErrorTrackerHasher>
+    PatcherShaderTransform::s_errorTracker;
 
-  return ErrorTracker.contains({File, FromShader, ToShader});
+void PatcherShaderTransform::postError(const std::filesystem::path& file)
+{
+    const std::lock_guard<std::mutex> lock(s_errorTrackerMutex);
+
+    if (s_errorTracker.insert({ file, m_fromShader, m_toShader }).second) {
+        spdlog::error(L"Failed to transform from {} to {} for {}",
+            ParallaxGenUtil::asciitoUTF16(NIFUtil::getStrFromShader(m_fromShader)),
+            ParallaxGenUtil::asciitoUTF16(NIFUtil::getStrFromShader(m_toShader)), file.wstring());
+    }
+}
+
+auto PatcherShaderTransform::alreadyTried(const std::filesystem::path& file) -> bool
+{
+    const std::lock_guard<std::mutex> lock(s_errorTrackerMutex);
+
+    return s_errorTracker.contains({ file, m_fromShader, m_toShader });
 }

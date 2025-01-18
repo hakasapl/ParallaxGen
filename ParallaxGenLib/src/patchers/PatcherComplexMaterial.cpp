@@ -5,176 +5,187 @@
 
 #include "Logger.hpp"
 #include "NIFUtil.hpp"
-#include "patchers/PatcherUtil.hpp"
 
 using namespace std;
 
 // Statics
-std::vector<wstring> PatcherComplexMaterial::DynCubemapBlocklist;
-bool PatcherComplexMaterial::DisableMLP;
+std::vector<wstring> PatcherComplexMaterial::s_dynCubemapBlocklist;
+bool PatcherComplexMaterial::s_disableMLP;
 
-auto PatcherComplexMaterial::loadStatics(const bool &DisableMLP,
-                                         const std::vector<std::wstring> &DynCubemapBlocklist) -> void {
-  PatcherComplexMaterial::DynCubemapBlocklist = DynCubemapBlocklist;
-  PatcherComplexMaterial::DisableMLP = DisableMLP;
+auto PatcherComplexMaterial::loadStatics(const bool& disableMLP, const std::vector<std::wstring>& dynCubemapBlocklist)
+    -> void
+{
+    PatcherComplexMaterial::s_dynCubemapBlocklist = dynCubemapBlocklist;
+    PatcherComplexMaterial::s_disableMLP = disableMLP;
 }
 
-auto PatcherComplexMaterial::getFactory() -> PatcherShader::PatcherShaderFactory {
-  return [](const filesystem::path &NIFPath, nifly::NifFile *NIF) -> unique_ptr<PatcherShader> {
-    return make_unique<PatcherComplexMaterial>(NIFPath, NIF);
-  };
+auto PatcherComplexMaterial::getFactory() -> PatcherShader::PatcherShaderFactory
+{
+    return [](const filesystem::path& nifPath, nifly::NifFile* nif) -> unique_ptr<PatcherShader> {
+        return make_unique<PatcherComplexMaterial>(nifPath, nif);
+    };
 }
 
 auto PatcherComplexMaterial::getShaderType() -> NIFUtil::ShapeShader { return NIFUtil::ShapeShader::COMPLEXMATERIAL; }
 
-PatcherComplexMaterial::PatcherComplexMaterial(filesystem::path NIFPath, nifly::NifFile *NIF)
-    : PatcherShader(std::move(NIFPath), NIF, "ComplexMaterial") {}
-
-auto PatcherComplexMaterial::canApply(NiShape &NIFShape) -> bool {
-  // Prep
-  Logger::trace(L"Starting checking");
-
-  auto *NIFShader = getNIF()->GetShader(&NIFShape);
-
-  // Get NIFShader type
-  auto NIFShaderType = static_cast<nifly::BSLightingShaderPropertyShaderType>(NIFShader->GetShaderType());
-  if (NIFShaderType != BSLSP_DEFAULT && NIFShaderType != BSLSP_ENVMAP && NIFShaderType != BSLSP_PARALLAX &&
-      (NIFShaderType != BSLSP_MULTILAYERPARALLAX || !DisableMLP)) {
-    Logger::trace(L"Shape Rejected: Incorrect NIFShader type");
-    return false;
-  }
-
-  // check to make sure there are textures defined in slot 3 or 8
-  if (NIFShaderType != BSLSP_MULTILAYERPARALLAX &&
-      (!NIFUtil::getTextureSlot(getNIF(), &NIFShape, NIFUtil::TextureSlots::GLOW).empty() ||
-       !NIFUtil::getTextureSlot(getNIF(), &NIFShape, NIFUtil::TextureSlots::MULTILAYER).empty() ||
-       !NIFUtil::getTextureSlot(getNIF(), &NIFShape, NIFUtil::TextureSlots::BACKLIGHT).empty())) {
-    Logger::trace(L"Shape Rejected: Texture defined in slots 3,7,or 8");
-    return false;
-  }
-
-  Logger::trace(L"Shape Accepted");
-  return true;
+PatcherComplexMaterial::PatcherComplexMaterial(filesystem::path nifPath, nifly::NifFile* nif)
+    : PatcherShader(std::move(nifPath), nif, "ComplexMaterial")
+{
 }
 
-auto PatcherComplexMaterial::shouldApply(nifly::NiShape &NIFShape, std::vector<PatcherMatch> &Matches) -> bool {
-  // Check for CM matches
-  return shouldApply(getTextureSet(NIFShape), Matches);
-}
+auto PatcherComplexMaterial::canApply(NiShape& nifShape) -> bool
+{
+    // Prep
+    Logger::trace(L"Starting checking");
 
-auto PatcherComplexMaterial::shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
-                                         std::vector<PatcherMatch> &Matches) -> bool {
-  static const auto CMBaseMap = getPGD()->getTextureMapConst(NIFUtil::TextureSlots::ENVMASK);
+    auto* nifShader = getNIF()->GetShader(&nifShape);
 
-  Matches.clear();
-
-  // Search prefixes
-  const auto SearchPrefixes = NIFUtil::getSearchPrefixes(OldSlots);
-
-  // Check if complex material file exists
-  static const vector<int> SlotSearch = {1, 0}; // Diffuse first, then normal
-  filesystem::path BaseMap;
-  vector<NIFUtil::PGTexture> FoundMatches;
-  NIFUtil::TextureSlots MatchedFromSlot = NIFUtil::TextureSlots::NORMAL;
-  for (int Slot : SlotSearch) {
-    BaseMap = OldSlots[Slot];
-    if (BaseMap.empty() || !getPGD()->isFile(BaseMap)) {
-      continue;
+    // Get NIFShader type
+    auto nifShaderType = static_cast<nifly::BSLightingShaderPropertyShaderType>(nifShader->GetShaderType());
+    if (nifShaderType != BSLSP_DEFAULT && nifShaderType != BSLSP_ENVMAP && nifShaderType != BSLSP_PARALLAX
+        && (nifShaderType != BSLSP_MULTILAYERPARALLAX || !s_disableMLP)) {
+        Logger::trace(L"Shape Rejected: Incorrect NIFShader type");
+        return false;
     }
 
-    FoundMatches.clear();
-    FoundMatches = NIFUtil::getTexMatch(SearchPrefixes[Slot], NIFUtil::TextureType::COMPLEXMATERIAL, CMBaseMap);
-
-    if (!FoundMatches.empty()) {
-      // TODO should we be trying diffuse after normal too and present all options?
-      MatchedFromSlot = static_cast<NIFUtil::TextureSlots>(Slot);
-      break;
+    // check to make sure there are textures defined in slot 3 or 8
+    if (nifShaderType != BSLSP_MULTILAYERPARALLAX
+        && (!NIFUtil::getTextureSlot(getNIF(), &nifShape, NIFUtil::TextureSlots::GLOW).empty()
+            || !NIFUtil::getTextureSlot(getNIF(), &nifShape, NIFUtil::TextureSlots::MULTILAYER).empty()
+            || !NIFUtil::getTextureSlot(getNIF(), &nifShape, NIFUtil::TextureSlots::BACKLIGHT).empty())) {
+        Logger::trace(L"Shape Rejected: Texture defined in slots 3,7,or 8");
+        return false;
     }
-  }
 
-  PatcherMatch LastMatch; // Variable to store the match that equals OldSlots[Slot], if found
-  for (const auto &Match : FoundMatches) {
-    if (getPGD3D()->checkIfAspectRatioMatches(BaseMap, Match.Path)) {
-      PatcherMatch CurMatch;
-      CurMatch.MatchedPath = Match.Path;
-      CurMatch.MatchedFrom.insert(MatchedFromSlot);
-      if (Match.Path == OldSlots[static_cast<size_t>(NIFUtil::TextureSlots::ENVMASK)]) {
-        LastMatch = CurMatch; // Save the match that equals OldSlots[Slot]
-      } else {
-        Matches.push_back(CurMatch); // Add other matches
-      }
+    Logger::trace(L"Shape Accepted");
+    return true;
+}
+
+auto PatcherComplexMaterial::shouldApply(nifly::NiShape& nifShape, std::vector<PatcherMatch>& matches) -> bool
+{
+    // Check for CM matches
+    return shouldApply(getTextureSet(nifShape), matches);
+}
+
+auto PatcherComplexMaterial::shouldApply(
+    const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots, std::vector<PatcherMatch>& matches) -> bool
+{
+    static const auto cmBaseMap = getPGD()->getTextureMapConst(NIFUtil::TextureSlots::ENVMASK);
+
+    matches.clear();
+
+    // Search prefixes
+    const auto searchPrefixes = NIFUtil::getSearchPrefixes(oldSlots);
+
+    // Check if complex material file exists
+    static const vector<int> slotSearch = { 1, 0 }; // Diffuse first, then normal
+    filesystem::path baseMap;
+    vector<NIFUtil::PGTexture> foundMatches;
+    NIFUtil::TextureSlots matchedFromSlot = NIFUtil::TextureSlots::NORMAL;
+    for (const int& slot : slotSearch) {
+        baseMap = oldSlots.at(slot);
+        if (baseMap.empty() || !getPGD()->isFile(baseMap)) {
+            continue;
+        }
+
+        foundMatches.clear();
+        foundMatches = NIFUtil::getTexMatch(searchPrefixes.at(slot), NIFUtil::TextureType::COMPLEXMATERIAL, cmBaseMap);
+
+        if (!foundMatches.empty()) {
+            // TODO should we be trying diffuse after normal too and present all options?
+            matchedFromSlot = static_cast<NIFUtil::TextureSlots>(slot);
+            break;
+        }
     }
-  }
 
-  if (!LastMatch.MatchedPath.empty()) {
-    Matches.push_back(LastMatch); // Add the match that equals OldSlots[Slot]
-  }
+    PatcherMatch lastMatch; // Variable to store the match that equals OldSlots[Slot], if found
+    for (const auto& match : foundMatches) {
+        if (getPGD3D()->checkIfAspectRatioMatches(baseMap, match.path)) {
+            PatcherMatch curMatch;
+            curMatch.matchedPath = match.path;
+            curMatch.matchedFrom.insert(matchedFromSlot);
+            if (match.path == oldSlots[static_cast<size_t>(NIFUtil::TextureSlots::ENVMASK)]) {
+                lastMatch = curMatch; // Save the match that equals OldSlots[Slot]
+            } else {
+                matches.push_back(curMatch); // Add other matches
+            }
+        }
+    }
 
-  return !Matches.empty();
+    if (!lastMatch.matchedPath.empty()) {
+        matches.push_back(lastMatch); // Add the match that equals OldSlots[Slot]
+    }
+
+    return !matches.empty();
 }
 
-auto PatcherComplexMaterial::applyPatch(NiShape &NIFShape, const PatcherMatch &Match,
-                                        bool &NIFModified) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
-  // Apply shader
-  applyShader(NIFShape, NIFModified);
+auto PatcherComplexMaterial::applyPatch(NiShape& nifShape, const PatcherMatch& match, bool& nifModified)
+    -> std::array<std::wstring, NUM_TEXTURE_SLOTS>
+{
+    // Apply shader
+    applyShader(nifShape, nifModified);
 
-  // Check if specular should be white
-  if (getPGD()->hasTextureAttribute(Match.MatchedPath, NIFUtil::TextureAttribute::CM_METALNESS)) {
-    Logger::trace(L"Setting specular to white because CM has metalness");
-    auto *NIFShader = getNIF()->GetShader(&NIFShape);
-    auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
-    NIFUtil::setShaderFloat(NIFShaderBSLSP->specularColor.x, 1.0F, NIFModified);
-    NIFUtil::setShaderFloat(NIFShaderBSLSP->specularColor.y, 1.0F, NIFModified);
-    NIFUtil::setShaderFloat(NIFShaderBSLSP->specularColor.z, 1.0F, NIFModified);
-  }
+    // Check if specular should be white
+    if (getPGD()->hasTextureAttribute(match.matchedPath, NIFUtil::TextureAttribute::CM_METALNESS)) {
+        Logger::trace(L"Setting specular to white because CM has metalness");
+        auto* nifShader = getNIF()->GetShader(&nifShape);
+        auto* const nifShaderBSLSP = dynamic_cast<BSLightingShaderProperty*>(nifShader);
+        NIFUtil::setShaderFloat(nifShaderBSLSP->specularColor.x, 1.0F, nifModified);
+        NIFUtil::setShaderFloat(nifShaderBSLSP->specularColor.y, 1.0F, nifModified);
+        NIFUtil::setShaderFloat(nifShaderBSLSP->specularColor.z, 1.0F, nifModified);
+    }
 
-  // Apply slots
-  auto NewSlots = applyPatchSlots(getTextureSet(NIFShape), Match);
-  setTextureSet(NIFShape, NewSlots, NIFModified);
+    // Apply slots
+    auto newSlots = applyPatchSlots(getTextureSet(nifShape), match);
+    setTextureSet(nifShape, newSlots, nifModified);
 
-  return NewSlots;
+    return newSlots;
 }
 
-auto PatcherComplexMaterial::applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS> &OldSlots,
-                                             const PatcherMatch &Match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS> {
-  array<wstring, NUM_TEXTURE_SLOTS> NewSlots = OldSlots;
+auto PatcherComplexMaterial::applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots,
+    const PatcherMatch& match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>
+{
+    array<wstring, NUM_TEXTURE_SLOTS> newSlots = oldSlots;
 
-  const auto MatchedPath = Match.MatchedPath;
+    const auto matchedPath = match.matchedPath;
 
-  NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::PARALLAX)] = L"";
-  NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::ENVMASK)] = MatchedPath;
+    newSlots[static_cast<size_t>(NIFUtil::TextureSlots::PARALLAX)] = L"";
+    newSlots[static_cast<size_t>(NIFUtil::TextureSlots::ENVMASK)] = matchedPath;
 
-  bool EnableDynCubemaps = !(ParallaxGenDirectory::checkGlobMatchInVector(getNIFPath().wstring(), DynCubemapBlocklist) ||
-                             ParallaxGenDirectory::checkGlobMatchInVector(MatchedPath, DynCubemapBlocklist));
-  if (EnableDynCubemaps) {
-    NewSlots[static_cast<size_t>(NIFUtil::TextureSlots::CUBEMAP)] = L"textures\\cubemaps\\dynamic1pxcubemap_black.dds";
-  }
+    const bool enableDynCubemaps
+        = !(ParallaxGenDirectory::checkGlobMatchInVector(getNIFPath().wstring(), s_dynCubemapBlocklist)
+            || ParallaxGenDirectory::checkGlobMatchInVector(matchedPath, s_dynCubemapBlocklist));
+    if (enableDynCubemaps) {
+        newSlots[static_cast<size_t>(NIFUtil::TextureSlots::CUBEMAP)]
+            = L"textures\\cubemaps\\dynamic1pxcubemap_black.dds";
+    }
 
-  return NewSlots;
+    return newSlots;
 }
 
-void PatcherComplexMaterial::processNewTXSTRecord(const PatcherMatch &Match, const std::string &EDID) {}
+void PatcherComplexMaterial::processNewTXSTRecord(const PatcherMatch& match, const std::string& edid) { }
 
-void PatcherComplexMaterial::applyShader(NiShape &NIFShape, bool &NIFModified) {
-  auto *NIFShader = getNIF()->GetShader(&NIFShape);
-  auto *const NIFShaderBSLSP = dynamic_cast<BSLightingShaderProperty *>(NIFShader);
+void PatcherComplexMaterial::applyShader(NiShape& nifShape, bool& nifModified)
+{
+    auto* nifShader = getNIF()->GetShader(&nifShape);
+    auto* const nifShaderBSLSP = dynamic_cast<BSLightingShaderProperty*>(nifShader);
 
-  // Remove texture slots if disabling MLP
-  if (DisableMLP && NIFShaderBSLSP->GetShaderType() == BSLSP_MULTILAYERPARALLAX) {
-    NIFUtil::setTextureSlot(getNIF(), &NIFShape, NIFUtil::TextureSlots::GLOW, "", NIFModified);
-    NIFUtil::setTextureSlot(getNIF(), &NIFShape, NIFUtil::TextureSlots::MULTILAYER, "", NIFModified);
-    NIFUtil::setTextureSlot(getNIF(), &NIFShape, NIFUtil::TextureSlots::BACKLIGHT, "", NIFModified);
+    // Remove texture slots if disabling MLP
+    if (s_disableMLP && nifShaderBSLSP->GetShaderType() == BSLSP_MULTILAYERPARALLAX) {
+        NIFUtil::setTextureSlot(getNIF(), &nifShape, NIFUtil::TextureSlots::GLOW, "", nifModified);
+        NIFUtil::setTextureSlot(getNIF(), &nifShape, NIFUtil::TextureSlots::MULTILAYER, "", nifModified);
+        NIFUtil::setTextureSlot(getNIF(), &nifShape, NIFUtil::TextureSlots::BACKLIGHT, "", nifModified);
 
-    NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF2_MULTI_LAYER_PARALLAX, NIFModified);
-  }
+        NIFUtil::clearShaderFlag(nifShaderBSLSP, SLSF2_MULTI_LAYER_PARALLAX, nifModified);
+    }
 
-  // Set NIFShader type to env map
-  NIFUtil::setShaderType(NIFShader, BSLSP_ENVMAP, NIFModified);
-  NIFUtil::setShaderFloat(NIFShaderBSLSP->environmentMapScale, 1.0F, NIFModified);
-  NIFUtil::setShaderFloat(NIFShaderBSLSP->specularStrength, 1.0F, NIFModified);
+    // Set NIFShader type to env map
+    NIFUtil::setShaderType(nifShader, BSLSP_ENVMAP, nifModified);
+    NIFUtil::setShaderFloat(nifShaderBSLSP->environmentMapScale, 1.0F, nifModified);
+    NIFUtil::setShaderFloat(nifShaderBSLSP->specularStrength, 1.0F, nifModified);
 
-  // Set NIFShader flags
-  NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF1_PARALLAX, NIFModified);
-  NIFUtil::clearShaderFlag(NIFShaderBSLSP, SLSF2_UNUSED01, NIFModified);
-  NIFUtil::setShaderFlag(NIFShaderBSLSP, SLSF1_ENVIRONMENT_MAPPING, NIFModified);
+    // Set NIFShader flags
+    NIFUtil::clearShaderFlag(nifShaderBSLSP, SLSF1_PARALLAX, nifModified);
+    NIFUtil::clearShaderFlag(nifShaderBSLSP, SLSF2_UNUSED01, nifModified);
+    NIFUtil::setShaderFlag(nifShaderBSLSP, SLSF1_ENVIRONMENT_MAPPING, nifModified);
 }

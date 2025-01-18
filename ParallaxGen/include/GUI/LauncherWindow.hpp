@@ -20,237 +20,240 @@
  */
 class LauncherWindow : public wxDialog {
 public:
-  static inline bool UIExitTriggered = false;
+    /**
+     * @brief Construct a new Launcher Window object
+     *
+     * @param pgc PGC object for UI to use
+     */
+    LauncherWindow(ParallaxGenConfig& pgc);
 
-  /**
-   * @brief Construct a new Launcher Window object
-   *
-   * @param Params initial set of parameters to have the dialog display
-   */
-  LauncherWindow(ParallaxGenConfig &PGC);
-
-  /**
-   * @brief Get the Params object (meant to be called after the user presses okay)
-   *
-   * @return ParallaxGenConfig::PGParams Gets the current parameters set by the user on the dialog
-   */
-  [[nodiscard]] auto getParams() -> ParallaxGenConfig::PGParams;
+    /**
+     * @brief Get the Params object (meant to be called after the user presses okay)
+     *
+     * @return ParallaxGenConfig::PGParams Gets the current parameters set by the user on the dialog
+     */
+    [[nodiscard]] auto getParams() -> ParallaxGenConfig::PGParams;
 
 private:
-  ParallaxGenConfig &PGC; /** Reference to the ParallaxGenConfig object */
+    constexpr static int DEFAULT_WIDTH = 600;
+    constexpr static int DEFAULT_HEIGHT = 800;
+    constexpr static int BORDER_SIZE = 5;
+    constexpr static int BUTTON_FONT_SIZE = 12;
 
-  /**
-   * @brief Runs immediately after the wxDialog gets constructed, intended to set the UI elements to the initial
-   * parameters
-   *
-   * @param Event wxWidgets event object
-   */
-  void onInitDialog(wxInitDialogEvent &Event);
+    ParallaxGenConfig& m_pgc; /** Reference to the ParallaxGenConfig object */
 
-  /**
-   * @brief Loads config from PGC
-   */
-  void loadConfig();
+    /**
+     * @brief Runs immediately after the wxDialog gets constructed, intended to set the UI elements to the initial
+     * parameters
+     *
+     * @param event wxWidgets event object
+     */
+    void onInitDialog(wxInitDialogEvent& event);
 
-  //
-  // UI Param Elements
-  //
+    /**
+     * @brief Loads config from PGC
+     */
+    void loadConfig();
 
-  // Game
-  wxTextCtrl *GameLocationTextbox;
-  void onGameLocationChange(wxCommandEvent &Event);
+    //
+    // UI Param Elements
+    //
 
-  std::unordered_map<BethesdaGame::GameType, wxRadioButton *> GameTypeRadios;
-  void onGameTypeChange(wxCommandEvent &Event);
+    // Game
+    wxTextCtrl* m_gameLocationTextbox;
+    void onGameLocationChange(wxCommandEvent& event);
 
-  // Mod Manager
-  std::unordered_map<ModManagerDirectory::ModManagerType, wxRadioButton *> ModManagerRadios;
-  void onModManagerChange(wxCommandEvent &Event);
+    std::unordered_map<BethesdaGame::GameType, wxRadioButton*> m_gameTypeRadios;
+    void onGameTypeChange(wxCommandEvent& event);
 
-  wxTextCtrl *MO2InstanceLocationTextbox;
-  void onMO2InstanceLocationChange(wxCommandEvent &Event);
+    // Mod Manager
+    std::unordered_map<ModManagerDirectory::ModManagerType, wxRadioButton*> m_modManagerRadios;
+    void onModManagerChange(wxCommandEvent& event);
 
-  wxChoice *MO2ProfileChoice;
-  void onMO2ProfileChange(wxCommandEvent &Event);
+    wxTextCtrl* m_mo2InstanceLocationTextbox;
+    void onMO2InstanceLocationChange(wxCommandEvent& event);
 
-  wxCheckBox *MO2UseOrderCheckbox;
-  void onMO2UseOrderChange(wxCommandEvent &Event);
+    wxChoice* m_mo2ProfileChoice;
+    void onMO2ProfileChange(wxCommandEvent& event);
 
-  // Output
-  wxTextCtrl *OutputLocationTextbox;
-  void onOutputLocationChange(wxCommandEvent &Event);
+    wxCheckBox* m_mo2UseOrderCheckbox;
+    void onMO2UseOrderChange(wxCommandEvent& event);
 
-  wxCheckBox *OutputZipCheckbox;
-  void onOutputZipChange(wxCommandEvent &Event);
+    // Output
+    wxTextCtrl* m_outputLocationTextbox;
+    void onOutputLocationChange(wxCommandEvent& event);
 
-  // Advanced
-  wxCheckBox *AdvancedOptionsCheckbox;
-  void onAdvancedOptionsChange(wxCommandEvent &Event);
+    wxCheckBox* m_outputZipCheckbox;
+    void onOutputZipChange(wxCommandEvent& event);
 
-  // Processing
-  wxCheckBox *ProcessingPluginPatchingCheckbox;
-  void onProcessingPluginPatchingChange(wxCommandEvent &Event);
-  wxStaticBoxSizer *ProcessingPluginPatchingOptions;
-  wxCheckBox *ProcessingPluginPatchingOptionsESMifyCheckbox;
-  void onProcessingPluginPatchingOptionsESMifyChange(wxCommandEvent &Event);
+    // Advanced
+    wxCheckBox* m_advancedOptionsCheckbox;
+    void onAdvancedOptionsChange(wxCommandEvent& event);
 
-  wxCheckBox *ProcessingMultithreadingCheckbox;
-  void onProcessingMultithreadingChange(wxCommandEvent &Event);
+    // Processing
+    wxCheckBox* m_processingPluginPatchingCheckbox;
+    void onProcessingPluginPatchingChange(wxCommandEvent& event);
+    wxStaticBoxSizer* m_processingPluginPatchingOptions;
+    wxCheckBox* m_processingPluginPatchingOptionsESMifyCheckbox;
+    void onProcessingPluginPatchingOptionsESMifyChange(wxCommandEvent& event);
 
-  wxCheckBox *ProcessingHighMemCheckbox;
-  void onProcessingHighMemChange(wxCommandEvent &Event);
+    wxCheckBox* m_processingMultithreadingCheckbox;
+    void onProcessingMultithreadingChange(wxCommandEvent& event);
 
-  wxCheckBox *ProcessingGPUAccelerationCheckbox;
-  void onProcessingGPUAccelerationChange(wxCommandEvent &Event);
+    wxCheckBox* m_processingHighMemCheckbox;
+    void onProcessingHighMemChange(wxCommandEvent& event);
 
-  wxCheckBox *ProcessingMapFromMeshesCheckbox;
-  void onProcessingMapFromMeshesChange(wxCommandEvent &Event);
+    wxCheckBox* m_processingGPUAccelerationCheckbox;
+    void onProcessingGPUAccelerationChange(wxCommandEvent& event);
 
-  wxCheckBox *ProcessingBSACheckbox;
-  void onProcessingBSAChange(wxCommandEvent &Event);
+    wxCheckBox* m_processingMapFromMeshesCheckbox;
+    void onProcessingMapFromMeshesChange(wxCommandEvent& event);
 
+    wxCheckBox* m_processingBSACheckbox;
+    void onProcessingBSAChange(wxCommandEvent& event);
 
-  // Pre-Patchers
-  wxCheckBox *PrePatcherDisableMLPCheckbox;
-  void onPrePatcherDisableMLPChange(wxCommandEvent &Event);
+    // Pre-Patchers
+    wxCheckBox* m_prePatcherDisableMLPCheckbox;
+    void onPrePatcherDisableMLPChange(wxCommandEvent& event);
 
-  // Shader Patchers
-  wxCheckBox *ShaderPatcherParallaxCheckbox;
-  void onShaderPatcherParallaxChange(wxCommandEvent &Event);
+    // Shader Patchers
+    wxCheckBox* m_shaderPatcherParallaxCheckbox;
+    void onShaderPatcherParallaxChange(wxCommandEvent& event);
 
-  wxCheckBox *ShaderPatcherComplexMaterialCheckbox;
-  void onShaderPatcherComplexMaterialChange(wxCommandEvent &Event);
+    wxCheckBox* m_shaderPatcherComplexMaterialCheckbox;
+    void onShaderPatcherComplexMaterialChange(wxCommandEvent& event);
 
-  wxListCtrl *ShaderPatcherComplexMaterialDynCubemapBlocklist;
-  void onShaderPatcherComplexMaterialDynCubemapBlocklistChange(wxListEvent &Event);
+    wxListCtrl* m_shaderPatcherComplexMaterialDynCubemapBlocklist;
+    void onShaderPatcherComplexMaterialDynCubemapBlocklistChange(wxListEvent& event);
 
-  wxCheckBox *ShaderPatcherTruePBRCheckbox;
-  void onShaderPatcherTruePBRChange(wxCommandEvent &Event);
+    wxCheckBox* m_shaderPatcherTruePBRCheckbox;
+    void onShaderPatcherTruePBRChange(wxCommandEvent& event);
 
-  // Shader Transforms
-  wxCheckBox *ShaderTransformParallaxToCMCheckbox;
-  void onShaderTransformParallaxToCMChange(wxCommandEvent &Event);
+    // Shader Transforms
+    wxCheckBox* m_shaderTransformParallaxToCMCheckbox;
+    void onShaderTransformParallaxToCMChange(wxCommandEvent& event);
 
-  // Post-Patchers
-  wxCheckBox *PostPatcherOptimizeMeshesCheckbox;
-  void onPostPatcherOptimizeMeshesChange(wxCommandEvent &Event);
+    // Post-Patchers
+    wxCheckBox* m_postPatcherOptimizeMeshesCheckbox;
+    void onPostPatcherOptimizeMeshesChange(wxCommandEvent& event);
 
-  // Mesh Rules
-  wxListCtrl *MeshRulesAllowList;
-  void onMeshRulesAllowListChange(wxListEvent &Event);
+    // Mesh Rules
+    wxListCtrl* m_meshRulesAllowList;
+    void onMeshRulesAllowListChange(wxListEvent& event);
 
-  wxListCtrl *MeshRulesBlockList;
-  void onMeshRulesBlockListChange(wxListEvent &Event);
+    wxListCtrl* m_meshRulesBlockList;
+    void onMeshRulesBlockListChange(wxListEvent& event);
 
-  // Texture Rules
-  wxListCtrl *TextureRulesMaps;
-  void onTextureRulesMapsChange(wxListEvent &Event);
-  void onTextureRulesMapsChangeStart(wxMouseEvent &Event);
+    // Texture Rules
+    wxListCtrl* m_textureRulesMaps;
+    void onTextureRulesMapsChange(wxListEvent& event);
+    void onTextureRulesMapsChangeStart(wxMouseEvent& event);
 
-  wxListCtrl *TextureRulesVanillaBSAList;
-  void onTextureRulesVanillaBSAListChange(wxListEvent &Event);
+    wxListCtrl* m_textureRulesVanillaBSAList;
+    void onTextureRulesVanillaBSAListChange(wxListEvent& event);
 
-  //
-  // UI Controls
-  //
-  wxStaticBoxSizer *MO2OptionsSizer; /** Stores the MO2-specific options since these are only sometimes shown */
-  wxStaticBoxSizer *ProcessingOptionsSizer; /** Stores the processing options */
-  wxStaticBoxSizer *ShaderPatcherComplexMaterialOptionsSizer; /** Stores the complex material options */
+    //
+    // UI Controls
+    //
+    wxStaticBoxSizer* m_mo2OptionsSizer; /** Stores the MO2-specific options since these are only sometimes shown */
+    wxStaticBoxSizer* m_processingOptionsSizer; /** Stores the processing options */
+    wxStaticBoxSizer* m_shaderPatcherComplexMaterialOptionsSizer; /** Stores the complex material options */
 
-  wxComboBox *TextureMapTypeCombo; /** Stores the texture map type combo box */
+    wxComboBox* m_textureMapTypeCombo; /** Stores the texture map type combo box */
 
-  /**
-   * @brief Event handler responsible for showing the brose dialog when the user clicks on the browse button - for game
-   * location
-   *
-   * @param Event wxWidgets event object
-   */
-  void onBrowseGameLocation(wxCommandEvent &Event);
+    /**
+     * @brief Event handler responsible for showing the brose dialog when the user clicks on the browse button - for
+     * game location
+     *
+     * @param event wxWidgets event object
+     */
+    void onBrowseGameLocation(wxCommandEvent& event);
 
-  /**
-   * @brief Event handler responsible for showing the brose dialog when the user clicks on the browse button - for MO2
-   * instance location
-   *
-   * @param Event wxWidgets event object
-   */
-  void onBrowseMO2InstanceLocation(wxCommandEvent &Event);
+    /**
+     * @brief Event handler responsible for showing the brose dialog when the user clicks on the browse button - for MO2
+     * instance location
+     *
+     * @param event wxWidgets event object
+     */
+    void onBrowseMO2InstanceLocation(wxCommandEvent& event);
 
-  /**
-   * @brief Event handler responsible for showing the brose dialog when the user clicks on the browse button - for
-   * output location
-   *
-   * @param Event wxWidgets event object
-   */
-  void onBrowseOutputLocation(wxCommandEvent &Event);
+    /**
+     * @brief Event handler responsible for showing the brose dialog when the user clicks on the browse button - for
+     * output location
+     *
+     * @param event wxWidgets event object
+     */
+    void onBrowseOutputLocation(wxCommandEvent& event);
 
-  /**
-   * @brief Updates disabled elements based on the current state of the UI
-   */
-  void updateDisabledElements();
+    /**
+     * @brief Updates disabled elements based on the current state of the UI
+     */
+    void updateDisabledElements();
 
-  wxBoxSizer *AdvancedOptionsSizer; /** Container that stores advanced options */
-  void updateAdvanced();
+    wxBoxSizer* m_advancedOptionsSizer; /** Container that stores advanced options */
+    void updateAdvanced();
 
-  /**
-   * @brief Event handler responsible for deleting/adding items based on list edits
-   *
-   * @param Event wxWidgets event object
-   */
-  void onListEdit(wxListEvent& Event);
+    /**
+     * @brief Event handler responsible for deleting/adding items based on list edits
+     *
+     * @param event wxWidgets event object
+     */
+    void onListEdit(wxListEvent& event);
 
-  /**
-   * @brief Event handler responsible for activating list items on double click or enter
-   *
-   * @param Event wxWidgets event object
-   */
-  void onListItemActivated(wxListEvent& Event);
+    /**
+     * @brief Event handler responsible for activating list items on double click or enter
+     *
+     * @param event wxWidgets event object
+     */
+    void onListItemActivated(wxListEvent& event);
 
-  auto getColumnAtPosition(const wxPoint& Pos, long Item) -> int;
+    auto getColumnAtPosition(const wxPoint& pos, long item) -> int;
 
-  //
-  // Validation
-  //
-  wxButton *OKButton; /** Stores the OKButton as a member var in case it needs to be disabled/enabled */
-  wxButton *SaveConfigButton; /** Stores the SaveConfigButton as a member var in case it needs to be disabled/enabled */
-  wxButton *LoadConfigButton;
+    //
+    // Validation
+    //
+    wxButton* m_okButton; /** Stores the OKButton as a member var in case it needs to be disabled/enabled */
+    wxButton*
+        m_saveConfigButton; /** Stores the SaveConfigButton as a member var in case it needs to be disabled/enabled */
+    wxButton* m_loadConfigButton;
 
-  /**
-   * @brief Event handler that triggers when the user presses "Start Patching" - performs validation
-   *
-   * @param Event wxWidgets event object
-   */
-  void onOkButtonPressed(wxCommandEvent &Event);
+    /**
+     * @brief Event handler that triggers when the user presses "Start Patching" - performs validation
+     *
+     * @param event wxWidgets event object
+     */
+    void onOkButtonPressed(wxCommandEvent& event);
 
-  /**
-   * @brief Event handler that triggers when the user presses the "Save Config" button
-   *
-   * @param Event wxWidgets event object
-   */
-  void onSaveConfigButtonPressed(wxCommandEvent &Event);
+    /**
+     * @brief Event handler that triggers when the user presses the "Save Config" button
+     *
+     * @param event wxWidgets event object
+     */
+    void onSaveConfigButtonPressed(wxCommandEvent& event);
 
-  /**
-   * @brief Event handler that triggers when the user presses the "Load Config" button
-   *
-   * @param Event wxWidgets event object
-   */
-  void onLoadConfigButtonPressed(wxCommandEvent &Event);
+    /**
+     * @brief Event handler that triggers when the user presses the "Load Config" button
+     *
+     * @param event wxWidgets event object
+     */
+    void onLoadConfigButtonPressed(wxCommandEvent& event);
 
-  /**
-   * @brief Event handler that triggers when the user presses the "Restore Defaults" button
-   *
-   * @param Event wxWidgets event object
-   */
-  void onRestoreDefaultsButtonPressed(wxCommandEvent &Event);
+    /**
+     * @brief Event handler that triggers when the user presses the "Restore Defaults" button
+     *
+     * @param event wxWidgets event object
+     */
+    void onRestoreDefaultsButtonPressed(wxCommandEvent& event);
 
-  /**
-   * @brief Event handler that triggers when the user presses the X on the dialog window, which closes the application
-   *
-   * @param Event wxWidgets event object
-   */
-  void onClose(wxCloseEvent &Event);
+    /**
+     * @brief Event handler that triggers when the user presses the X on the dialog window, which closes the application
+     *
+     * @param event wxWidgets event object
+     */
+    void onClose(wxCloseEvent& event);
 
-  /**
-   * @brief Saves current values to the config
-   */
-  auto saveConfig() -> bool;
+    /**
+     * @brief Saves current values to the config
+     */
+    auto saveConfig() -> bool;
 };

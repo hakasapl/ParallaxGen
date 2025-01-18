@@ -5,24 +5,22 @@
 #include <gtest/gtest.h>
 
 namespace PGTesting {
-  auto getExecutableDir() -> std::filesystem::path;
+auto getExecutableDir() -> std::filesystem::path;
 
-  struct TestEnvGameParams {
+struct TestEnvGameParams {
     BethesdaGame::GameType GameType;
     std::filesystem::path GamePath;
     std::filesystem::path AppDataPath;
     std::filesystem::path DocumentPath;
-  };
-}  // namespace PGTesting
+};
+} // namespace PGTesting
 
 namespace PGTestEnvs {
-  const std::filesystem::path EXEPath = PGTesting::getExecutableDir();
+const std::filesystem::path s_exePath = PGTesting::getExecutableDir();
 
-  // Define test environments
-  const PGTesting::TestEnvGameParams TESTENVSkyrimSE = {
-    BethesdaGame::GameType::SKYRIM_SE,
-    EXEPath / "env\\skyrimse\\game",
-    EXEPath / "env\\skyrimse\\appdata",
-    EXEPath / "env\\skyrimse\\documents"
-  };
-}  // namespace PGTestEnvs
+// Define test environments
+const PGTesting::TestEnvGameParams s_testENVSkyrimSE = { .GameType = BethesdaGame::GameType::SKYRIM_SE,
+    .GamePath = s_exePath / "env\\skyrimse\\game",
+    .AppDataPath = s_exePath / "env\\skyrimse\\appdata",
+    .DocumentPath = s_exePath / "env\\skyrimse\\documents" };
+} // namespace PGTestEnvs

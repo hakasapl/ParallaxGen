@@ -2,6 +2,7 @@
 set (HEADERS
     "include/ParallaxGenConfig.hpp"
     "include/ParallaxGenUI.hpp"
+    "include/ParallaxGenHandlers.hpp"
     "include/GUI/LauncherWindow.hpp"
     "include/GUI/ModSortDialog.hpp"
 )

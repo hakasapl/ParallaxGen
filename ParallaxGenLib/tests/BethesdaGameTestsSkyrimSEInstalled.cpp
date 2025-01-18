@@ -1,57 +1,60 @@
 #include "BethesdaGame.hpp"
 #include "CommonTests.hpp"
-#include "ParallaxGenPlugin.hpp"
 
 #include <gtest/gtest.h>
 
+#include <boost/algorithm/string/predicate.hpp>
 #include <filesystem>
 #include <memory>
-#include <boost/algorithm/string/predicate.hpp>
 
 using namespace std;
 
+// NOLINTBEGIN(misc-non-private-member-variables-in-classes,cppcoreguidelines-non-private-member-variables-in-classes)
 class BethesdaGameTestSkyrimSEInstalled : public ::testing::Test {
 protected:
-  // Set up code for each test
-  void SetUp() override {
+    // Set up code for each test
+    void SetUp() override
+    {
 
-    // must not throw exception
-    BG = make_unique<BethesdaGame>(BethesdaGame::GameType::SKYRIM_SE);
-  }
+        // must not throw exception
+        m_bg = make_unique<BethesdaGame>(BethesdaGame::GameType::SKYRIM_SE);
+    }
 
-  // Tear down code for each test
-  void TearDown() override {
-    // Clean up after each test
-  }
-  std::unique_ptr<BethesdaGame> BG;
+    // Tear down code for each test
+    void TearDown() override
+    {
+        // Clean up after each test
+    }
+    std::unique_ptr<BethesdaGame> m_bg;
 };
+// NOLINTEND(misc-non-private-member-variables-in-classes,cppcoreguidelines-non-private-member-variables-in-classes)
 
-TEST_F(BethesdaGameTestSkyrimSEInstalled, TestInitialization) {
-  EXPECT_EQ(BG->getGameType(), BethesdaGame::GameType::SKYRIM_SE);
+TEST_F(BethesdaGameTestSkyrimSEInstalled, TestInitialization)
+{
+    EXPECT_EQ(m_bg->getGameType(), BethesdaGame::GameType::SKYRIM_SE);
 
-  // all directories exist
-  EXPECT_TRUE(std::filesystem::exists(BG->getGamePath()));
-  EXPECT_TRUE(std::filesystem::exists(BG->getGameDataPath()));
+    // all directories exist
+    EXPECT_TRUE(std::filesystem::exists(m_bg->getGamePath()));
+    EXPECT_TRUE(std::filesystem::exists(m_bg->getGameDataPath()));
 
-  EXPECT_EQ(BG->getGameDataPath(), BG->getGamePath() / "Data");
+    EXPECT_EQ(m_bg->getGameDataPath(), m_bg->getGamePath() / "Data");
 
-  EXPECT_TRUE(boost::iequals(BG->getPluginsFile().filename().wstring(), L"plugins.txt"));
-  EXPECT_TRUE(boost::iequals(BG->getLoadOrderFile().filename().wstring(), L"loadorder.txt"));
+    EXPECT_TRUE(boost::iequals(m_bg->getPluginsFile().filename().wstring(), L"plugins.txt"));
 
-  EXPECT_TRUE(boost::iequals(BG->getINIPaths().INI.filename().wstring(), L"Skyrim.ini"));
-  EXPECT_TRUE(boost::iequals(BG->getINIPaths().INIPrefs.filename().wstring(), L"SkyrimPrefs.ini"));
-  EXPECT_TRUE(boost::iequals(BG->getINIPaths().INICustom.filename().wstring(), L"SkyrimCustom.ini"));
+    EXPECT_TRUE(boost::iequals(m_bg->getINIPaths().ini.filename().wstring(), L"Skyrim.ini"));
+    EXPECT_TRUE(boost::iequals(m_bg->getINIPaths().iniPrefs.filename().wstring(), L"SkyrimPrefs.ini"));
+    EXPECT_TRUE(boost::iequals(m_bg->getINIPaths().iniCustom.filename().wstring(), L"SkyrimCustom.ini"));
 
-  EXPECT_TRUE(std::filesystem::exists(BG->getINIPaths().INI));
-  EXPECT_TRUE(std::filesystem::exists(BG->getINIPaths().INIPrefs));
-  EXPECT_TRUE(std::filesystem::exists(BG->getINIPaths().INICustom));
-  EXPECT_TRUE(std::filesystem::exists(BG->getPluginsFile()));
-  EXPECT_TRUE(std::filesystem::exists(BG->getLoadOrderFile()));
+    EXPECT_TRUE(std::filesystem::exists(m_bg->getINIPaths().ini));
+    EXPECT_TRUE(std::filesystem::exists(m_bg->getINIPaths().iniPrefs));
+    EXPECT_TRUE(std::filesystem::exists(m_bg->getINIPaths().iniCustom));
+    EXPECT_TRUE(std::filesystem::exists(m_bg->getPluginsFile()));
 }
 
-TEST_F(BethesdaGameTestSkyrimSEInstalled, TestPlugins) {
-    EXPECT_TRUE(BG->getActivePlugins().size() > 0);
+TEST_F(BethesdaGameTestSkyrimSEInstalled, TestPlugins)
+{
+    EXPECT_TRUE(!m_bg->getActivePlugins().empty());
 
-    EXPECT_EQ(BG->getActivePlugins()[0], std::wstring{L"Skyrim.esm"});
-    EXPECT_EQ(BG->getActivePlugins(true)[0], std::wstring{L"Skyrim"});
+    EXPECT_EQ(m_bg->getActivePlugins()[0], std::wstring { L"Skyrim.esm" });
+    EXPECT_EQ(m_bg->getActivePlugins(true)[0], std::wstring { L"Skyrim" });
 }

@@ -1,52 +1,41 @@
 ---
-Checks: '-*,
-         boost-*,
-         bugprone-*,
-         -bugprone-easily-swappable-parameters,
-         cert-*,
-         -cert-err58-cpp,
-         concurrency-*,
-         -concurrency-mt-unsafe,
-         cppcoreguidelines-*,
-         -cppcoreguidelines-avoid-c-arrays,
-         -cppcoreguidelines-avoid-magic-numbers,
-         -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
-         -cppcoreguidelines-pro-bounds-constant-array-index,
-         -cppcoreguidelines-pro-type-reinterpret-cast,
-         llvm-*,
-         -llvm-header-guard,
-         llvm-include-order,
-         misc-*,
-         -misc-no-recursion,
-         -misc-non-private-member-variables-in-classes,
-         misc-const-correctness,
-         modernize-*,
-         -modernize-avoid-c-arrays,
-         modernize-use-nullptr,
-         performance-*,
-         portability-*,
-         readability-*,
-         -readability-function-cognitive-complexity,
-         -readability-identifier-length,
-         -readability-magic-numbers'
-FormatStyle: llvm
-HeaderFilterRegex: 'src/|include/'
+Checks: "-*,
+  cppcoreguidelines-*,
+  misc-*,
+  -misc-include-cleaner,
+  -misc-no-recursion,
+  modernize-*,
+  performance-*,
+  readability-*,
+  -readability-function-cognitive-complexity,
+  -readability-identifier-length,
+  -readability-magic-numbers"
+FormatStyle: webkit
 CheckOptions:
-  - key:             readability-identifier-naming.ClassCase
-    value:           CamelCase
-  - key:             readability-identifier-naming.EnumCase
-    value:           CamelCase
-  - key:             readability-identifier-naming.FunctionCase
-    value:           camelBack
-  - key:             readability-identifier-naming.MemberCase
-    value:           CamelCase
-  - key:             readability-identifier-naming.ParameterCase
-    value:           CamelCase
-  - key:             readability-identifier-naming.UnionCase
-    value:           CamelCase
-  - key:             readability-identifier-naming.VariableCase
-    value:           CamelCase
-  - key:             readability-identifier-naming.ConstexprVariableCase
-    value:           UPPER_CASE
-  - key:             readability-identifier-naming.IgnoreMainLikeFunctions
-    value:           1
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumCase
+    value: CamelCase
+  - key: readability-identifier-naming.FunctionCase
+    value: camelBack
+  - key: readability-identifier-naming.VariableCase
+    value: camelBack
+  - key: readability-identifier-naming.ParameterCase
+    value: camelBack
+
+  - key: readability-identifier-naming.PrivateMemberPrefix
+    value: m_
+  - key: readability-identifier-naming.ProtectedMemberPrefix
+    value: m_
+  - key: readability-identifier-naming.GlobalVariablePrefix
+    value: s_
+
+  - key: readability-identifier-naming.ConstexprVariableCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.MacroDefinitionCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.EnumConstantCase
+    value: UPPER_CASE
+
+  - key: misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic
+    value: true
