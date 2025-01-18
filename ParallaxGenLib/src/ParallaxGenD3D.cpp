@@ -67,7 +67,7 @@ auto ParallaxGenD3D::findCMMaps(const std::vector<std::wstring>& bsaExcludes) ->
 
     // loop through maps
     for (auto& envSlot : envMasks) {
-        vector<pair<NIFUtil::PGTexture, bool>> cmMaps;
+        vector<tuple<NIFUtil::PGTexture, bool, bool, bool>> cmMaps;
 
         for (const auto& envMask : envSlot.second) {
             if (envMask.type != NIFUtil::TextureType::ENVIRONMENTMASK) {
@@ -78,9 +78,12 @@ auto ParallaxGenD3D::findCMMaps(const std::vector<std::wstring>& bsaExcludes) ->
 
             bool result = false;
             bool hasMetalness = false;
+            bool hasGlosiness = false;
+            bool hasEnvMask = false;
             if (!bFileInVanillaBSA) {
                 try {
-                    ParallaxGenTask::updatePGResult(pgResult, checkIfCM(envMask.path, result, hasMetalness),
+                    ParallaxGenTask::updatePGResult(pgResult,
+                        checkIfCM(envMask.path, result, hasEnvMask, hasGlosiness, hasMetalness),
                         ParallaxGenTask::PGResult::SUCCESS_WITH_WARNINGS);
                 } catch (const exception& e) {
                     spdlog::error(L"Failed to check if {} is a complex material: {}", envMask.path.wstring(),
@@ -95,16 +98,24 @@ auto ParallaxGenD3D::findCMMaps(const std::vector<std::wstring>& bsaExcludes) ->
 
             if (result) {
                 // remove old env mask
-                cmMaps.emplace_back(envMask, hasMetalness);
+                cmMaps.emplace_back(envMask, hasEnvMask, hasGlosiness, hasMetalness);
                 spdlog::trace(L"Found complex material env mask: {}", envMask.path.wstring());
             }
         }
 
         // update map
-        for (const auto& [cmMap, hasMetalness] : cmMaps) {
+        for (const auto& [cmMap, hasEnvMask, hasGlosiness, hasMetalness] : cmMaps) {
             envSlot.second.erase(cmMap);
             envSlot.second.insert({ cmMap.path, NIFUtil::TextureType::COMPLEXMATERIAL });
             m_pgd->setTextureType(cmMap.path, NIFUtil::TextureType::COMPLEXMATERIAL);
+
+            if (hasEnvMask) {
+                m_pgd->addTextureAttribute(cmMap.path, NIFUtil::TextureAttribute::CM_ENVMASK);
+            }
+
+            if (hasGlosiness) {
+                m_pgd->addTextureAttribute(cmMap.path, NIFUtil::TextureAttribute::CM_GLOSSINESS);
+            }
 
             if (hasMetalness) {
                 m_pgd->addTextureAttribute(cmMap.path, NIFUtil::TextureAttribute::CM_METALNESS);
@@ -117,8 +128,8 @@ auto ParallaxGenD3D::findCMMaps(const std::vector<std::wstring>& bsaExcludes) ->
     return ParallaxGenTask::PGResult::SUCCESS;
 }
 
-auto ParallaxGenD3D::checkIfCM(const filesystem::path& ddsPath, bool& result, bool& hasMetalness)
-    -> ParallaxGenTask::PGResult
+auto ParallaxGenD3D::checkIfCM(const filesystem::path& ddsPath, bool& result, bool& hasEnvMask, bool& hasGlosiness,
+    bool& hasMetalness) -> ParallaxGenTask::PGResult
 {
     // get metadata (should only pull headers, which is much faster)
     DirectX::TexMetadata ddsImageMeta {};
@@ -183,16 +194,26 @@ auto ParallaxGenD3D::checkIfCM(const filesystem::path& ddsPath, bool& result, bo
         return pgResult;
     }
 
-    array<int, 2> values {};
+    array<int, 4> values {};
     values = countValuesGPU(image);
 
     const size_t numPixels = ddsImageMeta.width * ddsImageMeta.height;
-    if (values[0] > numPixels / 2) {
+    if (values[3] > numPixels / 2) {
+        // check alpha
         result = false;
         return ParallaxGenTask::PGResult::SUCCESS;
     }
 
+    if (values[0] > 0) {
+        hasEnvMask = true;
+    }
+
     if (values[1] > 0) {
+        // check green
+        hasGlosiness = true;
+    }
+
+    if (values[2] > 0) {
         hasMetalness = true;
     }
 
@@ -200,7 +221,7 @@ auto ParallaxGenD3D::checkIfCM(const filesystem::path& ddsPath, bool& result, bo
     return ParallaxGenTask::PGResult::SUCCESS;
 }
 
-auto ParallaxGenD3D::countValuesGPU(const DirectX::ScratchImage& image) -> array<int, 2>
+auto ParallaxGenD3D::countValuesGPU(const DirectX::ScratchImage& image) -> array<int, 4>
 {
     if ((m_ptrContext == nullptr) || (m_ptrDevice == nullptr) || (m_shaderCountAlphaValues == nullptr)) {
         throw runtime_error("GPU not initialized");
@@ -227,7 +248,7 @@ auto ParallaxGenD3D::countValuesGPU(const DirectX::ScratchImage& image) -> array
     bufferDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
     bufferDesc.StructureByteStride = sizeof(UINT);
 
-    array<unsigned int, 2> outputData = { 0, 0 };
+    array<unsigned int, 4> outputData = { 0, 0, 0, 0 };
     ComPtr<ID3D11Buffer> outputBuffer;
     if (createBuffer(outputData.data(), bufferDesc, outputBuffer) != ParallaxGenTask::PGResult::SUCCESS) {
         return {};
@@ -268,7 +289,7 @@ auto ParallaxGenD3D::countValuesGPU(const DirectX::ScratchImage& image) -> array
     m_ptrContext->CSSetShader(nullptr, nullptr, 0);
 
     // Read back data
-    vector<array<int, 2>> data = readBack<array<int, 2>>(outputBuffer);
+    vector<array<int, 4>> data = readBack<array<int, 4>>(outputBuffer);
 
     // Cleanup
     outputBuffer.Reset();

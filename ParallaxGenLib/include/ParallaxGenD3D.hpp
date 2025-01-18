@@ -102,8 +102,9 @@ public:
     auto getDDS(const std::filesystem::path& ddsPath, DirectX::ScratchImage& dds) const -> ParallaxGenTask::PGResult;
 
 private:
-    auto checkIfCM(const std::filesystem::path& ddsPath, bool& result, bool& hasMetalness) -> ParallaxGenTask::PGResult;
-    auto countValuesGPU(const DirectX::ScratchImage& image) -> std::array<int, 2>;
+    auto checkIfCM(const std::filesystem::path& ddsPath, bool& result, bool& hasEnvMask, bool& hasGlosiness,
+        bool& hasMetalness) -> ParallaxGenTask::PGResult;
+    auto countValuesGPU(const DirectX::ScratchImage& image) -> std::array<int, 4>;
 
     // GPU functions
     void initShaders();

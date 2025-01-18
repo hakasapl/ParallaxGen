@@ -5,6 +5,7 @@
 - Added `converttohdr` patcher for pgtools
 - Removed the GPU Acceleration option, which is now required
 - Fixed some custom paths in modorganizer.ini with %BASE_DIR% in them that were not properly parsed
+- Specular flag will be set if CM map has glosiness
 
 ## [0.8.1] - 2025-01-13
 
