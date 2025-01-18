@@ -58,7 +58,6 @@ public:
         struct Processing {
             bool multithread = true;
             bool highMem = false;
-            bool gpuAcceleration = true;
             bool bsa = true;
             bool pluginPatching = true;
             bool pluginESMify = false;
@@ -66,8 +65,7 @@ public:
 
             auto operator==(const Processing& other) const -> bool
             {
-                return multithread == other.multithread && highMem == other.highMem
-                    && gpuAcceleration == other.gpuAcceleration && bsa == other.bsa
+                return multithread == other.multithread && highMem == other.highMem && bsa == other.bsa
                     && pluginPatching == other.pluginPatching && mapFromMeshes == other.mapFromMeshes;
             }
         } Processing;

@@ -160,9 +160,6 @@ auto ParallaxGenConfig::addConfigJSON(const nlohmann::json& j) -> void
         if (paramJ.contains("processing") && paramJ["processing"].contains("highmem")) {
             paramJ["processing"]["highmem"].get_to<bool>(m_params.Processing.highMem);
         }
-        if (paramJ.contains("processing") && paramJ["processing"].contains("gpuacceleration")) {
-            paramJ["processing"]["gpuacceleration"].get_to<bool>(m_params.Processing.gpuAcceleration);
-        }
         if (paramJ.contains("processing") && paramJ["processing"].contains("bsa")) {
             paramJ["processing"]["bsa"].get_to<bool>(m_params.Processing.bsa);
         }
@@ -368,10 +365,6 @@ auto ParallaxGenConfig::validateParams(const PGParams& params, vector<string>& e
             "Upgrade Parallax to Complex Material requires both the Complex Material and Parallax shader patchers");
     }
 
-    if (params.ShaderTransforms.parallaxToCM && !params.Processing.gpuAcceleration) {
-        errors.emplace_back("Upgrade Parallax to Complex Material requires GPU acceleration to be enabled");
-    }
-
     // Post-Patchers
 
     // Mesh Rules
@@ -454,7 +447,6 @@ void ParallaxGenConfig::saveUserConfig()
     // "processing"
     j["params"]["processing"]["multithread"] = m_params.Processing.multithread;
     j["params"]["processing"]["highmem"] = m_params.Processing.highMem;
-    j["params"]["processing"]["gpuacceleration"] = m_params.Processing.gpuAcceleration;
     j["params"]["processing"]["bsa"] = m_params.Processing.bsa;
     j["params"]["processing"]["pluginpatching"] = m_params.Processing.pluginPatching;
     j["params"]["processing"]["pluginesmify"] = m_params.Processing.pluginESMify;
@@ -512,7 +504,6 @@ auto ParallaxGenConfig::PGParams::getString() const -> wstring
     outStr += L"ZipOutput: " + to_wstring(static_cast<int>(Output.zip)) + L"\n";
     outStr += L"Multithread: " + to_wstring(static_cast<int>(Processing.multithread)) + L"\n";
     outStr += L"HighMem: " + to_wstring(static_cast<int>(Processing.highMem)) + L"\n";
-    outStr += L"GPUAcceleration: " + to_wstring(static_cast<int>(Processing.gpuAcceleration)) + L"\n";
     outStr += L"BSA: " + to_wstring(static_cast<int>(Processing.bsa)) + L"\n";
     outStr += L"PluginPatching: " + to_wstring(static_cast<int>(Processing.pluginPatching)) + L"\n";
     outStr += L"MapFromMeshes: " + to_wstring(static_cast<int>(Processing.mapFromMeshes)) + L"\n";

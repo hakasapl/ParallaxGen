@@ -321,7 +321,7 @@ void ParallaxGenPlugin::initialize(const BethesdaGame& game)
 void ParallaxGenPlugin::populateObjs() { libPopulateObjs(); }
 
 void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nifShape, const wstring& name3D,
-    const int& index3D, PatcherUtil::PatcherObjectSet& patchers, vector<TXSTResult>& results,
+    const int& index3D, PatcherUtil::PatcherMeshObjectSet& patchers, vector<TXSTResult>& results,
     PatcherUtil::ConflictModResults* conflictMods)
 {
     const lock_guard<mutex> lock(s_processShapeMutex);

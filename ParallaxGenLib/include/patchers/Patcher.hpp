@@ -1,9 +1,5 @@
 #pragma once
 
-#include <filesystem>
-
-#include "NifFile.hpp"
-
 #include "ParallaxGenD3D.hpp"
 #include "ParallaxGenDirectory.hpp"
 
@@ -14,8 +10,6 @@
 class Patcher {
 private:
     // Instance vars
-    std::filesystem::path m_nifPath; /** Stores the path to the NIF file currently being patched */
-    nifly::NifFile* m_nif; /** Stores the NIF object itself */
     std::string m_patcherName; /** Name of the patcher (used in log and UI elements) */
 
     // Static Tools
@@ -26,20 +20,6 @@ private:
     // static auto getFactory()
 
 protected:
-    /**
-     * @brief Get the NIF path for the current patcher (used only within child patchers)
-     *
-     * @return std::filesystem::path Path to NIF
-     */
-    [[nodiscard]] auto getNIFPath() const -> std::filesystem::path;
-
-    /**
-     * @brief Get the NIF object for the current patcher (used only within child patchers)
-     *
-     * @return nifly::NifFile* pointer to NIF object
-     */
-    [[nodiscard]] auto getNIF() const -> nifly::NifFile*;
-
     /**
      * @brief Get the PGD object (used only within child patchers)
      *
@@ -70,7 +50,7 @@ public:
      * @param nif NIF object
      * @param patcherName Name of patcher
      */
-    Patcher(std::filesystem::path nifPath, nifly::NifFile* nif, std::string patcherName);
+    Patcher(std::string patcherName);
 
     /**
      * @brief Get the Patcher Name object

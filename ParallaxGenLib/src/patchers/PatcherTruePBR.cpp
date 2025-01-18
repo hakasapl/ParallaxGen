@@ -575,9 +575,9 @@ void PatcherTruePBR::applyShader(nifly::NiShape& nifShape, bool& nifModified)
     NIFUtil::clearShaderFlag(nifShaderBSLSP, SLSF1_HAIR_SOFT_LIGHTING, nifModified);
 }
 
-void PatcherTruePBR::loadOptions(unordered_set<string>& optionsStr)
+void PatcherTruePBR::loadOptions(unordered_map<string, string>& optionsStr)
 {
-    for (const auto& option : optionsStr) {
+    for (const auto& [option, value] : optionsStr) {
         if (option == "no_path_check") {
             s_checkPaths = false;
         }

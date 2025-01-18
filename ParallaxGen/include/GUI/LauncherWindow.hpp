@@ -103,9 +103,6 @@ private:
     wxCheckBox* m_processingHighMemCheckbox;
     void onProcessingHighMemChange(wxCommandEvent& event);
 
-    wxCheckBox* m_processingGPUAccelerationCheckbox;
-    void onProcessingGPUAccelerationChange(wxCommandEvent& event);
-
     wxCheckBox* m_processingMapFromMeshesCheckbox;
     void onProcessingMapFromMeshesChange(wxCommandEvent& event);
 

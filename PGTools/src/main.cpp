@@ -18,8 +18,10 @@
 #include "patchers/Patcher.hpp"
 #include "patchers/PatcherComplexMaterial.hpp"
 #include "patchers/PatcherParticleLightsToLP.hpp"
+#include "patchers/PatcherTextureGlobalConvertToHDR.hpp"
 #include "patchers/PatcherTruePBR.hpp"
 #include "patchers/PatcherUpgradeParallaxToCM.hpp"
+#include "patchers/PatcherUtil.hpp"
 #include "patchers/PatcherVanillaParallax.hpp"
 
 using namespace std;
@@ -48,7 +50,6 @@ auto getExecutablePath() -> filesystem::path
 struct PGToolsCLIArgs {
     int verbosity = 0;
     bool multithreading = true;
-    bool gpuAcceleration = true;
 
     struct Patch {
         CLI::App* subCommand = nullptr;
@@ -84,16 +85,14 @@ void mainRunner(PGToolsCLIArgs& args)
         args.Patch.output = filesystem::absolute(args.Patch.output);
 
         auto pgd = ParallaxGenDirectory(args.Patch.source, args.Patch.output, nullptr);
-        auto pgd3D = ParallaxGenD3D(&pgd, args.Patch.output, exePath, args.gpuAcceleration);
+        auto pgd3D = ParallaxGenD3D(&pgd, args.Patch.output, exePath);
         auto pg = ParallaxGen(args.Patch.output, &pgd, &pgd3D, args.Patch.patchers.contains("optimize"));
 
         Patcher::loadStatics(pgd, pgd3D);
         ParallaxGenWarnings::init(&pgd, {});
 
         // Check if GPU needs to be initialized
-        if (args.gpuAcceleration) {
-            pgd3D.initGPU();
-        }
+        pgd3D.initGPU();
 
         // Create output directory
         try {
@@ -120,7 +119,7 @@ void mainRunner(PGToolsCLIArgs& args)
         pgd.mapFiles({}, {}, {}, {}, args.Patch.mapTexturesFromMeshes, args.multithreading, args.Patch.highMem);
 
         // Split patchers into names and options
-        unordered_map<string, unordered_set<string>> patcherDefs;
+        unordered_map<string, unordered_map<string, string>> patcherDefs;
         for (const auto& patcher : args.Patch.patchers) {
             auto openBracket = patcher.find('[');
             auto closeBracket = patcher.find(']');
@@ -132,9 +131,17 @@ void mainRunner(PGToolsCLIArgs& args)
             // Get substring between brackets
             auto options = patcher.substr(openBracket + 1, closeBracket - openBracket - 1);
             // Split options by | into unordered set
-            unordered_set<string> optionSet;
+            unordered_map<string, string> optionSet;
             for (const auto& option : options | views::split('|')) {
-                optionSet.insert(string(option.begin(), option.end()));
+                // check if = in option string
+                const auto optionStr = string(option.begin(), option.end());
+                const auto eqPos = optionStr.find('=');
+                if (eqPos != string::npos) {
+                    optionSet[optionStr.substr(0, eqPos)] = optionStr.substr(eqPos + 1);
+                    continue;
+                }
+
+                optionSet[optionStr] = "";
             }
 
             // Add to set
@@ -149,31 +156,37 @@ void mainRunner(PGToolsCLIArgs& args)
         }
 
         // Create patcher factory
-        PatcherUtil::PatcherSet patchers;
+        PatcherUtil::PatcherMeshSet meshPatchers;
         if (patcherDefs.contains("parallax")) {
-            patchers.shaderPatchers.emplace(
+            meshPatchers.shaderPatchers.emplace(
                 PatcherVanillaParallax::getShaderType(), PatcherVanillaParallax::getFactory());
         }
         if (patcherDefs.contains("complexmaterial")) {
-            patchers.shaderPatchers.emplace(
+            meshPatchers.shaderPatchers.emplace(
                 PatcherComplexMaterial::getShaderType(), PatcherComplexMaterial::getFactory());
             PatcherComplexMaterial::loadStatics(args.Patch.patchers.contains("disablemlp"), {});
         }
         if (patcherDefs.contains("truepbr")) {
-            patchers.shaderPatchers.emplace(PatcherTruePBR::getShaderType(), PatcherTruePBR::getFactory());
+            meshPatchers.shaderPatchers.emplace(PatcherTruePBR::getShaderType(), PatcherTruePBR::getFactory());
             PatcherTruePBR::loadStatics(pgd.getPBRJSONs());
             PatcherTruePBR::loadOptions(patcherDefs["truepbr"]);
         }
         if (patcherDefs.contains("parallaxtocm")) {
-            patchers.shaderTransformPatchers[PatcherUpgradeParallaxToCM::getFromShader()].emplace(
+            meshPatchers.shaderTransformPatchers[PatcherUpgradeParallaxToCM::getFromShader()].emplace(
                 PatcherUpgradeParallaxToCM::getToShader(), PatcherUpgradeParallaxToCM::getFactory());
         }
         if (patcherDefs.contains("particlelightstolp")) {
-            patchers.globalPatchers.emplace_back(PatcherParticleLightsToLP::getFactory());
+            meshPatchers.globalPatchers.emplace_back(PatcherParticleLightsToLP::getFactory());
         }
 
-        pg.loadPatchers(patchers);
-        pg.patchMeshes(args.multithreading, false);
+        PatcherUtil::PatcherTextureSet texPatchers;
+        if (patcherDefs.contains("converttohdr")) {
+            texPatchers.globalPatchers.emplace_back(PatcherTextureGlobalConvertToHDR::getFactory());
+            PatcherTextureGlobalConvertToHDR::loadOptions(patcherDefs["converttohdr"]);
+        }
+
+        pg.loadPatchers(meshPatchers, texPatchers);
+        pg.patch(args.multithreading, false);
 
         // Finalize step
         if (patcherDefs.contains("particlelightstolp")) {
@@ -215,7 +228,6 @@ void addArguments(CLI::App& app, PGToolsCLIArgs& args)
         "Verbosity level -v for DEBUG data or -vv for TRACE data "
         "(warning: TRACE data is very verbose)");
     app.add_flag("--no-multithreading", args.multithreading, "Disable multithreading");
-    app.add_flag("--no-gpu-acceleration", args.gpuAcceleration, "Disable GPU acceleration");
 
     args.Patch.subCommand = app.add_subcommand("patch", "Patch meshes");
     args.Patch.subCommand->add_option("patcher", args.Patch.patchers, "List of patchers to use")

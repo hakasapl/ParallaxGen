@@ -6,13 +6,13 @@
 #include <vector>
 
 #include "NIFUtil.hpp"
-#include "patchers/Patcher.hpp"
+#include "patchers/PatcherMesh.hpp"
 
 /**
  * @class PatcherShader
  * @brief Base class for shader patchers
  */
-class PatcherShader : public Patcher {
+class PatcherShader : public PatcherMesh {
 private:
     struct PatchedTextureSetsHash {
         auto operator()(const std::tuple<std::filesystem::path, uint32_t>& key) const -> std::size_t

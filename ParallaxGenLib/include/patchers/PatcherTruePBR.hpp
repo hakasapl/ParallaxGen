@@ -179,7 +179,7 @@ public:
      *
      * @param optionsStr string to load
      */
-    static void loadOptions(std::unordered_set<std::string>& optionsStr);
+    static void loadOptions(std::unordered_map<std::string, std::string>& optionsStr);
 
 private:
     /**

@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.8.2] - UNRELEASED
+
+- Added `converttohdr` patcher for pgtools
+- Removed the GPU Acceleration option, which is now required
+- Fixed some custom paths in modorganizer.ini with %BASE_DIR% in them that were not properly parsed
+- Specular flag will be set if CM map has glosiness
+- Fixed duplicate modkeys crash
+- Fixed mesh slot size being modified even if nothing is being patched
+
 ## [0.8.1] - 2025-01-13
 
 - Specular strength will be set to 1.0 for complex material

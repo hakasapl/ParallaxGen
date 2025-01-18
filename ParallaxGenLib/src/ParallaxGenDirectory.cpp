@@ -65,6 +65,12 @@ auto ParallaxGenDirectory::findFiles() -> void
             // Found a DDS
             spdlog::trace(L"Finding Files | Found DDS | {}", path.wstring());
             m_unconfirmedTextures[path] = {};
+
+            {
+                // add to textures set
+                const lock_guard<mutex> lock(m_texturesMutex);
+                m_textures.insert(path);
+            }
         } else if (boost::iequals(firstPath, "meshes") && boost::iequals(path.extension().wstring(), L".nif")) {
             // Found a NIF
             spdlog::trace(L"Finding Files | Found NIF | {}", path.wstring());
@@ -459,6 +465,8 @@ auto ParallaxGenDirectory::getTextureMapConst(const NIFUtil::TextureSlots& slot)
 }
 
 auto ParallaxGenDirectory::getMeshes() const -> const unordered_set<filesystem::path>& { return m_meshes; }
+
+auto ParallaxGenDirectory::getTextures() const -> const unordered_set<filesystem::path>& { return m_textures; }
 
 auto ParallaxGenDirectory::getPBRJSONs() const -> const vector<filesystem::path>& { return m_pbrJSONs; }
 

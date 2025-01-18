@@ -18,6 +18,7 @@
 #include <mutex>
 #include <ranges>
 #include <spdlog/spdlog.h>
+#include <stdexcept>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -53,7 +54,12 @@ ParallaxGen::ParallaxGen(
     m_nifSaveOptions.optimize = optimizeMeshes;
 }
 
-void ParallaxGen::loadPatchers(const PatcherUtil::PatcherSet& patchers) { this->m_patchers = patchers; }
+void ParallaxGen::loadPatchers(
+    const PatcherUtil::PatcherMeshSet& meshPatchers, const PatcherUtil::PatcherTextureSet& texPatchers)
+{
+    this->m_meshPatchers = meshPatchers;
+    this->m_texPatchers = texPatchers;
+}
 
 void ParallaxGen::loadModPriorityMap(unordered_map<wstring, int>* modPriority)
 {
@@ -61,7 +67,7 @@ void ParallaxGen::loadModPriorityMap(unordered_map<wstring, int>* modPriority)
     ParallaxGenPlugin::loadModPriorityMap(modPriority);
 }
 
-void ParallaxGen::patchMeshes(const bool& multiThread, const bool& patchPlugin)
+void ParallaxGen::patch(const bool& multiThread, const bool& patchPlugin)
 {
     auto meshes = m_pgd->getMeshes();
 
@@ -72,20 +78,40 @@ void ParallaxGen::patchMeshes(const bool& multiThread, const bool& patchPlugin)
     ParallaxGenTask taskTracker("Mesh Patcher", meshes.size());
 
     // Create runner
-    ParallaxGenRunner runner(multiThread);
+    ParallaxGenRunner meshRunner(multiThread);
 
     // Add tasks
     for (const auto& mesh : meshes) {
-        runner.addTask([this, &taskTracker, &diffJSON, &mesh, &patchPlugin] {
+        meshRunner.addTask([this, &taskTracker, &diffJSON, &mesh, &patchPlugin] {
             taskTracker.completeJob(processNIF(mesh, &diffJSON, patchPlugin));
         });
     }
 
     // Blocks until all tasks are done
-    runner.runTasks();
+    meshRunner.runTasks();
 
     // Print any resulting warning
     ParallaxGenWarnings::printWarnings();
+
+    if (!m_texPatchers.globalPatchers.empty()) {
+        // texture runner
+        auto textures = m_pgd->getTextures();
+
+        // Create task tracker
+        ParallaxGenTask textureTaskTracker("Texture Patcher", textures.size());
+
+        // Create runner
+        ParallaxGenRunner textureRunner(multiThread);
+
+        // Add tasks
+        for (const auto& texture : textures) {
+            textureRunner.addTask(
+                [this, &textureTaskTracker, &texture] { textureTaskTracker.completeJob(processDDS(texture)); });
+        }
+
+        // Blocks until all tasks are done
+        textureRunner.runTasks();
+    }
 
     // Write diffJSON file
     spdlog::info("Saving diff JSON file...");
@@ -290,18 +316,18 @@ auto ParallaxGen::processNIF(const std::filesystem::path& nifFile, const vector<
     nifModified = false;
 
     // Create patcher objects
-    auto patcherObjects = PatcherUtil::PatcherObjectSet();
-    for (const auto& [shader, factory] : m_patchers.shaderPatchers) {
+    auto patcherObjects = PatcherUtil::PatcherMeshObjectSet();
+    for (const auto& [shader, factory] : m_meshPatchers.shaderPatchers) {
         auto patcher = factory(nifFile, &nif);
         patcherObjects.shaderPatchers.emplace(shader, std::move(patcher));
     }
-    for (const auto& [shader, factory] : m_patchers.shaderTransformPatchers) {
+    for (const auto& [shader, factory] : m_meshPatchers.shaderTransformPatchers) {
         for (const auto& [transformShader, transformFactory] : factory) {
             auto transform = transformFactory(nifFile, &nif);
             patcherObjects.shaderTransformPatchers[shader].emplace(transformShader, std::move(transform));
         }
     }
-    for (const auto& factory : m_patchers.globalPatchers) {
+    for (const auto& factory : m_meshPatchers.globalPatchers) {
         auto patcher = factory(nifFile, &nif);
         patcherObjects.globalPatchers.emplace_back(std::move(patcher));
     }
@@ -488,7 +514,7 @@ auto ParallaxGen::processNIF(const std::filesystem::path& nifFile, const vector<
 }
 
 auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, NiShape* nifShape, const int& shapeIndex,
-    PatcherUtil::PatcherObjectSet& patchers, bool& shapeModified, NIFUtil::ShapeShader& shaderApplied,
+    PatcherUtil::PatcherMeshObjectSet& patchers, bool& shapeModified, NIFUtil::ShapeShader& shaderApplied,
     PatcherUtil::ConflictModResults* conflictMods, const NIFUtil::ShapeShader* forceShader) -> ParallaxGenTask::PGResult
 {
 
@@ -644,9 +670,15 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
 
     // Apply transforms
     winningShaderMatch = PatcherUtil::applyTransformIfNeeded(winningShaderMatch, patchers);
+    shaderApplied = winningShaderMatch.shader;
+
+    if (shaderApplied == NIFUtil::ShapeShader::NONE || shaderApplied == NIFUtil::ShapeShader::UNKNOWN) {
+        // no shader to apply
+        Logger::trace(L"Rejecting: No shaders to apply");
+        return result;
+    }
 
     // Fix num texture slots
-    // TODO move to patcher at some point?
     auto* txstRec = nif.GetHeader().GetBlock(nifShader->TextureSetRef());
     if (txstRec->textures.size() < NUM_TEXTURE_SLOTS) {
         txstRec->textures.resize(NUM_TEXTURE_SLOTS);
@@ -657,8 +689,6 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
     array<wstring, NUM_TEXTURE_SLOTS> newSlots = patchers.shaderPatchers.at(winningShaderMatch.shader)
                                                      ->applyPatch(*nifShape, winningShaderMatch.match, shapeModified);
 
-    shaderApplied = winningShaderMatch.shader;
-
     // Post warnings if any
     for (const auto& curMatchedFrom : winningShaderMatch.match.matchedFrom) {
         ParallaxGenWarnings::mismatchWarn(
@@ -666,6 +696,52 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
     }
 
     ParallaxGenWarnings::meshWarn(winningShaderMatch.match.matchedPath, nifPath.wstring());
+
+    return result;
+}
+
+auto ParallaxGen::processDDS(const filesystem::path& ddsFile) -> ParallaxGenTask::PGResult
+{
+    auto result = ParallaxGenTask::PGResult::SUCCESS;
+
+    // Prep
+    Logger::trace(L"Starting Processing");
+
+    // only allow DDS files
+    const string ddsFileExt = ddsFile.extension().string();
+    if (ddsFileExt != ".dds") {
+        throw runtime_error("File is not a DDS file");
+    }
+
+    DirectX::ScratchImage ddsImage;
+    if (m_pgd3D->getDDS(ddsFile, ddsImage) != ParallaxGenTask::PGResult::SUCCESS) {
+        Logger::error(L"Unable to load DDS file: {}", ddsFile.wstring());
+        return ParallaxGenTask::PGResult::FAILURE;
+    }
+
+    bool ddsModified = false;
+
+    for (const auto& factory : m_texPatchers.globalPatchers) {
+        auto patcher = factory(ddsFile, &ddsImage);
+        patcher->applyPatch(ddsModified);
+    }
+
+    if (ddsModified) {
+        // save to output
+        const filesystem::path outputFile = m_outputDir / ddsFile;
+        filesystem::create_directories(outputFile.parent_path());
+
+        const HRESULT hr = DirectX::SaveToDDSFile(ddsImage.GetImages(), ddsImage.GetImageCount(),
+            ddsImage.GetMetadata(), DirectX::DDS_FLAGS_NONE, outputFile.c_str());
+        if (FAILED(hr)) {
+            Logger::error(L"Unable to save DDS {}: {}", outputFile.wstring(),
+                ParallaxGenUtil::asciitoUTF16(ParallaxGenD3D::getHRESULTErrorMessage(hr)));
+            return ParallaxGenTask::PGResult::FAILURE;
+        }
+
+        // Update file map with generated file
+        m_pgd->addGeneratedFile(ddsFile, m_pgd->getMod(ddsFile));
+    }
 
     return result;
 }

@@ -20,6 +20,7 @@ private:
     static constexpr const char* MO2INI_PROFILESDIR_KEY = "profiles_directory=";
     static constexpr const char* MO2INI_MODDIR_KEY = "mod_directory=";
     static constexpr const char* MO2INI_BASEDIR_KEY = "base_directory=";
+    static constexpr const char* MO2INI_BASEDIR_WILDCARD = "%BASE_DIR%";
 
 public:
     ModManagerDirectory(const ModManagerType& mmType);
@@ -38,4 +39,8 @@ public:
     [[nodiscard]] static auto getModManagerTypes() -> std::vector<ModManagerType>;
     [[nodiscard]] static auto getStrFromModManagerType(const ModManagerType& type) -> std::string;
     [[nodiscard]] static auto getModManagerTypeFromStr(const std::string& type) -> ModManagerType;
+
+private:
+    static auto getMO2FilePaths(const std::filesystem::path& instanceDir)
+        -> std::pair<std::filesystem::path, std::filesystem::path>;
 };

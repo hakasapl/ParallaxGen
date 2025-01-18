@@ -135,6 +135,13 @@ auto PatcherComplexMaterial::applyPatch(NiShape& nifShape, const PatcherMatch& m
         NIFUtil::setShaderFloat(nifShaderBSLSP->specularColor.z, 1.0F, nifModified);
     }
 
+    if (getPGD()->hasTextureAttribute(match.matchedPath, NIFUtil::TextureAttribute::CM_GLOSSINESS)) {
+        Logger::trace(L"Setting specular flag because CM has glossiness");
+        auto* nifShader = getNIF()->GetShader(&nifShape);
+        auto* const nifShaderBSLSP = dynamic_cast<BSLightingShaderProperty*>(nifShader);
+        NIFUtil::setShaderFlag(nifShaderBSLSP, SLSF1_SPECULAR, nifModified);
+    }
+
     // Apply slots
     auto newSlots = applyPatchSlots(getTextureSet(nifShape), match);
     setTextureSet(nifShape, newSlots, nifModified);

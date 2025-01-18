@@ -3,13 +3,13 @@
 #include <Geometry.hpp>
 #include <NifFile.hpp>
 
-#include "patchers/Patcher.hpp"
+#include "patchers/PatcherMesh.hpp"
 
 /**
  * @class PrePatcher
  * @brief Base class for prepatchers
  */
-class PatcherGlobal : public Patcher {
+class PatcherGlobal : public PatcherMesh {
 public:
     // type definitions
     using PatcherGlobalFactory = std::function<std::unique_ptr<PatcherGlobal>(std::filesystem::path, nifly::NifFile*)>;

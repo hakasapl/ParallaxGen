@@ -27,8 +27,7 @@ protected:
             params.DocumentPath); // no logging
         m_pgd = make_unique<ParallaxGenDirectory>(m_bg.get(), "", nullptr); // no logging
 
-        m_pgd3d = make_unique<ParallaxGenD3D>(
-            m_pgd.get(), PGTestEnvs::s_exePath / "output", PGTestEnvs::s_exePath, true); // UseGPU = true
+        m_pgd3d = make_unique<ParallaxGenD3D>(m_pgd.get(), PGTestEnvs::s_exePath / "output", PGTestEnvs::s_exePath);
     }
 
     // Tear down code for each test

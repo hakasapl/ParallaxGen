@@ -92,40 +92,9 @@ void ModManagerDirectory::populateModFileMapMO2(
             "Mod Organizer 2 ini file does not exist: " + ParallaxGenUtil::utf16toUTF8(mo2IniFile.wstring()));
     }
 
-    // Find MO2 paths from ModOrganizer.ini
-    filesystem::path profileDir;
-    filesystem::path modDir;
-    filesystem::path baseDir;
-
-    ifstream mo2IniFileF(mo2IniFile);
-    string mo2IniLine;
-    while (getline(mo2IniFileF, mo2IniLine)) {
-        if (mo2IniLine.starts_with(MO2INI_PROFILESDIR_KEY)) {
-            profileDir = instanceDir / mo2IniLine.substr(strlen(MO2INI_PROFILESDIR_KEY));
-        } else if (mo2IniLine.starts_with(MO2INI_MODDIR_KEY)) {
-            modDir = instanceDir / mo2IniLine.substr(strlen(MO2INI_MODDIR_KEY));
-        } else if (mo2IniLine.starts_with(MO2INI_BASEDIR_KEY)) {
-            baseDir = instanceDir / mo2IniLine.substr(strlen(MO2INI_BASEDIR_KEY));
-        }
-    }
-
-    mo2IniFileF.close();
-
-    if (profileDir.empty()) {
-        if (baseDir.empty()) {
-            profileDir = instanceDir / "profiles";
-        } else {
-            profileDir = baseDir / "profiles";
-        }
-    }
-
-    if (modDir.empty()) {
-        if (baseDir.empty()) {
-            modDir = instanceDir / "mods";
-        } else {
-            modDir = baseDir / "mods";
-        }
-    }
+    auto mo2Paths = getMO2FilePaths(instanceDir);
+    const auto profileDir = mo2Paths.first;
+    const auto modDir = mo2Paths.second;
 
     // Find location of modlist.txt
     const auto modListFile = profileDir / profile / "modlist.txt";
@@ -248,33 +217,9 @@ auto ModManagerDirectory::getModManagerTypeFromStr(const string& type) -> ModMan
 
 auto ModManagerDirectory::getMO2ProfilesFromInstanceDir(const filesystem::path& instanceDir) -> vector<wstring>
 {
-    // First read modorganizer.ini in the instance folder to get the profiles and mods folders
-    const filesystem::path mo2IniFile = instanceDir / L"modorganizer.ini";
-    if (!filesystem::exists(mo2IniFile)) {
-        return {};
-    }
-
-    filesystem::path profileDir;
-    filesystem::path baseDir;
-
-    ifstream mo2IniFileF(mo2IniFile);
-    string mo2IniLine;
-    while (getline(mo2IniFileF, mo2IniLine)) {
-        if (mo2IniLine.starts_with(MO2INI_PROFILESDIR_KEY)) {
-            profileDir = instanceDir / mo2IniLine.substr(strlen(MO2INI_PROFILESDIR_KEY));
-        } else if (mo2IniLine.starts_with(MO2INI_BASEDIR_KEY)) {
-            baseDir = instanceDir / mo2IniLine.substr(strlen(MO2INI_BASEDIR_KEY));
-        }
-    }
-
-    mo2IniFileF.close();
-
+    const auto profileDir = getMO2FilePaths(instanceDir).first;
     if (profileDir.empty()) {
-        if (baseDir.empty()) {
-            profileDir = instanceDir / "profiles";
-        } else {
-            profileDir = baseDir / "profiles";
-        }
+        return {};
     }
 
     // check if the "profiles" folder exists
@@ -295,3 +240,56 @@ auto ModManagerDirectory::getMO2ProfilesFromInstanceDir(const filesystem::path& 
 }
 
 auto ModManagerDirectory::getInferredOrder() const -> const vector<wstring>& { return m_inferredOrder; }
+
+auto ModManagerDirectory::getMO2FilePaths(const std::filesystem::path& instanceDir)
+    -> std::pair<std::filesystem::path, std::filesystem::path>
+{
+    // Find MO2 paths from ModOrganizer.ini
+    string profileDirField;
+    string modDirField;
+    filesystem::path baseDir;
+
+    const filesystem::path mo2IniFile = instanceDir / L"modorganizer.ini";
+    if (!filesystem::exists(mo2IniFile)) {
+        return { {}, {} };
+    }
+
+    ifstream mo2IniFileF(mo2IniFile);
+    string mo2IniLine;
+    while (getline(mo2IniFileF, mo2IniLine)) {
+        if (mo2IniLine.starts_with(MO2INI_PROFILESDIR_KEY)) {
+            profileDirField = mo2IniLine.substr(strlen(MO2INI_PROFILESDIR_KEY));
+        } else if (mo2IniLine.starts_with(MO2INI_MODDIR_KEY)) {
+            modDirField = mo2IniLine.substr(strlen(MO2INI_MODDIR_KEY));
+        } else if (mo2IniLine.starts_with(MO2INI_BASEDIR_KEY)) {
+            baseDir = mo2IniLine.substr(strlen(MO2INI_BASEDIR_KEY));
+        }
+    }
+
+    mo2IniFileF.close();
+
+    // replace any instance of %BASE_DIR% with the base directory
+    boost::replace_all(profileDirField, MO2INI_BASEDIR_WILDCARD, baseDir.string());
+    boost::replace_all(modDirField, MO2INI_BASEDIR_WILDCARD, baseDir.string());
+
+    filesystem::path profileDir = profileDirField;
+    filesystem::path modDir = modDirField;
+
+    if (profileDir.empty()) {
+        if (baseDir.empty()) {
+            profileDir = instanceDir / "profiles";
+        } else {
+            profileDir = baseDir / "profiles";
+        }
+    }
+
+    if (modDir.empty()) {
+        if (baseDir.empty()) {
+            modDir = instanceDir / "mods";
+        } else {
+            modDir = baseDir / "mods";
+        }
+    }
+
+    return { profileDir, modDir };
+}

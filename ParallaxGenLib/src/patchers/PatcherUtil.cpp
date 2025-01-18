@@ -35,7 +35,7 @@ auto PatcherUtil::getWinningMatch(
     return winningShaderMatch;
 }
 
-auto PatcherUtil::applyTransformIfNeeded(const ShaderPatcherMatch& match, const PatcherObjectSet& patchers)
+auto PatcherUtil::applyTransformIfNeeded(const ShaderPatcherMatch& match, const PatcherMeshObjectSet& patchers)
     -> ShaderPatcherMatch
 {
     auto transformedMatch = match;

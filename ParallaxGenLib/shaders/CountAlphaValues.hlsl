@@ -6,13 +6,21 @@ RWStructuredBuffer<uint> Output : register(u0);
 [numthreads(16, 16, 1)]
 void main(uint3 id : SV_DispatchThreadID)
 {
-    float alpha = Input.Load(uint3(id.xy, 0)).a;
-    if (alpha == 1.0) {
+    float4 pixel = Input.Load(uint3(id.xy, 0)) * 255;
+
+    if (pixel.r >= 4) {
         InterlockedAdd(Output[0], 1);
     }
 
-    int blue = Input.Load(uint3(id.xy, 0)).b * 255;
-    if (blue >= 4) {
+    if (pixel.g >= 4) {
         InterlockedAdd(Output[1], 1);
+    }
+
+    if (pixel.b >= 4) {
+        InterlockedAdd(Output[2], 1);
+    }
+
+    if (pixel.a > 254) {
+        InterlockedAdd(Output[3], 1);
     }
 }

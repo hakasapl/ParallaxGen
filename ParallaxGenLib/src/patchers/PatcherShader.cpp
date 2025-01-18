@@ -2,7 +2,6 @@
 
 #include "NIFUtil.hpp"
 #include "ParallaxGenUtil.hpp"
-#include "patchers/Patcher.hpp"
 #include <BasicTypes.hpp>
 #include <Shaders.hpp>
 #include <memory>
@@ -21,7 +20,7 @@ mutex PatcherShader::s_patchedTextureSetsMutex;
 
 // Constructor
 PatcherShader::PatcherShader(filesystem::path nifPath, nifly::NifFile* nif, string patcherName)
-    : Patcher(std::move(nifPath), nif, std::move(patcherName))
+    : PatcherMesh(std::move(nifPath), nif, std::move(patcherName))
 {
 }
 

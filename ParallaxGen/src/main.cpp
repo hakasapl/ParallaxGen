@@ -127,16 +127,14 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
 
     auto mmd = ModManagerDirectory(params.ModManager.type);
     auto pgd = ParallaxGenDirectory(&bg, params.Output.dir, &mmd);
-    auto pgd3d = ParallaxGenD3D(&pgd, params.Output.dir, exePath, params.Processing.gpuAcceleration);
+    auto pgd3d = ParallaxGenD3D(&pgd, params.Output.dir, exePath);
     auto pg = ParallaxGen(params.Output.dir, &pgd, &pgd3d, params.PostPatcher.optimizeMeshes);
 
     Patcher::loadStatics(pgd, pgd3d);
 
     // Check if GPU needs to be initialized
-    if (params.Processing.gpuAcceleration) {
-        Logger::info("Initializing GPU");
-        pgd3d.initGPU();
-    }
+    Logger::info("Initializing GPU");
+    pgd3d.initGPU();
 
     //
     // Generation
@@ -221,30 +219,33 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
     }
 
     // Create patcher factory
-    PatcherUtil::PatcherSet patchers;
-    patchers.shaderPatchers.emplace(PatcherDefault::getShaderType(), PatcherDefault::getFactory());
+    PatcherUtil::PatcherMeshSet meshPatchers;
+    meshPatchers.shaderPatchers.emplace(PatcherDefault::getShaderType(), PatcherDefault::getFactory());
     if (params.ShaderPatcher.parallax) {
         Logger::debug("Adding Parallax shader patcher");
-        patchers.shaderPatchers.emplace(PatcherVanillaParallax::getShaderType(), PatcherVanillaParallax::getFactory());
+        meshPatchers.shaderPatchers.emplace(
+            PatcherVanillaParallax::getShaderType(), PatcherVanillaParallax::getFactory());
     }
     if (params.ShaderPatcher.complexMaterial) {
         Logger::debug("Adding Complex Material shader patcher");
-        patchers.shaderPatchers.emplace(PatcherComplexMaterial::getShaderType(), PatcherComplexMaterial::getFactory());
+        meshPatchers.shaderPatchers.emplace(
+            PatcherComplexMaterial::getShaderType(), PatcherComplexMaterial::getFactory());
         PatcherComplexMaterial::loadStatics(
             params.PrePatcher.disableMLP, params.ShaderPatcher.ShaderPatcherComplexMaterial.listsDyncubemapBlocklist);
     }
     if (params.ShaderPatcher.truePBR) {
         Logger::debug("Adding True PBR shader patcher");
-        patchers.shaderPatchers.emplace(PatcherTruePBR::getShaderType(), PatcherTruePBR::getFactory());
+        meshPatchers.shaderPatchers.emplace(PatcherTruePBR::getShaderType(), PatcherTruePBR::getFactory());
         PatcherTruePBR::loadStatics(pgd.getPBRJSONs());
     }
     if (params.ShaderTransforms.parallaxToCM) {
         Logger::debug("Adding Parallax to Complex Material shader transform patcher");
-        patchers.shaderTransformPatchers[PatcherUpgradeParallaxToCM::getFromShader()].emplace(
+        meshPatchers.shaderTransformPatchers[PatcherUpgradeParallaxToCM::getFromShader()].emplace(
             PatcherUpgradeParallaxToCM::getToShader(), PatcherUpgradeParallaxToCM::getFactory());
     }
 
-    pg.loadPatchers(patchers);
+    const PatcherUtil::PatcherTextureSet texPatchers;
+    pg.loadPatchers(meshPatchers, texPatchers);
 
     if (params.ModManager.type != ModManagerDirectory::ModManagerType::NONE) {
         // Check if MO2 is used and MO2 use order is checked
@@ -281,7 +282,7 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
     pg.loadModPriorityMap(&modPriorityMap);
     ParallaxGenWarnings::init(&pgd, &modPriorityMap);
     if (params.ShaderPatcher.parallax || params.ShaderPatcher.complexMaterial || params.ShaderPatcher.truePBR) {
-        pg.patchMeshes(params.Processing.multithread, params.Processing.pluginPatching);
+        pg.patch(params.Processing.multithread, params.Processing.pluginPatching);
     }
 
     // Release cached files, if any

@@ -4,14 +4,14 @@
 #include <unordered_set>
 
 #include "NIFUtil.hpp"
-#include "patchers/Patcher.hpp"
+#include "patchers/PatcherMesh.hpp"
 #include "patchers/PatcherShader.hpp"
 
 /**
  * @class PatcherShaderTransform
  * @brief Base class for shader transform patchers
  */
-class PatcherShaderTransform : public Patcher {
+class PatcherShaderTransform : public PatcherMesh {
 private:
     struct ErrorTrackerHasher {
         auto operator()(const std::tuple<std::filesystem::path, NIFUtil::ShapeShader, NIFUtil::ShapeShader>& key) const
