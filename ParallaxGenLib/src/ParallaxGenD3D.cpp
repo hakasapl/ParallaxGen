@@ -46,12 +46,10 @@ using Microsoft::WRL::ComPtr;
 // reinterpret cast is needed often for type casting with DX11
 // NOLINTBEGIN(cppcoreguidelines-pro-type-union-access,cppcoreguidelines-pro-type-reinterpret-cast,cppcoreguidelines-pro-bounds-pointer-arithmetic)
 
-ParallaxGenD3D::ParallaxGenD3D(
-    ParallaxGenDirectory* pgd, filesystem::path outputDir, filesystem::path exePath, const bool& useGPU)
+ParallaxGenD3D::ParallaxGenD3D(ParallaxGenDirectory* pgd, filesystem::path outputDir, filesystem::path exePath)
     : m_pgd(pgd)
     , m_outputDir(std::move(outputDir))
     , m_exePath(std::move(exePath))
-    , m_useGPU(useGPU)
 {
 }
 
@@ -59,7 +57,7 @@ auto ParallaxGenD3D::findCMMaps(const std::vector<std::wstring>& bsaExcludes) ->
 {
     Logger::info("Finding complex material maps");
 
-    if (m_useGPU && ((m_ptrDevice == nullptr) || (m_ptrContext == nullptr))) {
+    if (m_ptrDevice == nullptr || m_ptrContext == nullptr) {
         throw runtime_error("GPU not initialized");
     }
 
@@ -186,14 +184,7 @@ auto ParallaxGenD3D::checkIfCM(const filesystem::path& ddsPath, bool& result, bo
     }
 
     array<int, 2> values {};
-    if (m_useGPU) {
-        // GPU
-        values = countValuesGPU(image);
-    } else {
-        // CPU
-        // values = countValuesCPU(image, bcCompressed);
-        throw runtime_error("CPU not supported");
-    }
+    values = countValuesGPU(image);
 
     const size_t numPixels = ddsImageMeta.width * ddsImageMeta.height;
     if (values[0] > numPixels / 2) {
@@ -435,11 +426,6 @@ auto ParallaxGenD3D::createComputeShader(const wstring& shaderPath, ComPtr<ID3D1
 auto ParallaxGenD3D::upgradeToComplexMaterial(
     const std::filesystem::path& parallaxMap, const std::filesystem::path& envMap) -> DirectX::ScratchImage
 {
-
-    if (!m_useGPU) {
-        throw runtime_error("GPU needed to upgrade to complex material");
-    }
-
     if ((m_ptrContext == nullptr) || (m_ptrDevice == nullptr) || (m_shaderMergeToComplexMaterial == nullptr)) {
         throw runtime_error("GPU was not initialized");
     }
@@ -710,10 +696,6 @@ auto ParallaxGenD3D::upgradeToComplexMaterial(
 void ParallaxGenD3D::convertToHDR(
     DirectX::ScratchImage* dds, bool& ddsModified, const float& luminanceMult, const DXGI_FORMAT& outputFormat)
 {
-    if (!m_useGPU) {
-        throw runtime_error("GPU needed to upgrade to complex material");
-    }
-
     if ((m_ptrContext == nullptr) || (m_ptrDevice == nullptr) || (m_shaderMergeToComplexMaterial == nullptr)) {
         throw runtime_error("GPU was not initialized");
     }

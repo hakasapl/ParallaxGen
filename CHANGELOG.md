@@ -3,6 +3,7 @@
 ## [0.8.2] - UNRELEASED
 
 - Added `converttohdr` patcher for pgtools
+- Removed the GPU Acceleration option, which is now required
 
 ## [0.8.1] - 2025-01-13
 

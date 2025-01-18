@@ -127,16 +127,14 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
 
     auto mmd = ModManagerDirectory(params.ModManager.type);
     auto pgd = ParallaxGenDirectory(&bg, params.Output.dir, &mmd);
-    auto pgd3d = ParallaxGenD3D(&pgd, params.Output.dir, exePath, params.Processing.gpuAcceleration);
+    auto pgd3d = ParallaxGenD3D(&pgd, params.Output.dir, exePath);
     auto pg = ParallaxGen(params.Output.dir, &pgd, &pgd3d, params.PostPatcher.optimizeMeshes);
 
     Patcher::loadStatics(pgd, pgd3d);
 
     // Check if GPU needs to be initialized
-    if (params.Processing.gpuAcceleration) {
-        Logger::info("Initializing GPU");
-        pgd3d.initGPU();
-    }
+    Logger::info("Initializing GPU");
+    pgd3d.initGPU();
 
     //
     // Generation

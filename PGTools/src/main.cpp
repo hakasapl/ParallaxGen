@@ -50,7 +50,6 @@ auto getExecutablePath() -> filesystem::path
 struct PGToolsCLIArgs {
     int verbosity = 0;
     bool multithreading = true;
-    bool gpuAcceleration = true;
 
     struct Patch {
         CLI::App* subCommand = nullptr;
@@ -86,16 +85,14 @@ void mainRunner(PGToolsCLIArgs& args)
         args.Patch.output = filesystem::absolute(args.Patch.output);
 
         auto pgd = ParallaxGenDirectory(args.Patch.source, args.Patch.output, nullptr);
-        auto pgd3D = ParallaxGenD3D(&pgd, args.Patch.output, exePath, args.gpuAcceleration);
+        auto pgd3D = ParallaxGenD3D(&pgd, args.Patch.output, exePath);
         auto pg = ParallaxGen(args.Patch.output, &pgd, &pgd3D, args.Patch.patchers.contains("optimize"));
 
         Patcher::loadStatics(pgd, pgd3D);
         ParallaxGenWarnings::init(&pgd, {});
 
         // Check if GPU needs to be initialized
-        if (args.gpuAcceleration) {
-            pgd3D.initGPU();
-        }
+        pgd3D.initGPU();
 
         // Create output directory
         try {
@@ -231,7 +228,6 @@ void addArguments(CLI::App& app, PGToolsCLIArgs& args)
         "Verbosity level -v for DEBUG data or -vv for TRACE data "
         "(warning: TRACE data is very verbose)");
     app.add_flag("--no-multithreading", args.multithreading, "Disable multithreading");
-    app.add_flag("--no-gpu-acceleration", args.gpuAcceleration, "Disable GPU acceleration");
 
     args.Patch.subCommand = app.add_subcommand("patch", "Patch meshes");
     args.Patch.subCommand->add_option("patcher", args.Patch.patchers, "List of patchers to use")

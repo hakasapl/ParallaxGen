@@ -25,7 +25,6 @@ private:
 
     std::filesystem::path m_outputDir;
     std::filesystem::path m_exePath;
-    bool m_useGPU;
 
     // GPU objects
     Microsoft::WRL::ComPtr<ID3D11Device> m_ptrDevice; // GPU device
@@ -65,9 +64,7 @@ public:
     /// @param pgd ParallaxGenDirectory, must be populated before calling member functions
     /// @param outputDir absolute path of output directory
     /// @param exePath absolute path of executable directory
-    /// @param useGPU if the GPU should be used, currently only findCMMaps has a corresponding CPU implementation
-    ParallaxGenD3D(
-        ParallaxGenDirectory* pgd, std::filesystem::path outputDir, std::filesystem::path exePath, const bool& useGPU);
+    ParallaxGenD3D(ParallaxGenDirectory* pgd, std::filesystem::path outputDir, std::filesystem::path exePath);
 
     /// @brief Initialize GPU (also compiles shaders)
     void initGPU();

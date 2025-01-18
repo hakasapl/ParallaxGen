@@ -333,11 +333,6 @@ LauncherWindow::LauncherWindow(ParallaxGenConfig& pgc)
     m_processingHighMemCheckbox->Bind(wxEVT_CHECKBOX, &LauncherWindow::onProcessingHighMemChange, this);
     m_processingOptionsSizer->Add(m_processingHighMemCheckbox, 0, wxALL, BORDER_SIZE);
 
-    m_processingGPUAccelerationCheckbox = new wxCheckBox(this, wxID_ANY, "GPU Acceleration");
-    m_processingGPUAccelerationCheckbox->SetToolTip("Uses the GPU to speed up processing some DDS related tasks");
-    m_processingGPUAccelerationCheckbox->Bind(wxEVT_CHECKBOX, &LauncherWindow::onProcessingGPUAccelerationChange, this);
-    m_processingOptionsSizer->Add(m_processingGPUAccelerationCheckbox, 0, wxALL, BORDER_SIZE);
-
     m_processingMapFromMeshesCheckbox = new wxCheckBox(this, wxID_ANY, "Map Textures From Meshes");
     m_processingMapFromMeshesCheckbox->SetToolTip(
         "Attempts to map textures from meshes instead of relying entirely on the "
@@ -506,7 +501,6 @@ void LauncherWindow::loadConfig()
     m_processingPluginPatchingOptionsESMifyCheckbox->SetValue(initParams.Processing.pluginESMify);
     m_processingMultithreadingCheckbox->SetValue(initParams.Processing.multithread);
     m_processingHighMemCheckbox->SetValue(initParams.Processing.highMem);
-    m_processingGPUAccelerationCheckbox->SetValue(initParams.Processing.gpuAcceleration);
     m_processingMapFromMeshesCheckbox->SetValue(initParams.Processing.mapFromMeshes);
     m_processingBSACheckbox->SetValue(initParams.Processing.bsa);
 
@@ -666,11 +660,6 @@ void LauncherWindow::onProcessingMultithreadingChange([[maybe_unused]] wxCommand
 }
 
 void LauncherWindow::onProcessingHighMemChange([[maybe_unused]] wxCommandEvent& event) { updateDisabledElements(); }
-
-void LauncherWindow::onProcessingGPUAccelerationChange([[maybe_unused]] wxCommandEvent& event)
-{
-    updateDisabledElements();
-}
 
 void LauncherWindow::onProcessingMapFromMeshesChange([[maybe_unused]] wxCommandEvent& event)
 {
@@ -842,7 +831,6 @@ auto LauncherWindow::getParams() -> ParallaxGenConfig::PGParams
     params.Processing.pluginESMify = m_processingPluginPatchingOptionsESMifyCheckbox->GetValue();
     params.Processing.multithread = m_processingMultithreadingCheckbox->GetValue();
     params.Processing.highMem = m_processingHighMemCheckbox->GetValue();
-    params.Processing.gpuAcceleration = m_processingGPUAccelerationCheckbox->GetValue();
     params.Processing.mapFromMeshes = m_processingMapFromMeshesCheckbox->GetValue();
     params.Processing.bsa = m_processingBSACheckbox->GetValue();
 
@@ -1019,14 +1007,9 @@ void LauncherWindow::updateDisabledElements()
         // disable and check CM patcher
         m_shaderPatcherComplexMaterialCheckbox->SetValue(true);
         m_shaderPatcherComplexMaterialCheckbox->Enable(false);
-
-        // disable and check GPU acceleration
-        m_processingGPUAccelerationCheckbox->SetValue(true);
-        m_processingGPUAccelerationCheckbox->Enable(false);
     } else {
         m_shaderPatcherParallaxCheckbox->Enable(true);
         m_shaderPatcherComplexMaterialCheckbox->Enable(true);
-        m_processingGPUAccelerationCheckbox->Enable(true);
     }
 
     // PBR rules
