@@ -54,14 +54,14 @@ jobs:
         cd build
         cmake --build . --target install --config RelWithDebInfo
 
-        - name: Download Clang
-        uses: robinraju/release-downloader@v1
-        with:
-          repository: 'llvm/llvm-project'
-          tag: 'llvmorg-19.1.7'
-          fileName: 'clang+llvm-19.1.7-x86_64-pc-windows-msvc.tar.xz'
-          out-file-path: 'clang'
-          extract: false
+    - name: Download Clang
+      uses: robinraju/release-downloader@v1
+      with:
+        repository: 'llvm/llvm-project'
+        tag: 'llvmorg-19.1.7'
+        fileName: 'clang+llvm-19.1.7-x86_64-pc-windows-msvc.tar.xz'
+        out-file-path: 'clang'
+        extract: false
 
     - name: Extract Clang
       uses: ihiroky/extract-action@v1
