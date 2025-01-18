@@ -7,6 +7,7 @@
 - Fixed some custom paths in modorganizer.ini with %BASE_DIR% in them that were not properly parsed
 - Specular flag will be set if CM map has glosiness
 - Fixed duplicate modkeys crash
+- Fixed mesh slot size being modified even if nothing is being patched
 
 ## [0.8.1] - 2025-01-13
 

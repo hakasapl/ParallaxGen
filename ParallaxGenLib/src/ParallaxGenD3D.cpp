@@ -242,7 +242,7 @@ auto ParallaxGenD3D::countValuesGPU(const DirectX::ScratchImage& image) -> array
     // Create buffer for output
     D3D11_BUFFER_DESC bufferDesc = {};
     bufferDesc.Usage = D3D11_USAGE_DEFAULT;
-    bufferDesc.ByteWidth = sizeof(UINT) * 2;
+    bufferDesc.ByteWidth = sizeof(UINT) * 4;
     bufferDesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
     bufferDesc.CPUAccessFlags = 0;
     bufferDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
@@ -259,7 +259,7 @@ auto ParallaxGenD3D::countValuesGPU(const DirectX::ScratchImage& image) -> array
     uavDesc.Format = DXGI_FORMAT_UNKNOWN;
     uavDesc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
     uavDesc.Buffer.FirstElement = 0;
-    uavDesc.Buffer.NumElements = 2;
+    uavDesc.Buffer.NumElements = 4;
 
     ComPtr<ID3D11UnorderedAccessView> outputBufferUAV;
     if (createUnorderedAccessView(outputBuffer, uavDesc, outputBufferUAV) != ParallaxGenTask::PGResult::SUCCESS) {

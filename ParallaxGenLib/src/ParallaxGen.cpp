@@ -670,9 +670,15 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
 
     // Apply transforms
     winningShaderMatch = PatcherUtil::applyTransformIfNeeded(winningShaderMatch, patchers);
+    shaderApplied = winningShaderMatch.shader;
+
+    if (shaderApplied == NIFUtil::ShapeShader::NONE || shaderApplied == NIFUtil::ShapeShader::UNKNOWN) {
+        // no shader to apply
+        Logger::trace(L"Rejecting: No shaders to apply");
+        return result;
+    }
 
     // Fix num texture slots
-    // TODO move to patcher at some point?
     auto* txstRec = nif.GetHeader().GetBlock(nifShader->TextureSetRef());
     if (txstRec->textures.size() < NUM_TEXTURE_SLOTS) {
         txstRec->textures.resize(NUM_TEXTURE_SLOTS);
@@ -682,8 +688,6 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
     // loop through patchers
     array<wstring, NUM_TEXTURE_SLOTS> newSlots = patchers.shaderPatchers.at(winningShaderMatch.shader)
                                                      ->applyPatch(*nifShape, winningShaderMatch.match, shapeModified);
-
-    shaderApplied = winningShaderMatch.shader;
 
     // Post warnings if any
     for (const auto& curMatchedFrom : winningShaderMatch.match.matchedFrom) {
