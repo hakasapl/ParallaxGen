@@ -31,7 +31,7 @@ public:
 
         // Mod Manager
         struct ModManager {
-            ModManagerDirectory::ModManagerType type = ModManagerDirectory::ModManagerType::None;
+            ModManagerDirectory::ModManagerType type = ModManagerDirectory::ModManagerType::NONE;
             std::filesystem::path mo2InstanceDir;
             std::wstring mo2Profile = L"Default";
             bool mo2UseOrder = true;

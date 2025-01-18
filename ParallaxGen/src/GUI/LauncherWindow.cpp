@@ -473,7 +473,7 @@ void LauncherWindow::loadConfig()
             m_modManagerRadios[mmType]->SetValue(true);
 
             // Show MO2 options only if MO2 is selected
-            if (mmType == ModManagerDirectory::ModManagerType::ModOrganizer2) {
+            if (mmType == ModManagerDirectory::ModManagerType::MODORGANIZER2) {
                 m_mo2OptionsSizer->Show(true);
             } else {
                 m_mo2OptionsSizer->Show(false);
@@ -594,7 +594,7 @@ void LauncherWindow::onModManagerChange([[maybe_unused]] wxCommandEvent& event)
 {
     // Show MO2 options only if the MO2 radio button is selected
     const bool isMO2Selected
-        = (event.GetEventObject() == m_modManagerRadios[ModManagerDirectory::ModManagerType::ModOrganizer2]);
+        = (event.GetEventObject() == m_modManagerRadios[ModManagerDirectory::ModManagerType::MODORGANIZER2]);
     m_mo2OptionsSizer->Show(isMO2Selected);
     Layout(); // Refresh layout to apply visibility changes
     Fit();

@@ -323,7 +323,7 @@ auto ParallaxGenConfig::validateParams(const PGParams& params, vector<string>& e
     }
 
     // Mod Manager
-    if (params.ModManager.type == ModManagerDirectory::ModManagerType::ModOrganizer2) {
+    if (params.ModManager.type == ModManagerDirectory::ModManagerType::MODORGANIZER2) {
         if (params.ModManager.mo2InstanceDir.empty()) {
             errors.emplace_back("MO2 Instance Location is required");
         }

@@ -187,11 +187,11 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
     }
 
     // Populate file map from data directory
-    if (params.ModManager.type == ModManagerDirectory::ModManagerType::ModOrganizer2
+    if (params.ModManager.type == ModManagerDirectory::ModManagerType::MODORGANIZER2
         && !params.ModManager.mo2InstanceDir.empty() && !params.ModManager.mo2Profile.empty()) {
         // MO2
         mmd.populateModFileMapMO2(params.ModManager.mo2InstanceDir, params.ModManager.mo2Profile, params.Output.dir);
-    } else if (params.ModManager.type == ModManagerDirectory::ModManagerType::Vortex) {
+    } else if (params.ModManager.type == ModManagerDirectory::ModManagerType::VORTEX) {
         // Vortex
         mmd.populateModFileMapVortex(bg.getGameDataPath());
     }
@@ -246,9 +246,9 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
 
     pg.loadPatchers(patchers);
 
-    if (params.ModManager.type != ModManagerDirectory::ModManagerType::None) {
+    if (params.ModManager.type != ModManagerDirectory::ModManagerType::NONE) {
         // Check if MO2 is used and MO2 use order is checked
-        if (params.ModManager.type == ModManagerDirectory::ModManagerType::ModOrganizer2
+        if (params.ModManager.type == ModManagerDirectory::ModManagerType::MODORGANIZER2
             && params.ModManager.mo2UseOrder) {
             // Get mod order from MO2
             const auto& modOrder = mmd.getInferredOrder();

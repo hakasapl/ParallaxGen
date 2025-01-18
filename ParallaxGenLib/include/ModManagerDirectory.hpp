@@ -8,7 +8,7 @@
 class ModManagerDirectory {
 
 public:
-    enum class ModManagerType : uint8_t { None, Vortex, ModOrganizer2 };
+    enum class ModManagerType : uint8_t { NONE, VORTEX, MODORGANIZER2 };
 
 private:
     std::unordered_map<std::filesystem::path, std::wstring> m_modFileMap;

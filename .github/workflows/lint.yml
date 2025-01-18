@@ -29,14 +29,14 @@ jobs:
         key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
         path: |
           build/vcpkg_installed
-  
+
     - name: Cache Externals
       uses: actions/cache@v3
       with:
         key: externals-${{ runner.os }}-${{ hashFiles('.gitmodules') }}
         path: |
           build/external
-    
+
     - name: Build ParallaxGenMutagenWrapper
       run: |
         cd ParallaxGenMutagenWrapper

@@ -219,25 +219,25 @@ void ModManagerDirectory::populateModFileMapMO2(
 
 auto ModManagerDirectory::getModManagerTypes() -> vector<ModManagerType>
 {
-    return { ModManagerType::None, ModManagerType::Vortex, ModManagerType::ModOrganizer2 };
+    return { ModManagerType::NONE, ModManagerType::VORTEX, ModManagerType::MODORGANIZER2 };
 }
 
 auto ModManagerDirectory::getStrFromModManagerType(const ModManagerType& type) -> string
 {
-    const static auto modManagerTypeToStrMap = unordered_map<ModManagerType, string> { { ModManagerType::None, "None" },
-        { ModManagerType::Vortex, "Vortex" }, { ModManagerType::ModOrganizer2, "Mod Organizer 2" } };
+    const static auto modManagerTypeToStrMap = unordered_map<ModManagerType, string> { { ModManagerType::NONE, "None" },
+        { ModManagerType::VORTEX, "Vortex" }, { ModManagerType::MODORGANIZER2, "Mod Organizer 2" } };
 
     if (modManagerTypeToStrMap.contains(type)) {
         return modManagerTypeToStrMap.at(type);
     }
 
-    return modManagerTypeToStrMap.at(ModManagerType::None);
+    return modManagerTypeToStrMap.at(ModManagerType::NONE);
 }
 
 auto ModManagerDirectory::getModManagerTypeFromStr(const string& type) -> ModManagerType
 {
-    const static auto modManagerStrToTypeMap = unordered_map<string, ModManagerType> { { "None", ModManagerType::None },
-        { "Vortex", ModManagerType::Vortex }, { "Mod Organizer 2", ModManagerType::ModOrganizer2 } };
+    const static auto modManagerStrToTypeMap = unordered_map<string, ModManagerType> { { "None", ModManagerType::NONE },
+        { "Vortex", ModManagerType::VORTEX }, { "Mod Organizer 2", ModManagerType::MODORGANIZER2 } };
 
     if (modManagerStrToTypeMap.contains(type)) {
         return modManagerStrToTypeMap.at(type);
