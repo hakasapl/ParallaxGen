@@ -37,12 +37,6 @@ jobs:
         path: |
           build/external
 
-    - name: Build ParallaxGenMutagenWrapper
-      run: |
-        cd ParallaxGenMutagenWrapper
-        dotnet restore
-        msbuild /p:Configuration=RelWithDebInfo
-
     - name: Configure CMake
       run: |
         New-Item -ItemType Directory -Path "build" -Force
@@ -53,33 +47,6 @@ jobs:
       run: |
         cd build
         cmake --build . --target install --config RelWithDebInfo
-
-    - name: Download Clang
-      uses: robinraju/release-downloader@v1
-      with:
-        repository: 'llvm/llvm-project'
-        tag: 'llvmorg-19.1.7'
-        fileName: 'clang+llvm-19.1.7-x86_64-pc-windows-msvc.tar.xz'
-        out-file-path: 'clang'
-        extract: false
-
-    - name: Extract Clang
-      uses: ihiroky/extract-action@v1
-      with:
-        file_path: 'clang\\clang+llvm-19.1.7-x86_64-pc-windows-msvc.tar.xz'
-        extract_dir: 'clang'
-
-    - name: Add Clang to PATH
-      run: echo "clang\\clang+llvm-19.1.7-x86_64-pc-windows-msvc\\bin" >> $Env:GITHUB_PATH
-      shell: pwsh
-
-    - name: Verify Clang Installation version
-      run: clangd --version
-
-    - name: Set up python
-      uses: actions/setup-python@v3
-    - name: Linting checks
-      uses: pre-commit/action@v3.0.1
 
     - name: Copy ParallaxGenMutagenWrapper build
       run: |
