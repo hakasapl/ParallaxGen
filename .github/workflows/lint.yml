@@ -37,12 +37,6 @@ jobs:
         path: |
           build/external
 
-    - name: Build ParallaxGenMutagenWrapper
-      run: |
-        cd ParallaxGenMutagenWrapper
-        dotnet restore
-        msbuild /p:Configuration=RelWithDebInfo
-
     - name: Download Clang
       uses: robinraju/release-downloader@v1
       with:
@@ -64,6 +58,12 @@ jobs:
 
     - name: Verify Clang Installation version
       run: clangd --version
+
+    - name: Build ParallaxGenMutagenWrapper
+      run: |
+        cd ParallaxGenMutagenWrapper
+        dotnet restore
+        msbuild /p:Configuration=RelWithDebInfo
 
     - name: Configure CMake
       run: |
