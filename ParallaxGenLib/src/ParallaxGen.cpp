@@ -458,7 +458,7 @@ auto ParallaxGen::processNIF(const std::filesystem::path& nifFile, const vector<
                         = (nifFile.parent_path() / nifFile.stem()).wstring() + L"_pg" + to_wstring(++numMesh) + L".nif";
                     // Create duplicate NIF object from original bytes
                     bool dupnifModified = false;
-                    auto dupNIF = processNIF(newNIFName, nifBytes, dupnifModified, &curShaders);
+                    auto dupNIF = processNIF(newNIFName, nifBytes, dupnifModified, &curShaders, nullptr, false);
                     dupNIFs->emplace_back(newNIFName, dupNIF);
                 }
             }
@@ -592,6 +592,11 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
     unordered_set<wstring> modSet;
     if (!cacheExists) {
         for (const auto& [shader, patcher] : patchers.shaderPatchers) {
+            if (shader == NIFUtil::ShapeShader::NONE) {
+                // TEMPORARILY disable default patcher
+                continue;
+            }
+
             // note: name is defined in source code in UTF8-encoded files
             const Logger::Prefix prefixPatches(utf8toUTF16(patcher->getPatcherName()));
 

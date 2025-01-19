@@ -353,6 +353,11 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
         // Loop through each shader
         unordered_set<wstring> modSet;
         for (const auto& [shader, patcher] : patchers.shaderPatchers) {
+            if (shader == NIFUtil::ShapeShader::NONE) {
+                // TEMPORARILY disable default patcher
+                continue;
+            }
+
             // note: name is defined in source code in UTF8-encoded files
             const Logger::Prefix prefixPatches(ParallaxGenUtil::utf8toUTF16(patcher->getPatcherName()));
 

@@ -11,7 +11,7 @@
 #include "ParallaxGenUI.hpp"
 #include "ParallaxGenWarnings.hpp"
 #include "patchers/PatcherComplexMaterial.hpp"
-// #include "patchers/PatcherDefault.hpp"
+#include "patchers/PatcherDefault.hpp"
 #include "patchers/PatcherTruePBR.hpp"
 #include "patchers/PatcherUpgradeParallaxToCM.hpp"
 #include "patchers/PatcherUtil.hpp"
@@ -220,8 +220,7 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
 
     // Create patcher factory
     PatcherUtil::PatcherMeshSet meshPatchers;
-    // Temporarily disabling default patcher
-    // meshPatchers.shaderPatchers.emplace(PatcherDefault::getShaderType(), PatcherDefault::getFactory());
+    meshPatchers.shaderPatchers.emplace(PatcherDefault::getShaderType(), PatcherDefault::getFactory());
     if (params.ShaderPatcher.parallax) {
         Logger::debug("Adding Parallax shader patcher");
         meshPatchers.shaderPatchers.emplace(
