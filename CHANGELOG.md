@@ -8,6 +8,7 @@
 - Specular flag will be set if CM map has glosiness
 - Fixed duplicate modkeys crash
 - Fixed mesh slot size being modified even if nothing is being patched
+- Fixed duplicate meshes not being saved in some cases
 
 ## [0.8.1] - 2025-01-13
 
