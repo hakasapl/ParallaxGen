@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.8.2] - UNRELEASED
+## [0.8.2] - 2025-01-19
 
 - Added `converttohdr` patcher for pgtools
 - Temporarily disabled default patcher because it is causing issues, it will come back with revamped conflict resolution system in 0.9.0
