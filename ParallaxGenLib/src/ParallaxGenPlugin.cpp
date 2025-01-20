@@ -353,6 +353,11 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
         // Loop through each shader
         unordered_set<wstring> modSet;
         for (const auto& [shader, patcher] : patchers.shaderPatchers) {
+            if (shader == NIFUtil::ShapeShader::NONE) {
+                // TEMPORARILY disable default patcher
+                continue;
+            }
+
             // note: name is defined in source code in UTF8-encoded files
             const Logger::Prefix prefixPatches(ParallaxGenUtil::utf8toUTF16(patcher->getPatcherName()));
 
@@ -507,7 +512,7 @@ void ParallaxGenPlugin::set3DIndices(
 
     // Loop through shape tracker
     for (const auto& [shape, oldIndex3D, newIndex3D] : shapeTracker) {
-        const auto shapeName = ParallaxGenUtil::asciitoUTF16(shape->name.get());
+        const auto shapeName = ParallaxGenUtil::utf8toUTF16(shape->name.get());
 
         // find matches
         const auto matches = libGetMatchingTXSTObjs(nifPath, shapeName, oldIndex3D);

@@ -1,13 +1,16 @@
 # Changelog
 
-## [0.8.2] - UNRELEASED
+## [0.8.2] - 2025-01-19
 
 - Added `converttohdr` patcher for pgtools
+- Temporarily disabled default patcher because it is causing issues, it will come back with revamped conflict resolution system in 0.9.0
 - Removed the GPU Acceleration option, which is now required
 - Fixed some custom paths in modorganizer.ini with %BASE_DIR% in them that were not properly parsed
 - Specular flag will be set if CM map has glosiness
 - Fixed duplicate modkeys crash
 - Fixed mesh slot size being modified even if nothing is being patched
+- Fixed duplicate meshes not being saved in some cases
+- Hopefully fixed conversion error crash
 
 ## [0.8.1] - 2025-01-13
 

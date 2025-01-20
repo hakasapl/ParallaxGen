@@ -235,7 +235,7 @@ auto ParallaxGen::processNIF(const filesystem::path& nifFile, nlohmann::json* di
     try {
         nifFileData = m_pgd->getFile(nifFile);
     } catch (const exception& e) {
-        Logger::error(L"NIF Rejected: Unable to load NIF: {}", asciitoUTF16(e.what()));
+        Logger::error(L"NIF Rejected: Unable to load NIF: {}", utf8toUTF16(e.what()));
         result = ParallaxGenTask::PGResult::FAILURE;
         return result;
     }
@@ -305,11 +305,15 @@ auto ParallaxGen::processNIF(const std::filesystem::path& nifFile, const vector<
     const vector<NIFUtil::ShapeShader>* forceShaders, vector<pair<filesystem::path, nifly::NifFile>>* dupNIFs,
     const bool& patchPlugin, PatcherUtil::ConflictModResults* conflictMods) -> nifly::NifFile
 {
+    if (patchPlugin && dupNIFs == nullptr) {
+        throw runtime_error("DupNIFs must be set if patchPlugin is true");
+    }
+
     NifFile nif;
     try {
         nif = NIFUtil::loadNIFFromBytes(nifBytes);
     } catch (const exception& e) {
-        Logger::error(L"NIF Rejected: Unable to load NIF: {}", asciitoUTF16(e.what()));
+        Logger::error(L"NIF Rejected: Unable to load NIF: {}", utf8toUTF16(e.what()));
         return {};
     }
 
@@ -363,7 +367,7 @@ auto ParallaxGen::processNIF(const std::filesystem::path& nifFile, const vector<
 
         // get shape name and blockid
         const auto shapeBlockID = nif.GetBlockID(nifShape);
-        const auto shapeName = asciitoUTF16(nifShape->name.get());
+        const auto shapeName = utf8toUTF16(nifShape->name.get());
         const auto shapeIDStr = to_wstring(shapeBlockID) + L" / " + shapeName;
         const Logger::Prefix prefixShape(shapeIDStr);
 
@@ -454,10 +458,8 @@ auto ParallaxGen::processNIF(const std::filesystem::path& nifFile, const vector<
                         = (nifFile.parent_path() / nifFile.stem()).wstring() + L"_pg" + to_wstring(++numMesh) + L".nif";
                     // Create duplicate NIF object from original bytes
                     bool dupnifModified = false;
-                    auto dupNIF = processNIF(newNIFName, nifBytes, dupnifModified, &curShaders);
-                    if (dupNIFs != nullptr && dupNIF.IsValid() && dupnifModified) {
-                        dupNIFs->emplace_back(newNIFName, dupNIF);
-                    }
+                    auto dupNIF = processNIF(newNIFName, nifBytes, dupnifModified, &curShaders, nullptr, false);
+                    dupNIFs->emplace_back(newNIFName, dupNIF);
                 }
             }
 
@@ -503,11 +505,6 @@ auto ParallaxGen::processNIF(const std::filesystem::path& nifFile, const vector<
         }
 
         ParallaxGenPlugin::set3DIndices(nifFile.wstring(), shapeTracker);
-    }
-
-    if (forceShaders != nullptr) {
-        // duplicates are always saved
-        nifModified = true;
     }
 
     return nif;
@@ -595,6 +592,11 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
     unordered_set<wstring> modSet;
     if (!cacheExists) {
         for (const auto& [shader, patcher] : patchers.shaderPatchers) {
+            if (shader == NIFUtil::ShapeShader::NONE) {
+                // TEMPORARILY disable default patcher
+                continue;
+            }
+
             // note: name is defined in source code in UTF8-encoded files
             const Logger::Prefix prefixPatches(utf8toUTF16(patcher->getPatcherName()));
 
@@ -735,7 +737,7 @@ auto ParallaxGen::processDDS(const filesystem::path& ddsFile) -> ParallaxGenTask
             ddsImage.GetMetadata(), DirectX::DDS_FLAGS_NONE, outputFile.c_str());
         if (FAILED(hr)) {
             Logger::error(L"Unable to save DDS {}: {}", outputFile.wstring(),
-                ParallaxGenUtil::asciitoUTF16(ParallaxGenD3D::getHRESULTErrorMessage(hr)));
+                ParallaxGenUtil::utf8toUTF16(ParallaxGenD3D::getHRESULTErrorMessage(hr)));
             return ParallaxGenTask::PGResult::FAILURE;
         }
 
