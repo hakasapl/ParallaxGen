@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.8.3] - UNRELEASED
+## [0.8.3] - 2025-01-22
 
 - Fixed some duplicate meshes saving with no data
 
