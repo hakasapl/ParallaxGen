@@ -477,7 +477,7 @@ auto ParallaxGen::processNIF(const std::filesystem::path& nifFile, const vector<
         globalPatcher->applyPatch(nifModified);
     }
 
-    if (!nifModified) {
+    if (!nifModified && forceShaders == nullptr) {
         // No changes were made
         return {};
     }

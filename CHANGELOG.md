@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.8.3] - 2025-01-22
+
+- Fixed some duplicate meshes saving with no data
+
 ## [0.8.2] - 2025-01-19
 
 - Added `converttohdr` patcher for pgtools
