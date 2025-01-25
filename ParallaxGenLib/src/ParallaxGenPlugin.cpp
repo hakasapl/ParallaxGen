@@ -396,12 +396,6 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
             }
         }
 
-        if (matches.empty()) {
-            // no shaders to apply
-            Logger::trace(L"Rejecting: No shaders to apply");
-            continue;
-        }
-
         // Populate conflict mods if set
         if (conflictMods != nullptr) {
             if (modSet.size() > 1) {
