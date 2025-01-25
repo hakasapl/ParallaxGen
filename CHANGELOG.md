@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.8.4] - UNRELEASED
+
+- Fixed some statics in plugins not being patched
+- Fixed only one model of two in armor and armor addon records being patched
+
 ## [0.8.3] - 2025-01-22
 
 - Fixed some duplicate meshes saving with no data

@@ -399,7 +399,7 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
         if (matches.empty()) {
             // no shaders to apply
             Logger::trace(L"Rejecting: No shaders to apply");
-            return;
+            continue;
         }
 
         // Populate conflict mods if set
@@ -419,7 +419,7 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
                 }
             }
 
-            return;
+            continue;
         }
 
         // Get winning match

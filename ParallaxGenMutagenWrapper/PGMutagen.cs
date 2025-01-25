@@ -914,16 +914,21 @@ public class PGMutagen
         {
             MessageHandler.Log("[SetModelAltTexManage] [Alt Tex Index: " + AltTexHandle + "] [TXST Index: " + TXSTHandle + "]", 0);
 
-            var AltTexObj = GetAltTexFromHandle(AltTexHandle);
+            var AltTexObjs = GetAltTexFromHandle(AltTexHandle);
 
-            if (AltTexObj.Item1 is null)
+            for (int i = 0; i < AltTexObjs.Count; i++)
             {
-                MessageHandler.Log("[SetModelAltTexManage] [Alt Tex Index: " + AltTexHandle + "] Alt Texture Not Found", 4);
-                return;
-            }
+                var AltTexObj = AltTexObjs[i];
 
-            AltTexObj.Item1.NewTexture.SetTo(TXSTObjs[TXSTHandle]);
-            ModifiedModeledRecords.Add(AltTexObj.Item3);
+                if (AltTexObj.Item1 is null)
+                {
+                    MessageHandler.Log("[SetModelAltTexManage] [Alt Tex Index: " + AltTexHandle + "] Alt Texture Not Found", 4);
+                    return;
+                }
+
+                AltTexObj.Item1.NewTexture.SetTo(TXSTObjs[TXSTHandle]);
+                ModifiedModeledRecords.Add(AltTexObj.Item3);
+            }
         }
         catch (Exception ex)
         {
@@ -945,16 +950,21 @@ public class PGMutagen
         {
             MessageHandler.Log("[Set3DIndex] [Alt Tex Index: " + AltTexHandle + "] [New Index: " + NewIndex + "]", 0);
 
-            var AltTexObj = GetAltTexFromHandle(AltTexHandle);
+            var AltTexObjs = GetAltTexFromHandle(AltTexHandle);
 
-            if (AltTexObj.Item1 is null)
+            for (int i = 0; i < AltTexObjs.Count; i++)
             {
-                MessageHandler.Log("[Set3DIndex] [Alt Tex Index: " + AltTexHandle + "] Alt Texture Not Found", 4);
-                return;
-            }
+                var AltTexObj = AltTexObjs[i];
 
-            AltTexObj.Item1.Index = NewIndex;
-            ModifiedModeledRecords.Add(AltTexObj.Item3);
+                if (AltTexObj.Item1 is null)
+                {
+                    MessageHandler.Log("[Set3DIndex] [Alt Tex Index: " + AltTexHandle + "] Alt Texture Not Found", 4);
+                    return;
+                }
+
+                AltTexObj.Item1.Index = NewIndex;
+                ModifiedModeledRecords.Add(AltTexObj.Item3);
+            }
         }
         catch (Exception ex)
         {
@@ -1001,31 +1011,36 @@ public class PGMutagen
     {
         try
         {
-            var ModelRec = GetAltTexFromHandle(AltTexHandle).Item2;
+            var AltTexRefs = GetAltTexFromHandle(AltTexHandle);
 
-            if (ModelRec is null)
+            for (int i = 0; i < AltTexRefs.Count; i++)
             {
-                throw new Exception("Model Record does not have a model");
+                var ModelRec = AltTexRefs[i].Item2;
+
+                if (ModelRec is null)
+                {
+                    throw new Exception("Model Record does not have a model");
+                }
+
+                var NIFPath = Marshal.PtrToStringUni(NIFPathPtr);
+                if (NIFPath is null)
+                {
+                    throw new Exception("NIF Path is null");
+                }
+
+                // remove "meshes" from beginning of NIFPath if exists
+                NIFPath = RemovePrefixIfExists("meshes\\", NIFPath);
+
+                // Check if NIFPath is different from ModelRec ignore case
+                if (NIFPath.Equals(ModelRec.File, StringComparison.OrdinalIgnoreCase))
+                {
+                    MessageHandler.Log("[SetModelRecNIF] [Alt Tex Index: " + AltTexHandle + "] [NIF Path: " + NIFPath + "] NIF Path is the same as the current one", 0);
+                    return;
+                }
+
+                ModelRec.File = NIFPath;
+                MessageHandler.Log("[SetModelRecNIF] [Alt Tex Index: " + AltTexHandle + "] [NIF Path: " + NIFPath + "]", 0);
             }
-
-            var NIFPath = Marshal.PtrToStringUni(NIFPathPtr);
-            if (NIFPath is null)
-            {
-                throw new Exception("NIF Path is null");
-            }
-
-            // remove "meshes" from beginning of NIFPath if exists
-            NIFPath = RemovePrefixIfExists("meshes\\", NIFPath);
-
-            // Check if NIFPath is different from ModelRec ignore case
-            if (NIFPath.Equals(ModelRec.File, StringComparison.OrdinalIgnoreCase))
-            {
-                MessageHandler.Log("[SetModelRecNIF] [Alt Tex Index: " + AltTexHandle + "] [NIF Path: " + NIFPath + "] NIF Path is the same as the current one", 0);
-                return;
-            }
-
-            ModelRec.File = NIFPath;
-            MessageHandler.Log("[SetModelRecNIF] [Alt Tex Index: " + AltTexHandle + "] [NIF Path: " + NIFPath + "]", 0);
         }
         catch (Exception ex)
         {
@@ -1035,12 +1050,14 @@ public class PGMutagen
 
     // Helpers
 
-    private static (AlternateTexture?, IModel?, int) GetAltTexFromHandle(int AltTexHandle)
+    private static List<(AlternateTexture?, IModel?, int)> GetAltTexFromHandle(int AltTexHandle)
     {
         var oldAltTex = AltTexRefs[AltTexHandle].Item1;
         var ModeledRecordId = AltTexRefs[AltTexHandle].Item2;
 
         var ModeledRecord = ModelCopies[ModeledRecordId];
+
+        var outList = new List<(AlternateTexture?, IModel?, int)>();
 
         // loop through alternate textures to find the one to replace
         var modelElems = GetModelElems(ModeledRecord);
@@ -1062,12 +1079,12 @@ public class PGMutagen
                     // Found the one to update
                     var EditableModelObj = GetModelElems(ModelCopiesEditable[ModeledRecordId])[i];
                     var EditableAltTexObj = EditableModelObj.AlternateTextures?[j];
-                    return (EditableAltTexObj, EditableModelObj, ModeledRecordId);
+                    outList.Add((EditableAltTexObj, EditableModelObj, ModeledRecordId));
                 }
             }
         }
 
-        return (null, null, -1);
+        return outList;
     }
 
     private static string GetRecordDesc(IMajorRecordGetter rec)
