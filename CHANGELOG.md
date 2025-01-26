@@ -4,6 +4,7 @@
 
 - Fixed some statics in plugins not being patched
 - Fixed only one model of two in armor and armor addon records being patched
+- Fixed localization breaking for overridden records in ParallaxGen.esp
 
 ## [0.8.3] - 2025-01-22
 
