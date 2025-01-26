@@ -158,7 +158,7 @@ void ParallaxGen::zipMeshes() const
 void ParallaxGen::deleteOutputDir(const bool& preOutput) const
 {
     static const unordered_set<filesystem::path> foldersToDelete
-        = { "meshes", "textures", "LightPlacer", "PBRTextureSets" };
+        = { "meshes", "textures", "LightPlacer", "PBRTextureSets", "Strings" };
     static const unordered_set<filesystem::path> filesToDelete = { "ParallaxGen.esp", getDiffJSONName() };
     static const unordered_set<filesystem::path> filesToIgnore = { "meta.ini" };
     static const unordered_set<filesystem::path> filesToDeletePreOutput = { getOutputZipName() };
@@ -454,8 +454,15 @@ auto ParallaxGen::processNIF(const std::filesystem::path& nifFile, const vector<
                     newNIFName = nifFile.wstring();
                 } else {
                     // Different from mesh which means duplicate is needed
-                    newNIFName
-                        = (nifFile.parent_path() / nifFile.stem()).wstring() + L"_pg" + to_wstring(++numMesh) + L".nif";
+                    filesystem::path newNIFPath;
+                    auto it = nifFile.begin();
+                    newNIFPath /= *it++ / (L"pg" + to_wstring(++numMesh));
+                    while (it != nifFile.end()) {
+                        newNIFPath /= *it++;
+                    }
+
+                    newNIFName = newNIFPath.wstring();
+
                     // Create duplicate NIF object from original bytes
                     bool dupnifModified = false;
                     auto dupNIF = processNIF(newNIFName, nifBytes, dupnifModified, &curShaders, nullptr, false);

@@ -326,7 +326,27 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
 {
     const lock_guard<mutex> lock(s_processShapeMutex);
 
-    const auto matches = libGetMatchingTXSTObjs(nifPath, name3D, index3D);
+    // check if nifPath ends in _1.nif or _0.nif (armors)
+    // TODO this should probably be a smarter check and only match on armor records etc. required PGMutagen involvement
+    vector<wstring> nifPathSearch;
+    if (boost::iends_with(nifPath, L"_1.nif")) {
+        // we need to search for both _1 and _0 because one is hidden
+        nifPathSearch.push_back(nifPath);
+        nifPathSearch.push_back(boost::replace_last_copy(nifPath, L"_1.nif", L"_0.nif"));
+    }
+
+    if (boost::iends_with(nifPath, L"_0.nif")) {
+        // we need to search for both _1 and _0 because one is hidden
+        nifPathSearch.push_back(nifPath);
+        nifPathSearch.push_back(boost::replace_last_copy(nifPath, L"_0.nif", L"_1.nif"));
+    }
+
+    vector<tuple<int, int>> matches;
+    for (const auto& nifPathSearchCur : nifPathSearch) {
+        // find matches
+        const auto matchesCur = libGetMatchingTXSTObjs(nifPathSearchCur, name3D, index3D);
+        matches.insert(matches.end(), matchesCur.begin(), matchesCur.end());
+    }
 
     results.clear();
 
@@ -396,12 +416,6 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
             }
         }
 
-        if (matches.empty()) {
-            // no shaders to apply
-            Logger::trace(L"Rejecting: No shaders to apply");
-            return;
-        }
-
         // Populate conflict mods if set
         if (conflictMods != nullptr) {
             if (modSet.size() > 1) {
@@ -419,7 +433,7 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
                 }
             }
 
-            return;
+            continue;
         }
 
         // Get winning match
@@ -450,15 +464,17 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
             }
         }
 
+        curResult.altTexIndex = altTexIndex;
+        curResult.modelRecHandle = libGetModelRecHandleFromAltTexHandle(altTexIndex);
+
         if (!foundDiff) {
             // No need to patch
             spdlog::trace(
                 L"Plugin Patching | {} | {} | {} | Not patching because nothing to change", nifPath, name3D, index3D);
+            curResult.txstIndex = txstIndex;
+            results.push_back(curResult);
             continue;
         }
-
-        curResult.altTexIndex = altTexIndex;
-        curResult.modelRecHandle = libGetModelRecHandleFromAltTexHandle(altTexIndex);
 
         {
             const lock_guard<mutex> lock(s_createdTXSTMutex);

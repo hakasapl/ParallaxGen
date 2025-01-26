@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.8.4] - 2025-01-26
+
+- Fixed some statics in plugins not being patched
+- Fixed only one model of two in armor and armor addon records being patched
+- Fixed localization breaking for overridden records in ParallaxGen.esp
+- Fixed duplicate meshes not being created past PG1
+- Fixed vanilla texture sets not being included in duplicate mesh consideration
+- Fixed 1st person armor models not being patched
+- Fixed duplicate meshes not being created for _0 or_1 armor meshes depending on which is in the plugin
+
 ## [0.8.3] - 2025-01-22
 
 - Fixed some duplicate meshes saving with no data
