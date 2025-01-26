@@ -327,6 +327,7 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
     const lock_guard<mutex> lock(s_processShapeMutex);
 
     // check if nifPath ends in _1.nif or _0.nif (armors)
+    // TODO this should probably be a smarter check and only match on armor records etc. required PGMutagen involvement
     vector<wstring> nifPathSearch;
     if (boost::iends_with(nifPath, L"_1.nif")) {
         // we need to search for both _1 and _0 because one is hidden

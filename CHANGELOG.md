@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.8.4] - UNRELEASED
+## [0.8.4] - 2025-01-26
 
 - Fixed some statics in plugins not being patched
 - Fixed only one model of two in armor and armor addon records being patched
