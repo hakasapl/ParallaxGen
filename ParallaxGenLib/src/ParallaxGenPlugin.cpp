@@ -444,15 +444,17 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
             }
         }
 
+        curResult.altTexIndex = altTexIndex;
+        curResult.modelRecHandle = libGetModelRecHandleFromAltTexHandle(altTexIndex);
+
         if (!foundDiff) {
             // No need to patch
             spdlog::trace(
                 L"Plugin Patching | {} | {} | {} | Not patching because nothing to change", nifPath, name3D, index3D);
+            curResult.txstIndex = txstIndex;
+            results.push_back(curResult);
             continue;
         }
-
-        curResult.altTexIndex = altTexIndex;
-        curResult.modelRecHandle = libGetModelRecHandleFromAltTexHandle(altTexIndex);
 
         {
             const lock_guard<mutex> lock(s_createdTXSTMutex);

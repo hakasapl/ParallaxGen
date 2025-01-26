@@ -168,8 +168,10 @@ public class PGMutagen
                     .Build();
             }
 
-            OutMod = new SkyrimMod(ModKey.FromFileName(outputPlugin), (SkyrimRelease)gameType);
-            OutMod.UsingLocalization = true;
+            OutMod = new SkyrimMod(ModKey.FromFileName(outputPlugin), (SkyrimRelease)gameType)
+            {
+                UsingLocalization = true
+            };
         }
         catch (Exception ex)
         {
@@ -273,6 +275,8 @@ public class PGMutagen
             }
 
             TXSTRefs = [];
+            int ModelRecCounter = 0;
+            var DCIdx = -1;
             foreach (var txstRefObj in EnumerateModelRecords())
             {
                 // Will store models to check later
@@ -286,8 +290,6 @@ public class PGMutagen
                 }
 
                 bool CopiedRecord = false;
-                var DCIdx = -1;
-                int ModelRecCounter = 0;
                 foreach (var modelRec in ModelRecs)
                 {
                     if (modelRec.AlternateTextures is null)
@@ -299,7 +301,7 @@ public class PGMutagen
 
                     if (!CopiedRecord)
                     {
-                        // Deep copy major recor
+                        // Deep copy major record
                         try
                         {
                             var DeepCopy = txstRefObj.DeepCopy();
@@ -311,14 +313,9 @@ public class PGMutagen
                         }
                         catch (Exception)
                         {
-                            MessageHandler.Log("Failed to copy record: " + GetRecordDesc(txstRefObj), 4);
+                            MessageHandler.Log("Failed to copy record: " + GetRecordDesc(txstRefObj), 3);
                             break;
                         }
-                    }
-
-                    if (DCIdx < 0)
-                    {
-                        throw new Exception("DCIdx is negative: this shouldn't happen");
                     }
 
                     // find lowercase nifname
@@ -916,6 +913,11 @@ public class PGMutagen
             MessageHandler.Log("[SetModelAltTexManage] [Alt Tex Index: " + AltTexHandle + "] [TXST Index: " + TXSTHandle + "]", 0);
 
             var AltTexObjs = GetAltTexFromHandle(AltTexHandle);
+            if (AltTexObjs.Count == 0)
+            {
+                MessageHandler.Log("[SetModelAltTexManage] [Alt Tex Index: " + AltTexHandle + "] No Model Records found", 4);
+                return;
+            }
 
             for (int i = 0; i < AltTexObjs.Count; i++)
             {
@@ -924,7 +926,13 @@ public class PGMutagen
                 if (AltTexObj.Item1 is null)
                 {
                     MessageHandler.Log("[SetModelAltTexManage] [Alt Tex Index: " + AltTexHandle + "] Alt Texture Not Found", 4);
-                    return;
+                    continue;
+                }
+
+                if (AltTexObj.Item1.NewTexture.FormKey == TXSTObjs[TXSTHandle].FormKey)
+                {
+                    MessageHandler.Log("[SetModelAltTexManage] [Alt Tex Index: " + AltTexHandle + "] [TXST Index: " + TXSTHandle + "] TXST is the same as the current one", 0);
+                    continue;
                 }
 
                 AltTexObj.Item1.NewTexture.SetTo(TXSTObjs[TXSTHandle]);
@@ -952,6 +960,11 @@ public class PGMutagen
             MessageHandler.Log("[Set3DIndex] [Alt Tex Index: " + AltTexHandle + "] [New Index: " + NewIndex + "]", 0);
 
             var AltTexObjs = GetAltTexFromHandle(AltTexHandle);
+            if (AltTexObjs.Count == 0)
+            {
+                MessageHandler.Log("[Set3DIndex] [Alt Tex Index: " + AltTexHandle + "] No Model Records found", 4);
+                return;
+            }
 
             for (int i = 0; i < AltTexObjs.Count; i++)
             {
@@ -960,7 +973,7 @@ public class PGMutagen
                 if (AltTexObj.Item1 is null)
                 {
                     MessageHandler.Log("[Set3DIndex] [Alt Tex Index: " + AltTexHandle + "] Alt Texture Not Found", 4);
-                    return;
+                    continue;
                 }
 
                 AltTexObj.Item1.Index = NewIndex;
@@ -1013,6 +1026,11 @@ public class PGMutagen
         try
         {
             var AltTexRefs = GetAltTexFromHandle(AltTexHandle);
+            if (AltTexRefs.Count == 0)
+            {
+                MessageHandler.Log("[SetModelRecNIF] [Alt Tex Index: " + AltTexHandle + "] No Model Records found", 4);
+                return;
+            }
 
             for (int i = 0; i < AltTexRefs.Count; i++)
             {
@@ -1036,10 +1054,11 @@ public class PGMutagen
                 if (NIFPath.Equals(ModelRec.File, StringComparison.OrdinalIgnoreCase))
                 {
                     MessageHandler.Log("[SetModelRecNIF] [Alt Tex Index: " + AltTexHandle + "] [NIF Path: " + NIFPath + "] NIF Path is the same as the current one", 0);
-                    return;
+                    continue;
                 }
 
                 ModelRec.File = NIFPath;
+                ModifiedModeledRecords.Add(AltTexRefs[i].Item3);
                 MessageHandler.Log("[SetModelRecNIF] [Alt Tex Index: " + AltTexHandle + "] [NIF Path: " + NIFPath + "]", 0);
             }
         }
