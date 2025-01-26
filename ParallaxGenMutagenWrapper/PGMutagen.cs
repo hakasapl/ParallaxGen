@@ -15,6 +15,7 @@ using Mutagen.Bethesda.Plugins.Binary.Parameters;
 using Mutagen.Bethesda.Plugins.Records;
 using Noggog;
 using Mutagen.Bethesda.Plugins.Utility;
+using Noggog.StructuredStrings;
 
 public static class ExceptionHandler
 {
@@ -81,7 +82,7 @@ public class PGMutagen
     private static SkyrimMod? OutMod;
     private static IGameEnvironment<ISkyrimMod, ISkyrimModGetter>? Env;
     private static List<ITextureSetGetter> TXSTObjs = [];
-    private static List<Tuple<IAlternateTextureGetter, int, int>> AltTexRefs = [];
+    private static List<Tuple<IAlternateTextureGetter, int, int, string>> AltTexRefs = [];
     private static List<IMajorRecord> ModelCopies = [];
     private static List<IMajorRecord> ModelCopiesEditable = [];
     private static Dictionary<Tuple<string, string, int>, List<Tuple<int, int>>>? TXSTRefs;
@@ -179,77 +180,77 @@ public class PGMutagen
         }
     }
 
-    private static List<IModelGetter> GetModelElems(IMajorRecordGetter Rec)
+    private static List<Tuple<IModelGetter, string>> GetModelElems(IMajorRecordGetter Rec)
     {
         // Will store models to check later
-        List<IModelGetter> ModelRecs = [];
+        List<Tuple<IModelGetter, string>> ModelRecs = [];
 
         // Figure out special cases for nested models
         if (Rec is IArmorGetter armorObj && armorObj.WorldModel is not null)
         {
             if (armorObj.WorldModel.Male is not null && armorObj.WorldModel.Male.Model is not null)
             {
-                ModelRecs.Add(armorObj.WorldModel.Male.Model);
+                ModelRecs.Add(new Tuple<IModelGetter, string>(armorObj.WorldModel.Male.Model, "MALE"));
             }
 
             if (armorObj.WorldModel.Female is not null && armorObj.WorldModel.Female.Model is not null)
             {
-                ModelRecs.Add(armorObj.WorldModel.Female.Model);
+                ModelRecs.Add(new Tuple<IModelGetter, string>(armorObj.WorldModel.Female.Model, "FEMALE"));
             }
         }
         else if (Rec is IArmorAddonGetter armorAddonObj && armorAddonObj.WorldModel is not null)
         {
             if (armorAddonObj.WorldModel.Male is not null)
             {
-                ModelRecs.Add(armorAddonObj.WorldModel.Male);
+                ModelRecs.Add(new Tuple<IModelGetter, string>(armorAddonObj.WorldModel.Male, "MALE"));
             }
 
             if (armorAddonObj.WorldModel.Female is not null)
             {
-                ModelRecs.Add(armorAddonObj.WorldModel.Female);
+                ModelRecs.Add(new Tuple<IModelGetter, string>(armorAddonObj.WorldModel.Female, "FEMALE"));
             }
         }
         else if (Rec is IModeledGetter modeledObj && modeledObj.Model is not null)
         {
-            ModelRecs.Add(modeledObj.Model);
+            ModelRecs.Add(new Tuple<IModelGetter, string>(modeledObj.Model, "MODL"));
         }
 
         return ModelRecs;
     }
 
-    private static List<IModel> GetModelElems(IMajorRecord Rec)
+    private static List<Tuple<IModel, string>> GetModelElems(IMajorRecord Rec)
     {
         // Will store models to check later
-        List<IModel> ModelRecs = [];
+        List<Tuple<IModel, string>> ModelRecs = [];
 
         // Figure out special cases for nested models
         if (Rec is IArmor armorObj && armorObj.WorldModel is not null)
         {
             if (armorObj.WorldModel.Male is not null && armorObj.WorldModel.Male.Model is not null)
             {
-                ModelRecs.Add(armorObj.WorldModel.Male.Model);
+                ModelRecs.Add(new Tuple<IModel, string>(armorObj.WorldModel.Male.Model, "MALE"));
             }
 
             if (armorObj.WorldModel.Female is not null && armorObj.WorldModel.Female.Model is not null)
             {
-                ModelRecs.Add(armorObj.WorldModel.Female.Model);
+                ModelRecs.Add(new Tuple<IModel, string>(armorObj.WorldModel.Female.Model, "FEMALE"));
             }
         }
         else if (Rec is IArmorAddon armorAddonObj && armorAddonObj.WorldModel is not null)
         {
             if (armorAddonObj.WorldModel.Male is not null)
             {
-                ModelRecs.Add(armorAddonObj.WorldModel.Male);
+                ModelRecs.Add(new Tuple<IModel, string>(armorAddonObj.WorldModel.Male, "MALE"));
             }
 
             if (armorAddonObj.WorldModel.Female is not null)
             {
-                ModelRecs.Add(armorAddonObj.WorldModel.Female);
+                ModelRecs.Add(new Tuple<IModel, string>(armorAddonObj.WorldModel.Female, "FEMALE"));
             }
         }
         else if (Rec is IModeled modeledObj && modeledObj.Model is not null)
         {
-            ModelRecs.Add(modeledObj.Model);
+            ModelRecs.Add(new Tuple<IModel, string>(modeledObj.Model, "MODL"));
         }
 
         return ModelRecs;
@@ -280,7 +281,7 @@ public class PGMutagen
             foreach (var txstRefObj in EnumerateModelRecords())
             {
                 // Will store models to check later
-                List<IModelGetter> ModelRecs = GetModelElems(txstRefObj);
+                var ModelRecs = GetModelElems(txstRefObj);
 
                 if (ModelRecs.Count == 0)
                 {
@@ -292,7 +293,7 @@ public class PGMutagen
                 bool CopiedRecord = false;
                 foreach (var modelRec in ModelRecs)
                 {
-                    if (modelRec.AlternateTextures is null)
+                    if (modelRec.Item1.AlternateTextures is null)
                     {
                         // no alternate textures
                         MessageHandler.Log("[PopulateObjs] No alternate textures found for a model record: " + GetRecordDesc(txstRefObj), 0);
@@ -319,7 +320,7 @@ public class PGMutagen
                     }
 
                     // find lowercase nifname
-                    string nifName = modelRec.File;
+                    string nifName = modelRec.Item1.File;
 
                     // Otherwise this causes issues with deepcopy
                     nifName = RemovePrefixIfExists("\\", nifName);
@@ -329,10 +330,10 @@ public class PGMutagen
 
                     MessageHandler.Log("[PopulateObjs] NIF Name '" + nifName + "' found in model record in record " + GetRecordDesc(txstRefObj), 0);
 
-                    foreach (var alternateTexture in modelRec.AlternateTextures)
+                    foreach (var alternateTexture in modelRec.Item1.AlternateTextures)
                     {
                         // Add to global
-                        var AltTexEntry = new Tuple<IAlternateTextureGetter, int, int>(alternateTexture, DCIdx, ModelRecCounter);
+                        var AltTexEntry = new Tuple<IAlternateTextureGetter, int, int, string>(alternateTexture, DCIdx, ModelRecCounter, modelRec.Item2);
                         AltTexRefs.Add(AltTexEntry);
                         var AltTexId = AltTexRefs.Count - 1;
 
@@ -912,32 +913,22 @@ public class PGMutagen
         {
             MessageHandler.Log("[SetModelAltTexManage] [Alt Tex Index: " + AltTexHandle + "] [TXST Index: " + TXSTHandle + "]", 0);
 
-            var AltTexObjs = GetAltTexFromHandle(AltTexHandle);
-            if (AltTexObjs.Count == 0)
+            var AltTexObj = GetAltTexFromHandle(AltTexHandle);
+
+            if (AltTexObj.Item1 is null)
             {
-                MessageHandler.Log("[SetModelAltTexManage] [Alt Tex Index: " + AltTexHandle + "] No Model Records found", 4);
+                MessageHandler.Log("[SetModelAltTexManage] [Alt Tex Index: " + AltTexHandle + "] Alt Texture Not Found", 4);
                 return;
             }
 
-            for (int i = 0; i < AltTexObjs.Count; i++)
+            if (AltTexObj.Item1.NewTexture.FormKey == TXSTObjs[TXSTHandle].FormKey)
             {
-                var AltTexObj = AltTexObjs[i];
-
-                if (AltTexObj.Item1 is null)
-                {
-                    MessageHandler.Log("[SetModelAltTexManage] [Alt Tex Index: " + AltTexHandle + "] Alt Texture Not Found", 4);
-                    continue;
-                }
-
-                if (AltTexObj.Item1.NewTexture.FormKey == TXSTObjs[TXSTHandle].FormKey)
-                {
-                    MessageHandler.Log("[SetModelAltTexManage] [Alt Tex Index: " + AltTexHandle + "] [TXST Index: " + TXSTHandle + "] TXST is the same as the current one", 0);
-                    continue;
-                }
-
-                AltTexObj.Item1.NewTexture.SetTo(TXSTObjs[TXSTHandle]);
-                ModifiedModeledRecords.Add(AltTexObj.Item3);
+                MessageHandler.Log("[SetModelAltTexManage] [Alt Tex Index: " + AltTexHandle + "] [TXST Index: " + TXSTHandle + "] TXST is the same as the current one", 0);
+                return;
             }
+
+            AltTexObj.Item1.NewTexture.SetTo(TXSTObjs[TXSTHandle]);
+            ModifiedModeledRecords.Add(AltTexObj.Item3);
         }
         catch (Exception ex)
         {
@@ -959,26 +950,16 @@ public class PGMutagen
         {
             MessageHandler.Log("[Set3DIndex] [Alt Tex Index: " + AltTexHandle + "] [New Index: " + NewIndex + "]", 0);
 
-            var AltTexObjs = GetAltTexFromHandle(AltTexHandle);
-            if (AltTexObjs.Count == 0)
+            var AltTexObj = GetAltTexFromHandle(AltTexHandle);
+
+            if (AltTexObj.Item1 is null)
             {
-                MessageHandler.Log("[Set3DIndex] [Alt Tex Index: " + AltTexHandle + "] No Model Records found", 4);
+                MessageHandler.Log("[Set3DIndex] [Alt Tex Index: " + AltTexHandle + "] Alt Texture Not Found", 4);
                 return;
             }
 
-            for (int i = 0; i < AltTexObjs.Count; i++)
-            {
-                var AltTexObj = AltTexObjs[i];
-
-                if (AltTexObj.Item1 is null)
-                {
-                    MessageHandler.Log("[Set3DIndex] [Alt Tex Index: " + AltTexHandle + "] Alt Texture Not Found", 4);
-                    continue;
-                }
-
-                AltTexObj.Item1.Index = NewIndex;
-                ModifiedModeledRecords.Add(AltTexObj.Item3);
-            }
+            AltTexObj.Item1.Index = NewIndex;
+            ModifiedModeledRecords.Add(AltTexObj.Item3);
         }
         catch (Exception ex)
         {
@@ -1025,42 +1006,33 @@ public class PGMutagen
     {
         try
         {
-            var AltTexRefs = GetAltTexFromHandle(AltTexHandle);
-            if (AltTexRefs.Count == 0)
+            var AltTexObj = GetAltTexFromHandle(AltTexHandle);
+            var ModelRec = AltTexObj.Item2;
+
+            if (ModelRec is null)
             {
-                MessageHandler.Log("[SetModelRecNIF] [Alt Tex Index: " + AltTexHandle + "] No Model Records found", 4);
+                throw new Exception("Model Record does not have a model");
+            }
+
+            var NIFPath = Marshal.PtrToStringUni(NIFPathPtr);
+            if (NIFPath is null)
+            {
+                throw new Exception("NIF Path is null");
+            }
+
+            // remove "meshes" from beginning of NIFPath if exists
+            NIFPath = RemovePrefixIfExists("meshes\\", NIFPath);
+
+            // Check if NIFPath is different from ModelRec ignore case
+            if (NIFPath.Equals(ModelRec.File, StringComparison.OrdinalIgnoreCase))
+            {
+                MessageHandler.Log("[SetModelRecNIF] [Alt Tex Index: " + AltTexHandle + "] [NIF Path: " + NIFPath + "] NIF Path is the same as the current one", 0);
                 return;
             }
 
-            for (int i = 0; i < AltTexRefs.Count; i++)
-            {
-                var ModelRec = AltTexRefs[i].Item2;
-
-                if (ModelRec is null)
-                {
-                    throw new Exception("Model Record does not have a model");
-                }
-
-                var NIFPath = Marshal.PtrToStringUni(NIFPathPtr);
-                if (NIFPath is null)
-                {
-                    throw new Exception("NIF Path is null");
-                }
-
-                // remove "meshes" from beginning of NIFPath if exists
-                NIFPath = RemovePrefixIfExists("meshes\\", NIFPath);
-
-                // Check if NIFPath is different from ModelRec ignore case
-                if (NIFPath.Equals(ModelRec.File, StringComparison.OrdinalIgnoreCase))
-                {
-                    MessageHandler.Log("[SetModelRecNIF] [Alt Tex Index: " + AltTexHandle + "] [NIF Path: " + NIFPath + "] NIF Path is the same as the current one", 0);
-                    continue;
-                }
-
-                ModelRec.File = NIFPath;
-                ModifiedModeledRecords.Add(AltTexRefs[i].Item3);
-                MessageHandler.Log("[SetModelRecNIF] [Alt Tex Index: " + AltTexHandle + "] [NIF Path: " + NIFPath + "]", 0);
-            }
+            ModelRec.File = NIFPath;
+            ModifiedModeledRecords.Add(AltTexObj.Item3);
+            MessageHandler.Log("[SetModelRecNIF] [Alt Tex Index: " + AltTexHandle + "] [NIF Path: " + NIFPath + "]", 0);
         }
         catch (Exception ex)
         {
@@ -1070,9 +1042,10 @@ public class PGMutagen
 
     // Helpers
 
-    private static List<(AlternateTexture?, IModel?, int)> GetAltTexFromHandle(int AltTexHandle)
+    private static (AlternateTexture?, IModel?, int) GetAltTexFromHandle(int AltTexHandle)
     {
         var oldAltTex = AltTexRefs[AltTexHandle].Item1;
+        var oldType = AltTexRefs[AltTexHandle].Item4;
         var ModeledRecordId = AltTexRefs[AltTexHandle].Item2;
 
         var ModeledRecord = ModelCopies[ModeledRecordId];
@@ -1084,27 +1057,33 @@ public class PGMutagen
         for (int i = 0; i < modelElems.Count; i++)
         {
             var modelRec = modelElems[i];
-            if (modelRec.AlternateTextures is null)
+            if (modelRec.Item1.AlternateTextures is null)
             {
                 continue;
             }
 
-            for (int j = 0; j < modelRec.AlternateTextures.Count; j++)
+            if (oldType != modelRec.Item2)
             {
-                var alternateTexture = modelRec.AlternateTextures[j];
+                // useful for records with multiple MODL records like ARMO
+                continue;
+            }
+
+            for (int j = 0; j < modelRec.Item1.AlternateTextures.Count; j++)
+            {
+                var alternateTexture = modelRec.Item1.AlternateTextures[j];
                 if (alternateTexture.Name == oldAltTex.Name &&
                     alternateTexture.Index == oldAltTex.Index &&
                     alternateTexture.NewTexture.FormKey.ID.ToString() == oldAltTex.NewTexture.FormKey.ID.ToString())
                 {
                     // Found the one to update
                     var EditableModelObj = GetModelElems(ModelCopiesEditable[ModeledRecordId])[i];
-                    var EditableAltTexObj = EditableModelObj.AlternateTextures?[j];
-                    outList.Add((EditableAltTexObj, EditableModelObj, ModeledRecordId));
+                    var EditableAltTexObj = EditableModelObj.Item1.AlternateTextures?[j];
+                    return (EditableAltTexObj, EditableModelObj.Item1, ModeledRecordId);
                 }
             }
         }
 
-        return outList;
+        return (null, null, ModeledRecordId);
     }
 
     private static string GetRecordDesc(IMajorRecordGetter rec)
