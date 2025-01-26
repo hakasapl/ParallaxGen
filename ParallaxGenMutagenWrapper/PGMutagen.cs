@@ -198,16 +198,32 @@ public class PGMutagen
                 ModelRecs.Add(new Tuple<IModelGetter, string>(armorObj.WorldModel.Female.Model, "FEMALE"));
             }
         }
-        else if (Rec is IArmorAddonGetter armorAddonObj && armorAddonObj.WorldModel is not null)
+        else if (Rec is IArmorAddonGetter armorAddonObj)
         {
-            if (armorAddonObj.WorldModel.Male is not null)
+            if (armorAddonObj.WorldModel is not null)
             {
-                ModelRecs.Add(new Tuple<IModelGetter, string>(armorAddonObj.WorldModel.Male, "MALE"));
+                if (armorAddonObj.WorldModel.Male is not null)
+                {
+                    ModelRecs.Add(new Tuple<IModelGetter, string>(armorAddonObj.WorldModel.Male, "MALE"));
+                }
+
+                if (armorAddonObj.WorldModel.Female is not null)
+                {
+                    ModelRecs.Add(new Tuple<IModelGetter, string>(armorAddonObj.WorldModel.Female, "FEMALE"));
+                }
             }
 
-            if (armorAddonObj.WorldModel.Female is not null)
+            if (armorAddonObj.FirstPersonModel is not null)
             {
-                ModelRecs.Add(new Tuple<IModelGetter, string>(armorAddonObj.WorldModel.Female, "FEMALE"));
+                if (armorAddonObj.FirstPersonModel.Male is not null)
+                {
+                    ModelRecs.Add(new Tuple<IModelGetter, string>(armorAddonObj.FirstPersonModel.Male, "1STMALE"));
+                }
+
+                if (armorAddonObj.FirstPersonModel.Female is not null)
+                {
+                    ModelRecs.Add(new Tuple<IModelGetter, string>(armorAddonObj.FirstPersonModel.Female, "1STFEMALE"));
+                }
             }
         }
         else if (Rec is IModeledGetter modeledObj && modeledObj.Model is not null)
@@ -236,16 +252,32 @@ public class PGMutagen
                 ModelRecs.Add(new Tuple<IModel, string>(armorObj.WorldModel.Female.Model, "FEMALE"));
             }
         }
-        else if (Rec is IArmorAddon armorAddonObj && armorAddonObj.WorldModel is not null)
+        else if (Rec is IArmorAddon armorAddonObj)
         {
-            if (armorAddonObj.WorldModel.Male is not null)
+            if (armorAddonObj.WorldModel is not null)
             {
-                ModelRecs.Add(new Tuple<IModel, string>(armorAddonObj.WorldModel.Male, "MALE"));
+                if (armorAddonObj.WorldModel.Male is not null)
+                {
+                    ModelRecs.Add(new Tuple<IModel, string>(armorAddonObj.WorldModel.Male, "MALE"));
+                }
+
+                if (armorAddonObj.WorldModel.Female is not null)
+                {
+                    ModelRecs.Add(new Tuple<IModel, string>(armorAddonObj.WorldModel.Female, "FEMALE"));
+                }
             }
 
-            if (armorAddonObj.WorldModel.Female is not null)
+            if (armorAddonObj.FirstPersonModel is not null)
             {
-                ModelRecs.Add(new Tuple<IModel, string>(armorAddonObj.WorldModel.Female, "FEMALE"));
+                if (armorAddonObj.FirstPersonModel.Male is not null)
+                {
+                    ModelRecs.Add(new Tuple<IModel, string>(armorAddonObj.FirstPersonModel.Male, "1STMALE"));
+                }
+
+                if (armorAddonObj.FirstPersonModel.Female is not null)
+                {
+                    ModelRecs.Add(new Tuple<IModel, string>(armorAddonObj.FirstPersonModel.Female, "1STFEMALE"));
+                }
             }
         }
         else if (Rec is IModeled modeledObj && modeledObj.Model is not null)
@@ -1049,8 +1081,6 @@ public class PGMutagen
         var ModeledRecordId = AltTexRefs[AltTexHandle].Item2;
 
         var ModeledRecord = ModelCopies[ModeledRecordId];
-
-        var outList = new List<(AlternateTexture?, IModel?, int)>();
 
         // loop through alternate textures to find the one to replace
         var modelElems = GetModelElems(ModeledRecord);

@@ -326,7 +326,26 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
 {
     const lock_guard<mutex> lock(s_processShapeMutex);
 
-    const auto matches = libGetMatchingTXSTObjs(nifPath, name3D, index3D);
+    // check if nifPath ends in _1.nif or _0.nif (armors)
+    vector<wstring> nifPathSearch;
+    if (boost::iends_with(nifPath, L"_1.nif")) {
+        // we need to search for both _1 and _0 because one is hidden
+        nifPathSearch.push_back(nifPath);
+        nifPathSearch.push_back(boost::replace_last_copy(nifPath, L"_1.nif", L"_0.nif"));
+    }
+
+    if (boost::iends_with(nifPath, L"_0.nif")) {
+        // we need to search for both _1 and _0 because one is hidden
+        nifPathSearch.push_back(nifPath);
+        nifPathSearch.push_back(boost::replace_last_copy(nifPath, L"_0.nif", L"_1.nif"));
+    }
+
+    vector<tuple<int, int>> matches;
+    for (const auto& nifPathSearchCur : nifPathSearch) {
+        // find matches
+        const auto matchesCur = libGetMatchingTXSTObjs(nifPathSearchCur, name3D, index3D);
+        matches.insert(matches.end(), matchesCur.begin(), matchesCur.end());
+    }
 
     results.clear();
 
