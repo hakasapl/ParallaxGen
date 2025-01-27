@@ -471,7 +471,7 @@ auto ParallaxGen::processNIF(const std::filesystem::path& nifFile, const vector<
             }
 
             // assign mesh in plugin
-            ParallaxGenPlugin::assignMesh(newNIFName, results.second);
+            ParallaxGenPlugin::assignMesh(newNIFName, nifFile, results.second);
 
             // Add to mesh tracker
             meshTracker[results.first] = newNIFName;

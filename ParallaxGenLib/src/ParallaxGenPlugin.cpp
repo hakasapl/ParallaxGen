@@ -329,29 +329,31 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
     // check if nifPath ends in _1.nif or _0.nif (armors)
     // TODO this should probably be a smarter check and only match on armor records etc. required PGMutagen involvement
     vector<wstring> nifPathSearch;
+    nifPathSearch.push_back(nifPath);
+
     if (boost::iends_with(nifPath, L"_1.nif")) {
         // we need to search for both _1 and _0 because one is hidden
-        nifPathSearch.push_back(nifPath);
         nifPathSearch.push_back(boost::replace_last_copy(nifPath, L"_1.nif", L"_0.nif"));
     }
 
     if (boost::iends_with(nifPath, L"_0.nif")) {
         // we need to search for both _1 and _0 because one is hidden
-        nifPathSearch.push_back(nifPath);
         nifPathSearch.push_back(boost::replace_last_copy(nifPath, L"_0.nif", L"_1.nif"));
     }
 
-    vector<tuple<int, int>> matches;
+    vector<tuple<int, int, wstring>> matches;
     for (const auto& nifPathSearchCur : nifPathSearch) {
         // find matches
         const auto matchesCur = libGetMatchingTXSTObjs(nifPathSearchCur, name3D, index3D);
-        matches.insert(matches.end(), matchesCur.begin(), matchesCur.end());
+        for (const auto& [txstIndex, altTexIndex] : matchesCur) {
+            matches.emplace_back(txstIndex, altTexIndex, nifPathSearchCur);
+        }
     }
 
     results.clear();
 
     // loop through matches
-    for (const auto& [txstIndex, altTexIndex] : matches) {
+    for (const auto& [txstIndex, altTexIndex, matchedNIF] : matches) {
         //  Allowed shaders from result of patchers
         vector<PatcherUtil::ShaderPatcherMatch> matches;
 
@@ -438,6 +440,7 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
 
         // Get winning match
         auto winningShaderMatch = PatcherUtil::getWinningMatch(matches, s_modPriority);
+        curResult.matchedNIF = matchedNIF;
 
         // Apply transforms
         winningShaderMatch = PatcherUtil::applyTransformIfNeeded(winningShaderMatch, patchers);
@@ -503,7 +506,7 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
     }
 }
 
-void ParallaxGenPlugin::assignMesh(const wstring& nifPath, const vector<TXSTResult>& result)
+void ParallaxGenPlugin::assignMesh(const wstring& nifPath, const wstring& baseNIFPath, const vector<TXSTResult>& result)
 {
     const lock_guard<mutex> lock(s_processShapeMutex);
 
@@ -511,8 +514,15 @@ void ParallaxGenPlugin::assignMesh(const wstring& nifPath, const vector<TXSTResu
 
     // Loop through results
     for (const auto& curResult : result) {
-        // Set model rec handle
-        libSetModelRecNIF(curResult.altTexIndex, nifPath);
+        if (!boost::iequals(curResult.matchedNIF, baseNIFPath)) {
+            // Skip if not the base NIF
+            continue;
+        }
+
+        if (!boost::iequals(curResult.matchedNIF, nifPath)) {
+            // Set model rec handle
+            libSetModelRecNIF(curResult.altTexIndex, nifPath);
+        }
 
         // Set model alt tex
         libSetModelAltTex(curResult.altTexIndex, curResult.txstIndex);
