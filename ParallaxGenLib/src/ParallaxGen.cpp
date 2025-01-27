@@ -309,6 +309,11 @@ auto ParallaxGen::processNIF(const std::filesystem::path& nifFile, const vector<
         throw runtime_error("DupNIFs must be set if patchPlugin is true");
     }
 
+    if (boost::icontains(nifFile.wstring(), "rockpileL04.nif")) {
+        // Skip this file as it causes a crash
+        spdlog::info("HERE");
+    }
+
     NifFile nif;
     try {
         nif = NIFUtil::loadNIFFromBytes(nifBytes);
