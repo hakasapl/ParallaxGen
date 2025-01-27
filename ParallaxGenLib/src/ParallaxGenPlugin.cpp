@@ -135,19 +135,18 @@ void ParallaxGenPlugin::libFinalize(const filesystem::path& outputPath, const bo
     libThrowExceptionIfExists();
 }
 
-auto ParallaxGenPlugin::libGetMatchingTXSTObjs(const wstring& nifName, const wstring& name3D, const int& index3D)
-    -> vector<tuple<int, int>>
+auto ParallaxGenPlugin::libGetMatchingTXSTObjs(const wstring& nifName, const int& index3D) -> vector<tuple<int, int>>
 {
     const lock_guard<mutex> lock(s_libMutex);
 
     int length = 0;
-    GetMatchingTXSTObjs(nifName.c_str(), name3D.c_str(), index3D, nullptr, nullptr, &length);
+    GetMatchingTXSTObjs(nifName.c_str(), index3D, nullptr, nullptr, &length);
     libLogMessageIfExists();
     libThrowExceptionIfExists();
 
     vector<int> txstIdArray(length);
     vector<int> altTexIdArray(length);
-    GetMatchingTXSTObjs(nifName.c_str(), name3D.c_str(), index3D, txstIdArray.data(), altTexIdArray.data(), nullptr);
+    GetMatchingTXSTObjs(nifName.c_str(), index3D, txstIdArray.data(), altTexIdArray.data(), nullptr);
     libLogMessageIfExists();
     libThrowExceptionIfExists();
 
@@ -320,8 +319,8 @@ void ParallaxGenPlugin::initialize(const BethesdaGame& game)
 
 void ParallaxGenPlugin::populateObjs() { libPopulateObjs(); }
 
-void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nifShape, const wstring& name3D,
-    const int& index3D, PatcherUtil::PatcherMeshObjectSet& patchers, vector<TXSTResult>& results,
+void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nifShape, const int& index3D,
+    PatcherUtil::PatcherMeshObjectSet& patchers, vector<TXSTResult>& results,
     PatcherUtil::ConflictModResults* conflictMods)
 {
     const lock_guard<mutex> lock(s_processShapeMutex);
@@ -344,7 +343,7 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
     vector<tuple<int, int, wstring>> matches;
     for (const auto& nifPathSearchCur : nifPathSearch) {
         // find matches
-        const auto matchesCur = libGetMatchingTXSTObjs(nifPathSearchCur, name3D, index3D);
+        const auto matchesCur = libGetMatchingTXSTObjs(nifPathSearchCur, index3D);
         for (const auto& [txstIndex, altTexIndex] : matchesCur) {
             matches.emplace_back(txstIndex, altTexIndex, nifPathSearchCur);
         }
@@ -472,8 +471,7 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
 
         if (!foundDiff) {
             // No need to patch
-            spdlog::trace(
-                L"Plugin Patching | {} | {} | {} | Not patching because nothing to change", nifPath, name3D, index3D);
+            spdlog::trace(L"Plugin Patching | {} | {} | Not patching because nothing to change", nifPath, index3D);
             curResult.txstIndex = txstIndex;
             results.push_back(curResult);
             continue;
@@ -485,15 +483,14 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
             // Check if we need to make a new TXST record
             if (s_createdTXSTs.contains(newSlots)) {
                 // Already modded
-                spdlog::trace(L"Plugin Patching | {} | {} | {} | Already added, skipping", nifPath, name3D, index3D);
+                spdlog::trace(L"Plugin Patching | {} | {} | Already added, skipping", nifPath, index3D);
                 curResult.txstIndex = s_createdTXSTs[newSlots];
                 results.push_back(curResult);
                 continue;
             }
 
             // Create a new TXST record
-            spdlog::trace(
-                L"Plugin Patching | {} | {} | {} | Creating a new TXST record and patching", nifPath, name3D, index3D);
+            spdlog::trace(L"Plugin Patching | {} | {} | Creating a new TXST record and patching", nifPath, index3D);
             const string newEDID = fmt::format("PGTXST{:05d}", s_edidCounter++);
             curResult.txstIndex = libCreateNewTXSTPatch(altTexIndex, newSlots, newEDID);
             patchers.shaderPatchers.at(winningShaderMatch.shader)
@@ -541,7 +538,7 @@ void ParallaxGenPlugin::set3DIndices(
         const auto shapeName = ParallaxGenUtil::utf8toUTF16(shape->name.get());
 
         // find matches
-        const auto matches = libGetMatchingTXSTObjs(nifPath, shapeName, oldIndex3D);
+        const auto matches = libGetMatchingTXSTObjs(nifPath, oldIndex3D);
 
         // Set indices
         for (const auto& [txstIndex, altTexIndex] : matches) {

@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.8.6] - UNRELEASED
+
+- 3D name is no longer considered for matching alternate textures
+
 ## [0.8.5] - 2025-01-27
 
 - Fixed "_1" armor being renamed to "_0" in some cases in the plugin

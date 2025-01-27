@@ -2,7 +2,6 @@
 
 // Base Imports
 using System;
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 
@@ -11,11 +10,10 @@ using Mutagen.Bethesda;
 using Mutagen.Bethesda.Skyrim;
 using Mutagen.Bethesda.Environments;
 using Mutagen.Bethesda.Plugins;
-using Mutagen.Bethesda.Plugins.Binary.Parameters;
 using Mutagen.Bethesda.Plugins.Records;
 using Noggog;
 using Mutagen.Bethesda.Plugins.Utility;
-using Noggog.StructuredStrings;
+using Mutagen.Bethesda.Plugins.Binary.Parameters;
 
 public static class ExceptionHandler
 {
@@ -85,7 +83,7 @@ public class PGMutagen
     private static List<Tuple<IAlternateTextureGetter, int, int, string>> AltTexRefs = [];
     private static List<IMajorRecord> ModelCopies = [];
     private static List<IMajorRecord> ModelCopiesEditable = [];
-    private static Dictionary<Tuple<string, string, int>, List<Tuple<int, int>>>? TXSTRefs;
+    private static Dictionary<Tuple<string, int>, List<Tuple<int, int>>>? TXSTRefs;
     private static HashSet<int> ModifiedModeledRecords = [];
 
     private static IEnumerable<IMajorRecordGetter> EnumerateModelRecords()
@@ -366,11 +364,10 @@ public class PGMutagen
                         AltTexRefs.Add(AltTexEntry);
                         var AltTexId = AltTexRefs.Count - 1;
 
-                        string name3D = alternateTexture.Name;
                         int index3D = alternateTexture.Index;
                         var newTXST = alternateTexture.NewTexture;
 
-                        var key = new Tuple<string, string, int>(nifName, name3D, index3D);
+                        var key = new Tuple<string, int>(nifName, index3D);
 
                         MessageHandler.Log("[PopulateObjs] Adding to AltTexRefs as index " + AltTexId + ": " + key.ToString(), 0);
 
@@ -624,7 +621,6 @@ public class PGMutagen
     [UnmanagedCallersOnly(EntryPoint = "GetMatchingTXSTObjs", CallConvs = [typeof(CallConvCdecl)])]
     public static unsafe void GetMatchingTXSTObjs(
       [DNNE.C99Type("const wchar_t*")] IntPtr nifNamePtr,
-      [DNNE.C99Type("const wchar_t*")] IntPtr name3DPtr,
       [DNNE.C99Type("const int")] int index3D,
       [DNNE.C99Type("int*")] int* TXSTHandles,
       [DNNE.C99Type("int*")] int* AltTexHandles,
@@ -643,8 +639,7 @@ public class PGMutagen
             }
 
             string nifName = Marshal.PtrToStringUni(nifNamePtr) ?? string.Empty;
-            string name3D = Marshal.PtrToStringUni(name3DPtr) ?? string.Empty;
-            var key = new Tuple<string, string, int>(nifName, name3D, index3D);
+            var key = new Tuple<string, int>(nifName, index3D);
 
             // Log input params
             MessageHandler.Log("[GetMatchingTXSTObjs] Getting Matching TXST Objects for: " + key.ToString(), 0);

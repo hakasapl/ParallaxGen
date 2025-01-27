@@ -399,7 +399,7 @@ auto ParallaxGen::processNIF(const std::filesystem::path& nifFile, const vector<
             // Get all plugin results
             vector<ParallaxGenPlugin::TXSTResult> results;
             ParallaxGenPlugin::processShape(
-                nifFile.wstring(), nifShape, shapeName, oldShapeIndex, patcherObjects, results, conflictMods);
+                nifFile.wstring(), nifShape, oldShapeIndex, patcherObjects, results, conflictMods);
 
             // Loop through results
             for (const auto& result : results) {
