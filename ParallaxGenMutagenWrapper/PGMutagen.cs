@@ -169,10 +169,7 @@ public class PGMutagen
                     .Build();
             }
 
-            OutMod = new SkyrimMod(ModKey.FromFileName(outputPlugin), (SkyrimRelease)gameType)
-            {
-                UsingLocalization = true
-            };
+            OutMod = new SkyrimMod(ModKey.FromFileName(outputPlugin), (SkyrimRelease)gameType);
         }
         catch (Exception ex)
         {
