@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.8.5] - UNRELEASED
+
+- Fixed "_1" armor being renamed to "_0" in some cases in the plugin
+- Fixed some records being copied to ParallaxGen.esp that were not needed
+
 ## [0.8.4] - 2025-01-26
 
 - Fixed some statics in plugins not being patched

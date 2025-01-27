@@ -117,6 +117,7 @@ public:
     static void populateObjs();
 
     struct TXSTResult {
+        std::wstring matchedNIF;
         int modelRecHandle {};
         int altTexIndex {};
         int txstIndex {};
@@ -127,7 +128,8 @@ public:
         const int& index3D, PatcherUtil::PatcherMeshObjectSet& patchers, std::vector<TXSTResult>& results,
         PatcherUtil::ConflictModResults* conflictMods = nullptr);
 
-    static void assignMesh(const std::wstring& nifPath, const std::vector<TXSTResult>& result);
+    static void assignMesh(
+        const std::wstring& nifPath, const std::wstring& baseNIFPath, const std::vector<TXSTResult>& result);
 
     static void set3DIndices(
         const std::wstring& nifPath, const std::vector<std::tuple<nifly::NiShape*, int, int>>& shapeTracker);
