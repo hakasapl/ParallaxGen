@@ -135,24 +135,30 @@ void ParallaxGenPlugin::libFinalize(const filesystem::path& outputPath, const bo
     libThrowExceptionIfExists();
 }
 
-auto ParallaxGenPlugin::libGetMatchingTXSTObjs(const wstring& nifName, const int& index3D) -> vector<tuple<int, int>>
+auto ParallaxGenPlugin::libGetMatchingTXSTObjs(const wstring& nifName, const int& index3D)
+    -> vector<tuple<int, int, wstring>>
 {
     const lock_guard<mutex> lock(s_libMutex);
 
     int length = 0;
-    GetMatchingTXSTObjs(nifName.c_str(), index3D, nullptr, nullptr, &length);
+    GetMatchingTXSTObjs(nifName.c_str(), index3D, nullptr, nullptr, nullptr, &length);
     libLogMessageIfExists();
     libThrowExceptionIfExists();
 
     vector<int> txstIdArray(length);
     vector<int> altTexIdArray(length);
-    GetMatchingTXSTObjs(nifName.c_str(), index3D, txstIdArray.data(), altTexIdArray.data(), nullptr);
+    vector<wchar_t*> matchedNIFArray(length);
+    GetMatchingTXSTObjs(
+        nifName.c_str(), index3D, txstIdArray.data(), altTexIdArray.data(), matchedNIFArray.data(), nullptr);
     libLogMessageIfExists();
     libThrowExceptionIfExists();
 
-    vector<tuple<int, int>> outputArray(length);
+    vector<tuple<int, int, wstring>> outputArray(length);
     for (int i = 0; i < length; ++i) {
-        outputArray[i] = { txstIdArray[i], altTexIdArray[i] };
+        const auto* matchedNIFStr = static_cast<const wchar_t*>(matchedNIFArray.at(i));
+        LocalFree(static_cast<HGLOBAL>(matchedNIFArray.at(i)));
+
+        outputArray[i] = { txstIdArray[i], altTexIdArray[i], matchedNIFStr };
     }
 
     return outputArray;
@@ -325,33 +331,10 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
 {
     const lock_guard<mutex> lock(s_processShapeMutex);
 
-    // check if nifPath ends in _1.nif or _0.nif (armors)
-    // TODO this should probably be a smarter check and only match on armor records etc. required PGMutagen involvement
-    vector<wstring> nifPathSearch;
-    nifPathSearch.push_back(nifPath);
-
-    if (boost::iends_with(nifPath, L"_1.nif")) {
-        // we need to search for both _1 and _0 because one is hidden
-        nifPathSearch.push_back(boost::replace_last_copy(nifPath, L"_1.nif", L"_0.nif"));
-    }
-
-    if (boost::iends_with(nifPath, L"_0.nif")) {
-        // we need to search for both _1 and _0 because one is hidden
-        nifPathSearch.push_back(boost::replace_last_copy(nifPath, L"_0.nif", L"_1.nif"));
-    }
-
-    vector<tuple<int, int, wstring>> matches;
-    for (const auto& nifPathSearchCur : nifPathSearch) {
-        // find matches
-        const auto matchesCur = libGetMatchingTXSTObjs(nifPathSearchCur, index3D);
-        for (const auto& [txstIndex, altTexIndex] : matchesCur) {
-            matches.emplace_back(txstIndex, altTexIndex, nifPathSearchCur);
-        }
-    }
-
     results.clear();
 
     // loop through matches
+    const auto matches = libGetMatchingTXSTObjs(nifPath, index3D);
     for (const auto& [txstIndex, altTexIndex, matchedNIF] : matches) {
         //  Allowed shaders from result of patchers
         vector<PatcherUtil::ShaderPatcherMatch> matches;
@@ -541,7 +524,12 @@ void ParallaxGenPlugin::set3DIndices(
         const auto matches = libGetMatchingTXSTObjs(nifPath, oldIndex3D);
 
         // Set indices
-        for (const auto& [txstIndex, altTexIndex] : matches) {
+        for (const auto& [txstIndex, altTexIndex, matchedNIF] : matches) {
+            if (!boost::iequals(nifPath, matchedNIF)) {
+                // Skip if not the base NIF
+                continue;
+            }
+
             if (oldIndex3D == newIndex3D) {
                 // No change
                 continue;

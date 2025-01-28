@@ -168,11 +168,13 @@ void ParallaxGen::deleteOutputDir(const bool& preOutput) const
         return;
     }
 
+    vector<filesystem::path> filesToDeleteParsed;
     for (const auto& entry : filesystem::directory_iterator(m_outputDir)) {
         if (entry.is_regular_file()
             && (filesToDelete.contains(entry.path().filename()) || filesToIgnore.contains(entry.path().filename())
                 || filesToDeletePreOutput.contains(entry.path().filename())
                 || boost::istarts_with(entry.path().filename().wstring(), filesToDeleteStartsWith))) {
+            filesToDeleteParsed.push_back(entry.path());
             continue;
         }
 
@@ -188,7 +190,7 @@ void ParallaxGen::deleteOutputDir(const bool& preOutput) const
     spdlog::info("Deleting old output files from output directory...");
 
     // Delete old output
-    for (const auto& fileToDelete : filesToDelete) {
+    for (const auto& fileToDelete : filesToDeleteParsed) {
         const auto file = m_outputDir / fileToDelete;
         if (filesystem::exists(file)) {
             filesystem::remove(file);

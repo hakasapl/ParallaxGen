@@ -32,7 +32,7 @@ private:
     /// @param[in] index3D "3D index" - index of the shape in the nif
     /// @return TXST objects, pairs of (texture set index,alternate textures ids)
     static auto libGetMatchingTXSTObjs(const std::wstring& nifName, const int& index3D)
-        -> std::vector<std::tuple<int, int>>;
+        -> std::vector<std::tuple<int, int, std::wstring>>;
 
     /// @brief get the assigned textures of all slots in a texture set
     /// @param[in] txstIndex index of the texture set

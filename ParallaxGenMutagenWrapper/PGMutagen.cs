@@ -701,7 +701,7 @@ public class PGMutagen
         }
 
         // we need to create a new plugin
-        var newPluginIndex = OutputSplitMods.Count;
+        var newPluginIndex = OutputSplitMods.Count + 1;
         var newPluginName = "ParallaxGen_" + newPluginIndex + ".esp";
         var newMod = new SkyrimMod(newPluginName, GameType);
 
@@ -709,7 +709,7 @@ public class PGMutagen
         OutputMasterTracker.Add(curMasterList);
         OutputSplitMods.Add(newMod);
 
-        return OutputSplitMods[newPluginIndex];
+        return OutputSplitMods[newPluginIndex - 1];
     }
 
     [UnmanagedCallersOnly(EntryPoint = "GetMatchingTXSTObjs", CallConvs = [typeof(CallConvCdecl)])]
@@ -718,6 +718,7 @@ public class PGMutagen
       [DNNE.C99Type("const int")] int index3D,
       [DNNE.C99Type("int*")] int* TXSTHandles,
       [DNNE.C99Type("int*")] int* AltTexHandles,
+      [DNNE.C99Type("wchar_t**")] IntPtr* MatchedNIF,
       [DNNE.C99Type("int*")] int* length)
     {
         try
@@ -733,33 +734,72 @@ public class PGMutagen
             }
 
             string nifName = Marshal.PtrToStringUni(nifNamePtr) ?? string.Empty;
+            nifName = nifName.ToLower();
+
             var key = new Tuple<string, int>(nifName, index3D);
 
             // Log input params
             MessageHandler.Log("[GetMatchingTXSTObjs] Getting Matching TXST Objects for: " + key.ToString(), 0);
 
-            if (TXSTRefs.ContainsKey(key))
+            List<Tuple<int, int, string>> txstList = [];
+            if (TXSTRefs.TryGetValue(key, out List<Tuple<int, int>>? value))
             {
-                var txstList = TXSTRefs[key];
-                if (length is not null)
+                foreach (var txst in value)
                 {
-                    *length = txstList.Count;
-                    MessageHandler.Log("[GetMatchingTXSTObjs] Found " + txstList.Count + " Matching TXST Objects", 0);
+                    txstList.Add(new Tuple<int, int, string>(txst.Item1, txst.Item2, nifName));
                 }
+            }
 
-                if (TXSTHandles is null || AltTexHandles is null)
+            // find alternate nif Name if able
+            string altNifName = "";
+            if (nifName.EndsWith("_1.nif"))
+            {
+                // replace _1.nif with _0.nif
+                altNifName = nifName.Substring(0, nifName.Length - 6) + "_0.nif";
+            }
+
+            if (nifName.EndsWith("_0.nif"))
+            {
+                // replace _0.nif with _1.nif
+                altNifName = nifName.Substring(0, nifName.Length - 6) + "_1.nif";
+            }
+
+            var altKey = new Tuple<string, int>(altNifName, index3D);
+
+            if (TXSTRefs.TryGetValue(altKey, out List<Tuple<int, int>>? valueAlt))
+            {
+                foreach (var txst in valueAlt)
                 {
-                    return;
-                }
+                    var altTexRef = AltTexRefs[txst.Item2];
+                    if (altTexRef.Item4 == "MODL")
+                    {
+                        // Skip if not _1 _0 type of MODL
+                        continue;
+                    }
 
-                // Manually copy the elements from the list to the pointer
-                for (int i = 0; i < txstList.Count; i++)
-                {
-                    TXSTHandles[i] = txstList[i].Item1;
-                    AltTexHandles[i] = txstList[i].Item2;
-
-                    MessageHandler.Log("[GetMatchingTXSTObjs] Found Matching TXST: " + key.ToString() + " -> " + GetRecordDesc(TXSTObjs[txstList[i].Item1]), 0);
+                    txstList.Add(new Tuple<int, int, string>(txst.Item1, txst.Item2, altNifName));
                 }
+            }
+
+            if (length is not null)
+            {
+                *length = txstList.Count;
+                MessageHandler.Log("[GetMatchingTXSTObjs] Found " + txstList.Count + " Matching TXST Objects", 0);
+            }
+
+            if (TXSTHandles is null || AltTexHandles is null || MatchedNIF is null)
+            {
+                return;
+            }
+
+            // Manually copy the elements from the list to the pointer
+            for (int i = 0; i < txstList.Count; i++)
+            {
+                TXSTHandles[i] = txstList[i].Item1;
+                AltTexHandles[i] = txstList[i].Item2;
+                MatchedNIF[i] = txstList[i].Item3.IsNullOrEmpty() ? IntPtr.Zero : Marshal.StringToHGlobalUni(txstList[i].Item3);
+
+                MessageHandler.Log("[GetMatchingTXSTObjs] Found Matching TXST: " + key.ToString() + " -> " + GetRecordDesc(TXSTObjs[txstList[i].Item1]), 0);
             }
         }
         catch (Exception ex)
@@ -1243,74 +1283,3 @@ public static class PatchBaseDirectory
         return false;
     }
 }
-
-/*
-[HarmonyPatch]
-public static class LoadAssembliesPatch
-{
-    [HarmonyTargetMethod]
-    public static System.Reflection.MethodBase TargetMethod()
-    {
-        // AccessTools is a Harmony helper class for reflection
-        return AccessTools.Method(
-            typeof(TypeExt),             // the class
-            nameof(TypeExt.LoadAssemblies), // the method name
-            [typeof(List<string>).MakeByRefType()] // the parameter signature
-        );
-    }
-
-    public static string? AssemblySearchPath;
-
-    public static bool Prefix(ref List<string> failed)
-    {
-        if (AssemblySearchPath is null)
-        {
-            throw new Exception("AssemblySearchPath is null");
-        }
-
-        if (TypeExt.FailedAssemblyLoads != null)
-        {
-            failed = TypeExt.FailedAssemblyLoads;
-            return false;
-        }
-        TypeExt.FailedAssemblyLoads = new List<string>();
-        var loadedAssemblies = AppDomain.CurrentDomain.GetAssemblies().ToList();
-        List<string> loadedPaths = new List<string>();
-        foreach (System.Reflection.Assembly a in loadedAssemblies)
-        {
-            try
-            {
-                loadedPaths.Add(a.Location);
-            }
-            catch (Exception)
-            {
-                TypeExt.FailedAssemblyLoads.Add(a.ToString());
-            }
-        }
-
-        var referencedPaths = Directory.GetFiles(AssemblySearchPath, "*.dll");
-        var toLoad = referencedPaths.Where(r => !loadedPaths.Contains(r, StringComparer.InvariantCultureIgnoreCase)).ToList();
-        toLoad.ForEach(path =>
-        {
-            try
-            {
-                System.Reflection.AssemblyName name = System.Reflection.AssemblyName.GetAssemblyName(path);
-                System.Reflection.Assembly assembly = AppDomain.CurrentDomain.Load(name);
-                loadedAssemblies.Add(assembly);
-            }
-            catch (BadImageFormatException)
-            {
-                TypeExt.FailedAssemblyLoads.Add(path);
-            }
-            catch (FileNotFoundException)
-            {
-                TypeExt.FailedAssemblyLoads.Add(path);
-            }
-        });
-        failed = TypeExt.FailedAssemblyLoads;
-
-        // return false so the original method is not called
-        return false;
-    }
-}
-*/
