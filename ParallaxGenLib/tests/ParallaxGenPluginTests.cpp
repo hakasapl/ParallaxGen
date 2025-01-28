@@ -16,7 +16,7 @@ protected:
         // Initialize necessary components for each test
         // TODO test for initialize
         const BethesdaGame bg(params.GameType, false, params.GamePath, params.AppDataPath, params.DocumentPath);
-        ParallaxGenPlugin::initialize(bg);
+        ParallaxGenPlugin::initialize(bg, "");
     }
 
     // Tear down code for each test

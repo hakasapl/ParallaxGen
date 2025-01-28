@@ -160,6 +160,7 @@ void ParallaxGen::deleteOutputDir(const bool& preOutput) const
     static const unordered_set<filesystem::path> foldersToDelete
         = { "meshes", "textures", "LightPlacer", "PBRTextureSets", "Strings" };
     static const unordered_set<filesystem::path> filesToDelete = { "ParallaxGen.esp", getDiffJSONName() };
+    static const wstring filesToDeleteStartsWith = L"ParallaxGen_";
     static const unordered_set<filesystem::path> filesToIgnore = { "meta.ini" };
     static const unordered_set<filesystem::path> filesToDeletePreOutput = { getOutputZipName() };
 
@@ -170,7 +171,8 @@ void ParallaxGen::deleteOutputDir(const bool& preOutput) const
     for (const auto& entry : filesystem::directory_iterator(m_outputDir)) {
         if (entry.is_regular_file()
             && (filesToDelete.contains(entry.path().filename()) || filesToIgnore.contains(entry.path().filename())
-                || filesToDeletePreOutput.contains(entry.path().filename()))) {
+                || filesToDeletePreOutput.contains(entry.path().filename())
+                || boost::istarts_with(entry.path().filename().wstring(), filesToDeleteStartsWith))) {
             continue;
         }
 

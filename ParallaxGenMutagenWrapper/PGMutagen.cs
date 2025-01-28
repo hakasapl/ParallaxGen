@@ -15,6 +15,12 @@ using Noggog;
 using Mutagen.Bethesda.Plugins.Utility;
 using Mutagen.Bethesda.Plugins.Binary.Parameters;
 
+// Harmony
+using HarmonyLib;
+using DynamicData.Kernel;
+using Mutagen.Bethesda.Plugins.Assets;
+using Mutagen.Bethesda.Plugins.Order;
+
 public static class ExceptionHandler
 {
     private static string? LastExceptionMessage;
@@ -85,6 +91,11 @@ public class PGMutagen
     private static List<IMajorRecord> ModelCopiesEditable = [];
     private static Dictionary<Tuple<string, int>, List<Tuple<int, int>>>? TXSTRefs;
     private static HashSet<int> ModifiedModeledRecords = [];
+    private static SkyrimRelease GameType;
+
+    // tracks masters in each split plugin
+    private static List<HashSet<ModKey>> OutputMasterTracker = [];
+    private static List<SkyrimMod> OutputSplitMods = [];
 
     private static IEnumerable<IMajorRecordGetter> EnumerateModelRecords()
     {
@@ -134,40 +145,37 @@ public class PGMutagen
     [UnmanagedCallersOnly(EntryPoint = "Initialize", CallConvs = [typeof(CallConvCdecl)])]
     public static unsafe void Initialize(
       [DNNE.C99Type("const int")] int gameType,
+      [DNNE.C99Type("const wchar_t*")] IntPtr exePath,
       [DNNE.C99Type("const wchar_t*")] IntPtr dataPathPtr,
-      [DNNE.C99Type("const wchar_t*")] IntPtr outputPluginPtr,
       [DNNE.C99Type("const wchar_t**")] IntPtr* loadOrder)
     {
         try
         {
+            // Setup harmony patches
+            string ExePath = Marshal.PtrToStringUni(exePath) ?? string.Empty;
+            PatchBaseDirectory.BaseDirectory = ExePath;
+
+            var harmony = new Harmony("com.github.hakasapl.parallaxgen.parallaxgenmutagenwrapper");
+            harmony.PatchAll();
+
+            // Main method
             string dataPath = Marshal.PtrToStringUni(dataPathPtr) ?? string.Empty;
             MessageHandler.Log("[Initialize] Data Path: " + dataPath, 0);
-            string outputPlugin = Marshal.PtrToStringUni(outputPluginPtr) ?? string.Empty;
-            MessageHandler.Log("[Initialize] Output Plugin: " + dataPath, 0);
 
-            // check if loadorder is defined
-            if (loadOrder is not null)
-            {
-                // Load order is defined
-                List<ModKey> loadOrderList = [];
-                for (int i = 0; loadOrder[i] != IntPtr.Zero; i++)
-                {
-                    loadOrderList.Add(Marshal.PtrToStringUni(loadOrder[i]) ?? string.Empty);
-                }
+            GameType = (SkyrimRelease)gameType;
+            OutMod = new SkyrimMod(ModKey.FromFileName("ParallaxGen.esp"), GameType);
 
-                Env = GameEnvironment.Typical.Builder<ISkyrimMod, ISkyrimModGetter>((GameRelease)gameType)
-                  .WithTargetDataFolder(dataPath)
-                  .WithLoadOrder(loadOrderList.ToArray())
-                  .Build();
-            }
-            else
+            List<ModKey> loadOrderList = [];
+            for (int i = 0; loadOrder[i] != IntPtr.Zero; i++)
             {
-                Env = GameEnvironment.Typical.Builder<ISkyrimMod, ISkyrimModGetter>((GameRelease)gameType)
-                    .WithTargetDataFolder(dataPath)
-                    .Build();
+                loadOrderList.Add(Marshal.PtrToStringUni(loadOrder[i]) ?? string.Empty);
             }
 
-            OutMod = new SkyrimMod(ModKey.FromFileName(outputPlugin), (SkyrimRelease)gameType);
+            Env = GameEnvironment.Typical.Builder<ISkyrimMod, ISkyrimModGetter>((GameRelease)GameType)
+              .WithTargetDataFolder(dataPath)
+              .WithLoadOrder(loadOrderList.ToArray())
+              .WithOutputMod(OutMod)
+              .Build();
         }
         catch (Exception ex)
         {
@@ -410,212 +418,298 @@ public class PGMutagen
     {
         try
         {
-            if (Env is null || OutMod is null)
+            if (Env is null)
             {
                 throw new Exception("Initialize must be called before Finalize");
             }
 
-            // Add all modified model records to the output mod
-            foreach (var recId in ModifiedModeledRecords)
+            string outputPath = Marshal.PtrToStringUni(outputPathPtr) ?? string.Empty;
+
+            if (OutMod == null)
             {
-                var ModifiedRecord = ModelCopiesEditable[recId];
-                if (ModifiedRecord is Mutagen.Bethesda.Skyrim.Activator)
-                {
-                    OutMod.Activators.Add((Mutagen.Bethesda.Skyrim.Activator)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Activator: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is Ammunition)
-                {
-                    OutMod.Ammunitions.Add((Ammunition)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Ammunition: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is AnimatedObject)
-                {
-                    OutMod.AnimatedObjects.Add((AnimatedObject)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Animated Object: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is Armor)
-                {
-                    OutMod.Armors.Add((Armor)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Armor: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is ArmorAddon)
-                {
-                    OutMod.ArmorAddons.Add((ArmorAddon)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Armor Addon: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is ArtObject)
-                {
-                    OutMod.ArtObjects.Add((ArtObject)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Art Object: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is BodyPartData)
-                {
-                    OutMod.BodyParts.Add((BodyPartData)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Body Part Data: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is Book)
-                {
-                    OutMod.Books.Add((Book)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Book: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is CameraShot)
-                {
-                    OutMod.CameraShots.Add((CameraShot)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Camera Shot: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is Climate)
-                {
-                    OutMod.Climates.Add((Climate)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Climate: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is Container)
-                {
-                    OutMod.Containers.Add((Container)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Container: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is Door)
-                {
-                    OutMod.Doors.Add((Door)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Door: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is Explosion)
-                {
-                    OutMod.Explosions.Add((Explosion)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Explosion: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is Flora)
-                {
-                    OutMod.Florae.Add((Flora)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Flora: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is Furniture)
-                {
-                    OutMod.Furniture.Add((Furniture)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Furniture: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is Grass)
-                {
-                    OutMod.Grasses.Add((Grass)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Grass: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is Hazard)
-                {
-                    OutMod.Hazards.Add((Hazard)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Hazard: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is HeadPart)
-                {
-                    OutMod.HeadParts.Add((HeadPart)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Head Part: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is IdleMarker)
-                {
-                    OutMod.IdleMarkers.Add((IdleMarker)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Idle Marker: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is Impact)
-                {
-                    OutMod.Impacts.Add((Impact)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Impact: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is Ingestible)
-                {
-                    OutMod.Ingestibles.Add((Ingestible)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Ingestible: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is Ingredient)
-                {
-                    OutMod.Ingredients.Add((Ingredient)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Ingredient: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is Key)
-                {
-                    OutMod.Keys.Add((Key)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Key: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is LeveledNpc)
-                {
-                    OutMod.LeveledNpcs.Add((LeveledNpc)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Leveled NPC: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is Light)
-                {
-                    OutMod.Lights.Add((Light)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Light: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is MaterialObject)
-                {
-                    OutMod.MaterialObjects.Add((MaterialObject)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Material Object: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is MiscItem)
-                {
-                    OutMod.MiscItems.Add((MiscItem)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Misc Item: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is MoveableStatic)
-                {
-                    OutMod.MoveableStatics.Add((MoveableStatic)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Moveable Static: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is Projectile)
-                {
-                    OutMod.Projectiles.Add((Projectile)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Projectile: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is Scroll)
-                {
-                    OutMod.Scrolls.Add((Scroll)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Scroll: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is SoulGem)
-                {
-                    OutMod.SoulGems.Add((SoulGem)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Soul Gem: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is Static)
-                {
-                    OutMod.Statics.Add((Static)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Static: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is TalkingActivator)
-                {
-                    OutMod.TalkingActivators.Add((TalkingActivator)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Talking Activator: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is Tree)
-                {
-                    OutMod.Trees.Add((Tree)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Tree: " + GetRecordDesc(ModifiedRecord), 0);
-                }
-                else if (ModifiedRecord is Weapon)
-                {
-                    OutMod.Weapons.Add((Weapon)ModifiedRecord);
-                    MessageHandler.Log("[Finalize] Adding Weapon: " + GetRecordDesc(ModifiedRecord), 0);
-                }
+                throw new Exception("OutMod is null");
             }
 
+            // First, write parallaxgen.esm
             ModCompaction.CompactToWithFallback(OutMod, MasterStyle.Small);
-
             if (esmify == 1)
             {
                 OutMod.IsMaster = true;
             }
 
+            if (OutMod.EnumerateMajorRecords().Count() == 0)
+            {
+                MessageHandler.Log("[Finalize] No records to write to ParallaxGen.esm", 0);
+                return;
+            }
+
             // Write the output plugin
-            MessageHandler.Log("[Finalize] Writing Output Plugin", 0);
-            string outputPath = Marshal.PtrToStringUni(outputPathPtr) ?? string.Empty;
-            OutMod?.WriteToBinary(Path.Combine(outputPath, OutMod.ModKey.FileName),
-                new BinaryWriteParameters()
+            MessageHandler.Log("[Finalize] Writing ParallaxGen.esm", 0);
+            OutMod.BeginWrite
+                .ToPath(Path.Combine(outputPath, OutMod.ModKey.FileName))
+                .WithLoadOrder(Env.LoadOrder)
+                .Write();
+
+            // Add all modified model records to the output mod
+            foreach (var recId in ModifiedModeledRecords)
+            {
+                var ModifiedRecord = ModelCopiesEditable[recId];
+
+                var outputMod = getModToAdd(ModifiedRecord);
+
+                if (ModifiedRecord is Mutagen.Bethesda.Skyrim.Activator activator)
                 {
-                    MastersListOrdering = new MastersListOrderingByLoadOrder(Env.LoadOrder)
-                });
+                    outputMod.Activators.Add(activator);
+                    MessageHandler.Log("[Finalize] Adding Activator: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is Ammunition ammunition)
+                {
+                    outputMod.Ammunitions.Add(ammunition);
+                    MessageHandler.Log("[Finalize] Adding Ammunition: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is AnimatedObject @object)
+                {
+                    outputMod.AnimatedObjects.Add(@object);
+                    MessageHandler.Log("[Finalize] Adding Animated Object: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is Armor armor)
+                {
+                    outputMod.Armors.Add(armor);
+                    MessageHandler.Log("[Finalize] Adding Armor: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is ArmorAddon addon)
+                {
+                    outputMod.ArmorAddons.Add(addon);
+                    MessageHandler.Log("[Finalize] Adding Armor Addon: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is ArtObject object1)
+                {
+                    outputMod.ArtObjects.Add(object1);
+                    MessageHandler.Log("[Finalize] Adding Art Object: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is BodyPartData data)
+                {
+                    outputMod.BodyParts.Add(data);
+                    MessageHandler.Log("[Finalize] Adding Body Part Data: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is Book book)
+                {
+                    outputMod.Books.Add(book);
+                    MessageHandler.Log("[Finalize] Adding Book: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is CameraShot shot)
+                {
+                    outputMod.CameraShots.Add(shot);
+                    MessageHandler.Log("[Finalize] Adding Camera Shot: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is Climate climate)
+                {
+                    outputMod.Climates.Add(climate);
+                    MessageHandler.Log("[Finalize] Adding Climate: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is Container container)
+                {
+                    outputMod.Containers.Add(container);
+                    MessageHandler.Log("[Finalize] Adding Container: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is Door door)
+                {
+                    outputMod.Doors.Add(door);
+                    MessageHandler.Log("[Finalize] Adding Door: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is Explosion explosion)
+                {
+                    outputMod.Explosions.Add(explosion);
+                    MessageHandler.Log("[Finalize] Adding Explosion: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is Flora flora)
+                {
+                    outputMod.Florae.Add(flora);
+                    MessageHandler.Log("[Finalize] Adding Flora: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is Furniture furniture)
+                {
+                    outputMod.Furniture.Add(furniture);
+                    MessageHandler.Log("[Finalize] Adding Furniture: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is Grass grass)
+                {
+                    outputMod.Grasses.Add(grass);
+                    MessageHandler.Log("[Finalize] Adding Grass: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is Hazard hazard)
+                {
+                    outputMod.Hazards.Add(hazard);
+                    MessageHandler.Log("[Finalize] Adding Hazard: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is HeadPart part)
+                {
+                    outputMod.HeadParts.Add(part);
+                    MessageHandler.Log("[Finalize] Adding Head Part: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is IdleMarker marker)
+                {
+                    outputMod.IdleMarkers.Add(marker);
+                    MessageHandler.Log("[Finalize] Adding Idle Marker: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is Impact impact)
+                {
+                    outputMod.Impacts.Add(impact);
+                    MessageHandler.Log("[Finalize] Adding Impact: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is Ingestible ingestible)
+                {
+                    outputMod.Ingestibles.Add(ingestible);
+                    MessageHandler.Log("[Finalize] Adding Ingestible: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is Ingredient ingredient)
+                {
+                    outputMod.Ingredients.Add(ingredient);
+                    MessageHandler.Log("[Finalize] Adding Ingredient: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is Key key)
+                {
+                    outputMod.Keys.Add(key);
+                    MessageHandler.Log("[Finalize] Adding Key: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is LeveledNpc npc)
+                {
+                    outputMod.LeveledNpcs.Add(npc);
+                    MessageHandler.Log("[Finalize] Adding Leveled NPC: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is Light light)
+                {
+                    outputMod.Lights.Add(light);
+                    MessageHandler.Log("[Finalize] Adding Light: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is MaterialObject object2)
+                {
+                    outputMod.MaterialObjects.Add(object2);
+                    MessageHandler.Log("[Finalize] Adding Material Object: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is MiscItem item)
+                {
+                    outputMod.MiscItems.Add(item);
+                    MessageHandler.Log("[Finalize] Adding Misc Item: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is MoveableStatic @static)
+                {
+                    outputMod.MoveableStatics.Add(@static);
+                    MessageHandler.Log("[Finalize] Adding Moveable Static: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is Projectile projectile)
+                {
+                    outputMod.Projectiles.Add(projectile);
+                    MessageHandler.Log("[Finalize] Adding Projectile: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is Scroll scroll)
+                {
+                    outputMod.Scrolls.Add(scroll);
+                    MessageHandler.Log("[Finalize] Adding Scroll: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is SoulGem gem)
+                {
+                    outputMod.SoulGems.Add(gem);
+                    MessageHandler.Log("[Finalize] Adding Soul Gem: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is Static static1)
+                {
+                    outputMod.Statics.Add(static1);
+                    MessageHandler.Log("[Finalize] Adding Static: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is TalkingActivator activator1)
+                {
+                    outputMod.TalkingActivators.Add(activator1);
+                    MessageHandler.Log("[Finalize] Adding Talking Activator: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is Tree tree)
+                {
+                    outputMod.Trees.Add(tree);
+                    MessageHandler.Log("[Finalize] Adding Tree: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+                else if (ModifiedRecord is Weapon weapon)
+                {
+                    outputMod.Weapons.Add(weapon);
+                    MessageHandler.Log("[Finalize] Adding Weapon: " + GetRecordDesc(ModifiedRecord), 0);
+                }
+            }
+
+            if (OutMod == null)
+            {
+                throw new Exception("OutMod is null");
+            }
+
+            var newLo = Env.LoadOrder.ListedOrder.Select(x => x.ModKey).And(OutMod.ModKey);
+            foreach (var mod in OutputSplitMods)
+            {
+                newLo = newLo.And(mod.ModKey);
+            }
+
+            // Loop through each output split mod
+            foreach (var mod in OutputSplitMods)
+            {
+                // convert to ESL if able
+                ModCompaction.CompactToWithFallback(mod, MasterStyle.Small);
+
+                if (esmify == 1)
+                {
+                    mod.IsMaster = true;
+                }
+
+                // Write the output plugin
+                mod.BeginWrite
+                    .ToPath(Path.Combine(outputPath, mod.ModKey.FileName))
+                    .WithLoadOrder(newLo)
+                    .WithDataFolder(Env.DataFolderPath)
+                    .Write();
+            }
         }
         catch (Exception ex)
         {
             ExceptionHandler.SetLastException(ex);
         }
+    }
+
+    private static SkyrimMod getModToAdd(IMajorRecord majorRecord)
+    {
+        if (Env is null)
+        {
+            throw new Exception("Initialize must be called before getModToAdd");
+        }
+
+        // curMasterList is the masters needed for the current record
+        var curMasterList = majorRecord.EnumerateFormLinks().Select(x => x.FormKey.ModKey).ToHashSet();
+        curMasterList.Add(majorRecord.FormKey.ModKey);
+
+        // check if this modkey is in any of the existing output plugins
+        for (int i = 0; i < OutputSplitMods.Count; i++)
+        {
+            // check if curMasterList is a subset of the masters in the current plugin
+            if (curMasterList.IsSubsetOf(OutputMasterTracker[i]))
+            {
+                return OutputSplitMods[i];
+            }
+
+            // check what the result would be if we added the current record's modkey to the plugin
+            var newMasterList = new HashSet<ModKey>(OutputMasterTracker[i]);
+            newMasterList.UnionWith(curMasterList);
+            if (newMasterList.Count <= 254)
+            {
+                OutputMasterTracker[i] = newMasterList;
+                return OutputSplitMods[i];
+            }
+        }
+
+        // we need to create a new plugin
+        var newPluginIndex = OutputSplitMods.Count;
+        var newPluginName = "ParallaxGen_" + newPluginIndex + ".esp";
+        var newMod = new SkyrimMod(newPluginName, GameType);
+
+        // add the new modkey to the new plugin
+        OutputMasterTracker.Add(curMasterList);
+        OutputSplitMods.Add(newMod);
+
+        return OutputSplitMods[newPluginIndex];
     }
 
     [UnmanagedCallersOnly(EntryPoint = "GetMatchingTXSTObjs", CallConvs = [typeof(CallConvCdecl)])]
@@ -1131,3 +1225,92 @@ public class PGMutagen
         return str;
     }
 }
+
+
+// HARMONY PATCHES
+
+[HarmonyPatch(typeof(AppDomain))]
+[HarmonyPatch("get_BaseDirectory")]
+public static class PatchBaseDirectory
+{
+    public static string? BaseDirectory;
+
+    public static bool Prefix(ref string __result)
+    {
+        __result = BaseDirectory ?? string.Empty;
+
+        // don't invoke original method
+        return false;
+    }
+}
+
+/*
+[HarmonyPatch]
+public static class LoadAssembliesPatch
+{
+    [HarmonyTargetMethod]
+    public static System.Reflection.MethodBase TargetMethod()
+    {
+        // AccessTools is a Harmony helper class for reflection
+        return AccessTools.Method(
+            typeof(TypeExt),             // the class
+            nameof(TypeExt.LoadAssemblies), // the method name
+            [typeof(List<string>).MakeByRefType()] // the parameter signature
+        );
+    }
+
+    public static string? AssemblySearchPath;
+
+    public static bool Prefix(ref List<string> failed)
+    {
+        if (AssemblySearchPath is null)
+        {
+            throw new Exception("AssemblySearchPath is null");
+        }
+
+        if (TypeExt.FailedAssemblyLoads != null)
+        {
+            failed = TypeExt.FailedAssemblyLoads;
+            return false;
+        }
+        TypeExt.FailedAssemblyLoads = new List<string>();
+        var loadedAssemblies = AppDomain.CurrentDomain.GetAssemblies().ToList();
+        List<string> loadedPaths = new List<string>();
+        foreach (System.Reflection.Assembly a in loadedAssemblies)
+        {
+            try
+            {
+                loadedPaths.Add(a.Location);
+            }
+            catch (Exception)
+            {
+                TypeExt.FailedAssemblyLoads.Add(a.ToString());
+            }
+        }
+
+        var referencedPaths = Directory.GetFiles(AssemblySearchPath, "*.dll");
+        var toLoad = referencedPaths.Where(r => !loadedPaths.Contains(r, StringComparer.InvariantCultureIgnoreCase)).ToList();
+        toLoad.ForEach(path =>
+        {
+            try
+            {
+                System.Reflection.AssemblyName name = System.Reflection.AssemblyName.GetAssemblyName(path);
+                System.Reflection.Assembly assembly = AppDomain.CurrentDomain.Load(name);
+                loadedAssemblies.Add(assembly);
+            }
+            catch (BadImageFormatException)
+            {
+                TypeExt.FailedAssemblyLoads.Add(path);
+            }
+            catch (FileNotFoundException)
+            {
+                TypeExt.FailedAssemblyLoads.Add(path);
+            }
+        });
+        failed = TypeExt.FailedAssemblyLoads;
+
+        // return false so the original method is not called
+        return false;
+    }
+}
+*/

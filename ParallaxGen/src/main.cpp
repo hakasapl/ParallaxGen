@@ -180,7 +180,7 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
     if (params.Processing.pluginPatching) {
         Logger::info("Initializing plugin patching");
         ParallaxGenPlugin::loadStatics(&pgd);
-        ParallaxGenPlugin::initialize(bg);
+        ParallaxGenPlugin::initialize(bg, exePath);
         ParallaxGenPlugin::populateObjs();
     }
 

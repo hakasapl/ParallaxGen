@@ -21,7 +21,7 @@ private:
     static std::mutex s_libMutex;
     static void libLogMessageIfExists();
     static void libThrowExceptionIfExists();
-    static void libInitialize(const int& gameType, const std::wstring& dataPath, const std::wstring& outputPlugin,
+    static void libInitialize(const int& gameType, const std::wstring& exePath, const std::wstring& dataPath,
         const std::vector<std::wstring>& loadOrder = {});
     static void libPopulateObjs();
     static void libFinalize(const std::filesystem::path& outputPath, const bool& esmify);
@@ -112,7 +112,7 @@ public:
     static void loadStatics(ParallaxGenDirectory* pgd);
     static void loadModPriorityMap(std::unordered_map<std::wstring, int>* modPriority);
 
-    static void initialize(const BethesdaGame& game);
+    static void initialize(const BethesdaGame& game, const std::filesystem::path& exePath);
 
     static void populateObjs();
 

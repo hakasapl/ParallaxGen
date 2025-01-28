@@ -96,7 +96,7 @@ void ParallaxGenPlugin::libThrowExceptionIfExists()
 }
 
 void ParallaxGenPlugin::libInitialize(
-    const int& gameType, const wstring& dataPath, const wstring& outputPlugin, const vector<wstring>& loadOrder)
+    const int& gameType, const std::wstring& exePath, const wstring& dataPath, const vector<wstring>& loadOrder)
 {
     const lock_guard<mutex> lock(s_libMutex);
 
@@ -112,7 +112,7 @@ void ParallaxGenPlugin::libInitialize(
     // Add the null terminator to the end
     loadOrderArr.push_back(nullptr);
 
-    Initialize(gameType, dataPath.c_str(), outputPlugin.c_str(), loadOrderArr.data());
+    Initialize(gameType, exePath.c_str(), dataPath.c_str(), loadOrderArr.data());
     libLogMessageIfExists();
     libThrowExceptionIfExists();
 }
@@ -303,7 +303,7 @@ void ParallaxGenPlugin::loadModPriorityMap(std::unordered_map<std::wstring, int>
     ParallaxGenPlugin::s_modPriority = modPriority;
 }
 
-void ParallaxGenPlugin::initialize(const BethesdaGame& game)
+void ParallaxGenPlugin::initialize(const BethesdaGame& game, const filesystem::path& exePath)
 {
     set_failure_callback(dnneFailure);
 
@@ -313,8 +313,8 @@ void ParallaxGenPlugin::initialize(const BethesdaGame& game)
               { BethesdaGame::GameType::SKYRIM_VR, 3 }, { BethesdaGame::GameType::ENDERAL, 5 },
               { BethesdaGame::GameType::ENDERAL_SE, 6 }, { BethesdaGame::GameType::SKYRIM_GOG, 7 } };
 
-    libInitialize(mutagenGameTypeMap.at(game.getGameType()), game.getGameDataPath().wstring(), L"ParallaxGen.esp",
-        game.getActivePlugins());
+    libInitialize(
+        mutagenGameTypeMap.at(game.getGameType()), exePath, game.getGameDataPath().wstring(), game.getActivePlugins());
 }
 
 void ParallaxGenPlugin::populateObjs() { libPopulateObjs(); }

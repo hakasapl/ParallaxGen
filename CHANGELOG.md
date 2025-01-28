@@ -3,6 +3,8 @@
 ## [0.8.6] - UNRELEASED
 
 - 3D name is no longer considered for matching alternate textures
+- ParallaxGen.esp now holds new TXST records only
+- ParallaxGen_X.esp (where X is sequential numbers) will be created automatically as required based on master limit
 
 ## [0.8.5] - 2025-01-27
 
