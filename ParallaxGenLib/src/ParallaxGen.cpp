@@ -160,7 +160,7 @@ void ParallaxGen::deleteOutputDir(const bool& preOutput) const
     static const unordered_set<filesystem::path> foldersToDelete
         = { "meshes", "textures", "LightPlacer", "PBRTextureSets", "Strings" };
     static const unordered_set<filesystem::path> filesToDelete = { "ParallaxGen.esp", getDiffJSONName() };
-    static const wstring filesToDeleteStartsWith = L"ParallaxGen_";
+    static const vector<pair<wstring, wstring>> filesToDeleteParseRules = { { L"ParallaxGen_", L".esp" } };
     static const unordered_set<filesystem::path> filesToIgnore = { "meta.ini" };
     static const unordered_set<filesystem::path> filesToDeletePreOutput = { getOutputZipName() };
 
@@ -170,11 +170,23 @@ void ParallaxGen::deleteOutputDir(const bool& preOutput) const
 
     vector<filesystem::path> filesToDeleteParsed;
     for (const auto& entry : filesystem::directory_iterator(m_outputDir)) {
+        bool outerContinue = false;
+        for (const auto& [filesToDeleteStartsWith, filesToDeleteEndsWith] : filesToDeleteParseRules) {
+            if (boost::istarts_with(entry.path().filename().wstring(), filesToDeleteStartsWith)
+                && boost::iends_with(entry.path().filename().wstring(), filesToDeleteEndsWith)) {
+                filesToDeleteParsed.push_back(entry.path().filename());
+                outerContinue = true;
+                break;
+            }
+        }
+
+        if (outerContinue) {
+            continue;
+        }
+
         if (entry.is_regular_file()
             && (filesToDelete.contains(entry.path().filename()) || filesToIgnore.contains(entry.path().filename())
-                || filesToDeletePreOutput.contains(entry.path().filename())
-                || boost::istarts_with(entry.path().filename().wstring(), filesToDeleteStartsWith))) {
-            filesToDeleteParsed.push_back(entry.path());
+                || filesToDeletePreOutput.contains(entry.path().filename()))) {
             continue;
         }
 
@@ -190,6 +202,7 @@ void ParallaxGen::deleteOutputDir(const bool& preOutput) const
     spdlog::info("Deleting old output files from output directory...");
 
     // Delete old output
+    filesToDeleteParsed.insert(filesToDeleteParsed.end(), filesToDelete.begin(), filesToDelete.end());
     for (const auto& fileToDelete : filesToDeleteParsed) {
         const auto file = m_outputDir / fileToDelete;
         if (filesystem::exists(file)) {
