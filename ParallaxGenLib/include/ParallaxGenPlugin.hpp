@@ -21,7 +21,7 @@ private:
     static std::mutex s_libMutex;
     static void libLogMessageIfExists();
     static void libThrowExceptionIfExists();
-    static void libInitialize(const int& gameType, const std::wstring& dataPath, const std::wstring& outputPlugin,
+    static void libInitialize(const int& gameType, const std::wstring& exePath, const std::wstring& dataPath,
         const std::vector<std::wstring>& loadOrder = {});
     static void libPopulateObjs();
     static void libFinalize(const std::filesystem::path& outputPath, const bool& esmify);
@@ -31,8 +31,8 @@ private:
     /// @param[in] name3D "3D name" - name of the shape
     /// @param[in] index3D "3D index" - index of the shape in the nif
     /// @return TXST objects, pairs of (texture set index,alternate textures ids)
-    static auto libGetMatchingTXSTObjs(const std::wstring& nifName, const std::wstring& name3D, const int& index3D)
-        -> std::vector<std::tuple<int, int>>;
+    static auto libGetMatchingTXSTObjs(const std::wstring& nifName, const int& index3D)
+        -> std::vector<std::tuple<int, int, std::wstring>>;
 
     /// @brief get the assigned textures of all slots in a texture set
     /// @param[in] txstIndex index of the texture set
@@ -112,7 +112,7 @@ public:
     static void loadStatics(ParallaxGenDirectory* pgd);
     static void loadModPriorityMap(std::unordered_map<std::wstring, int>* modPriority);
 
-    static void initialize(const BethesdaGame& game);
+    static void initialize(const BethesdaGame& game, const std::filesystem::path& exePath);
 
     static void populateObjs();
 
@@ -124,8 +124,8 @@ public:
         NIFUtil::ShapeShader shader {};
     };
 
-    static void processShape(const std::wstring& nifPath, nifly::NiShape* nifShape, const std::wstring& name3D,
-        const int& index3D, PatcherUtil::PatcherMeshObjectSet& patchers, std::vector<TXSTResult>& results,
+    static void processShape(const std::wstring& nifPath, nifly::NiShape* nifShape, const int& index3D,
+        PatcherUtil::PatcherMeshObjectSet& patchers, std::vector<TXSTResult>& results,
         PatcherUtil::ConflictModResults* conflictMods = nullptr);
 
     static void assignMesh(

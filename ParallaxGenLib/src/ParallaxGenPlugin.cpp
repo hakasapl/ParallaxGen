@@ -96,7 +96,7 @@ void ParallaxGenPlugin::libThrowExceptionIfExists()
 }
 
 void ParallaxGenPlugin::libInitialize(
-    const int& gameType, const wstring& dataPath, const wstring& outputPlugin, const vector<wstring>& loadOrder)
+    const int& gameType, const std::wstring& exePath, const wstring& dataPath, const vector<wstring>& loadOrder)
 {
     const lock_guard<mutex> lock(s_libMutex);
 
@@ -112,7 +112,7 @@ void ParallaxGenPlugin::libInitialize(
     // Add the null terminator to the end
     loadOrderArr.push_back(nullptr);
 
-    Initialize(gameType, dataPath.c_str(), outputPlugin.c_str(), loadOrderArr.data());
+    Initialize(gameType, exePath.c_str(), dataPath.c_str(), loadOrderArr.data());
     libLogMessageIfExists();
     libThrowExceptionIfExists();
 }
@@ -135,25 +135,30 @@ void ParallaxGenPlugin::libFinalize(const filesystem::path& outputPath, const bo
     libThrowExceptionIfExists();
 }
 
-auto ParallaxGenPlugin::libGetMatchingTXSTObjs(const wstring& nifName, const wstring& name3D, const int& index3D)
-    -> vector<tuple<int, int>>
+auto ParallaxGenPlugin::libGetMatchingTXSTObjs(const wstring& nifName, const int& index3D)
+    -> vector<tuple<int, int, wstring>>
 {
     const lock_guard<mutex> lock(s_libMutex);
 
     int length = 0;
-    GetMatchingTXSTObjs(nifName.c_str(), name3D.c_str(), index3D, nullptr, nullptr, &length);
+    GetMatchingTXSTObjs(nifName.c_str(), index3D, nullptr, nullptr, nullptr, &length);
     libLogMessageIfExists();
     libThrowExceptionIfExists();
 
     vector<int> txstIdArray(length);
     vector<int> altTexIdArray(length);
-    GetMatchingTXSTObjs(nifName.c_str(), name3D.c_str(), index3D, txstIdArray.data(), altTexIdArray.data(), nullptr);
+    vector<wchar_t*> matchedNIFArray(length);
+    GetMatchingTXSTObjs(
+        nifName.c_str(), index3D, txstIdArray.data(), altTexIdArray.data(), matchedNIFArray.data(), nullptr);
     libLogMessageIfExists();
     libThrowExceptionIfExists();
 
-    vector<tuple<int, int>> outputArray(length);
+    vector<tuple<int, int, wstring>> outputArray(length);
     for (int i = 0; i < length; ++i) {
-        outputArray[i] = { txstIdArray[i], altTexIdArray[i] };
+        const auto* matchedNIFStr = static_cast<const wchar_t*>(matchedNIFArray.at(i));
+        LocalFree(static_cast<HGLOBAL>(matchedNIFArray.at(i)));
+
+        outputArray[i] = { txstIdArray[i], altTexIdArray[i], matchedNIFStr };
     }
 
     return outputArray;
@@ -304,7 +309,7 @@ void ParallaxGenPlugin::loadModPriorityMap(std::unordered_map<std::wstring, int>
     ParallaxGenPlugin::s_modPriority = modPriority;
 }
 
-void ParallaxGenPlugin::initialize(const BethesdaGame& game)
+void ParallaxGenPlugin::initialize(const BethesdaGame& game, const filesystem::path& exePath)
 {
     set_failure_callback(dnneFailure);
 
@@ -314,45 +319,22 @@ void ParallaxGenPlugin::initialize(const BethesdaGame& game)
               { BethesdaGame::GameType::SKYRIM_VR, 3 }, { BethesdaGame::GameType::ENDERAL, 5 },
               { BethesdaGame::GameType::ENDERAL_SE, 6 }, { BethesdaGame::GameType::SKYRIM_GOG, 7 } };
 
-    libInitialize(mutagenGameTypeMap.at(game.getGameType()), game.getGameDataPath().wstring(), L"ParallaxGen.esp",
-        game.getActivePlugins());
+    libInitialize(
+        mutagenGameTypeMap.at(game.getGameType()), exePath, game.getGameDataPath().wstring(), game.getActivePlugins());
 }
 
 void ParallaxGenPlugin::populateObjs() { libPopulateObjs(); }
 
-void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nifShape, const wstring& name3D,
-    const int& index3D, PatcherUtil::PatcherMeshObjectSet& patchers, vector<TXSTResult>& results,
+void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nifShape, const int& index3D,
+    PatcherUtil::PatcherMeshObjectSet& patchers, vector<TXSTResult>& results,
     PatcherUtil::ConflictModResults* conflictMods)
 {
     const lock_guard<mutex> lock(s_processShapeMutex);
 
-    // check if nifPath ends in _1.nif or _0.nif (armors)
-    // TODO this should probably be a smarter check and only match on armor records etc. required PGMutagen involvement
-    vector<wstring> nifPathSearch;
-    nifPathSearch.push_back(nifPath);
-
-    if (boost::iends_with(nifPath, L"_1.nif")) {
-        // we need to search for both _1 and _0 because one is hidden
-        nifPathSearch.push_back(boost::replace_last_copy(nifPath, L"_1.nif", L"_0.nif"));
-    }
-
-    if (boost::iends_with(nifPath, L"_0.nif")) {
-        // we need to search for both _1 and _0 because one is hidden
-        nifPathSearch.push_back(boost::replace_last_copy(nifPath, L"_0.nif", L"_1.nif"));
-    }
-
-    vector<tuple<int, int, wstring>> matches;
-    for (const auto& nifPathSearchCur : nifPathSearch) {
-        // find matches
-        const auto matchesCur = libGetMatchingTXSTObjs(nifPathSearchCur, name3D, index3D);
-        for (const auto& [txstIndex, altTexIndex] : matchesCur) {
-            matches.emplace_back(txstIndex, altTexIndex, nifPathSearchCur);
-        }
-    }
-
     results.clear();
 
     // loop through matches
+    const auto matches = libGetMatchingTXSTObjs(nifPath, index3D);
     for (const auto& [txstIndex, altTexIndex, matchedNIF] : matches) {
         //  Allowed shaders from result of patchers
         vector<PatcherUtil::ShaderPatcherMatch> matches;
@@ -472,8 +454,7 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
 
         if (!foundDiff) {
             // No need to patch
-            spdlog::trace(
-                L"Plugin Patching | {} | {} | {} | Not patching because nothing to change", nifPath, name3D, index3D);
+            spdlog::trace(L"Plugin Patching | {} | {} | Not patching because nothing to change", nifPath, index3D);
             curResult.txstIndex = txstIndex;
             results.push_back(curResult);
             continue;
@@ -485,15 +466,14 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
             // Check if we need to make a new TXST record
             if (s_createdTXSTs.contains(newSlots)) {
                 // Already modded
-                spdlog::trace(L"Plugin Patching | {} | {} | {} | Already added, skipping", nifPath, name3D, index3D);
+                spdlog::trace(L"Plugin Patching | {} | {} | Already added, skipping", nifPath, index3D);
                 curResult.txstIndex = s_createdTXSTs[newSlots];
                 results.push_back(curResult);
                 continue;
             }
 
             // Create a new TXST record
-            spdlog::trace(
-                L"Plugin Patching | {} | {} | {} | Creating a new TXST record and patching", nifPath, name3D, index3D);
+            spdlog::trace(L"Plugin Patching | {} | {} | Creating a new TXST record and patching", nifPath, index3D);
             const string newEDID = fmt::format("PGTXST{:05d}", s_edidCounter++);
             curResult.txstIndex = libCreateNewTXSTPatch(altTexIndex, newSlots, newEDID);
             patchers.shaderPatchers.at(winningShaderMatch.shader)
@@ -541,10 +521,15 @@ void ParallaxGenPlugin::set3DIndices(
         const auto shapeName = ParallaxGenUtil::utf8toUTF16(shape->name.get());
 
         // find matches
-        const auto matches = libGetMatchingTXSTObjs(nifPath, shapeName, oldIndex3D);
+        const auto matches = libGetMatchingTXSTObjs(nifPath, oldIndex3D);
 
         // Set indices
-        for (const auto& [txstIndex, altTexIndex] : matches) {
+        for (const auto& [txstIndex, altTexIndex, matchedNIF] : matches) {
+            if (!boost::iequals(nifPath, matchedNIF)) {
+                // Skip if not the base NIF
+                continue;
+            }
+
             if (oldIndex3D == newIndex3D) {
                 // No change
                 continue;

@@ -180,7 +180,7 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
     if (params.Processing.pluginPatching) {
         Logger::info("Initializing plugin patching");
         ParallaxGenPlugin::loadStatics(&pgd);
-        ParallaxGenPlugin::initialize(bg);
+        ParallaxGenPlugin::initialize(bg, exePath);
         ParallaxGenPlugin::populateObjs();
     }
 
@@ -290,7 +290,7 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
 
     // Write plugin
     if (params.Processing.pluginPatching) {
-        Logger::info("Saving ParallaxGen.esp");
+        Logger::info("Saving Plugins...");
         ParallaxGenPlugin::savePlugin(params.Output.dir, params.Processing.pluginESMify);
     }
 
