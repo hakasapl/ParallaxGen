@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.8.6] - UNRELEASED
+## [0.8.6] - 2025-01-28
 
 - 3D name is no longer considered for matching alternate textures
 - ParallaxGen.esp now holds new TXST records only

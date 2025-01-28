@@ -661,6 +661,7 @@ public class PGMutagen
                     .ToPath(Path.Combine(outputPath, mod.ModKey.FileName))
                     .WithLoadOrder(newLo)
                     .WithDataFolder(Env.DataFolderPath)
+                    .WithExtraIncludedMasters(OutMod.ModKey)
                     .Write();
             }
         }
@@ -693,7 +694,7 @@ public class PGMutagen
             // check what the result would be if we added the current record's modkey to the plugin
             var newMasterList = new HashSet<ModKey>(OutputMasterTracker[i]);
             newMasterList.UnionWith(curMasterList);
-            if (newMasterList.Count <= 254)
+            if (newMasterList.Count < 254)
             {
                 OutputMasterTracker[i] = newMasterList;
                 return OutputSplitMods[i];
@@ -702,7 +703,7 @@ public class PGMutagen
 
         // we need to create a new plugin
         var newPluginIndex = OutputSplitMods.Count + 1;
-        var newPluginName = "ParallaxGen_" + newPluginIndex + ".esp";
+        var newPluginName = "PG_" + newPluginIndex + ".esp";
         var newMod = new SkyrimMod(newPluginName, GameType);
 
         // add the new modkey to the new plugin
