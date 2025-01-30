@@ -18,7 +18,18 @@ private:
 
     static constexpr const char* CRASHDUMP_DIR = "log";
 
+    static inline _MINIDUMP_TYPE s_miniDumpType = MiniDumpNormal;
+
 public:
+    static void setDumpType(const bool& fullDump = false)
+    {
+        if (fullDump) {
+            s_miniDumpType = MiniDumpWithFullMemory;
+        } else {
+            s_miniDumpType = MiniDumpNormal;
+        }
+    }
+
     static auto WINAPI customExceptionHandler(EXCEPTION_POINTERS* exceptionInfo) -> LONG
     {
         if (s_crashLogged.exchange(true)) {
@@ -58,7 +69,7 @@ public:
         dumpExceptionInfo.ClientPointers = TRUE;
 
         MiniDumpWriteDump(
-            GetCurrentProcess(), GetCurrentProcessId(), hFile, MiniDumpNormal, &dumpExceptionInfo, nullptr, nullptr);
+            GetCurrentProcess(), GetCurrentProcessId(), hFile, s_miniDumpType, &dumpExceptionInfo, nullptr, nullptr);
 
         CloseHandle(hFile);
 

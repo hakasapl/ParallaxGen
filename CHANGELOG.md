@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.8.7] - UNRELEASED
+
+- Added --full-dump CLI argument to ParallaxGen.exe to generate a full crash dump
+
 ## [0.8.6] - 2025-01-28
 
 - 3D name is no longer considered for matching alternate textures

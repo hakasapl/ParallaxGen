@@ -47,6 +47,7 @@ using namespace std;
 struct ParallaxGenCLIArgs {
     int verbosity = 0;
     bool autostart = false;
+    bool fullDump = false;
 };
 
 namespace {
@@ -315,6 +316,7 @@ void addArguments(CLI::App& app, ParallaxGenCLIArgs& args)
         "Verbosity level -v for DEBUG data or -vv for TRACE data "
         "(warning: TRACE data is very verbose)");
     app.add_flag("--autostart", args.autostart, "Start generation without user input");
+    app.add_flag("--full-dump", args.fullDump, "Save all memory to crash dumps");
 }
 
 void initLogger(const filesystem::path& logpath, const ParallaxGenCLIArgs& args)
@@ -381,6 +383,9 @@ auto main(int ArgC, char** ArgV) -> int
 
     // Parse CLI Arguments (this is what exits on any validation issues)
     CLI11_PARSE(app, ArgC, ArgV);
+
+    // Set dump type
+    ParallaxGenHandlers::setDumpType(args.fullDump);
 
     // Initialize logger
     const filesystem::path logDir = exePath / "log";
