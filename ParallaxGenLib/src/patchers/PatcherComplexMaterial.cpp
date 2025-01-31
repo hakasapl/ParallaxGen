@@ -39,6 +39,7 @@ auto PatcherComplexMaterial::canApply(NiShape& nifShape) -> bool
     Logger::trace(L"Starting checking");
 
     auto* nifShader = getNIF()->GetShader(&nifShape);
+    auto* const nifShaderBSLSP = dynamic_cast<BSLightingShaderProperty*>(nifShader);
 
     // Get NIFShader type
     auto nifShaderType = static_cast<nifly::BSLightingShaderPropertyShaderType>(nifShader->GetShaderType());
@@ -48,12 +49,9 @@ auto PatcherComplexMaterial::canApply(NiShape& nifShape) -> bool
         return false;
     }
 
-    // check to make sure there are textures defined in slot 3 or 8
-    if (nifShaderType != BSLSP_MULTILAYERPARALLAX
-        && (!NIFUtil::getTextureSlot(getNIF(), &nifShape, NIFUtil::TextureSlots::GLOW).empty()
-            || !NIFUtil::getTextureSlot(getNIF(), &nifShape, NIFUtil::TextureSlots::MULTILAYER).empty()
-            || !NIFUtil::getTextureSlot(getNIF(), &nifShape, NIFUtil::TextureSlots::BACKLIGHT).empty())) {
-        Logger::trace(L"Shape Rejected: Texture defined in slots 3,7,or 8");
+    if (NIFUtil::hasShaderFlag(nifShaderBSLSP, SLSF2_SOFT_LIGHTING)
+        && NIFUtil::hasShaderFlag(nifShaderBSLSP, SLSF2_ANISOTROPIC_LIGHTING)) {
+        Logger::trace(L"Shape Rejected: Soft and Anisotropic lighting flags set");
         return false;
     }
 
