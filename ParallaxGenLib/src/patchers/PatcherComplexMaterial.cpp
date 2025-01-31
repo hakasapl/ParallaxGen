@@ -49,9 +49,11 @@ auto PatcherComplexMaterial::canApply(NiShape& nifShape) -> bool
         return false;
     }
 
-    if (NIFUtil::hasShaderFlag(nifShaderBSLSP, SLSF2_SOFT_LIGHTING)
-        && NIFUtil::hasShaderFlag(nifShaderBSLSP, SLSF2_ANISOTROPIC_LIGHTING)) {
-        Logger::trace(L"Shape Rejected: Soft and Anisotropic lighting flags set");
+    if (NIFUtil::hasShaderFlag(nifShaderBSLSP, SLSF2_ANISOTROPIC_LIGHTING)
+        && (NIFUtil::hasShaderFlag(nifShaderBSLSP, SLSF2_SOFT_LIGHTING)
+            || NIFUtil::hasShaderFlag(nifShaderBSLSP, SLSF2_RIM_LIGHTING)
+            || NIFUtil::hasShaderFlag(nifShaderBSLSP, SLSF2_BACK_LIGHTING))) {
+        Logger::trace(L"Shape Rejected: Anisotropic lighting flags and other lighting flags are set");
         return false;
     }
 
