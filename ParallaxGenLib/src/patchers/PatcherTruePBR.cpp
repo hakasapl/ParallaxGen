@@ -312,32 +312,33 @@ void PatcherTruePBR::getSlotMatch(map<size_t, tuple<nlohmann::json, wstring>>& t
         return;
     }
 
-    bool foundMatch = false;
-    while (it != lookup.end()) {
-        if (boost::starts_with(mapReverse, it->first)) {
-            foundMatch = true;
-            break;
-        }
-
-        if (it != lookup.begin() && boost::starts_with(prev(it)->first, reverseFile)) {
-            it = prev(it);
+    auto beginIt = it;
+    while (beginIt != lookup.begin()) {
+        if (boost::starts_with(prev(beginIt)->first, reverseFile)) {
+            beginIt = prev(beginIt);
         } else {
             break;
         }
     }
 
-    if (!foundMatch) {
-        Logger::trace(L"No PBR JSON match found for \"{}\":\"{}\"", slotLabel, texName);
-        return;
+    // Initialize CFG set
+    set<size_t> cfgs;
+
+    // create vector of all matches based on beginIt and It
+    while (beginIt != next(it)) {
+        if (!boost::starts_with(mapReverse, beginIt->first)) {
+            // not a valid match
+            beginIt = next(beginIt);
+            continue;
+        }
+
+        cfgs.insert(beginIt->second.begin(), beginIt->second.end());
+        beginIt = next(beginIt);
     }
 
-    // Initialize CFG set
-    set<size_t> cfgs(it->second.begin(), it->second.end());
-
-    // Go back to include others if we need to
-    while (it != lookup.begin() && boost::starts_with(mapReverse, prev(it)->first)) {
-        it = prev(it);
-        cfgs.insert(it->second.begin(), it->second.end());
+    if (cfgs.empty()) {
+        Logger::trace(L"No PBR JSON match found for \"{}\":\"{}\"", slotLabel, texName);
+        return;
     }
 
     Logger::trace(L"Matched {} PBR JSONs for \"{}\":\"{}\"", cfgs.size(), slotLabel, texName);
