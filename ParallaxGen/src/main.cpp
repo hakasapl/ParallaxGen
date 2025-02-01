@@ -114,7 +114,6 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
             Logger::error("{}", error);
         }
         Logger::critical("Validation errors were found. Exiting.");
-        exit(1);
     }
 
     // Print configuration parameters
@@ -159,13 +158,11 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
     if (filesystem::equivalent(params.Output.dir, pgd.getDataPath())) {
         Logger::critical("Output directory cannot be the same directory as your data folder. "
                          "Exiting.");
-        exit(1);
     }
 
     // If output dir is a subdirectory of data dir vfs issues can occur
     if (boost::istarts_with(params.Output.dir.wstring(), bg.getGameDataPath().wstring() + "\\")) {
         Logger::critical("Output directory cannot be a subdirectory of your data folder. Exiting.");
-        exit(1);
     }
 
     // Check if dyndolod.esp exists
@@ -174,7 +171,6 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
         Logger::critical(
             "DynDoLOD and TexGen outputs must be disabled prior to running ParallaxGen. It is recommended to "
             "generate LODs after running ParallaxGen with the ParallaxGen output enabled.");
-        exit(1);
     }
 
     // Init PGP library
@@ -203,7 +199,6 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
     if (filesystem::exists(pgStateFilePath)) {
         Logger::critical("ParallaxGen meshes exist in your data directory, please delete before "
                          "re-running.");
-        exit(1);
     }
 
     // Init file map

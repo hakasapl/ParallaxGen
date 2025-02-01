@@ -13,13 +13,10 @@ using Mutagen.Bethesda.Plugins;
 using Mutagen.Bethesda.Plugins.Records;
 using Noggog;
 using Mutagen.Bethesda.Plugins.Utility;
-using Mutagen.Bethesda.Plugins.Binary.Parameters;
 
 // Harmony
 using HarmonyLib;
-using DynamicData.Kernel;
-using Mutagen.Bethesda.Plugins.Assets;
-using Mutagen.Bethesda.Plugins.Order;
+using Mutagen.Bethesda.Plugins.Exceptions;
 
 public static class ExceptionHandler
 {
@@ -62,7 +59,7 @@ public static class MessageHandler
         // 3: Warning
         // 4: Error
         // 5: Critical
-        LogQueue.Enqueue(new Tuple<string, int>("[ParallaxGenMutagenWrapper] " + message, level));
+        LogQueue.Enqueue(new Tuple<string, int>(message, level));
     }
 
     [UnmanagedCallersOnly(EntryPoint = "GetLogMessage", CallConvs = [typeof(CallConvCdecl)])]
@@ -96,6 +93,39 @@ public class PGMutagen
     // tracks masters in each split plugin
     private static List<HashSet<ModKey>> OutputMasterTracker = [];
     private static List<SkyrimMod> OutputSplitMods = [];
+
+    private static IEnumerable<IMajorRecordGetter> EnumerateModelRecordsSafe()
+    {
+        using (var enumerator = EnumerateModelRecords().GetEnumerator())
+        {
+            bool next = true;
+
+            while (next)
+            {
+                try
+                {
+                    next = enumerator.MoveNext();
+                }
+                catch (RecordException ex)
+                {
+                    var innerEx = ex.InnerException;
+                    if (innerEx is null)
+                    {
+                        MessageHandler.Log("Unknown error with mod " + ex.ModKey, 3);
+                    }
+                    else
+                    {
+                        MessageHandler.Log(innerEx.ToString(), 3);
+                    }
+
+                    continue;
+                }
+
+                if (next)
+                    yield return enumerator.Current;
+            }
+        }
+    }
 
     private static IEnumerable<IMajorRecordGetter> EnumerateModelRecords()
     {
@@ -313,7 +343,7 @@ public class PGMutagen
             TXSTRefs = [];
             int ModelRecCounter = 0;
             var DCIdx = -1;
-            foreach (var txstRefObj in EnumerateModelRecords())
+            foreach (var txstRefObj in EnumerateModelRecordsSafe())
             {
                 // Will store models to check later
                 var ModelRecs = GetModelElems(txstRefObj);

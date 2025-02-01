@@ -22,14 +22,13 @@ void dnneFailure(enum failure_type type, int errorCode)
     if (type == failure_type::failure_load_runtime) {
         if (errorCode == FAIL_CODE) { // FrameworkMissingFailure from
                                       // https://github.com/dotnet/runtime/blob/main/src/native/corehost/error_codes.h
-            spdlog::critical("The required .NET runtime is missing");
+            Logger::critical("The required .NET runtime is missing");
         } else {
-            spdlog::critical("Could not load .NET runtime, error code {:#X}", errorCode);
+            Logger::critical("Could not load .NET runtime, error code {:#X}", errorCode);
         }
     } else if (type == failure_type::failure_load_export) {
-        spdlog::critical("Could not load .NET exports, error code {:#X}", errorCode);
+        Logger::critical("Could not load .NET exports, error code {:#X}", errorCode);
     }
-    exit(1);
 }
 } // namespace
 
@@ -56,22 +55,22 @@ void ParallaxGenPlugin::libLogMessageIfExists()
         // log the message
         switch (level) {
         case TRACE_LOG:
-            spdlog::trace(messageOut);
+            Logger::trace(messageOut);
             break;
         case DEBUG_LOG:
-            spdlog::debug(messageOut);
+            Logger::debug(messageOut);
             break;
         case INFO_LOG:
-            spdlog::info(messageOut);
+            Logger::info(messageOut);
             break;
         case WARN_LOG:
-            spdlog::warn(messageOut);
+            Logger::warn(messageOut);
             break;
         case ERROR_LOG:
-            spdlog::error(messageOut);
+            Logger::error(messageOut);
             break;
         case CRITICAL_LOG:
-            spdlog::critical(messageOut);
+            Logger::critical(messageOut);
             break;
         }
 
