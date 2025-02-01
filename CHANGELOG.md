@@ -6,6 +6,7 @@
 - Fixed PBR matching bug when multiple full paths were specified as well as a short path
 - Disabled patching for CM on shaders with anisotropic_lighting and soft_lighting
 - Re-enabled CM patching on texture sets with slots in 3,6,7
+- Fixed non-ascii chars not working for paths in modorganizer.ini
 
 ## [0.8.6] - 2025-01-28
 

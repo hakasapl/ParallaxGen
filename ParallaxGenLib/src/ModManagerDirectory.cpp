@@ -245,8 +245,8 @@ auto ModManagerDirectory::getMO2FilePaths(const std::filesystem::path& instanceD
     -> std::pair<std::filesystem::path, std::filesystem::path>
 {
     // Find MO2 paths from ModOrganizer.ini
-    string profileDirField;
-    string modDirField;
+    wstring profileDirField;
+    wstring modDirField;
     filesystem::path baseDir;
 
     const filesystem::path mo2IniFile = instanceDir / L"modorganizer.ini";
@@ -257,20 +257,22 @@ auto ModManagerDirectory::getMO2FilePaths(const std::filesystem::path& instanceD
     ifstream mo2IniFileF(mo2IniFile);
     string mo2IniLine;
     while (getline(mo2IniFileF, mo2IniLine)) {
+        const wstring mo2IniLineWstr = ParallaxGenUtil::utf8toUTF16(mo2IniLine);
+
         if (mo2IniLine.starts_with(MO2INI_PROFILESDIR_KEY)) {
-            profileDirField = mo2IniLine.substr(strlen(MO2INI_PROFILESDIR_KEY));
+            profileDirField = mo2IniLineWstr.substr(strlen(MO2INI_PROFILESDIR_KEY));
         } else if (mo2IniLine.starts_with(MO2INI_MODDIR_KEY)) {
-            modDirField = mo2IniLine.substr(strlen(MO2INI_MODDIR_KEY));
+            modDirField = mo2IniLineWstr.substr(strlen(MO2INI_MODDIR_KEY));
         } else if (mo2IniLine.starts_with(MO2INI_BASEDIR_KEY)) {
-            baseDir = mo2IniLine.substr(strlen(MO2INI_BASEDIR_KEY));
+            baseDir = mo2IniLineWstr.substr(strlen(MO2INI_BASEDIR_KEY));
         }
     }
 
     mo2IniFileF.close();
 
     // replace any instance of %BASE_DIR% with the base directory
-    boost::replace_all(profileDirField, MO2INI_BASEDIR_WILDCARD, baseDir.string());
-    boost::replace_all(modDirField, MO2INI_BASEDIR_WILDCARD, baseDir.string());
+    boost::replace_all(profileDirField, MO2INI_BASEDIR_WILDCARD, baseDir.wstring());
+    boost::replace_all(modDirField, MO2INI_BASEDIR_WILDCARD, baseDir.wstring());
 
     filesystem::path profileDir = profileDirField;
     filesystem::path modDir = modDirField;
