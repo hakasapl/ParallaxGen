@@ -47,6 +47,7 @@ using namespace std;
 struct ParallaxGenCLIArgs {
     int verbosity = 0;
     bool autostart = false;
+    bool fullDump = false;
 };
 
 namespace {
@@ -113,7 +114,6 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
             Logger::error("{}", error);
         }
         Logger::critical("Validation errors were found. Exiting.");
-        exit(1);
     }
 
     // Print configuration parameters
@@ -158,13 +158,11 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
     if (filesystem::equivalent(params.Output.dir, pgd.getDataPath())) {
         Logger::critical("Output directory cannot be the same directory as your data folder. "
                          "Exiting.");
-        exit(1);
     }
 
     // If output dir is a subdirectory of data dir vfs issues can occur
     if (boost::istarts_with(params.Output.dir.wstring(), bg.getGameDataPath().wstring() + "\\")) {
         Logger::critical("Output directory cannot be a subdirectory of your data folder. Exiting.");
-        exit(1);
     }
 
     // Check if dyndolod.esp exists
@@ -173,7 +171,6 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
         Logger::critical(
             "DynDoLOD and TexGen outputs must be disabled prior to running ParallaxGen. It is recommended to "
             "generate LODs after running ParallaxGen with the ParallaxGen output enabled.");
-        exit(1);
     }
 
     // Init PGP library
@@ -202,7 +199,6 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
     if (filesystem::exists(pgStateFilePath)) {
         Logger::critical("ParallaxGen meshes exist in your data directory, please delete before "
                          "re-running.");
-        exit(1);
     }
 
     // Init file map
@@ -315,6 +311,7 @@ void addArguments(CLI::App& app, ParallaxGenCLIArgs& args)
         "Verbosity level -v for DEBUG data or -vv for TRACE data "
         "(warning: TRACE data is very verbose)");
     app.add_flag("--autostart", args.autostart, "Start generation without user input");
+    app.add_flag("--full-dump", args.fullDump, "Save all memory to crash dumps");
 }
 
 void initLogger(const filesystem::path& logpath, const ParallaxGenCLIArgs& args)
@@ -381,6 +378,9 @@ auto main(int ArgC, char** ArgV) -> int
 
     // Parse CLI Arguments (this is what exits on any validation issues)
     CLI11_PARSE(app, ArgC, ArgV);
+
+    // Set dump type
+    ParallaxGenHandlers::setDumpType(args.fullDump);
 
     // Initialize logger
     const filesystem::path logDir = exePath / "log";

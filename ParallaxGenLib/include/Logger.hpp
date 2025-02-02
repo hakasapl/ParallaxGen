@@ -29,6 +29,7 @@ public:
     template <typename... Args> static void critical(const std::wstring& fmt, Args&&... moreArgs)
     {
         spdlog::critical(fmt::runtime(fmt), std::forward<Args>(moreArgs)...);
+        exit(1);
     }
 
     template <typename... Args> static void error(const std::wstring& fmt, Args&&... moreArgs)
@@ -60,6 +61,7 @@ public:
     template <typename... Args> static void critical(const std::string& fmt, Args&&... moreArgs)
     {
         spdlog::critical(fmt::runtime(fmt), std::forward<Args>(moreArgs)...);
+        exit(1);
     }
 
     template <typename... Args> static void error(const std::string& fmt, Args&&... moreArgs)

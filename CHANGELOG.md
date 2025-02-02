@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.8.7] - 2025-02-02
+
+- Added --full-dump CLI argument to ParallaxGen.exe to generate a full crash dump
+- Fixed PBR matching bug when multiple full paths were specified as well as a short path
+- Disabled patching for CM on shaders with anisotropic_lighting and soft_lighting
+- Re-enabled CM patching on texture sets with slots in 3,6,7
+- Fixed non-ascii chars not working for paths in modorganizer.ini
+- Issues with plugins will now be printed to console instead of an unhandled exception
+
 ## [0.8.6] - 2025-01-28
 
 - 3D name is no longer considered for matching alternate textures
