@@ -338,6 +338,10 @@ auto ParallaxGen::processNIF(const std::filesystem::path& nifFile, const vector<
 
     // Create patcher objects
     auto patcherObjects = PatcherUtil::PatcherMeshObjectSet();
+    for (const auto& factory : m_meshPatchers.prePatchers) {
+        auto patcher = factory(nifFile, &nif);
+        patcherObjects.prePatchers.emplace_back(std::move(patcher));
+    }
     for (const auto& [shader, factory] : m_meshPatchers.shaderPatchers) {
         auto patcher = factory(nifFile, &nif);
         patcherObjects.shaderPatchers.emplace(shader, std::move(patcher));
@@ -572,6 +576,12 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
     if (nifShaderName != "BSLightingShaderProperty") {
         Logger::trace(L"Rejecting: Incorrect NIFShader block type");
         return result;
+    }
+
+    // apply prepatchers
+    for (const auto& prePatcher : patchers.prePatchers) {
+        const Logger::Prefix prefixPatches(utf8toUTF16(prePatcher->getPatcherName()));
+        prePatcher->applyPatch(*nifShape, shapeModified);
     }
 
     shaderApplied = NIFUtil::ShapeShader::NONE;

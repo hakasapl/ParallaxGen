@@ -12,6 +12,7 @@
 #include "ParallaxGenWarnings.hpp"
 #include "patchers/PatcherComplexMaterial.hpp"
 #include "patchers/PatcherDefault.hpp"
+#include "patchers/PatcherFixMeshLighting.hpp"
 #include "patchers/PatcherTruePBR.hpp"
 #include "patchers/PatcherUpgradeParallaxToCM.hpp"
 #include "patchers/PatcherUtil.hpp"
@@ -216,6 +217,10 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
 
     // Create patcher factory
     PatcherUtil::PatcherMeshSet meshPatchers;
+    if (params.PrePatcher.fixMeshLighting) {
+        Logger::debug("Adding Mesh Lighting Fix pre-patcher");
+        meshPatchers.prePatchers.emplace_back(PatcherFixMeshLighting::getFactory());
+    }
     meshPatchers.shaderPatchers.emplace(PatcherDefault::getShaderType(), PatcherDefault::getFactory());
     if (params.ShaderPatcher.parallax) {
         Logger::debug("Adding Parallax shader patcher");
@@ -277,9 +282,7 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
     auto modPriorityMap = pgc.getModPriorityMap();
     pg.loadModPriorityMap(&modPriorityMap);
     ParallaxGenWarnings::init(&pgd, &modPriorityMap);
-    if (params.ShaderPatcher.parallax || params.ShaderPatcher.complexMaterial || params.ShaderPatcher.truePBR) {
-        pg.patch(params.Processing.multithread, params.Processing.pluginPatching);
-    }
+    pg.patch(params.Processing.multithread, params.Processing.pluginPatching);
 
     // Release cached files, if any
     pgd.clearCache();

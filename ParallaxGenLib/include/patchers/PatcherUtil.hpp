@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 
+#include "PatcherPre.hpp"
 #include "patchers/PatcherGlobal.hpp"
 #include "patchers/PatcherShader.hpp"
 #include "patchers/PatcherShaderTransform.hpp"
@@ -21,6 +22,7 @@ public:
      */
     struct PatcherMeshObjectSet {
         std::vector<PatcherGlobal::PatcherGlobalObject> globalPatchers;
+        std::vector<PatcherPre::PatcherPreObject> prePatchers;
         std::unordered_map<NIFUtil::ShapeShader, PatcherShader::PatcherShaderObject> shaderPatchers;
         std::unordered_map<NIFUtil::ShapeShader,
             std::map<NIFUtil::ShapeShader, PatcherShaderTransform::PatcherShaderTransformObject>>
@@ -33,6 +35,7 @@ public:
      */
     struct PatcherMeshSet {
         std::vector<PatcherGlobal::PatcherGlobalFactory> globalPatchers;
+        std::vector<PatcherPre::PatcherPreFactory> prePatchers;
         std::unordered_map<NIFUtil::ShapeShader, PatcherShader::PatcherShaderFactory> shaderPatchers;
         std::unordered_map<NIFUtil::ShapeShader,
             std::map<NIFUtil::ShapeShader, PatcherShaderTransform::PatcherShaderTransformFactory>>

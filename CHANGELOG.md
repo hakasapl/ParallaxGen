@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.8.8] - UNRELEASED
+
+- Added "Fix Mesh Lighting" pre-patcher (Thanks to Catnyss for article!)
+
 ## [0.8.7] - 2025-02-02
 
 - Added --full-dump CLI argument to ParallaxGen.exe to generate a full crash dump

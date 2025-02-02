@@ -28,6 +28,8 @@ set(HEADERS
     "include/patchers/PatcherGlobal.hpp"
     "include/patchers/PatcherParticleLightsToLP.hpp"
     "include/patchers/PatcherDefault.hpp"
+    "include/patchers/PatcherPre.hpp"
+    "include/patchers/PatcherFixMeshLighting.hpp"
 )
 
 set(SOURCES
@@ -59,6 +61,8 @@ set(SOURCES
     "src/patchers/PatcherGlobal.cpp"
     "src/patchers/PatcherParticleLightsToLP.cpp"
     "src/patchers/PatcherDefault.cpp"
+    "src/patchers/PatcherPre.cpp"
+    "src/patchers/PatcherFixMeshLighting.cpp"
 )
 
 include_directories("include")
