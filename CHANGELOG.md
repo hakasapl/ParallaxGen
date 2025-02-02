@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.8.7] - UNRELEASED
+## [0.8.7] - 2025-02-02
 
 - Added --full-dump CLI argument to ParallaxGen.exe to generate a full crash dump
 - Fixed PBR matching bug when multiple full paths were specified as well as a short path
