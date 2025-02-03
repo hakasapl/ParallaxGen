@@ -82,7 +82,7 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
     }
 
     // Alpha message
-    Logger::warn("ParallaxGen is currently in ALPHA. Please file detailed bug reports on nexus or github.");
+    Logger::warn("ParallaxGen is currently in BETA. Please file detailed bug reports on nexus or github.");
 
     // Create cfg directory if it does not exist
     const filesystem::path cfgDir = exePath / "cfg";
