@@ -634,7 +634,7 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
                 curMatch.mod = m_pgd->getMod(match.matchedPath);
                 curMatch.shader = shader;
                 curMatch.match = match;
-                curMatch.shaderTransformTo = NIFUtil::ShapeShader::NONE;
+                curMatch.shaderTransformTo = NIFUtil::ShapeShader::UNKNOWN;
 
                 // See if transform is possible
                 if (patchers.shaderTransformPatchers.contains(shader)) {
@@ -650,7 +650,7 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
                 }
 
                 // Add to matches if shader can apply (or if transform shader exists and can apply)
-                if (patcher->canApply(*nifShape) || curMatch.shaderTransformTo != NIFUtil::ShapeShader::NONE) {
+                if (patcher->canApply(*nifShape) || curMatch.shaderTransformTo != NIFUtil::ShapeShader::UNKNOWN) {
                     matches.push_back(curMatch);
                     modSet.insert(curMatch.mod);
                 }

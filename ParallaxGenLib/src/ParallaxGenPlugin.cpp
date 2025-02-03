@@ -10,6 +10,7 @@
 #include "ParallaxGenMutagenWrapperNE.h"
 #include "ParallaxGenUtil.hpp"
 #include "ParallaxGenWarnings.hpp"
+#include "patchers/base/PatcherUtil.hpp"
 
 using namespace std;
 
@@ -375,7 +376,7 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
                 curMatch.mod = s_pgd->getMod(match.matchedPath);
                 curMatch.shader = shader;
                 curMatch.match = match;
-                curMatch.shaderTransformTo = NIFUtil::ShapeShader::NONE;
+                curMatch.shaderTransformTo = NIFUtil::ShapeShader::UNKNOWN;
 
                 // See if transform is possible
                 if (patchers.shaderTransformPatchers.contains(shader)) {
@@ -391,7 +392,7 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
                 }
 
                 // Add to matches if shader can apply (or if transform shader exists and can apply)
-                if (patcher->canApply(*nifShape) || curMatch.shaderTransformTo != NIFUtil::ShapeShader::NONE) {
+                if (patcher->canApply(*nifShape) || curMatch.shaderTransformTo != NIFUtil::ShapeShader::UNKNOWN) {
                     matches.push_back(curMatch);
                     modSet.insert(curMatch.mod);
                 }
@@ -424,6 +425,11 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
 
         // Apply transforms
         winningShaderMatch = PatcherUtil::applyTransformIfNeeded(winningShaderMatch, patchers);
+        if (winningShaderMatch.shader == NIFUtil::ShapeShader::UNKNOWN) {
+            // if no match apply the default patcher
+            winningShaderMatch.shader = NIFUtil::ShapeShader::NONE;
+        }
+
         curResult.shader = winningShaderMatch.shader;
 
         // loop through patchers
