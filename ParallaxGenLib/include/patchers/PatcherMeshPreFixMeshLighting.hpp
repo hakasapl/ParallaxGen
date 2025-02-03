@@ -1,8 +1,8 @@
 #pragma once
 
-#include "patchers/PatcherPre.hpp"
+#include "patchers/base/PatcherMeshPre.hpp"
 
-class PatcherFixMeshLighting : public PatcherPre {
+class PatcherMeshPreFixMeshLighting : public PatcherMeshPre {
 private:
     constexpr static float SOFTLIGHTING_MAX = 0.6F;
 
@@ -12,7 +12,7 @@ public:
      *
      * @return PatcherShaderTransform::PatcherShaderTransformFactory
      */
-    static auto getFactory() -> PatcherPre::PatcherPreFactory;
+    static auto getFactory() -> PatcherMeshPre::PatcherMeshPreFactory;
 
     /**
      * @brief Construct a new PrePatcher Particle Lights To LP patcher
@@ -20,7 +20,7 @@ public:
      * @param nifPath NIF path to be patched
      * @param nif NIF object to be patched
      */
-    PatcherFixMeshLighting(std::filesystem::path nifPath, nifly::NifFile* nif);
+    PatcherMeshPreFixMeshLighting(std::filesystem::path nifPath, nifly::NifFile* nif);
 
     /**
      * @brief Apply this patcher to shape

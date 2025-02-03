@@ -3,7 +3,7 @@
 #include <DirectXTex.h>
 #include <filesystem>
 
-#include "Patcher.hpp"
+#include "patchers/base/Patcher.hpp"
 
 /**
  * @class Patcher

@@ -1,4 +1,4 @@
-#include "patchers/PatcherTextureGlobal.hpp"
+#include "patchers/base/PatcherTextureGlobal.hpp"
 #include <DirectXTex.h>
 
 using namespace std;

@@ -12,7 +12,7 @@
 #include "BethesdaGame.hpp"
 #include "NIFUtil.hpp"
 #include "ParallaxGenDirectory.hpp"
-#include "patchers/PatcherUtil.hpp"
+#include "patchers/base/PatcherUtil.hpp"
 
 class ParallaxGenPlugin {
 private:

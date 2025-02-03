@@ -2,7 +2,7 @@
 
 #include <DirectXTex.h>
 
-#include "patchers/PatcherTexture.hpp"
+#include "patchers/base/PatcherTexture.hpp"
 
 /**
  * @class PrePatcher

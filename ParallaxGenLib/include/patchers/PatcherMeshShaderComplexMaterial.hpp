@@ -7,13 +7,13 @@
 #include <winnt.h>
 
 #include "NIFUtil.hpp"
-#include "Patchers/PatcherShader.hpp"
+#include "patchers/base/PatcherMeshShader.hpp"
 
 /**
- * @class PatcherComplexMaterial
+ * @class PatcherMeshShaderComplexMaterial
  * @brief Shader patcher for complex material
  */
-class PatcherComplexMaterial : public PatcherShader {
+class PatcherMeshShaderComplexMaterial : public PatcherMeshShader {
 private:
     static std::vector<std::wstring> s_dynCubemapBlocklist; /** Stores the dynamic cubemap blocklist set */
     static bool s_disableMLP; /** If true MLP should be replaced with CM */
@@ -24,7 +24,7 @@ public:
      *
      * @return PatcherShader::PatcherShaderFactory factory object for this patcher
      */
-    static auto getFactory() -> PatcherShader::PatcherShaderFactory;
+    static auto getFactory() -> PatcherMeshShader::PatcherMeshShaderFactory;
 
     /**
      * @brief Load required statics for CM patcher
@@ -47,12 +47,12 @@ public:
      * @param nifPath Path to NIF file
      * @param nif NIF object to patch
      */
-    PatcherComplexMaterial(std::filesystem::path nifPath, nifly::NifFile* nif);
+    PatcherMeshShaderComplexMaterial(std::filesystem::path nifPath, nifly::NifFile* nif);
 
     /**
      * @brief Check if the shape can accomodate the CM shader (without looking at texture slots)
      *
-     * @param nIFShape Shape to check
+     * @param nifShape Shape to check
      * @return true Shape can accomodate CM
      * @return false Shape cannot accomodate CM
      */

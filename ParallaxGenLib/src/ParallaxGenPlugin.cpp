@@ -10,7 +10,6 @@
 #include "ParallaxGenMutagenWrapperNE.h"
 #include "ParallaxGenUtil.hpp"
 #include "ParallaxGenWarnings.hpp"
-#include "patchers/PatcherUtil.hpp"
 
 using namespace std;
 
@@ -365,7 +364,7 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
             const Logger::Prefix prefixPatches(ParallaxGenUtil::utf8toUTF16(patcher->getPatcherName()));
 
             // Check if shader should be applied
-            vector<PatcherShader::PatcherMatch> curMatches;
+            vector<PatcherMeshShader::PatcherMatch> curMatches;
             if (!patcher->shouldApply(baseSlots, curMatches)) {
                 Logger::trace(L"Rejecting: Shader not applicable");
                 continue;

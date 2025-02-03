@@ -10,15 +10,15 @@
 #include <vector>
 
 #include "NIFUtil.hpp"
-#include "patchers/PatcherShader.hpp"
+#include "patchers/base/PatcherMeshShader.hpp"
 
 constexpr unsigned TEXTURE_STR_LENGTH = 9;
 
 /**
- * @class PatcherTruePBR
+ * @class PatcherMeshShaderTruePBR
  * @brief Patcher for True PBR
  */
-class PatcherTruePBR : public PatcherShader {
+class PatcherMeshShaderTruePBR : public PatcherMeshShader {
 private:
     // Static caches
 
@@ -89,7 +89,7 @@ public:
      *
      * @return PatcherShader::PatcherShaderFactory Factory object
      */
-    static auto getFactory() -> PatcherShader::PatcherShaderFactory;
+    static auto getFactory() -> PatcherMeshShader::PatcherMeshShaderFactory;
 
     /**
      * @brief Load statics from a list of PBRJSONs
@@ -111,7 +111,7 @@ public:
      * @param nifPath NIF Path to be patched
      * @param nif NIF object to be patched
      */
-    PatcherTruePBR(std::filesystem::path nifPath, nifly::NifFile* nif);
+    PatcherMeshShaderTruePBR(std::filesystem::path nifPath, nifly::NifFile* nif);
 
     /**
      * @brief Check if shape can accomodate truepbr (without slots)

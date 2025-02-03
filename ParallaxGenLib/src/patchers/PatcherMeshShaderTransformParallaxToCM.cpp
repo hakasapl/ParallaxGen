@@ -1,9 +1,8 @@
-#include "patchers/PatcherUpgradeParallaxToCM.hpp"
+#include "patchers/PatcherMeshShaderTransformParallaxToCM.hpp"
 
 #include "Logger.hpp"
 #include "NIFUtil.hpp"
 #include "ParallaxGenUtil.hpp"
-#include "patchers/PatcherShader.hpp"
 
 #include <filesystem>
 #include <mutex>
@@ -11,29 +10,34 @@
 
 using namespace std;
 
-mutex PatcherUpgradeParallaxToCM::s_upgradeCMMutex;
+mutex PatcherMeshShaderTransformParallaxToCM::s_upgradeCMMutex;
 
-auto PatcherUpgradeParallaxToCM::getFactory() -> PatcherShaderTransform::PatcherShaderTransformFactory
+auto PatcherMeshShaderTransformParallaxToCM::getFactory()
+    -> PatcherMeshShaderTransform::PatcherMeshShaderTransformFactory
 {
-    return [](filesystem::path nifPath, nifly::NifFile* nif) -> PatcherShaderTransformObject {
-        return make_unique<PatcherUpgradeParallaxToCM>(std::move(nifPath), nif);
+    return [](filesystem::path nifPath, nifly::NifFile* nif) -> PatcherMeshShaderTransformObject {
+        return make_unique<PatcherMeshShaderTransformParallaxToCM>(std::move(nifPath), nif);
     };
 }
 
-auto PatcherUpgradeParallaxToCM::getFromShader() -> NIFUtil::ShapeShader
+auto PatcherMeshShaderTransformParallaxToCM::getFromShader() -> NIFUtil::ShapeShader
 {
     return NIFUtil::ShapeShader::VANILLAPARALLAX;
 }
-auto PatcherUpgradeParallaxToCM::getToShader() -> NIFUtil::ShapeShader { return NIFUtil::ShapeShader::COMPLEXMATERIAL; }
+auto PatcherMeshShaderTransformParallaxToCM::getToShader() -> NIFUtil::ShapeShader
+{
+    return NIFUtil::ShapeShader::COMPLEXMATERIAL;
+}
 
-PatcherUpgradeParallaxToCM::PatcherUpgradeParallaxToCM(std::filesystem::path nifPath, nifly::NifFile* nif)
-    : PatcherShaderTransform(std::move(nifPath), nif, "UpgradeParallaxToCM", NIFUtil::ShapeShader::VANILLAPARALLAX,
+PatcherMeshShaderTransformParallaxToCM::PatcherMeshShaderTransformParallaxToCM(
+    std::filesystem::path nifPath, nifly::NifFile* nif)
+    : PatcherMeshShaderTransform(std::move(nifPath), nif, "UpgradeParallaxToCM", NIFUtil::ShapeShader::VANILLAPARALLAX,
           NIFUtil::ShapeShader::COMPLEXMATERIAL)
 {
 }
 
-auto PatcherUpgradeParallaxToCM::transform(
-    const PatcherShader::PatcherMatch& fromMatch, PatcherShader::PatcherMatch& result) -> bool
+auto PatcherMeshShaderTransformParallaxToCM::transform(
+    const PatcherMeshShader::PatcherMatch& fromMatch, PatcherMeshShader::PatcherMatch& result) -> bool
 {
     const lock_guard<mutex> lock(s_upgradeCMMutex);
 

@@ -2,11 +2,11 @@
 
 #include <unordered_map>
 
-#include "PatcherPre.hpp"
-#include "patchers/PatcherGlobal.hpp"
-#include "patchers/PatcherShader.hpp"
-#include "patchers/PatcherShaderTransform.hpp"
-#include "patchers/PatcherTextureGlobal.hpp"
+#include "patchers/base/PatcherMeshGlobal.hpp"
+#include "patchers/base/PatcherMeshPre.hpp"
+#include "patchers/base/PatcherMeshShader.hpp"
+#include "patchers/base/PatcherMeshShaderTransform.hpp"
+#include "patchers/base/PatcherTextureGlobal.hpp"
 
 #include "NIFUtil.hpp"
 
@@ -21,11 +21,11 @@ public:
      * @brief Stores the patcher objects for a given run
      */
     struct PatcherMeshObjectSet {
-        std::vector<PatcherGlobal::PatcherGlobalObject> globalPatchers;
-        std::vector<PatcherPre::PatcherPreObject> prePatchers;
-        std::unordered_map<NIFUtil::ShapeShader, PatcherShader::PatcherShaderObject> shaderPatchers;
+        std::vector<PatcherMeshGlobal::PatcherMeshGlobalObject> globalPatchers;
+        std::vector<PatcherMeshPre::PatcherMeshPreObject> prePatchers;
+        std::unordered_map<NIFUtil::ShapeShader, PatcherMeshShader::PatcherMeshShaderObject> shaderPatchers;
         std::unordered_map<NIFUtil::ShapeShader,
-            std::map<NIFUtil::ShapeShader, PatcherShaderTransform::PatcherShaderTransformObject>>
+            std::map<NIFUtil::ShapeShader, PatcherMeshShaderTransform::PatcherMeshShaderTransformObject>>
             shaderTransformPatchers;
     };
 
@@ -34,11 +34,11 @@ public:
      * @brief Stores the patcher factories for a given run
      */
     struct PatcherMeshSet {
-        std::vector<PatcherGlobal::PatcherGlobalFactory> globalPatchers;
-        std::vector<PatcherPre::PatcherPreFactory> prePatchers;
-        std::unordered_map<NIFUtil::ShapeShader, PatcherShader::PatcherShaderFactory> shaderPatchers;
+        std::vector<PatcherMeshGlobal::PatcherMeshGlobalFactory> globalPatchers;
+        std::vector<PatcherMeshPre::PatcherMeshPreFactory> prePatchers;
+        std::unordered_map<NIFUtil::ShapeShader, PatcherMeshShader::PatcherMeshShaderFactory> shaderPatchers;
         std::unordered_map<NIFUtil::ShapeShader,
-            std::map<NIFUtil::ShapeShader, PatcherShaderTransform::PatcherShaderTransformFactory>>
+            std::map<NIFUtil::ShapeShader, PatcherMeshShaderTransform::PatcherMeshShaderTransformFactory>>
             shaderTransformPatchers;
     };
 
@@ -57,7 +57,7 @@ public:
     struct ShaderPatcherMatch {
         std::wstring mod;
         NIFUtil::ShapeShader shader;
-        PatcherShader::PatcherMatch match;
+        PatcherMeshShader::PatcherMatch match;
         NIFUtil::ShapeShader shaderTransformTo;
     };
 

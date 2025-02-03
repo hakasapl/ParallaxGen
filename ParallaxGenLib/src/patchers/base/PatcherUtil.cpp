@@ -1,9 +1,10 @@
-#include "patchers/PatcherUtil.hpp"
+#include "patchers/base/PatcherUtil.hpp"
 
 #include "Logger.hpp"
 
 using namespace std;
 
+// TODO these methods should probably move into shader and transform classes respectively
 auto PatcherUtil::getWinningMatch(
     const vector<ShaderPatcherMatch>& matches, const unordered_map<wstring, int>* modPriority) -> ShaderPatcherMatch
 {

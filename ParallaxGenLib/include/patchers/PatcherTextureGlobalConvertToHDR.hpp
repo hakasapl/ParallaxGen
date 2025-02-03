@@ -1,6 +1,6 @@
 #pragma once
 
-#include "patchers/PatcherTextureGlobal.hpp"
+#include "patchers/base/PatcherTextureGlobal.hpp"
 #include <DirectXTex.h>
 #include <dxgiformat.h>
 

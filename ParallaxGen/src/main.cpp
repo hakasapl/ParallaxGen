@@ -10,13 +10,13 @@
 #include "ParallaxGenRunner.hpp"
 #include "ParallaxGenUI.hpp"
 #include "ParallaxGenWarnings.hpp"
-#include "patchers/PatcherComplexMaterial.hpp"
-#include "patchers/PatcherDefault.hpp"
-#include "patchers/PatcherFixMeshLighting.hpp"
-#include "patchers/PatcherTruePBR.hpp"
-#include "patchers/PatcherUpgradeParallaxToCM.hpp"
-#include "patchers/PatcherUtil.hpp"
-#include "patchers/PatcherVanillaParallax.hpp"
+#include "patchers/PatcherMeshPreFixMeshLighting.hpp"
+#include "patchers/PatcherMeshShaderComplexMaterial.hpp"
+#include "patchers/PatcherMeshShaderDefault.hpp"
+#include "patchers/PatcherMeshShaderTransformParallaxToCM.hpp"
+#include "patchers/PatcherMeshShaderTruePBR.hpp"
+#include "patchers/PatcherMeshShaderVanillaParallax.hpp"
+#include "patchers/base/PatcherUtil.hpp"
 
 #include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/predicate.hpp>
@@ -219,30 +219,33 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
     PatcherUtil::PatcherMeshSet meshPatchers;
     if (params.PrePatcher.fixMeshLighting) {
         Logger::debug("Adding Mesh Lighting Fix pre-patcher");
-        meshPatchers.prePatchers.emplace_back(PatcherFixMeshLighting::getFactory());
+        meshPatchers.prePatchers.emplace_back(PatcherMeshPreFixMeshLighting::getFactory());
     }
-    meshPatchers.shaderPatchers.emplace(PatcherDefault::getShaderType(), PatcherDefault::getFactory());
+    meshPatchers.shaderPatchers.emplace(
+        PatcherMeshShaderDefault::getShaderType(), PatcherMeshShaderDefault::getFactory());
     if (params.ShaderPatcher.parallax) {
         Logger::debug("Adding Parallax shader patcher");
         meshPatchers.shaderPatchers.emplace(
-            PatcherVanillaParallax::getShaderType(), PatcherVanillaParallax::getFactory());
+            PatcherMeshShaderVanillaParallax::getShaderType(), PatcherMeshShaderVanillaParallax::getFactory());
     }
     if (params.ShaderPatcher.complexMaterial) {
         Logger::debug("Adding Complex Material shader patcher");
         meshPatchers.shaderPatchers.emplace(
-            PatcherComplexMaterial::getShaderType(), PatcherComplexMaterial::getFactory());
-        PatcherComplexMaterial::loadStatics(
+            PatcherMeshShaderComplexMaterial::getShaderType(), PatcherMeshShaderComplexMaterial::getFactory());
+        PatcherMeshShaderComplexMaterial::loadStatics(
             params.PrePatcher.disableMLP, params.ShaderPatcher.ShaderPatcherComplexMaterial.listsDyncubemapBlocklist);
     }
     if (params.ShaderPatcher.truePBR) {
         Logger::debug("Adding True PBR shader patcher");
-        meshPatchers.shaderPatchers.emplace(PatcherTruePBR::getShaderType(), PatcherTruePBR::getFactory());
-        PatcherTruePBR::loadStatics(pgd.getPBRJSONs());
+        meshPatchers.shaderPatchers.emplace(
+            PatcherMeshShaderTruePBR::getShaderType(), PatcherMeshShaderTruePBR::getFactory());
+        PatcherMeshShaderTruePBR::loadStatics(pgd.getPBRJSONs());
     }
     if (params.ShaderTransforms.parallaxToCM) {
         Logger::debug("Adding Parallax to Complex Material shader transform patcher");
-        meshPatchers.shaderTransformPatchers[PatcherUpgradeParallaxToCM::getFromShader()].emplace(
-            PatcherUpgradeParallaxToCM::getToShader(), PatcherUpgradeParallaxToCM::getFactory());
+        meshPatchers.shaderTransformPatchers[PatcherMeshShaderTransformParallaxToCM::getFromShader()].emplace(
+            PatcherMeshShaderTransformParallaxToCM::getToShader(),
+            PatcherMeshShaderTransformParallaxToCM::getFactory());
     }
 
     const PatcherUtil::PatcherTextureSet texPatchers;

@@ -1,4 +1,4 @@
-#include "patchers/PatcherTruePBR.hpp"
+#include "patchers/PatcherMeshShaderTruePBR.hpp"
 
 #include <Shaders.hpp>
 #include <algorithm>
@@ -13,55 +13,54 @@
 #include "Logger.hpp"
 #include "NIFUtil.hpp"
 #include "ParallaxGenUtil.hpp"
-#include "patchers/PatcherShader.hpp"
 
 using namespace std;
 
-PatcherTruePBR::PatcherTruePBR(filesystem::path nifPath, nifly::NifFile* nif)
-    : PatcherShader(std::move(nifPath), nif, "TruePBR")
+PatcherMeshShaderTruePBR::PatcherMeshShaderTruePBR(filesystem::path nifPath, nifly::NifFile* nif)
+    : PatcherMeshShader(std::move(nifPath), nif, "TruePBR")
 {
 }
 
-auto PatcherTruePBR::getTruePBRConfigs() -> map<size_t, nlohmann::json>&
+auto PatcherMeshShaderTruePBR::getTruePBRConfigs() -> map<size_t, nlohmann::json>&
 {
     static map<size_t, nlohmann::json> truePBRConfigs = {};
     return truePBRConfigs;
 }
 
-auto PatcherTruePBR::getPathLookupJSONs() -> map<size_t, nlohmann::json>&
+auto PatcherMeshShaderTruePBR::getPathLookupJSONs() -> map<size_t, nlohmann::json>&
 {
     static map<size_t, nlohmann::json> pathLookupJSONs = {};
     return pathLookupJSONs;
 }
 
-auto PatcherTruePBR::getTruePBRDiffuseInverse() -> map<wstring, vector<size_t>>&
+auto PatcherMeshShaderTruePBR::getTruePBRDiffuseInverse() -> map<wstring, vector<size_t>>&
 {
     static map<wstring, vector<size_t>> truePBRDiffuseInverse = {};
     return truePBRDiffuseInverse;
 }
 
-auto PatcherTruePBR::getTruePBRNormalInverse() -> map<wstring, vector<size_t>>&
+auto PatcherMeshShaderTruePBR::getTruePBRNormalInverse() -> map<wstring, vector<size_t>>&
 {
     static map<wstring, vector<size_t>> truePBRNormalInverse = {};
     return truePBRNormalInverse;
 }
 
-auto PatcherTruePBR::getPathLookupCache() -> unordered_map<tuple<wstring, wstring>, bool, TupleStrHash>&
+auto PatcherMeshShaderTruePBR::getPathLookupCache() -> unordered_map<tuple<wstring, wstring>, bool, TupleStrHash>&
 {
     static unordered_map<tuple<wstring, wstring>, bool, TupleStrHash> pathLookupCache = {};
     return pathLookupCache;
 }
 
-auto PatcherTruePBR::getTruePBRConfigFilenameFields() -> vector<string>
+auto PatcherMeshShaderTruePBR::getTruePBRConfigFilenameFields() -> vector<string>
 {
     static const vector<string> pgConfigFilenameFields = { "match_normal", "match_diffuse", "rename" };
     return pgConfigFilenameFields;
 }
 
 // Statics
-bool PatcherTruePBR::s_checkPaths = true;
+bool PatcherMeshShaderTruePBR::s_checkPaths = true;
 
-void PatcherTruePBR::loadStatics(const std::vector<std::filesystem::path>& pbrJSONs)
+void PatcherMeshShaderTruePBR::loadStatics(const std::vector<std::filesystem::path>& pbrJSONs)
 {
     size_t configOrder = 0;
     for (const auto& config : pbrJSONs) {
@@ -130,16 +129,16 @@ void PatcherTruePBR::loadStatics(const std::vector<std::filesystem::path>& pbrJS
     }
 }
 
-auto PatcherTruePBR::getFactory() -> PatcherShader::PatcherShaderFactory
+auto PatcherMeshShaderTruePBR::getFactory() -> PatcherMeshShader::PatcherMeshShaderFactory
 {
-    return [](const filesystem::path& nifPath, nifly::NifFile* nif) -> unique_ptr<PatcherShader> {
-        return make_unique<PatcherTruePBR>(nifPath, nif);
+    return [](const filesystem::path& nifPath, nifly::NifFile* nif) -> unique_ptr<PatcherMeshShader> {
+        return make_unique<PatcherMeshShaderTruePBR>(nifPath, nif);
     };
 }
 
-auto PatcherTruePBR::getShaderType() -> NIFUtil::ShapeShader { return NIFUtil::ShapeShader::TRUEPBR; }
+auto PatcherMeshShaderTruePBR::getShaderType() -> NIFUtil::ShapeShader { return NIFUtil::ShapeShader::TRUEPBR; }
 
-auto PatcherTruePBR::canApply([[maybe_unused]] nifly::NiShape& nifShape) -> bool
+auto PatcherMeshShaderTruePBR::canApply([[maybe_unused]] nifly::NiShape& nifShape) -> bool
 {
     auto* const nifShader = getNIF()->GetShader(&nifShape);
     auto* const nifShaderBSLSP = dynamic_cast<BSLightingShaderProperty*>(nifShader);
@@ -152,7 +151,7 @@ auto PatcherTruePBR::canApply([[maybe_unused]] nifly::NiShape& nifShape) -> bool
     return true;
 }
 
-auto PatcherTruePBR::shouldApply(nifly::NiShape& nifShape, std::vector<PatcherMatch>& matches) -> bool
+auto PatcherMeshShaderTruePBR::shouldApply(nifly::NiShape& nifShape, std::vector<PatcherMatch>& matches) -> bool
 {
     // Prep
     auto* nifShader = getNIF()->GetShader(&nifShape);
@@ -185,7 +184,7 @@ auto PatcherTruePBR::shouldApply(nifly::NiShape& nifShape, std::vector<PatcherMa
     return !matches.empty();
 }
 
-auto PatcherTruePBR::shouldApply(
+auto PatcherMeshShaderTruePBR::shouldApply(
     const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots, std::vector<PatcherMatch>& matches) -> bool
 {
     // get search prefixes
@@ -286,8 +285,9 @@ auto PatcherTruePBR::shouldApply(
     return !matches.empty();
 }
 
-void PatcherTruePBR::getSlotMatch(map<size_t, tuple<nlohmann::json, wstring>>& truePBRData, const wstring& texName,
-    const map<wstring, vector<size_t>>& lookup, const wstring& slotLabel, const wstring& nifPath)
+void PatcherMeshShaderTruePBR::getSlotMatch(map<size_t, tuple<nlohmann::json, wstring>>& truePBRData,
+    const wstring& texName, const map<wstring, vector<size_t>>& lookup, const wstring& slotLabel,
+    const wstring& nifPath)
 {
     // binary search for map
     auto mapReverse = boost::to_lower_copy(texName);
@@ -349,8 +349,9 @@ void PatcherTruePBR::getSlotMatch(map<size_t, tuple<nlohmann::json, wstring>>& t
     }
 }
 
-void PatcherTruePBR::getPathContainsMatch(std::map<size_t, std::tuple<nlohmann::json, std::wstring>>& truePBRData,
-    const std::wstring& diffuse, const wstring& nifPath)
+void PatcherMeshShaderTruePBR::getPathContainsMatch(
+    std::map<size_t, std::tuple<nlohmann::json, std::wstring>>& truePBRData, const std::wstring& diffuse,
+    const wstring& nifPath)
 {
     // "patch_contains" attribute: Linear search for path_contains
     auto& cache = getPathLookupCache();
@@ -382,8 +383,9 @@ void PatcherTruePBR::getPathContainsMatch(std::map<size_t, std::tuple<nlohmann::
     }
 }
 
-auto PatcherTruePBR::insertTruePBRData(std::map<size_t, std::tuple<nlohmann::json, std::wstring>>& truePBRData,
-    const wstring& texName, size_t cfg, const wstring& nifPath) -> void
+auto PatcherMeshShaderTruePBR::insertTruePBRData(
+    std::map<size_t, std::tuple<nlohmann::json, std::wstring>>& truePBRData, const wstring& texName, size_t cfg,
+    const wstring& nifPath) -> void
 {
     const auto curCfg = getTruePBRConfigs()[cfg];
 
@@ -429,7 +431,7 @@ auto PatcherTruePBR::insertTruePBRData(std::map<size_t, std::tuple<nlohmann::jso
     truePBRData.insert({ cfg, { curCfg, matchedPath } });
 }
 
-auto PatcherTruePBR::applyPatch(nifly::NiShape& nifShape, const PatcherMatch& match, bool& nifModified)
+auto PatcherMeshShaderTruePBR::applyPatch(nifly::NiShape& nifShape, const PatcherMatch& match, bool& nifModified)
     -> std::array<std::wstring, NUM_TEXTURE_SLOTS>
 {
     auto newSlots = getTextureSet(nifShape);
@@ -458,7 +460,7 @@ auto PatcherTruePBR::applyPatch(nifly::NiShape& nifShape, const PatcherMatch& ma
     return newSlots;
 }
 
-auto PatcherTruePBR::applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots,
+auto PatcherMeshShaderTruePBR::applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots,
     const PatcherMatch& match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>
 {
     if (match.extraData == nullptr) {
@@ -485,7 +487,7 @@ auto PatcherTruePBR::applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_
     return newSlots;
 }
 
-void PatcherTruePBR::applyOnePatchSwapJSON(const nlohmann::json& truePBRData, nlohmann::json& output)
+void PatcherMeshShaderTruePBR::applyOnePatchSwapJSON(const nlohmann::json& truePBRData, nlohmann::json& output)
 {
     // "coatColor"
     if (truePBRData.contains("coat_color")) {
@@ -558,7 +560,7 @@ void PatcherTruePBR::applyOnePatchSwapJSON(const nlohmann::json& truePBRData, nl
     }
 }
 
-void PatcherTruePBR::applyShader(nifly::NiShape& nifShape, bool& nifModified)
+void PatcherMeshShaderTruePBR::applyShader(nifly::NiShape& nifShape, bool& nifModified)
 {
     // Contrary to the other patchers, this one is generic and is not called normally other than setting for plugins,
     // later material swaps in CS are used
@@ -576,7 +578,7 @@ void PatcherTruePBR::applyShader(nifly::NiShape& nifShape, bool& nifModified)
     NIFUtil::clearShaderFlag(nifShaderBSLSP, SLSF1_HAIR_SOFT_LIGHTING, nifModified);
 }
 
-void PatcherTruePBR::loadOptions(unordered_map<string, string>& optionsStr)
+void PatcherMeshShaderTruePBR::loadOptions(unordered_map<string, string>& optionsStr)
 {
     for (const auto& [option, value] : optionsStr) {
         if (option == "no_path_check") {
@@ -585,7 +587,7 @@ void PatcherTruePBR::loadOptions(unordered_map<string, string>& optionsStr)
     }
 }
 
-void PatcherTruePBR::processNewTXSTRecord(const PatcherMatch& match, const std::string& edid)
+void PatcherMeshShaderTruePBR::processNewTXSTRecord(const PatcherMatch& match, const std::string& edid)
 {
     // create texture swap json
     if (edid.empty()) {
@@ -612,8 +614,8 @@ void PatcherTruePBR::processNewTXSTRecord(const PatcherMatch& match, const std::
     out.close();
 }
 
-void PatcherTruePBR::applyOnePatch(NiShape* nifShape, nlohmann::json& truePBRData, const std::wstring& matchedPath,
-    bool& nifModified, std::array<std::wstring, NUM_TEXTURE_SLOTS>& newSlots)
+void PatcherMeshShaderTruePBR::applyOnePatch(NiShape* nifShape, nlohmann::json& truePBRData,
+    const std::wstring& matchedPath, bool& nifModified, std::array<std::wstring, NUM_TEXTURE_SLOTS>& newSlots)
 {
 
     // Prep
@@ -753,7 +755,7 @@ void PatcherTruePBR::applyOnePatch(NiShape* nifShape, nlohmann::json& truePBRDat
     }
 }
 
-void PatcherTruePBR::applyOnePatchSlots(std::array<std::wstring, NUM_TEXTURE_SLOTS>& slots,
+void PatcherMeshShaderTruePBR::applyOnePatchSlots(std::array<std::wstring, NUM_TEXTURE_SLOTS>& slots,
     const nlohmann::json& truePBRData, const std::wstring& matchedPath)
 {
     if (matchedPath.empty()) {
@@ -853,7 +855,7 @@ void PatcherTruePBR::applyOnePatchSlots(std::array<std::wstring, NUM_TEXTURE_SLO
     }
 }
 
-void PatcherTruePBR::enableTruePBROnShape(NiShape* nifShape, NiShader* nifShader,
+void PatcherMeshShaderTruePBR::enableTruePBROnShape(NiShape* nifShape, NiShader* nifShader,
     BSLightingShaderProperty* nifShaderBSLSP, nlohmann::json& truePBRData, const wstring& matchedPath,
     bool& nifModified, std::array<std::wstring, NUM_TEXTURE_SLOTS>& newSlots)
 {
@@ -1029,11 +1031,11 @@ void PatcherTruePBR::enableTruePBROnShape(NiShape* nifShape, NiShader* nifShader
 // Helpers
 //
 
-auto PatcherTruePBR::abs2(Vector2 v) -> Vector2 { return { abs(v.u), abs(v.v) }; }
+auto PatcherMeshShaderTruePBR::abs2(Vector2 v) -> Vector2 { return { abs(v.u), abs(v.v) }; }
 
 // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers)
-auto PatcherTruePBR::autoUVScale(const vector<Vector2>* uvs, const vector<Vector3>* verts, vector<Triangle>& tris)
-    -> Vector2
+auto PatcherMeshShaderTruePBR::autoUVScale(
+    const vector<Vector2>* uvs, const vector<Vector3>* verts, vector<Triangle>& tris) -> Vector2
 {
     Vector2 scale;
     for (const Triangle& t : tris) {
@@ -1057,7 +1059,7 @@ auto PatcherTruePBR::autoUVScale(const vector<Vector2>* uvs, const vector<Vector
 }
 // NOLINTEND(cppcoreguidelines-avoid-magic-numbers)
 
-auto PatcherTruePBR::flag(const nlohmann::json& json, const char* key) -> bool
+auto PatcherMeshShaderTruePBR::flag(const nlohmann::json& json, const char* key) -> bool
 {
     return json.contains(key) && json[key];
 }
