@@ -17,6 +17,7 @@
 
 #include "patchers/Patcher.hpp"
 #include "patchers/PatcherComplexMaterial.hpp"
+#include "patchers/PatcherFixMeshLighting.hpp"
 #include "patchers/PatcherParticleLightsToLP.hpp"
 #include "patchers/PatcherTextureGlobalConvertToHDR.hpp"
 #include "patchers/PatcherTruePBR.hpp"
@@ -157,6 +158,9 @@ void mainRunner(PGToolsCLIArgs& args)
 
         // Create patcher factory
         PatcherUtil::PatcherMeshSet meshPatchers;
+        if (patcherDefs.contains("fixmeshlighting")) {
+            meshPatchers.prePatchers.emplace_back(PatcherFixMeshLighting::getFactory());
+        }
         if (patcherDefs.contains("parallax")) {
             meshPatchers.shaderPatchers.emplace(
                 PatcherVanillaParallax::getShaderType(), PatcherVanillaParallax::getFactory());
