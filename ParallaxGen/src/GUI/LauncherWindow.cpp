@@ -185,8 +185,8 @@ LauncherWindow::LauncherWindow(ParallaxGenConfig& pgc)
     m_prePatcherDisableMLPCheckbox->Bind(wxEVT_CHECKBOX, &LauncherWindow::onPrePatcherDisableMLPChange, this);
     prePatcherSizer->Add(m_prePatcherDisableMLPCheckbox, 0, wxALL, BORDER_SIZE);
 
-    m_prePatcherFixMeshLightingCheckbox = new wxCheckBox(this, wxID_ANY, "Fix Mesh Lighting");
-    m_prePatcherFixMeshLightingCheckbox->SetToolTip("Fixes glowing meshes (For ENB only!)");
+    m_prePatcherFixMeshLightingCheckbox = new wxCheckBox(this, wxID_ANY, "Fix Mesh Lighting (ENB Only)");
+    m_prePatcherFixMeshLightingCheckbox->SetToolTip("Fixes glowing meshes (For ENB users only!)");
     m_prePatcherFixMeshLightingCheckbox->Bind(wxEVT_CHECKBOX, &LauncherWindow::onPrePatcherFixMeshLightingChange, this);
     prePatcherSizer->Add(m_prePatcherFixMeshLightingCheckbox, 0, wxALL, BORDER_SIZE);
 
