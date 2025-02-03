@@ -3,6 +3,7 @@
 ## [0.8.8] - UNRELEASED
 
 - Added "Fix Mesh Lighting" pre-patcher (Thanks to Catnyss for article!)
+- Fixed bug where texture sets of duplicate NIFs were not being patched even if an alternate texture didn't exist
 
 ## [0.8.7] - 2025-02-02
 
