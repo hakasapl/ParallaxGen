@@ -1,4 +1,4 @@
-#include "patchers/PatcherVanillaParallax.hpp"
+#include "patchers/PatcherMeshShaderVanillaParallax.hpp"
 
 #include <Geometry.hpp>
 #include <boost/algorithm/string.hpp>
@@ -8,17 +8,20 @@
 
 using namespace std;
 
-auto PatcherVanillaParallax::getFactory() -> PatcherShader::PatcherShaderFactory
+auto PatcherMeshShaderVanillaParallax::getFactory() -> PatcherMeshShader::PatcherMeshShaderFactory
 {
-    return [](const filesystem::path& nifPath, nifly::NifFile* nif) -> unique_ptr<PatcherShader> {
-        return make_unique<PatcherVanillaParallax>(nifPath, nif);
+    return [](const filesystem::path& nifPath, nifly::NifFile* nif) -> unique_ptr<PatcherMeshShader> {
+        return make_unique<PatcherMeshShaderVanillaParallax>(nifPath, nif);
     };
 }
 
-auto PatcherVanillaParallax::getShaderType() -> NIFUtil::ShapeShader { return NIFUtil::ShapeShader::VANILLAPARALLAX; }
+auto PatcherMeshShaderVanillaParallax::getShaderType() -> NIFUtil::ShapeShader
+{
+    return NIFUtil::ShapeShader::VANILLAPARALLAX;
+}
 
-PatcherVanillaParallax::PatcherVanillaParallax(filesystem::path nifPath, nifly::NifFile* nif)
-    : PatcherShader(std::move(nifPath), nif, "VanillaParallax")
+PatcherMeshShaderVanillaParallax::PatcherMeshShaderVanillaParallax(filesystem::path nifPath, nifly::NifFile* nif)
+    : PatcherMeshShader(std::move(nifPath), nif, "VanillaParallax")
 {
     // Determine if NIF has attached havok animations
     vector<NiObject*> nifBlockTree;
@@ -31,7 +34,7 @@ PatcherVanillaParallax::PatcherVanillaParallax(filesystem::path nifPath, nifly::
     }
 }
 
-auto PatcherVanillaParallax::canApply(NiShape& nifShape) -> bool
+auto PatcherMeshShaderVanillaParallax::canApply(NiShape& nifShape) -> bool
 {
     auto* nifShader = getNIF()->GetShader(&nifShape);
     auto* const nifShaderBSLSP = dynamic_cast<BSLightingShaderProperty*>(nifShader);
@@ -74,12 +77,12 @@ auto PatcherVanillaParallax::canApply(NiShape& nifShape) -> bool
     return true;
 }
 
-auto PatcherVanillaParallax::shouldApply(nifly::NiShape& nifShape, std::vector<PatcherMatch>& matches) -> bool
+auto PatcherMeshShaderVanillaParallax::shouldApply(nifly::NiShape& nifShape, std::vector<PatcherMatch>& matches) -> bool
 {
     return shouldApply(getTextureSet(nifShape), matches);
 }
 
-auto PatcherVanillaParallax::shouldApply(
+auto PatcherMeshShaderVanillaParallax::shouldApply(
     const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots, std::vector<PatcherMatch>& matches) -> bool
 {
     static const auto heightBaseMap = getPGD()->getTextureMapConst(NIFUtil::TextureSlots::PARALLAX);
@@ -132,8 +135,8 @@ auto PatcherVanillaParallax::shouldApply(
     return !matches.empty();
 }
 
-auto PatcherVanillaParallax::applyPatch(nifly::NiShape& nifShape, const PatcherMatch& match, bool& nifModified)
-    -> std::array<std::wstring, NUM_TEXTURE_SLOTS>
+auto PatcherMeshShaderVanillaParallax::applyPatch(nifly::NiShape& nifShape, const PatcherMatch& match,
+    bool& nifModified) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>
 {
     // Apply shader
     applyShader(nifShape, nifModified);
@@ -145,7 +148,7 @@ auto PatcherVanillaParallax::applyPatch(nifly::NiShape& nifShape, const PatcherM
     return newSlots;
 }
 
-auto PatcherVanillaParallax::applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots,
+auto PatcherMeshShaderVanillaParallax::applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots,
     const PatcherMatch& match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>
 {
     array<wstring, NUM_TEXTURE_SLOTS> newSlots = oldSlots;
@@ -155,7 +158,7 @@ auto PatcherVanillaParallax::applyPatchSlots(const std::array<std::wstring, NUM_
     return newSlots;
 }
 
-void PatcherVanillaParallax::applyShader(nifly::NiShape& nifShape, bool& nifModified)
+void PatcherMeshShaderVanillaParallax::applyShader(nifly::NiShape& nifShape, bool& nifModified)
 {
     auto* nifShader = getNIF()->GetShader(&nifShape);
     auto* const nifShaderBSLSP = dynamic_cast<BSLightingShaderProperty*>(nifShader);
@@ -178,4 +181,4 @@ void PatcherVanillaParallax::applyShader(nifly::NiShape& nifShape, bool& nifModi
     }
 }
 
-void PatcherVanillaParallax::processNewTXSTRecord(const PatcherMatch& match, const std::string& edid) { }
+void PatcherMeshShaderVanillaParallax::processNewTXSTRecord(const PatcherMatch& match, const std::string& edid) { }

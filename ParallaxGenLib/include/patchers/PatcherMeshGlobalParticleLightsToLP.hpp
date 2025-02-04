@@ -6,14 +6,14 @@
 #include <Nodes.hpp>
 #include <mutex>
 
-#include "patchers/PatcherGlobal.hpp"
+#include "patchers/base/PatcherMeshGlobal.hpp"
 #include <Shaders.hpp>
 
 /**
- * @class PrePatcherParticleLightsToLP
+ * @class PrePatcherMeshGlobalParticleLightsToLP
  * @brief patcher to transform particle lights to LP
  */
-class PatcherParticleLightsToLP : public PatcherGlobal {
+class PatcherMeshGlobalParticleLightsToLP : public PatcherMeshGlobal {
 private:
     static nlohmann::json s_lpJsonData; /** < LP JSON data */
     static std::mutex s_lpJsonDataMutex; /** < Mutex for LP JSON data */
@@ -29,7 +29,7 @@ public:
      *
      * @return PatcherShaderTransform::PatcherShaderTransformFactory
      */
-    static auto getFactory() -> PatcherGlobal::PatcherGlobalFactory;
+    static auto getFactory() -> PatcherMeshGlobal::PatcherMeshGlobalFactory;
 
     /**
      * @brief Construct a new PrePatcher Particle Lights To LP patcher
@@ -37,7 +37,7 @@ public:
      * @param nifPath NIF path to be patched
      * @param nif NIF object to be patched
      */
-    PatcherParticleLightsToLP(std::filesystem::path nifPath, nifly::NifFile* nif);
+    PatcherMeshGlobalParticleLightsToLP(std::filesystem::path nifPath, nifly::NifFile* nif);
 
     /**
      * @brief Apply this patcher to shape

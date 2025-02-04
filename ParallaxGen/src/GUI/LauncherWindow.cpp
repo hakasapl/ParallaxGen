@@ -185,6 +185,11 @@ LauncherWindow::LauncherWindow(ParallaxGenConfig& pgc)
     m_prePatcherDisableMLPCheckbox->Bind(wxEVT_CHECKBOX, &LauncherWindow::onPrePatcherDisableMLPChange, this);
     prePatcherSizer->Add(m_prePatcherDisableMLPCheckbox, 0, wxALL, BORDER_SIZE);
 
+    m_prePatcherFixMeshLightingCheckbox = new wxCheckBox(this, wxID_ANY, "Fix Mesh Lighting (ENB Only)");
+    m_prePatcherFixMeshLightingCheckbox->SetToolTip("Fixes glowing meshes (For ENB users only!)");
+    m_prePatcherFixMeshLightingCheckbox->Bind(wxEVT_CHECKBOX, &LauncherWindow::onPrePatcherFixMeshLightingChange, this);
+    prePatcherSizer->Add(m_prePatcherFixMeshLightingCheckbox, 0, wxALL, BORDER_SIZE);
+
     rightSizer->Add(prePatcherSizer, 0, wxEXPAND | wxALL, BORDER_SIZE);
 
     //
@@ -506,6 +511,7 @@ void LauncherWindow::loadConfig()
 
     // Pre-Patchers
     m_prePatcherDisableMLPCheckbox->SetValue(initParams.PrePatcher.disableMLP);
+    m_prePatcherFixMeshLightingCheckbox->SetValue(initParams.PrePatcher.fixMeshLighting);
 
     // Shader Patchers
     m_shaderPatcherParallaxCheckbox->SetValue(initParams.ShaderPatcher.parallax);
@@ -669,6 +675,11 @@ void LauncherWindow::onProcessingMapFromMeshesChange([[maybe_unused]] wxCommandE
 void LauncherWindow::onProcessingBSAChange([[maybe_unused]] wxCommandEvent& event) { updateDisabledElements(); }
 
 void LauncherWindow::onPrePatcherDisableMLPChange([[maybe_unused]] wxCommandEvent& event) { updateDisabledElements(); }
+
+void LauncherWindow::onPrePatcherFixMeshLightingChange([[maybe_unused]] wxCommandEvent& event)
+{
+    updateDisabledElements();
+}
 
 void LauncherWindow::onShaderPatcherParallaxChange([[maybe_unused]] wxCommandEvent& event) { updateDisabledElements(); }
 
@@ -836,6 +847,7 @@ auto LauncherWindow::getParams() -> ParallaxGenConfig::PGParams
 
     // Pre-Patchers
     params.PrePatcher.disableMLP = m_prePatcherDisableMLPCheckbox->GetValue();
+    params.PrePatcher.fixMeshLighting = m_prePatcherFixMeshLightingCheckbox->GetValue();
 
     // Shader Patchers
     params.ShaderPatcher.parallax = m_shaderPatcherParallaxCheckbox->GetValue();

@@ -2,11 +2,11 @@
 
 #include "NIFUtil.hpp"
 #include "ParallaxGenUtil.hpp"
-#include "patchers/PatcherShaderTransform.hpp"
+#include "patchers/base/PatcherMeshShaderTransform.hpp"
 
 #include <spdlog/spdlog.h>
 
-PatcherShaderTransform::PatcherShaderTransform(std::filesystem::path nifPath, nifly::NifFile* nif,
+PatcherMeshShaderTransform::PatcherMeshShaderTransform(std::filesystem::path nifPath, nifly::NifFile* nif,
     std::string patcherName, const NIFUtil::ShapeShader& from, const NIFUtil::ShapeShader& to)
     : PatcherMesh(std::move(nifPath), nif, std::move(patcherName))
     , m_fromShader(from)
@@ -14,12 +14,12 @@ PatcherShaderTransform::PatcherShaderTransform(std::filesystem::path nifPath, ni
 {
 }
 
-std::mutex PatcherShaderTransform::s_errorTrackerMutex;
+std::mutex PatcherMeshShaderTransform::s_errorTrackerMutex;
 std::unordered_set<std::tuple<std::filesystem::path, NIFUtil::ShapeShader, NIFUtil::ShapeShader>,
-    PatcherShaderTransform::ErrorTrackerHasher>
-    PatcherShaderTransform::s_errorTracker;
+    PatcherMeshShaderTransform::ErrorTrackerHasher>
+    PatcherMeshShaderTransform::s_errorTracker;
 
-void PatcherShaderTransform::postError(const std::filesystem::path& file)
+void PatcherMeshShaderTransform::postError(const std::filesystem::path& file)
 {
     const std::lock_guard<std::mutex> lock(s_errorTrackerMutex);
 
@@ -30,7 +30,7 @@ void PatcherShaderTransform::postError(const std::filesystem::path& file)
     }
 }
 
-auto PatcherShaderTransform::alreadyTried(const std::filesystem::path& file) -> bool
+auto PatcherMeshShaderTransform::alreadyTried(const std::filesystem::path& file) -> bool
 {
     const std::lock_guard<std::mutex> lock(s_errorTrackerMutex);
 

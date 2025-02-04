@@ -15,14 +15,15 @@
 #include "ParallaxGenRunner.hpp"
 #include "ParallaxGenWarnings.hpp"
 
-#include "patchers/Patcher.hpp"
-#include "patchers/PatcherComplexMaterial.hpp"
-#include "patchers/PatcherParticleLightsToLP.hpp"
+#include "patchers/PatcherMeshGlobalParticleLightsToLP.hpp"
+#include "patchers/PatcherMeshPreFixMeshLighting.hpp"
+#include "patchers/PatcherMeshShaderComplexMaterial.hpp"
+#include "patchers/PatcherMeshShaderTransformParallaxToCM.hpp"
+#include "patchers/PatcherMeshShaderTruePBR.hpp"
+#include "patchers/PatcherMeshShaderVanillaParallax.hpp"
 #include "patchers/PatcherTextureGlobalConvertToHDR.hpp"
-#include "patchers/PatcherTruePBR.hpp"
-#include "patchers/PatcherUpgradeParallaxToCM.hpp"
-#include "patchers/PatcherUtil.hpp"
-#include "patchers/PatcherVanillaParallax.hpp"
+#include "patchers/base/Patcher.hpp"
+#include "patchers/base/PatcherUtil.hpp"
 
 using namespace std;
 
@@ -157,26 +158,31 @@ void mainRunner(PGToolsCLIArgs& args)
 
         // Create patcher factory
         PatcherUtil::PatcherMeshSet meshPatchers;
+        if (patcherDefs.contains("fixmeshlighting")) {
+            meshPatchers.prePatchers.emplace_back(PatcherMeshPreFixMeshLighting::getFactory());
+        }
         if (patcherDefs.contains("parallax")) {
             meshPatchers.shaderPatchers.emplace(
-                PatcherVanillaParallax::getShaderType(), PatcherVanillaParallax::getFactory());
+                PatcherMeshShaderVanillaParallax::getShaderType(), PatcherMeshShaderVanillaParallax::getFactory());
         }
         if (patcherDefs.contains("complexmaterial")) {
             meshPatchers.shaderPatchers.emplace(
-                PatcherComplexMaterial::getShaderType(), PatcherComplexMaterial::getFactory());
-            PatcherComplexMaterial::loadStatics(args.Patch.patchers.contains("disablemlp"), {});
+                PatcherMeshShaderComplexMaterial::getShaderType(), PatcherMeshShaderComplexMaterial::getFactory());
+            PatcherMeshShaderComplexMaterial::loadStatics(args.Patch.patchers.contains("disablemlp"), {});
         }
         if (patcherDefs.contains("truepbr")) {
-            meshPatchers.shaderPatchers.emplace(PatcherTruePBR::getShaderType(), PatcherTruePBR::getFactory());
-            PatcherTruePBR::loadStatics(pgd.getPBRJSONs());
-            PatcherTruePBR::loadOptions(patcherDefs["truepbr"]);
+            meshPatchers.shaderPatchers.emplace(
+                PatcherMeshShaderTruePBR::getShaderType(), PatcherMeshShaderTruePBR::getFactory());
+            PatcherMeshShaderTruePBR::loadStatics(pgd.getPBRJSONs());
+            PatcherMeshShaderTruePBR::loadOptions(patcherDefs["truepbr"]);
         }
         if (patcherDefs.contains("parallaxtocm")) {
-            meshPatchers.shaderTransformPatchers[PatcherUpgradeParallaxToCM::getFromShader()].emplace(
-                PatcherUpgradeParallaxToCM::getToShader(), PatcherUpgradeParallaxToCM::getFactory());
+            meshPatchers.shaderTransformPatchers[PatcherMeshShaderTransformParallaxToCM::getFromShader()].emplace(
+                PatcherMeshShaderTransformParallaxToCM::getToShader(),
+                PatcherMeshShaderTransformParallaxToCM::getFactory());
         }
         if (patcherDefs.contains("particlelightstolp")) {
-            meshPatchers.globalPatchers.emplace_back(PatcherParticleLightsToLP::getFactory());
+            meshPatchers.globalPatchers.emplace_back(PatcherMeshGlobalParticleLightsToLP::getFactory());
         }
 
         PatcherUtil::PatcherTextureSet texPatchers;
@@ -190,7 +196,7 @@ void mainRunner(PGToolsCLIArgs& args)
 
         // Finalize step
         if (patcherDefs.contains("particlelightstolp")) {
-            PatcherParticleLightsToLP::finalize();
+            PatcherMeshGlobalParticleLightsToLP::finalize();
         }
 
         // Release cached files, if any

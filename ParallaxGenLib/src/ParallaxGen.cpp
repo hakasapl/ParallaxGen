@@ -34,8 +34,6 @@
 #include "ParallaxGenTask.hpp"
 #include "ParallaxGenUtil.hpp"
 #include "ParallaxGenWarnings.hpp"
-#include "patchers/PatcherShader.hpp"
-#include "patchers/PatcherUtil.hpp"
 
 using namespace std;
 using namespace ParallaxGenUtil;
@@ -338,6 +336,10 @@ auto ParallaxGen::processNIF(const std::filesystem::path& nifFile, const vector<
 
     // Create patcher objects
     auto patcherObjects = PatcherUtil::PatcherMeshObjectSet();
+    for (const auto& factory : m_meshPatchers.prePatchers) {
+        auto patcher = factory(nifFile, &nif);
+        patcherObjects.prePatchers.emplace_back(std::move(patcher));
+    }
     for (const auto& [shader, factory] : m_meshPatchers.shaderPatchers) {
         auto patcher = factory(nifFile, &nif);
         patcherObjects.shaderPatchers.emplace(shader, std::move(patcher));
@@ -574,17 +576,13 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
         return result;
     }
 
-    shaderApplied = NIFUtil::ShapeShader::NONE;
-
-    if (forceShader != nullptr) {
-        // Force shader means we can just apply the shader and return
-        shaderApplied = *forceShader;
-        // Find correct patcher
-        const auto& patcher = patchers.shaderPatchers.at(*forceShader);
-        patcher->applyShader(*nifShape, shapeModified);
-
-        return result;
+    // apply prepatchers
+    for (const auto& prePatcher : patchers.prePatchers) {
+        const Logger::Prefix prefixPatches(utf8toUTF16(prePatcher->getPatcherName()));
+        prePatcher->applyPatch(*nifShape, shapeModified);
     }
+
+    shaderApplied = NIFUtil::ShapeShader::NONE;
 
     // check that NIFShader has a texture set
     if (!nifShader->HasTextureSet()) {
@@ -625,7 +623,7 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
             const Logger::Prefix prefixPatches(utf8toUTF16(patcher->getPatcherName()));
 
             // Check if shader should be applied
-            vector<PatcherShader::PatcherMatch> curMatches;
+            vector<PatcherMeshShader::PatcherMatch> curMatches;
             if (!patcher->shouldApply(*nifShape, curMatches)) {
                 Logger::trace(L"Rejecting: Shader not applicable");
                 continue;
@@ -636,7 +634,7 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
                 curMatch.mod = m_pgd->getMod(match.matchedPath);
                 curMatch.shader = shader;
                 curMatch.match = match;
-                curMatch.shaderTransformTo = NIFUtil::ShapeShader::NONE;
+                curMatch.shaderTransformTo = NIFUtil::ShapeShader::UNKNOWN;
 
                 // See if transform is possible
                 if (patchers.shaderTransformPatchers.contains(shader)) {
@@ -652,7 +650,7 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
                 }
 
                 // Add to matches if shader can apply (or if transform shader exists and can apply)
-                if (patcher->canApply(*nifShape) || curMatch.shaderTransformTo != NIFUtil::ShapeShader::NONE) {
+                if (patcher->canApply(*nifShape) || curMatch.shaderTransformTo != NIFUtil::ShapeShader::UNKNOWN) {
                     matches.push_back(curMatch);
                     modSet.insert(curMatch.mod);
                 }
@@ -666,14 +664,8 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
         }
     }
 
-    if (matches.empty()) {
-        // no shaders to apply
-        Logger::trace(L"Rejecting: No shaders to apply");
-        return result;
-    }
-
     // Populate conflict mods if set
-    if (conflictMods != nullptr) {
+    if (conflictMods != nullptr && !matches.empty()) {
         if (modSet.size() > 1) {
             const lock_guard<mutex> lock(conflictMods->mutex);
 
@@ -687,6 +679,34 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
                 get<1>(conflictMods->mods[match.mod]).insert(modSet.begin(), modSet.end());
             }
         }
+
+        return result;
+    }
+
+    // if forceshader is set, remove any matches that cannot be applied
+    if (!matches.empty() && forceShader != nullptr) {
+        for (auto it = matches.begin(); it != matches.end();) {
+            if (it->shader != *forceShader && it->shaderTransformTo != *forceShader) {
+                it = matches.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
+
+    if (matches.empty()) {
+        if (forceShader == nullptr) {
+            // no shaders to apply
+            Logger::trace(L"Rejecting: No shaders to apply");
+            return result;
+        }
+
+        // Force shader means we can just apply the shader and return
+        // the only case this should be executing is if an alternate texture exists
+        shaderApplied = *forceShader;
+        // Find correct patcher
+        const auto& patcher = patchers.shaderPatchers.at(*forceShader);
+        patcher->applyShader(*nifShape, shapeModified);
 
         return result;
     }

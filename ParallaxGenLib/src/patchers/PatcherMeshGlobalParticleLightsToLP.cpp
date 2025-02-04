@@ -1,6 +1,5 @@
-#include "patchers/PatcherParticleLightsToLP.hpp"
+#include "patchers/PatcherMeshGlobalParticleLightsToLP.hpp"
 #include "ParallaxGenUtil.hpp"
-#include "patchers/PatcherGlobal.hpp"
 
 #include <Animation.hpp>
 #include <BasicTypes.hpp>
@@ -21,22 +20,23 @@
 using namespace std;
 
 // statics
-nlohmann::json PatcherParticleLightsToLP::s_lpJsonData;
-mutex PatcherParticleLightsToLP::s_lpJsonDataMutex;
+nlohmann::json PatcherMeshGlobalParticleLightsToLP::s_lpJsonData;
+mutex PatcherMeshGlobalParticleLightsToLP::s_lpJsonDataMutex;
 
-PatcherParticleLightsToLP::PatcherParticleLightsToLP(std::filesystem::path nifPath, nifly::NifFile* nif)
-    : PatcherGlobal(std::move(nifPath), nif, "ParticleLightsToLP")
+PatcherMeshGlobalParticleLightsToLP::PatcherMeshGlobalParticleLightsToLP(
+    std::filesystem::path nifPath, nifly::NifFile* nif)
+    : PatcherMeshGlobal(std::move(nifPath), nif, "ParticleLightsToLP")
 {
 }
 
-auto PatcherParticleLightsToLP::getFactory() -> PatcherGlobal::PatcherGlobalFactory
+auto PatcherMeshGlobalParticleLightsToLP::getFactory() -> PatcherMeshGlobal::PatcherMeshGlobalFactory
 {
-    return [](const filesystem::path& nifPath, nifly::NifFile* nif) -> unique_ptr<PatcherGlobal> {
-        return make_unique<PatcherParticleLightsToLP>(nifPath, nif);
+    return [](const filesystem::path& nifPath, nifly::NifFile* nif) -> unique_ptr<PatcherMeshGlobal> {
+        return make_unique<PatcherMeshGlobalParticleLightsToLP>(nifPath, nif);
     };
 }
 
-auto PatcherParticleLightsToLP::applyPatch(bool& nifModified) -> bool
+auto PatcherMeshGlobalParticleLightsToLP::applyPatch(bool& nifModified) -> bool
 {
     // Loop through all blocks to find alpha properties
     // Determine if NIF has attached havok animations
@@ -141,7 +141,7 @@ auto PatcherParticleLightsToLP::applyPatch(bool& nifModified) -> bool
     return appliedPatch;
 }
 
-auto PatcherParticleLightsToLP::applySinglePatch(
+auto PatcherMeshGlobalParticleLightsToLP::applySinglePatch(
     nifly::NiBillboardNode* node, nifly::NiShape* shape, nifly::BSEffectShaderProperty* effectShader) -> bool
 {
     // Start generating LP JSON
@@ -247,13 +247,13 @@ auto PatcherParticleLightsToLP::applySinglePatch(
     // Save JSON
     {
         const lock_guard<mutex> lock(s_lpJsonDataMutex);
-        PatcherParticleLightsToLP::s_lpJsonData.push_back(lpJson);
+        PatcherMeshGlobalParticleLightsToLP::s_lpJsonData.push_back(lpJson);
     }
 
     return true;
 }
 
-auto PatcherParticleLightsToLP::getControllerJSON(nifly::NiTimeController* controller, string& jsonField)
+auto PatcherMeshGlobalParticleLightsToLP::getControllerJSON(nifly::NiTimeController* controller, string& jsonField)
     -> nlohmann::json
 {
     nlohmann::json controllerJson = nlohmann::json::object();
@@ -377,7 +377,7 @@ auto PatcherParticleLightsToLP::getControllerJSON(nifly::NiTimeController* contr
     return controllerJson;
 }
 
-void PatcherParticleLightsToLP::finalize()
+void PatcherMeshGlobalParticleLightsToLP::finalize()
 {
     const lock_guard<mutex> lock(s_lpJsonDataMutex);
 

@@ -1,14 +1,14 @@
 #pragma once
 
 #include "NIFUtil.hpp"
-#include "patchers/PatcherShaderTransform.hpp"
+#include "patchers/base/PatcherMeshShaderTransform.hpp"
 #include <mutex>
 
 /**
- * @class PatcherUpgradeParallaxToCM
+ * @class PatcherMeshShaderTransformParallaxToCM
  * @brief Transform patcher to upgrade Parallax to CM
  */
-class PatcherUpgradeParallaxToCM : public PatcherShaderTransform {
+class PatcherMeshShaderTransformParallaxToCM : public PatcherMeshShaderTransform {
 private:
     static std::mutex s_upgradeCMMutex; /** < Mutex for the upgrade to CM */
 
@@ -18,7 +18,7 @@ public:
      *
      * @return PatcherShaderTransform::PatcherShaderTransformFactory Factory object
      */
-    static auto getFactory() -> PatcherShaderTransform::PatcherShaderTransformFactory;
+    static auto getFactory() -> PatcherMeshShaderTransform::PatcherMeshShaderTransformFactory;
 
     /**
      * @brief Get the From Shader (Parallax)
@@ -40,7 +40,7 @@ public:
      * @param nifPath NIF path to be patched
      * @param nif NIF object to be patched
      */
-    PatcherUpgradeParallaxToCM(std::filesystem::path nifPath, nifly::NifFile* nif);
+    PatcherMeshShaderTransformParallaxToCM(std::filesystem::path nifPath, nifly::NifFile* nif);
 
     /**
      * @brief Transform shader match to new shader match
@@ -48,5 +48,6 @@ public:
      * @param fromMatch Match to transform
      * @return PatcherShader::PatcherMatch Transformed match
      */
-    auto transform(const PatcherShader::PatcherMatch& fromMatch, PatcherShader::PatcherMatch& result) -> bool override;
+    auto transform(const PatcherMeshShader::PatcherMatch& fromMatch, PatcherMeshShader::PatcherMatch& result)
+        -> bool override;
 };

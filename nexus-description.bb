@@ -1,35 +1,8 @@
 [center][b]ParallaxGen is in BETA. It has been successfully used by many but is still in development. Please be patient and file detailed bug reports if you encounter any.[/b][/center]
 [center]The GitHub page for this open-source project can be found [url=https://github.com/hakasapl/ParallaxGen]here[/url].[/center]
 
-[b][size=6][center][color=#6aa84f]Requirements[/color][/center][/size][/b]
-[list]
-[*][size=3]Make sure [url=https://aka.ms/vs/17/release/vc_redist.x64.exe]Microsoft Visual C++ Redistributable x64[/url] is installed[/size]
-[*][size=3]Make sure .NET 8 runtime is installed, you can get it here [url=https://dotnet.microsoft.com/en-us/download/dotnet/8.0]Download .NET 8.0[/url][/size]
-[*][size=3]Mod manager that creates [i]plugins.txt[/i] and [i]loadorder.txt[/i], known to work: [url=https://www.nexusmods.com/about/vortex/]Vortex[/url] and [url=https://www.modorganizer.org/]Mod Organizer 2[/url][/size]
-[/list]
-
-[b][size=6][center][color=#6aa84f]Overview[/color][/center][/size][/b]
-[size=3]ParallaxGen scans the textures of your load order and creates patched meshes and a plugin to enable shaders on meshes. This tool is required in the following cases:[/size]
-[list]
-[*][size=3]you installed a mod that contains parallax, complex material or PBR textures but does not contain the corresponding meshes, note that this is the recommended way to provide textures[/size]
-[*][size=3]you created your own parallax textures[/size]
-[*][size=3]you do have parallax, complex material or PBR meshes, but they are overridden by another mod that does not have the corresponding shaders enabled in the meshes[/size]
-[*][size=3]you do have mixture of parallax, complex material or PBR textures[/size]
-[*][size=3]you don't want to use mod author provided meshes of parallax, complex material or PBR mods because they overwrite meshes from mesh fix mods[/size]
-[*][size=3]you want to upgrade your parallax textures to complex material textures[/size]
-[/list]
-
-[size=6][center][b][color=#6aa84f]Basic usage[/color][/b][/center][/size]
-[list=1]
-[*][size=3]Please review the [url=https://github.com/hakasapl/ParallaxGen/wiki/Requirements]requirements wiki page[/url][/size]
-[*][size=3]Download the latest version from the files section and extract the zip to an empty folder - [b]do not install as a mod in your mod manager[/b] [/size]
-[*][size=3]ParallaxGen will detect the game installation folder automatically, but you can override that in the GUI[/size]
-[*][size=3]Run [b][i]ParallaxGen.exe[/b][/i] to generate the patched meshes. If you use MO2 add ParallaxGen.exe as an executable and run it from there.[/size]
-[*][size=3]In case you get errors or warnings and you are not sure what they mean check out the [url=https://github.com/hakasapl/ParallaxGen/wiki/FAQ]FAQ wiki page[/url]. Otherwise, you can ask in the posts[/size]
-[*][size=3]Install the generated file (by default [b][i]ParallaxGen_Output/ParallaxGen_Output.zip[/b][/i]) with your mod manager, the meshes must win every conflict, the generated plugin [b][i]ParallaxGen.esp[/i][/b] must load as late as possible, but before DynDoLOD. LOOT should sort it correctly.[/size]
-[*][size=3]If you change textures or meshes in your load, remove the existing [b][i]ParallaxGen_Output[/b][/i] in your mod manager and rerun ParallaxGen.exe[/size]
-[/list]
-
+[size=6][center][b][color=#6aa84f][url=https://github.com/hakasapl/ParallaxGen/wiki/Basic-Usage]Getting Started / Requirements[/url][/color][/b][/center][/size]
+[size=6][center][b][color=#6aa84f][url=https://github.com/hakasapl/ParallaxGen/wiki/Troubleshooting-Guide]Troubleshooting Guide[/url][/color][/b][/center][/size]
 [b][size=6][center][color=#6aa84f]Features[/color][/center][/size][/b]
 [size=4]Mesh Patching[/size]
 
@@ -43,27 +16,18 @@ Want to learn more about all the shader types ParallaxGen supports? Check out th
 
 [size=4]Plugin Patching[/size]
 
-Plugins (mainly TXST records) will also be patched according to how the original shapes were patched during mesh patching. A resulting ParallaxGen.esp in the output.
+Plugins (mainly TXST records) will also be patched according to how the original shapes were patched during mesh patching. A resulting ParallaxGen.esp in the output. ParallaxGen will also automatically duplicate meshes when mixing shader types if a given alternate texture record cannot be applied to the originally patched shader.
 
-[size=4]Shader Upgrades[/size]
+[size=4]Shader Transforms[/size]
 
 Complex parallax has a lot of limitations that I didn't like, so I implemented shader upgrades into ParallaxGen. What this means is that by chosing "Upgrade Parallax to Complex Material", ParallaxGen will generate complex material environment mask files for every parallax height map you have in your load order, if an existing complex material map does not already exist. Then, when patching meshes, ParallaxGen will use those newly generated textures and enable complex material on meshes instead of complex parallax. In most cases you won't see any difference in-game between complex parallax and complex material since ParallaxGen does not add any extra data such as metalness and roughness (so you should still prefer to get complex material mods, which will). However, this will allow you to use single-pass snow shaders (ie. Vanilla or Better Dynamic Snow v3), see parallax on decals, and many more things that complex material supports where complex parallax doesn't. [b]In most cases I recommend enabling this option always[/b]. This also fixes the dreaded blue/white distant mesh bug with parallax meshes. After running with this option the result will be NO complex parallax in your game.
 
+[size=4]Other Things![/size]
+
+Such as [url=https://github.com/hakasapl/ParallaxGen/wiki/PGTools]pgtools modding tools[/url], limited texture patching, and a bit more.
+
 [color=#6aa84f][size=6][center][b]A Note to Mod Authors[/b][/center][/size][/color]
-One of the main goals for ParallaxGen is to allow texture artists to worry about just that, and not the mesh part. Historically parallax or complex material meshes needed to be included in mods for them to work in-game. With ParallaxGen you should be able to ship only textures with your mod, and send your users to here to patch their meshes. That being said, the way ParallaxGen identifies textures is not fool-proof. If your mod follows these guidelines, ParallaxGen will work correctly with it:
-
-[list]
-[*]Please make sure your vanilla (non-complex material) environment masks don't have any transparency in them. They should be a single-channel texture.
-[*]Please use standard naming conventions always (_p.dds for parallax maps, _m.dds or _em.dds for env mask / complex material etc.). This is critical for ParallaxGen to be able to find files properly.
-[*]Please reach out if a mod you are working on does not work well with ParallaxGen
-[/list]
-
-[size=6][b][center][color=#6aa84f]CLI arguments[/color][/center][/b][/size]You can add these arguments by editing the executable in MO2/Vortex. Here's what they do:
-[code]-v[/code] = Enable verbose mode - will print every NIF it patches
-[code]-vv[/code] = Trace mode - don't run this unless trying to report a bug or debugging reasons, it creates a huge amount of output that also slows down the general execution of the program
-[code]--autostart[/code] = Enabling this flag will skip the launcher UI and just start using the last saved settings
-
-[size=6][b][center][color=#6aa84f]Linux Users[/color][/center][/b][/size]ParallaxGen mostly seems to work using proton on linux. For now, you will need to disable the output ZIP option in the GUI. GPU acceleration does also work but you need to install d3dcompiler_47 into your prefix.
+One of the main goals for ParallaxGen is to allow texture artists to worry about just that, and not the mesh part. Historically parallax or complex material meshes needed to be included in mods for them to work in-game. With ParallaxGen you should be able to ship only textures with your mod, and send your users to here to patch their meshes. That being said, the way ParallaxGen identifies textures is not fool-proof. See this [url=https://github.com/hakasapl/ParallaxGen/wiki/Mod-Authors]wiki page[/url] for more information for mod authors.
 
 [size=6][center][color=#6aa84f][b]Contributors[/b][/color][/center][/size]This is an open-source project. We would love to have others contribute as well; check out the project's [url=https://github.com/hakasapl/ParallaxGen]GitHub page[/url] for more information. The following authors have contributed to ParallaxGen:
 

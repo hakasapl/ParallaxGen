@@ -15,7 +15,7 @@
 #include "ParallaxGenD3D.hpp"
 #include "ParallaxGenDirectory.hpp"
 #include "ParallaxGenTask.hpp"
-#include "patchers/PatcherUtil.hpp"
+#include "patchers/base/PatcherUtil.hpp"
 
 class ParallaxGen {
 private:

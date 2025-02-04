@@ -113,6 +113,9 @@ private:
     wxCheckBox* m_prePatcherDisableMLPCheckbox;
     void onPrePatcherDisableMLPChange(wxCommandEvent& event);
 
+    wxCheckBox* m_prePatcherFixMeshLightingCheckbox;
+    void onPrePatcherFixMeshLightingChange(wxCommandEvent& event);
+
     // Shader Patchers
     wxCheckBox* m_shaderPatcherParallaxCheckbox;
     void onShaderPatcherParallaxChange(wxCommandEvent& event);

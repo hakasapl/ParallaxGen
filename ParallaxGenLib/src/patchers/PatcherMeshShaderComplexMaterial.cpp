@@ -1,4 +1,4 @@
-#include "patchers/PatcherComplexMaterial.hpp"
+#include "patchers/PatcherMeshShaderComplexMaterial.hpp"
 
 #include <Shaders.hpp>
 #include <boost/algorithm/string.hpp>
@@ -9,31 +9,34 @@
 using namespace std;
 
 // Statics
-std::vector<wstring> PatcherComplexMaterial::s_dynCubemapBlocklist;
-bool PatcherComplexMaterial::s_disableMLP;
+std::vector<wstring> PatcherMeshShaderComplexMaterial::s_dynCubemapBlocklist;
+bool PatcherMeshShaderComplexMaterial::s_disableMLP;
 
-auto PatcherComplexMaterial::loadStatics(const bool& disableMLP, const std::vector<std::wstring>& dynCubemapBlocklist)
-    -> void
+auto PatcherMeshShaderComplexMaterial::loadStatics(
+    const bool& disableMLP, const std::vector<std::wstring>& dynCubemapBlocklist) -> void
 {
-    PatcherComplexMaterial::s_dynCubemapBlocklist = dynCubemapBlocklist;
-    PatcherComplexMaterial::s_disableMLP = disableMLP;
+    PatcherMeshShaderComplexMaterial::s_dynCubemapBlocklist = dynCubemapBlocklist;
+    PatcherMeshShaderComplexMaterial::s_disableMLP = disableMLP;
 }
 
-auto PatcherComplexMaterial::getFactory() -> PatcherShader::PatcherShaderFactory
+auto PatcherMeshShaderComplexMaterial::getFactory() -> PatcherMeshShader::PatcherMeshShaderFactory
 {
-    return [](const filesystem::path& nifPath, nifly::NifFile* nif) -> unique_ptr<PatcherShader> {
-        return make_unique<PatcherComplexMaterial>(nifPath, nif);
+    return [](const filesystem::path& nifPath, nifly::NifFile* nif) -> unique_ptr<PatcherMeshShader> {
+        return make_unique<PatcherMeshShaderComplexMaterial>(nifPath, nif);
     };
 }
 
-auto PatcherComplexMaterial::getShaderType() -> NIFUtil::ShapeShader { return NIFUtil::ShapeShader::COMPLEXMATERIAL; }
+auto PatcherMeshShaderComplexMaterial::getShaderType() -> NIFUtil::ShapeShader
+{
+    return NIFUtil::ShapeShader::COMPLEXMATERIAL;
+}
 
-PatcherComplexMaterial::PatcherComplexMaterial(filesystem::path nifPath, nifly::NifFile* nif)
-    : PatcherShader(std::move(nifPath), nif, "ComplexMaterial")
+PatcherMeshShaderComplexMaterial::PatcherMeshShaderComplexMaterial(filesystem::path nifPath, nifly::NifFile* nif)
+    : PatcherMeshShader(std::move(nifPath), nif, "ComplexMaterial")
 {
 }
 
-auto PatcherComplexMaterial::canApply(NiShape& nifShape) -> bool
+auto PatcherMeshShaderComplexMaterial::canApply(NiShape& nifShape) -> bool
 {
     // Prep
     Logger::trace(L"Starting checking");
@@ -61,13 +64,13 @@ auto PatcherComplexMaterial::canApply(NiShape& nifShape) -> bool
     return true;
 }
 
-auto PatcherComplexMaterial::shouldApply(nifly::NiShape& nifShape, std::vector<PatcherMatch>& matches) -> bool
+auto PatcherMeshShaderComplexMaterial::shouldApply(nifly::NiShape& nifShape, std::vector<PatcherMatch>& matches) -> bool
 {
     // Check for CM matches
     return shouldApply(getTextureSet(nifShape), matches);
 }
 
-auto PatcherComplexMaterial::shouldApply(
+auto PatcherMeshShaderComplexMaterial::shouldApply(
     const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots, std::vector<PatcherMatch>& matches) -> bool
 {
     static const auto cmBaseMap = getPGD()->getTextureMapConst(NIFUtil::TextureSlots::ENVMASK);
@@ -119,7 +122,7 @@ auto PatcherComplexMaterial::shouldApply(
     return !matches.empty();
 }
 
-auto PatcherComplexMaterial::applyPatch(NiShape& nifShape, const PatcherMatch& match, bool& nifModified)
+auto PatcherMeshShaderComplexMaterial::applyPatch(NiShape& nifShape, const PatcherMatch& match, bool& nifModified)
     -> std::array<std::wstring, NUM_TEXTURE_SLOTS>
 {
     // Apply shader
@@ -149,7 +152,7 @@ auto PatcherComplexMaterial::applyPatch(NiShape& nifShape, const PatcherMatch& m
     return newSlots;
 }
 
-auto PatcherComplexMaterial::applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots,
+auto PatcherMeshShaderComplexMaterial::applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots,
     const PatcherMatch& match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>
 {
     array<wstring, NUM_TEXTURE_SLOTS> newSlots = oldSlots;
@@ -170,9 +173,9 @@ auto PatcherComplexMaterial::applyPatchSlots(const std::array<std::wstring, NUM_
     return newSlots;
 }
 
-void PatcherComplexMaterial::processNewTXSTRecord(const PatcherMatch& match, const std::string& edid) { }
+void PatcherMeshShaderComplexMaterial::processNewTXSTRecord(const PatcherMatch& match, const std::string& edid) { }
 
-void PatcherComplexMaterial::applyShader(NiShape& nifShape, bool& nifModified)
+void PatcherMeshShaderComplexMaterial::applyShader(NiShape& nifShape, bool& nifModified)
 {
     auto* nifShader = getNIF()->GetShader(&nifShape);
     auto* const nifShaderBSLSP = dynamic_cast<BSLightingShaderProperty*>(nifShader);

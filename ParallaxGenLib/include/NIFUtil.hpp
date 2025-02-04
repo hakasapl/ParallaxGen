@@ -14,7 +14,7 @@ using TextureSet = std::array<std::wstring, NUM_TEXTURE_SLOTS>;
 static constexpr float MIN_FLOAT_COMPARISON = 10e-05F;
 
 // These need to be in the order of worst shader to best shader
-enum class ShapeShader : uint8_t { NONE, UNKNOWN, VANILLAPARALLAX, COMPLEXMATERIAL, TRUEPBR };
+enum class ShapeShader : uint8_t { UNKNOWN, NONE, VANILLAPARALLAX, COMPLEXMATERIAL, TRUEPBR };
 
 /// @brief get a string that represents the given shader
 /// @param[in] shader shader type

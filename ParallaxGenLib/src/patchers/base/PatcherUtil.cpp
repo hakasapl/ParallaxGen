@@ -1,9 +1,11 @@
-#include "patchers/PatcherUtil.hpp"
+#include "patchers/base/PatcherUtil.hpp"
 
 #include "Logger.hpp"
+#include "NIFUtil.hpp"
 
 using namespace std;
 
+// TODO these methods should probably move into shader and transform classes respectively
 auto PatcherUtil::getWinningMatch(
     const vector<ShaderPatcherMatch>& matches, const unordered_map<wstring, int>* modPriority) -> ShaderPatcherMatch
 {
@@ -41,7 +43,7 @@ auto PatcherUtil::applyTransformIfNeeded(const ShaderPatcherMatch& match, const 
     auto transformedMatch = match;
 
     // Transform if required
-    if (match.shaderTransformTo != NIFUtil::ShapeShader::NONE) {
+    if (match.shaderTransformTo != NIFUtil::ShapeShader::UNKNOWN) {
         // Find transform object
         auto* const transform = patchers.shaderTransformPatchers.at(match.shader).at(match.shaderTransformTo).get();
 
@@ -51,7 +53,7 @@ auto PatcherUtil::applyTransformIfNeeded(const ShaderPatcherMatch& match, const 
             transformedMatch.shader = match.shaderTransformTo;
         }
 
-        transformedMatch.shaderTransformTo = NIFUtil::ShapeShader::NONE;
+        transformedMatch.shaderTransformTo = NIFUtil::ShapeShader::UNKNOWN;
     }
 
     return transformedMatch;

@@ -1,4 +1,4 @@
-#include "Patchers/PatcherShader.hpp"
+#include "patchers/base/PatcherMeshShader.hpp"
 
 #include "NIFUtil.hpp"
 #include "ParallaxGenUtil.hpp"
@@ -13,18 +13,18 @@ using namespace std;
 
 // statics
 
-unordered_map<tuple<filesystem::path, uint32_t>, PatcherShader::PatchedTextureSet,
-    PatcherShader::PatchedTextureSetsHash>
-    PatcherShader::s_patchedTextureSets;
-mutex PatcherShader::s_patchedTextureSetsMutex;
+unordered_map<tuple<filesystem::path, uint32_t>, PatcherMeshShader::PatchedTextureSet,
+    PatcherMeshShader::PatchedTextureSetsHash>
+    PatcherMeshShader::s_patchedTextureSets;
+mutex PatcherMeshShader::s_patchedTextureSetsMutex;
 
 // Constructor
-PatcherShader::PatcherShader(filesystem::path nifPath, nifly::NifFile* nif, string patcherName)
+PatcherMeshShader::PatcherMeshShader(filesystem::path nifPath, nifly::NifFile* nif, string patcherName)
     : PatcherMesh(std::move(nifPath), nif, std::move(patcherName))
 {
 }
 
-auto PatcherShader::getTextureSet(nifly::NiShape& nifShape) -> array<wstring, NUM_TEXTURE_SLOTS>
+auto PatcherMeshShader::getTextureSet(nifly::NiShape& nifShape) -> array<wstring, NUM_TEXTURE_SLOTS>
 {
     const lock_guard<mutex> lock(s_patchedTextureSetsMutex);
 
@@ -41,7 +41,7 @@ auto PatcherShader::getTextureSet(nifly::NiShape& nifShape) -> array<wstring, NU
     return NIFUtil::getTextureSlots(getNIF(), &nifShape);
 }
 
-auto PatcherShader::setTextureSet(
+auto PatcherMeshShader::setTextureSet(
     nifly::NiShape& nifShape, const array<wstring, NUM_TEXTURE_SLOTS>& textures, bool& nifModified) -> void
 {
     const lock_guard<mutex> lock(s_patchedTextureSetsMutex);

@@ -6,13 +6,13 @@
 #include <vector>
 
 #include "NIFUtil.hpp"
-#include "patchers/PatcherMesh.hpp"
+#include "patchers/base/PatcherMesh.hpp"
 
 /**
- * @class PatcherShader
+ * @class PatcherMeshShader
  * @brief Base class for shader patchers
  */
-class PatcherShader : public PatcherMesh {
+class PatcherMeshShader : public PatcherMesh {
 private:
     struct PatchedTextureSetsHash {
         auto operator()(const std::tuple<std::filesystem::path, uint32_t>& key) const -> std::size_t
@@ -37,8 +37,9 @@ protected:
 
 public:
     // type definitions
-    using PatcherShaderFactory = std::function<std::unique_ptr<PatcherShader>(std::filesystem::path, nifly::NifFile*)>;
-    using PatcherShaderObject = std::unique_ptr<PatcherShader>;
+    using PatcherMeshShaderFactory
+        = std::function<std::unique_ptr<PatcherMeshShader>(std::filesystem::path, nifly::NifFile*)>;
+    using PatcherMeshShaderObject = std::unique_ptr<PatcherMeshShader>;
 
     /**
      * @struct PatcherMatch
@@ -51,12 +52,12 @@ public:
     };
 
     // Constructors
-    PatcherShader(std::filesystem::path nifPath, nifly::NifFile* nif, std::string patcherName);
-    virtual ~PatcherShader() = default;
-    PatcherShader(const PatcherShader& other) = default;
-    auto operator=(const PatcherShader& other) -> PatcherShader& = default;
-    PatcherShader(PatcherShader&& other) noexcept = default;
-    auto operator=(PatcherShader&& other) noexcept -> PatcherShader& = default;
+    PatcherMeshShader(std::filesystem::path nifPath, nifly::NifFile* nif, std::string patcherName);
+    virtual ~PatcherMeshShader() = default;
+    PatcherMeshShader(const PatcherMeshShader& other) = default;
+    auto operator=(const PatcherMeshShader& other) -> PatcherMeshShader& = default;
+    PatcherMeshShader(PatcherMeshShader&& other) noexcept = default;
+    auto operator=(PatcherMeshShader&& other) noexcept -> PatcherMeshShader& = default;
 
     /**
      * @brief Checks if a shape can be patched by this patcher (without looking at slots)
