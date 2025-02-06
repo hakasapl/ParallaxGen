@@ -4,6 +4,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <filesystem>
 #include <mutex>
+#include <nlohmann/json_fwd.hpp>
 #include <unordered_map>
 #include <windows.h>
 
@@ -32,7 +33,7 @@ private:
     /// @param[in] index3D "3D index" - index of the shape in the nif
     /// @return TXST objects, pairs of (texture set index,alternate textures ids)
     static auto libGetMatchingTXSTObjs(const std::wstring& nifName, const int& index3D)
-        -> std::vector<std::tuple<int, int, std::wstring>>;
+        -> std::vector<std::tuple<int, int, std::wstring, std::string>>;
 
     /// @brief get the assigned textures of all slots in a texture set
     /// @param[in] txstIndex index of the texture set
@@ -57,7 +58,11 @@ private:
     /// @brief get the form id and mod name of the given texture set
     /// @param[in] txstIndex  the texture set
     /// @return pair of form id and mod name
-    static auto libGetTXSTFormID(const int& txstIndex) -> std::tuple<unsigned int, std::wstring>;
+    static auto libGetTXSTFormID(const int& txstIndex) -> std::tuple<unsigned int, std::wstring, std::wstring>;
+
+    static auto libGetModelRecFormID(const int& modelRecHandle) -> std::tuple<unsigned int, std::wstring, std::wstring>;
+
+    static auto libGetAltTexFormID(const int& altTexIndex) -> std::tuple<unsigned int, std::wstring, std::wstring>;
 
     /// @brief get the model record handle from the alternate texture handle
     /// @param[in] altTexIndex global index of the alternate texture
@@ -99,7 +104,9 @@ private:
             return true;
         }
     };
-    static std::unordered_map<std::array<std::wstring, NUM_TEXTURE_SLOTS>, int, ArrayHash, ArrayEqual> s_createdTXSTs;
+    static std::unordered_map<std::array<std::wstring, NUM_TEXTURE_SLOTS>, std::pair<int, std::string>, ArrayHash,
+        ArrayEqual>
+        s_createdTXSTs;
     static std::mutex s_createdTXSTMutex;
 
     static int s_edidCounter;
@@ -121,18 +128,23 @@ public:
         int modelRecHandle {};
         int altTexIndex {};
         int txstIndex {};
+        std::string matchType;
         NIFUtil::ShapeShader shader {};
     };
 
     static void processShape(const std::wstring& nifPath, nifly::NiShape* nifShape, const int& index3D,
-        PatcherUtil::PatcherMeshObjectSet& patchers, std::vector<TXSTResult>& results,
-        PatcherUtil::ConflictModResults* conflictMods = nullptr);
+        PatcherUtil::PatcherMeshObjectSet& patchers, std::vector<TXSTResult>& results, const std::string& shapeKey,
+        PatcherUtil::ConflictModResults* conflictMods = nullptr, nlohmann::json* diagJSON = nullptr);
 
-    static void assignMesh(
-        const std::wstring& nifPath, const std::wstring& baseNIFPath, const std::vector<TXSTResult>& result);
+    static void assignMesh(const std::wstring& nifPath, const std::wstring& baseNIFPath,
+        const std::vector<TXSTResult>& result, nlohmann::json* diagJSON = nullptr);
 
-    static void set3DIndices(
-        const std::wstring& nifPath, const std::vector<std::tuple<nifly::NiShape*, int, int>>& shapeTracker);
+    static void set3DIndices(const std::wstring& nifPath,
+        const std::vector<std::tuple<nifly::NiShape*, int, int, std::string>>& shapeTracker,
+        nlohmann::json* diagJSON = nullptr);
 
     static void savePlugin(const std::filesystem::path& outputDir, bool esmify);
+
+private:
+    static auto getKeyFromFormID(const std::tuple<unsigned int, std::wstring, std::wstring>& formID) -> std::string;
 };

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <nlohmann/json_fwd.hpp>
 #include <unordered_map>
 
 #include "patchers/base/PatcherMeshGlobal.hpp"
@@ -9,6 +10,7 @@
 #include "patchers/base/PatcherTextureGlobal.hpp"
 
 #include "NIFUtil.hpp"
+#include "ParallaxGenUtil.hpp"
 
 /**
  * @class PatcherUtil
@@ -59,6 +61,21 @@ public:
         NIFUtil::ShapeShader shader;
         PatcherMeshShader::PatcherMatch match;
         NIFUtil::ShapeShader shaderTransformTo;
+
+        [[nodiscard]] auto getJSON() const -> nlohmann::json
+        {
+            nlohmann::json json = nlohmann::json::object();
+            json["mod"] = ParallaxGenUtil::utf16toUTF8(mod);
+            json["shader"] = NIFUtil::getStrFromShader(shader);
+            json["shaderTransformTo"] = NIFUtil::getStrFromShader(shaderTransformTo);
+            json["matchedPath"] = ParallaxGenUtil::utf16toUTF8(match.matchedPath);
+            json["matchedFrom"] = nlohmann::json::array();
+            for (const auto& matchedFrom : match.matchedFrom) {
+                json["matchedFrom"].push_back(static_cast<int>(matchedFrom));
+            }
+
+            return json;
+        }
     };
 
     struct ConflictModResults {
@@ -85,6 +102,5 @@ public:
      * @param Patchers Patcher set to use
      * @return ShaderPatcherMatch Transformed match
      */
-    static auto applyTransformIfNeeded(const ShaderPatcherMatch& match, const PatcherMeshObjectSet& patchers)
-        -> ShaderPatcherMatch;
+    static auto applyTransformIfNeeded(ShaderPatcherMatch& match, const PatcherMeshObjectSet& patchers) -> bool;
 };

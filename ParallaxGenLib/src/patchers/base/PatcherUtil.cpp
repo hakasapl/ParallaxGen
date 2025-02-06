@@ -37,24 +37,23 @@ auto PatcherUtil::getWinningMatch(
     return winningShaderMatch;
 }
 
-auto PatcherUtil::applyTransformIfNeeded(const ShaderPatcherMatch& match, const PatcherMeshObjectSet& patchers)
-    -> ShaderPatcherMatch
+auto PatcherUtil::applyTransformIfNeeded(ShaderPatcherMatch& match, const PatcherMeshObjectSet& patchers) -> bool
 {
-    auto transformedMatch = match;
-
     // Transform if required
     if (match.shaderTransformTo != NIFUtil::ShapeShader::UNKNOWN) {
         // Find transform object
         auto* const transform = patchers.shaderTransformPatchers.at(match.shader).at(match.shaderTransformTo).get();
 
         // Transform Shader
-        if (transform->transform(match.match, transformedMatch.match)) {
+        if (transform->transform(match.match, match.match)) {
             // Reset Transform
-            transformedMatch.shader = match.shaderTransformTo;
+            match.shader = match.shaderTransformTo;
         }
 
-        transformedMatch.shaderTransformTo = NIFUtil::ShapeShader::UNKNOWN;
+        match.shaderTransformTo = NIFUtil::ShapeShader::UNKNOWN;
+
+        return true;
     }
 
-    return transformedMatch;
+    return false;
 }

@@ -135,29 +135,33 @@ void ParallaxGenPlugin::libFinalize(const filesystem::path& outputPath, const bo
 }
 
 auto ParallaxGenPlugin::libGetMatchingTXSTObjs(const wstring& nifName, const int& index3D)
-    -> vector<tuple<int, int, wstring>>
+    -> vector<tuple<int, int, wstring, string>>
 {
     const lock_guard<mutex> lock(s_libMutex);
 
     int length = 0;
-    GetMatchingTXSTObjs(nifName.c_str(), index3D, nullptr, nullptr, nullptr, &length);
+    GetMatchingTXSTObjs(nifName.c_str(), index3D, nullptr, nullptr, nullptr, nullptr, &length);
     libLogMessageIfExists();
     libThrowExceptionIfExists();
 
     vector<int> txstIdArray(length);
     vector<int> altTexIdArray(length);
     vector<wchar_t*> matchedNIFArray(length);
-    GetMatchingTXSTObjs(
-        nifName.c_str(), index3D, txstIdArray.data(), altTexIdArray.data(), matchedNIFArray.data(), nullptr);
+    vector<char*> matchTypeArray(length);
+    GetMatchingTXSTObjs(nifName.c_str(), index3D, txstIdArray.data(), altTexIdArray.data(), matchedNIFArray.data(),
+        matchTypeArray.data(), nullptr);
     libLogMessageIfExists();
     libThrowExceptionIfExists();
 
-    vector<tuple<int, int, wstring>> outputArray(length);
+    vector<tuple<int, int, wstring, string>> outputArray(length);
     for (int i = 0; i < length; ++i) {
         const auto* matchedNIFStr = static_cast<const wchar_t*>(matchedNIFArray.at(i));
         LocalFree(static_cast<HGLOBAL>(matchedNIFArray.at(i)));
 
-        outputArray[i] = { txstIdArray[i], altTexIdArray[i], matchedNIFStr };
+        const auto* matchTypeStr = static_cast<const char*>(matchTypeArray.at(i));
+        LocalFree(static_cast<HGLOBAL>(matchTypeArray.at(i)));
+
+        outputArray[i] = { txstIdArray[i], altTexIdArray[i], matchedNIFStr, matchTypeStr };
     }
 
     return outputArray;
@@ -244,13 +248,14 @@ void ParallaxGenPlugin::libSet3DIndex(const int& altTexIndex, const int& index3D
     libThrowExceptionIfExists();
 }
 
-auto ParallaxGenPlugin::libGetTXSTFormID(const int& txstIndex) -> tuple<unsigned int, wstring>
+auto ParallaxGenPlugin::libGetTXSTFormID(const int& txstIndex) -> tuple<unsigned int, wstring, wstring>
 {
     const lock_guard<mutex> lock(s_libMutex);
 
     wchar_t* pluginName = nullptr;
+    wchar_t* winningPluginName = nullptr;
     unsigned int formID = 0;
-    GetTXSTFormID(txstIndex, &formID, &pluginName);
+    GetTXSTFormID(txstIndex, &formID, &pluginName, &winningPluginName);
     libLogMessageIfExists();
     libThrowExceptionIfExists();
 
@@ -259,11 +264,84 @@ auto ParallaxGenPlugin::libGetTXSTFormID(const int& txstIndex) -> tuple<unsigned
         pluginNameString = wstring(pluginName);
         LocalFree(static_cast<HGLOBAL>(pluginName)); // Only free if memory was allocated.
     } else {
-        // Handle the case where PluginName is null (e.g., log an error, throw an exception, etc.).
+        // Handle the case where PluginName is null
         pluginNameString = L"Unknown";
     }
 
-    return make_tuple(formID, pluginNameString);
+    wstring winningPluginNameString;
+    if (winningPluginName != nullptr) {
+        winningPluginNameString = wstring(winningPluginName);
+        LocalFree(static_cast<HGLOBAL>(winningPluginName)); // Only free if memory was allocated.
+    } else {
+        // Handle the case where WinningPluginName is null
+        winningPluginNameString = L"Unknown";
+    }
+
+    return make_tuple(formID, pluginNameString, winningPluginNameString);
+}
+
+auto ParallaxGenPlugin::libGetModelRecFormID(const int& modelRecHandle) -> tuple<unsigned int, wstring, wstring>
+{
+    const lock_guard<mutex> lock(s_libMutex);
+
+    wchar_t* pluginName = nullptr;
+    wchar_t* winningPluginName = nullptr;
+    unsigned int formID = 0;
+    GetModelRecFormID(modelRecHandle, &formID, &pluginName, &winningPluginName);
+    libLogMessageIfExists();
+    libThrowExceptionIfExists();
+
+    wstring pluginNameString;
+    if (pluginName != nullptr) {
+        pluginNameString = wstring(pluginName);
+        LocalFree(static_cast<HGLOBAL>(pluginName)); // Only free if memory was allocated.
+    } else {
+        // Handle the case where PluginName is null
+        pluginNameString = L"Unknown";
+    }
+
+    wstring winningPluginNameString;
+    if (winningPluginName != nullptr) {
+        winningPluginNameString = wstring(winningPluginName);
+        LocalFree(static_cast<HGLOBAL>(winningPluginName)); // Only free if memory was allocated.
+    } else {
+        // Handle the case where WinningPluginName is null
+        winningPluginNameString = L"Unknown";
+    }
+
+    return make_tuple(formID, pluginNameString, winningPluginNameString);
+}
+
+auto ParallaxGenPlugin::libGetAltTexFormID(const int& altTexIndex) -> tuple<unsigned int, wstring, wstring>
+{
+    const lock_guard<mutex> lock(s_libMutex);
+
+    wchar_t* pluginName = nullptr;
+    wchar_t* winningPluginName = nullptr;
+    unsigned int formID = 0;
+    GetAltTexFormID(altTexIndex, &formID, &pluginName, &winningPluginName);
+    libLogMessageIfExists();
+    libThrowExceptionIfExists();
+
+    wstring pluginNameString;
+    if (pluginName != nullptr) {
+        pluginNameString = wstring(pluginName);
+        LocalFree(static_cast<HGLOBAL>(pluginName)); // Only free if memory was allocated.
+    } else {
+        // Handle the case where PluginName is null
+        pluginNameString = L"Unknown";
+    }
+
+    wstring winningPluginNameString;
+    if (winningPluginName != nullptr) {
+        winningPluginNameString = wstring(winningPluginName);
+        LocalFree(static_cast<HGLOBAL>(winningPluginName)); // Only free if memory was allocated.
+    } else {
+        // Handle the case where WinningPluginName is null
+        winningPluginNameString = L"Unknown";
+    }
+
+    return make_tuple(formID, pluginNameString, winningPluginNameString);
 }
 
 auto ParallaxGenPlugin::libGetModelRecHandleFromAltTexHandle(const int& altTexIndex) -> int
@@ -289,7 +367,8 @@ void ParallaxGenPlugin::libSetModelRecNIF(const int& modelRecHandle, const wstri
 
 // Statics
 mutex ParallaxGenPlugin::s_createdTXSTMutex;
-unordered_map<array<wstring, NUM_TEXTURE_SLOTS>, int, ParallaxGenPlugin::ArrayHash, ParallaxGenPlugin::ArrayEqual>
+unordered_map<array<wstring, NUM_TEXTURE_SLOTS>, pair<int, string>, ParallaxGenPlugin::ArrayHash,
+    ParallaxGenPlugin::ArrayEqual>
     ParallaxGenPlugin::s_createdTXSTs;
 
 mutex ParallaxGenPlugin::s_edidCounterMutex;
@@ -324,9 +403,15 @@ void ParallaxGenPlugin::initialize(const BethesdaGame& game, const filesystem::p
 
 void ParallaxGenPlugin::populateObjs() { libPopulateObjs(); }
 
+auto ParallaxGenPlugin::getKeyFromFormID(const tuple<unsigned int, wstring, wstring>& formID) -> string
+{
+    return ParallaxGenUtil::utf16toUTF8(get<1>(formID)) + " (" + ParallaxGenUtil::utf16toUTF8(get<2>(formID)) + ") "
+        + format("{:X}", get<0>(formID));
+}
+
 void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nifShape, const int& index3D,
-    PatcherUtil::PatcherMeshObjectSet& patchers, vector<TXSTResult>& results,
-    PatcherUtil::ConflictModResults* conflictMods)
+    PatcherUtil::PatcherMeshObjectSet& patchers, vector<TXSTResult>& results, const string& shapeKey,
+    PatcherUtil::ConflictModResults* conflictMods, nlohmann::json* diagJSON)
 {
     const lock_guard<mutex> lock(s_processShapeMutex);
 
@@ -334,7 +419,25 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
 
     // loop through matches
     const auto matches = libGetMatchingTXSTObjs(nifPath, index3D);
-    for (const auto& [txstIndex, altTexIndex, matchedNIF] : matches) {
+    for (const auto& [txstIndex, altTexIndex, matchedNIF, matchType] : matches) {
+        // create keys for diagnostics
+        string altTexJSONKey;
+        string txstJSONKey;
+
+        nlohmann::json* curShapeDiagJSON = nullptr;
+        if (diagJSON != nullptr) {
+            altTexJSONKey = getKeyFromFormID(libGetAltTexFormID(altTexIndex)) + " / " + matchType;
+            txstJSONKey = getKeyFromFormID(libGetTXSTFormID(txstIndex));
+
+            if (!diagJSON->contains(altTexJSONKey)) {
+                (*diagJSON)[altTexJSONKey] = nlohmann::json::object();
+            }
+            (*diagJSON)[altTexJSONKey][shapeKey] = nlohmann::json::object();
+            curShapeDiagJSON = &(*diagJSON)[altTexJSONKey][shapeKey];
+
+            (*curShapeDiagJSON)["origIndex3D"] = index3D;
+        }
+
         //  Allowed shaders from result of patchers
         vector<PatcherUtil::ShaderPatcherMatch> matches;
 
@@ -342,9 +445,18 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
         TXSTResult curResult;
 
         // Get TXST slots
+        if (diagJSON != nullptr) {
+            (*curShapeDiagJSON)["origTXST"] = txstJSONKey;
+            (*curShapeDiagJSON)["origTextures"] = nlohmann::json::array();
+        }
+
         auto oldSlots = libGetTXSTSlots(txstIndex);
         auto baseSlots = oldSlots;
         for (auto& slot : baseSlots) {
+            if (diagJSON != nullptr) {
+                (*curShapeDiagJSON)["origTextures"].push_back(ParallaxGenUtil::utf16toUTF8(slot));
+            }
+
             // Remove PBR from beginning if its there so that we can actually process it
             static constexpr const char* PBR_PREFIX = "textures\\pbr\\";
 
@@ -362,7 +474,7 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
             }
 
             // note: name is defined in source code in UTF8-encoded files
-            const Logger::Prefix prefixPatches(ParallaxGenUtil::utf8toUTF16(patcher->getPatcherName()));
+            const Logger::Prefix prefixPatches(patcher->getPatcherName());
 
             // Check if shader should be applied
             vector<PatcherMeshShader::PatcherMatch> curMatches;
@@ -419,12 +531,27 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
             continue;
         }
 
+        // Populate diag JSON if set with each match
+        if (diagJSON != nullptr) {
+            (*curShapeDiagJSON)["shaderPatcherMatches"] = nlohmann::json::array();
+            for (const auto& match : matches) {
+                (*curShapeDiagJSON)["shaderPatcherMatches"].push_back(match.getJSON());
+            }
+        }
+
         // Get winning match
         auto winningShaderMatch = PatcherUtil::getWinningMatch(matches, s_modPriority);
+        if (diagJSON != nullptr) {
+            (*curShapeDiagJSON)["winningShaderMatch"] = winningShaderMatch.getJSON();
+        }
+
         curResult.matchedNIF = matchedNIF;
 
         // Apply transforms
-        winningShaderMatch = PatcherUtil::applyTransformIfNeeded(winningShaderMatch, patchers);
+        if (PatcherUtil::applyTransformIfNeeded(winningShaderMatch, patchers) && diagJSON != nullptr) {
+            (*curShapeDiagJSON)["shaderTransformResult"] = winningShaderMatch.getJSON();
+        }
+
         if (winningShaderMatch.shader == NIFUtil::ShapeShader::UNKNOWN) {
             // if no match apply the default patcher
             winningShaderMatch.shader = NIFUtil::ShapeShader::NONE;
@@ -450,12 +577,12 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
         for (int i = 0; i < NUM_TEXTURE_SLOTS; ++i) {
             if (!boost::iequals(oldSlots.at(i), newSlots.at(i))) {
                 foundDiff = true;
-                break;
             }
         }
 
         curResult.altTexIndex = altTexIndex;
         curResult.modelRecHandle = libGetModelRecHandleFromAltTexHandle(altTexIndex);
+        curResult.matchType = matchType;
 
         if (!foundDiff) {
             // No need to patch
@@ -465,6 +592,13 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
             continue;
         }
 
+        if (diagJSON != nullptr) {
+            (*curShapeDiagJSON)["newTextures"] = nlohmann::json::array();
+            for (int i = 0; i < NUM_TEXTURE_SLOTS; ++i) {
+                (*curShapeDiagJSON)["newTextures"].push_back(ParallaxGenUtil::utf16toUTF8(newSlots.at(i)));
+            }
+        }
+
         {
             const lock_guard<mutex> lock(s_createdTXSTMutex);
 
@@ -472,8 +606,13 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
             if (s_createdTXSTs.contains(newSlots)) {
                 // Already modded
                 spdlog::trace(L"Plugin Patching | {} | {} | Already added, skipping", nifPath, index3D);
-                curResult.txstIndex = s_createdTXSTs[newSlots];
+                curResult.txstIndex = s_createdTXSTs[newSlots].first;
                 results.push_back(curResult);
+
+                if (diagJSON != nullptr) {
+                    (*curShapeDiagJSON)["newTXST"] = s_createdTXSTs[newSlots].second;
+                }
+
                 continue;
             }
 
@@ -483,7 +622,11 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
             curResult.txstIndex = libCreateNewTXSTPatch(altTexIndex, newSlots, newEDID);
             patchers.shaderPatchers.at(winningShaderMatch.shader)
                 ->processNewTXSTRecord(winningShaderMatch.match, newEDID);
-            s_createdTXSTs[newSlots] = curResult.txstIndex;
+            s_createdTXSTs[newSlots] = { curResult.txstIndex, newEDID };
+
+            if (diagJSON != nullptr) {
+                (*curShapeDiagJSON)["newTXST"] = newEDID;
+            }
         }
 
         // add to result
@@ -491,7 +634,8 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
     }
 }
 
-void ParallaxGenPlugin::assignMesh(const wstring& nifPath, const wstring& baseNIFPath, const vector<TXSTResult>& result)
+void ParallaxGenPlugin::assignMesh(
+    const wstring& nifPath, const wstring& baseNIFPath, const vector<TXSTResult>& result, nlohmann::json* diagJSON)
 {
     const lock_guard<mutex> lock(s_processShapeMutex);
 
@@ -504,9 +648,24 @@ void ParallaxGenPlugin::assignMesh(const wstring& nifPath, const wstring& baseNI
             continue;
         }
 
+        string altTexJSONKey;
+        if (diagJSON != nullptr) {
+            // create keys for diagnostics
+            altTexJSONKey = getKeyFromFormID(libGetAltTexFormID(curResult.altTexIndex)) + " / " + curResult.matchType;
+
+            if (!diagJSON->contains(altTexJSONKey)) {
+                (*diagJSON)[altTexJSONKey] = nlohmann::json::object();
+            }
+            (*diagJSON)[altTexJSONKey]["origModel"] = ParallaxGenUtil::utf16toUTF8(baseNIFPath);
+        }
+
         if (!boost::iequals(curResult.matchedNIF, nifPath)) {
             // Set model rec handle
             libSetModelRecNIF(curResult.altTexIndex, nifPath);
+
+            if (diagJSON != nullptr) {
+                (*diagJSON)[altTexJSONKey]["newModel"] = ParallaxGenUtil::utf16toUTF8(nifPath);
+            }
         }
 
         // Set model alt tex
@@ -514,22 +673,22 @@ void ParallaxGenPlugin::assignMesh(const wstring& nifPath, const wstring& baseNI
     }
 }
 
-void ParallaxGenPlugin::set3DIndices(
-    const wstring& nifPath, const vector<tuple<nifly::NiShape*, int, int>>& shapeTracker)
+void ParallaxGenPlugin::set3DIndices(const wstring& nifPath,
+    const vector<tuple<nifly::NiShape*, int, int, string>>& shapeTracker, nlohmann::json* diagJSON)
 {
     const lock_guard<mutex> lock(s_processShapeMutex);
 
     const Logger::Prefix prefix(L"set3DIndices");
 
     // Loop through shape tracker
-    for (const auto& [shape, oldIndex3D, newIndex3D] : shapeTracker) {
+    for (const auto& [shape, oldIndex3D, newIndex3D, shapeLabel] : shapeTracker) {
         const auto shapeName = ParallaxGenUtil::utf8toUTF16(shape->name.get());
 
         // find matches
         const auto matches = libGetMatchingTXSTObjs(nifPath, oldIndex3D);
 
         // Set indices
-        for (const auto& [txstIndex, altTexIndex, matchedNIF] : matches) {
+        for (const auto& [txstIndex, altTexIndex, matchedNIF, matchType] : matches) {
             if (!boost::iequals(nifPath, matchedNIF)) {
                 // Skip if not the base NIF
                 continue;
@@ -538,6 +697,19 @@ void ParallaxGenPlugin::set3DIndices(
             if (oldIndex3D == newIndex3D) {
                 // No change
                 continue;
+            }
+
+            if (diagJSON != nullptr) {
+                // create keys for diagnostics
+                const auto altTexJSONKey = getKeyFromFormID(libGetAltTexFormID(altTexIndex)) + " / " + matchType;
+
+                if (!diagJSON->contains(altTexJSONKey)) {
+                    (*diagJSON)[altTexJSONKey] = nlohmann::json::object();
+                }
+                (*diagJSON)[altTexJSONKey][shapeLabel] = nlohmann::json::object();
+                auto& curShapeDiagJSON = (*diagJSON)[altTexJSONKey][shapeLabel];
+
+                curShapeDiagJSON["newIndex3D"] = newIndex3D;
             }
 
             Logger::trace(L"Setting 3D index for AltTex {} to {}", altTexIndex, newIndex3D);

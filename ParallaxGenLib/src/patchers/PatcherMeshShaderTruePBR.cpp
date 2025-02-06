@@ -247,7 +247,8 @@ auto PatcherMeshShaderTruePBR::shouldApply(const NIFUtil::TextureSet& oldSlots, 
             for (size_t i = 0; i < NUM_TEXTURE_SLOTS; i++) {
                 if (!newSlots.at(i).empty() && !getPGD()->isFile(newSlots.at(i))) {
                     // Slot does not exist
-                    Logger::trace(L"PBR JSON Match: Result texture slot {} does not exist", newSlots.at(i));
+                    Logger::warn(L"Result texture \"{}\" does not exist from PBR json {} (Skipping)", newSlots.at(i),
+                        match.matchedPath);
                     valid = false;
                 }
             }

@@ -84,6 +84,7 @@ public class PGMutagen
     private static IGameEnvironment<ISkyrimMod, ISkyrimModGetter>? Env;
     private static List<ITextureSetGetter> TXSTObjs = [];
     private static List<Tuple<IAlternateTextureGetter, int, int, string>> AltTexRefs = [];
+    private static List<IMajorRecordGetter> ModelOriginals = [];
     private static List<IMajorRecord> ModelCopies = [];
     private static List<IMajorRecord> ModelCopiesEditable = [];
     private static Dictionary<Tuple<string, int>, List<Tuple<int, int>>>? TXSTRefs;
@@ -370,6 +371,7 @@ public class PGMutagen
                         // Deep copy major record
                         try
                         {
+                            ModelOriginals.Add(txstRefObj);
                             var DeepCopy = txstRefObj.DeepCopy();
                             ModelCopies.Add(DeepCopy);
                             var DeepCopyEditable = txstRefObj.DeepCopy();
@@ -750,6 +752,7 @@ public class PGMutagen
       [DNNE.C99Type("int*")] int* TXSTHandles,
       [DNNE.C99Type("int*")] int* AltTexHandles,
       [DNNE.C99Type("wchar_t**")] IntPtr* MatchedNIF,
+      [DNNE.C99Type("char**")] IntPtr* MatchedType,
       [DNNE.C99Type("int*")] int* length)
     {
         try
@@ -772,12 +775,12 @@ public class PGMutagen
             // Log input params
             MessageHandler.Log("[GetMatchingTXSTObjs] Getting Matching TXST Objects for: " + key.ToString(), 0);
 
-            List<Tuple<int, int, string>> txstList = [];
+            List<Tuple<int, int, string, string>> txstList = [];
             if (TXSTRefs.TryGetValue(key, out List<Tuple<int, int>>? value))
             {
                 foreach (var txst in value)
                 {
-                    txstList.Add(new Tuple<int, int, string>(txst.Item1, txst.Item2, nifName));
+                    txstList.Add(new Tuple<int, int, string, string>(txst.Item1, txst.Item2, nifName, AltTexRefs[txst.Item2].Item4));
                 }
             }
 
@@ -808,7 +811,7 @@ public class PGMutagen
                         continue;
                     }
 
-                    txstList.Add(new Tuple<int, int, string>(txst.Item1, txst.Item2, altNifName));
+                    txstList.Add(new Tuple<int, int, string, string>(txst.Item1, txst.Item2, altNifName, altTexRef.Item4));
                 }
             }
 
@@ -818,7 +821,7 @@ public class PGMutagen
                 MessageHandler.Log("[GetMatchingTXSTObjs] Found " + txstList.Count + " Matching TXST Objects", 0);
             }
 
-            if (TXSTHandles is null || AltTexHandles is null || MatchedNIF is null)
+            if (TXSTHandles is null || AltTexHandles is null || MatchedNIF is null || MatchedType is null)
             {
                 return;
             }
@@ -829,6 +832,7 @@ public class PGMutagen
                 TXSTHandles[i] = txstList[i].Item1;
                 AltTexHandles[i] = txstList[i].Item2;
                 MatchedNIF[i] = txstList[i].Item3.IsNullOrEmpty() ? IntPtr.Zero : Marshal.StringToHGlobalUni(txstList[i].Item3);
+                MatchedType[i] = txstList[i].Item4.IsNullOrEmpty() ? IntPtr.Zero : Marshal.StringToHGlobalAnsi(txstList[i].Item4);
 
                 MessageHandler.Log("[GetMatchingTXSTObjs] Found Matching TXST: " + key.ToString() + " -> " + GetRecordDesc(TXSTObjs[txstList[i].Item1]), 0);
             }
@@ -1157,19 +1161,95 @@ public class PGMutagen
     }
 
     [UnmanagedCallersOnly(EntryPoint = "GetTXSTFormID", CallConvs = [typeof(CallConvCdecl)])]
-    public static unsafe void GetTXSTFormID([DNNE.C99Type("const int")] int TXSTHandle, [DNNE.C99Type("unsigned int*")] uint* FormID, [DNNE.C99Type("wchar_t**")] IntPtr* PluginName)
+    public static unsafe void GetTXSTFormID([DNNE.C99Type("const int")] int TXSTHandle, [DNNE.C99Type("unsigned int*")] uint* FormID, [DNNE.C99Type("wchar_t**")] IntPtr* PluginName, [DNNE.C99Type("wchar_t**")] IntPtr* WinningPluginName)
     {
         try
         {
-            MessageHandler.Log("[GetTXSTFormID] [TXST Index: " + TXSTHandle + "]", 0);
+            if (Env is null)
+            {
+                throw new Exception("Initialize must be called before GetTXSTFormID");
+            }
 
             var txstObj = TXSTObjs[TXSTHandle];
             var PluginNameStr = txstObj.FormKey.ModKey.FileName;
+
+            if (txstObj.ToLink().TryResolveSimpleContext(Env.LinkCache, out var context))
+            {
+                *WinningPluginName = Marshal.StringToHGlobalUni(context.ModKey.FileName);
+            }
+            else
+            {
+                *WinningPluginName = Marshal.StringToHGlobalUni(PluginNameStr);
+            }
+
             *PluginName = Marshal.StringToHGlobalUni(PluginNameStr);
             var FormIDStr = txstObj.FormKey.ID;
             *FormID = FormIDStr;
+        }
+        catch (Exception ex)
+        {
+            ExceptionHandler.SetLastException(ex);
+        }
+    }
 
-            MessageHandler.Log("[GetTXSTFormID] [TXST Index: " + TXSTHandle + "] Plugin Name: " + PluginNameStr + " FormID: " + FormIDStr.ToString("X6"), 0);
+    [UnmanagedCallersOnly(EntryPoint = "GetModelRecFormID", CallConvs = [typeof(CallConvCdecl)])]
+    public unsafe static void GetModelRecFormID([DNNE.C99Type("const int")] int ModelRecHandle, [DNNE.C99Type("unsigned int*")] uint* FormID, [DNNE.C99Type("wchar_t**")] IntPtr* PluginName, [DNNE.C99Type("wchar_t**")] IntPtr* WinningPluginName)
+    {
+        try
+        {
+            if (Env is null)
+            {
+                throw new Exception("Initialize must be called before GetModelRecFormID");
+            }
+
+            var modelRecObj = ModelOriginals[ModelRecHandle];
+            var PluginNameStr = modelRecObj.FormKey.ModKey.FileName;
+
+            if (modelRecObj.ToLink().TryResolveSimpleContext(Env.LinkCache, out var context))
+            {
+                *WinningPluginName = Marshal.StringToHGlobalUni(context.ModKey.FileName);
+            }
+            else
+            {
+                *WinningPluginName = Marshal.StringToHGlobalUni(PluginNameStr);
+            }
+
+            *PluginName = Marshal.StringToHGlobalUni(PluginNameStr);
+            var FormIDStr = modelRecObj.FormKey.ID;
+            *FormID = FormIDStr;
+        }
+        catch (Exception ex)
+        {
+            ExceptionHandler.SetLastException(ex);
+        }
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetAltTexFormID", CallConvs = [typeof(CallConvCdecl)])]
+    public unsafe static void GetAltTexFormID([DNNE.C99Type("const int")] int AltTexHandle, [DNNE.C99Type("unsigned int*")] uint* FormID, [DNNE.C99Type("wchar_t**")] IntPtr* PluginName, [DNNE.C99Type("wchar_t**")] IntPtr* WinningPluginName)
+    {
+        try
+        {
+            if (Env is null)
+            {
+                throw new Exception("Initialize must be called before GetAltTexFormID");
+            }
+
+            var altTexObj = GetAltTexFromHandle(AltTexHandle);
+            var modelRecObj = ModelOriginals[altTexObj.Item3];
+            var PluginNameStr = modelRecObj.FormKey.ModKey.FileName;
+
+            if (modelRecObj.ToLink().TryResolveSimpleContext(Env.LinkCache, out var context))
+            {
+                *WinningPluginName = Marshal.StringToHGlobalUni(context.ModKey.FileName);
+            }
+            else
+            {
+                *WinningPluginName = Marshal.StringToHGlobalUni(PluginNameStr);
+            }
+
+            *PluginName = Marshal.StringToHGlobalUni(PluginNameStr);
+            var FormIDStr = modelRecObj.FormKey.ID;
+            *FormID = FormIDStr;
         }
         catch (Exception ex)
         {

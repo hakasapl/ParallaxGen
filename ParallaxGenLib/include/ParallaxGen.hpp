@@ -74,7 +74,7 @@ public:
         const PatcherUtil::PatcherMeshSet& meshPatchers, const PatcherUtil::PatcherTextureSet& texPatchers);
     void loadModPriorityMap(std::unordered_map<std::wstring, int>* modPriority);
     // enables parallax on relevant meshes
-    void patch(const bool& multiThread = true, const bool& patchPlugin = true);
+    void patch(const bool& multiThread = true, const bool& patchPlugin = true, nlohmann::json* diagJSON = nullptr);
     // Dry run for finding potential matches (used with mod manager integration)
     [[nodiscard]] auto findModConflicts(const bool& multiThread = true, const bool& patchPlugin = true)
         -> std::unordered_map<std::wstring,
@@ -102,11 +102,12 @@ private:
     };
 
     // thread safe JSON update
-    std::mutex m_jsonUpdateMutex;
-    void threadSafeJSONUpdate(const std::function<void(nlohmann::json&)>& operation, nlohmann::json& diffJSON);
+    static void threadSafeJSONUpdate(
+        const std::function<void(nlohmann::json&)>& operation, nlohmann::json& j, std::mutex& mutex);
 
     // processes a NIF file (enable parallax if needed)
-    auto processNIF(const std::filesystem::path& nifFile, nlohmann::json* diffJSON, const bool& patchPlugin = true,
+    auto processNIF(const std::filesystem::path& nifFile, nlohmann::json* diffJSON, std::mutex* diffJSONMutex,
+        nlohmann::json* diagJSON, std::mutex* diagJSONMutex, const bool& patchPlugin = true,
         PatcherUtil::ConflictModResults* conflictMods = nullptr) -> ParallaxGenTask::PGResult;
 
     // TODO this should return bool
@@ -119,8 +120,8 @@ private:
     // processes a shape within a NIF file
     auto processShape(const std::filesystem::path& nifPath, nifly::NifFile& nif, nifly::NiShape* nifShape,
         const int& shapeIndex, PatcherUtil::PatcherMeshObjectSet& patchers, NIFUtil::ShapeShader& shaderApplied,
-        PatcherUtil::ConflictModResults* conflictMods = nullptr, const NIFUtil::ShapeShader* forceShader = nullptr)
-        -> bool;
+        PatcherUtil::ConflictModResults* conflictMods = nullptr, nlohmann::json* diagJSON = nullptr,
+        const NIFUtil::ShapeShader* forceShader = nullptr) -> bool;
 
     auto processDDS(const std::filesystem::path& ddsFile) -> ParallaxGenTask::PGResult;
 

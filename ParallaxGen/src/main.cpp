@@ -285,7 +285,15 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
     auto modPriorityMap = pgc.getModPriorityMap();
     pg.loadModPriorityMap(&modPriorityMap);
     ParallaxGenWarnings::init(&pgd, &modPriorityMap);
-    pg.patch(params.Processing.multithread, params.Processing.pluginPatching);
+    nlohmann::json patcherDiagJSON;
+    pg.patch(params.Processing.multithread, params.Processing.pluginPatching, &patcherDiagJSON);
+
+    // Save diag JSON
+    spdlog::info("Saving diag JSON file...");
+    const filesystem::path diffJSONPath = params.Output.dir / "ParallaxGen_DIAG.json";
+    ofstream diagJSONFile(diffJSONPath);
+    diagJSONFile << patcherDiagJSON.dump(2) << "\n";
+    diagJSONFile.close();
 
     // Release cached files, if any
     pgd.clearCache();
