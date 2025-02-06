@@ -41,9 +41,10 @@ auto PatcherMeshShader::getTextureSet(nifly::NiShape& nifShape) -> array<wstring
     return NIFUtil::getTextureSlots(getNIF(), &nifShape);
 }
 
-auto PatcherMeshShader::setTextureSet(
-    nifly::NiShape& nifShape, const array<wstring, NUM_TEXTURE_SLOTS>& textures, bool& nifModified) -> void
+auto PatcherMeshShader::setTextureSet(nifly::NiShape& nifShape, const array<wstring, NUM_TEXTURE_SLOTS>& textures)
+    -> bool
 {
+    // TODO this can be local not static
     const lock_guard<mutex> lock(s_patchedTextureSetsMutex);
 
     auto* const nifShader = getNIF()->GetShader(&nifShape);
@@ -60,7 +61,7 @@ auto PatcherMeshShader::setTextureSet(
                 newBlockID = possibleTexRecordID;
 
                 if (newBlockID == textureSetBlockID) {
-                    return;
+                    return false;
                 }
 
                 break;
@@ -84,8 +85,7 @@ auto PatcherMeshShader::setTextureSet(
         nifShaderBSLSP->textureSetRef = newBlockRef;
 
         s_patchedTextureSets[nifShapeKey].patchResults[newBlockID] = textures;
-        nifModified = true;
-        return;
+        return true;
     }
 
     // set original for future use
@@ -93,8 +93,10 @@ auto PatcherMeshShader::setTextureSet(
     s_patchedTextureSets[nifShapeKey].original = slots;
 
     // set the texture slots for the shape like normal
-    NIFUtil::setTextureSlots(getNIF(), &nifShape, textures, nifModified);
+    const bool changed = NIFUtil::setTextureSlots(getNIF(), &nifShape, textures);
 
     // update the patchedtexturesets
     s_patchedTextureSets[nifShapeKey].patchResults[textureSetBlockID] = textures;
+
+    return changed;
 }

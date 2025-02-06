@@ -22,8 +22,8 @@ private:
     };
 
     struct PatchedTextureSet {
-        std::array<std::wstring, NUM_TEXTURE_SLOTS> original;
-        std::unordered_map<uint32_t, std::array<std::wstring, NUM_TEXTURE_SLOTS>> patchResults;
+        NIFUtil::TextureSet original;
+        std::unordered_map<uint32_t, NIFUtil::TextureSet> patchResults;
     };
 
     static std::mutex s_patchedTextureSetsMutex;
@@ -31,9 +31,8 @@ private:
         s_patchedTextureSets;
 
 protected:
-    auto getTextureSet(nifly::NiShape& nifShape) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;
-    void setTextureSet(
-        nifly::NiShape& nifShape, const std::array<std::wstring, NUM_TEXTURE_SLOTS>& textures, bool& nifModified);
+    auto getTextureSet(nifly::NiShape& nifShape) -> NIFUtil::TextureSet;
+    auto setTextureSet(nifly::NiShape& nifShape, const NIFUtil::TextureSet& textures) -> bool;
 
 public:
     // type definitions
@@ -78,27 +77,23 @@ public:
     /// @param[in] oldSlots array of texture slot textures
     /// @param[out] matches vector of matches for the given textures
     /// @return if any match was found
-    virtual auto shouldApply(
-        const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots, std::vector<PatcherMatch>& matches) -> bool
-        = 0;
+    virtual auto shouldApply(const NIFUtil::TextureSet& oldSlots, std::vector<PatcherMatch>& matches) -> bool = 0;
 
     // Methods that apply the patch to a shape
-    virtual auto applyPatch(nifly::NiShape& nifShape, const PatcherMatch& match, bool& nifModified)
-        -> std::array<std::wstring, NUM_TEXTURE_SLOTS>
+    virtual auto applyPatch(nifly::NiShape& nifShape, const PatcherMatch& match, NIFUtil::TextureSet& newSlots) -> bool
         = 0;
 
     /// @brief apply the matched texture to the texture slots
     /// @param[in] oldSlots array of the slot textures
     /// @param[in] match matching texture
     /// @return new array containing the applied matched texture
-    virtual auto applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots, const PatcherMatch& match)
-        -> std::array<std::wstring, NUM_TEXTURE_SLOTS>
+    virtual auto applyPatchSlots(
+        const NIFUtil::TextureSet& oldSlots, const PatcherMatch& match, NIFUtil::TextureSet& newSlots) -> bool
         = 0;
 
     virtual void processNewTXSTRecord(const PatcherMatch& match, const std::string& edid = {}) = 0;
 
     /// @brief apply the shader to the shape
     /// @param[in] nifShape shape to apply the shader to
-    /// @param[out] nifModified if the shape was modified
-    virtual void applyShader(nifly::NiShape& nifShape, bool& nifModified) = 0;
+    virtual auto applyShader(nifly::NiShape& nifShape) -> bool = 0;
 };

@@ -140,37 +140,34 @@ public:
      * @return true Found matches
      * @return false Didn't find matches
      */
-    auto shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots, std::vector<PatcherMatch>& matches)
-        -> bool override;
+    auto shouldApply(const NIFUtil::TextureSet& oldSlots, std::vector<PatcherMatch>& matches) -> bool override;
 
     /**
      * @brief Applies a match to a shape
      *
      * @param nifShape Shape to patch
      * @param match Match to apply
-     * @param[out] nifModified Whether NIF was modified or not
-     * @return std::array<std::wstring, NUM_TEXTURE_SLOTS> New slots of shape
+     * @return NIFUtil::TextureSet New slots of shape
      */
-    auto applyPatch(nifly::NiShape& nifShape, const PatcherMatch& match, bool& nifModified)
-        -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
+    auto applyPatch(nifly::NiShape& nifShape, const PatcherMatch& match, NIFUtil::TextureSet& newSlots)
+        -> bool override;
 
     /**
      * @brief Apply a match to slots
      *
      * @param oldSlots Slots to patch
      * @param[out] match Match to apply
-     * @return std::array<std::wstring, NUM_TEXTURE_SLOTS> New slots
+     * @return NIFUtil::TextureSet New slots
      */
-    auto applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots, const PatcherMatch& match)
-        -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
+    auto applyPatchSlots(const NIFUtil::TextureSet& oldSlots, const PatcherMatch& match, NIFUtil::TextureSet& newSlots)
+        -> bool override;
 
     /**
      * @brief Apply pbr shader to a shape
      *
      * @param nifShape Shape to apply shader to
-     * @param nifModified Whether the NIF was modified
      */
-    void applyShader(nifly::NiShape& nifShape, bool& nifModified) override;
+    auto applyShader(nifly::NiShape& nifShape) -> bool override;
 
     void processNewTXSTRecord(const PatcherMatch& match, const std::string& edid = {}) override;
 
@@ -188,11 +185,10 @@ private:
      * @param nifShape Shape to patch
      * @param truePBRData Data to patch
      * @param matchedPath Matched path (PBR prefix)
-     * @param[out] nifModified Whether NIF was modified
      * @param[out] newSlots New slots of shape
      */
-    void applyOnePatch(nifly::NiShape* nifShape, nlohmann::json& truePBRData, const std::wstring& matchedPath,
-        bool& nifModified, std::array<std::wstring, NUM_TEXTURE_SLOTS>& newSlots);
+    auto applyOnePatch(nifly::NiShape* nifShape, nlohmann::json& truePBRData, const std::wstring& matchedPath,
+        NIFUtil::TextureSet& newSlots) -> bool;
 
     static void applyOnePatchSwapJSON(const nlohmann::json& truePBRData, nlohmann::json& output);
 
@@ -202,10 +198,10 @@ private:
      * @param oldSlots Slots to patch
      * @param truePBRData Data to patch
      * @param matchedPath Matched path (PBR prefix)
-     * @return std::array<std::wstring, NUM_TEXTURE_SLOTS> New slots after patch
+     * @return NIFUtil::TextureSet New slots after patch
      */
-    static void applyOnePatchSlots(std::array<std::wstring, NUM_TEXTURE_SLOTS>& slots,
-        const nlohmann::json& truePBRData, const std::wstring& matchedPath);
+    static void applyOnePatchSlots(
+        NIFUtil::TextureSet& slots, const nlohmann::json& truePBRData, const std::wstring& matchedPath);
 
     /**
      * @brief Enables truepbr on a shape (pbr: true in JSON)
@@ -215,12 +211,11 @@ private:
      * @param nifShaderBSLSP Properties of shader
      * @param truePBRData Data to enable truepbr with
      * @param matchedPath Matched path (PBR prefix)
-     * @param[out] nifModified Whether NIF was modified
      * @param[out] newSlots New slots of shape
      */
-    void enableTruePBROnShape(nifly::NiShape* nifShape, nifly::NiShader* nifShader,
+    auto enableTruePBROnShape(nifly::NiShape* nifShape, nifly::NiShader* nifShader,
         nifly::BSLightingShaderProperty* nifShaderBSLSP, nlohmann::json& truePBRData, const std::wstring& matchedPath,
-        bool& nifModified, std::array<std::wstring, NUM_TEXTURE_SLOTS>& newSlots);
+        NIFUtil::TextureSet& newSlots) -> bool;
 
     // TruePBR Helpers
 

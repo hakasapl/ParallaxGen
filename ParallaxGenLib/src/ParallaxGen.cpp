@@ -16,6 +16,7 @@
 #include <memory>
 #include <miniz.h>
 #include <mutex>
+#include <nlohmann/json_fwd.hpp>
 #include <ranges>
 #include <spdlog/spdlog.h>
 #include <stdexcept>
@@ -258,7 +259,15 @@ auto ParallaxGen::processNIF(const filesystem::path& nifFile, nlohmann::json* di
     // Process NIF
     bool nifModified = false;
     vector<pair<filesystem::path, nifly::NifFile>> dupNIFs;
-    auto nif = processNIF(nifFile, nifFileData, nifModified, nullptr, &dupNIFs, patchPlugin, conflictMods);
+    nlohmann::json diagJSON = nlohmann::json::object();
+    nifly::NifFile nif;
+
+    if (conflictMods == nullptr) {
+        // pass diag JSON only for actual patching
+        nif = processNIF(nifFile, nifFileData, nifModified, nullptr, &dupNIFs, patchPlugin, conflictMods, &diagJSON);
+    } else {
+        nif = processNIF(nifFile, nifFileData, nifModified, nullptr, &dupNIFs, patchPlugin, conflictMods);
+    }
 
     // Save patched NIF if it was modified
     if (nifModified && conflictMods == nullptr && nif.IsValid()) {
@@ -315,13 +324,18 @@ auto ParallaxGen::processNIF(const filesystem::path& nifFile, nlohmann::json* di
     return result;
 }
 
-// shorten some enum names
 auto ParallaxGen::processNIF(const std::filesystem::path& nifFile, const vector<std::byte>& nifBytes, bool& nifModified,
     const vector<NIFUtil::ShapeShader>* forceShaders, vector<pair<filesystem::path, nifly::NifFile>>* dupNIFs,
-    const bool& patchPlugin, PatcherUtil::ConflictModResults* conflictMods) -> nifly::NifFile
+    const bool& patchPlugin, PatcherUtil::ConflictModResults* conflictMods, nlohmann::json* diagJSON) -> nifly::NifFile
 {
     if (patchPlugin && dupNIFs == nullptr) {
+        // duplicating nifs is required for plugin patching
         throw runtime_error("DupNIFs must be set if patchPlugin is true");
+    }
+
+    if (diagJSON != nullptr) {
+        // specify the mod of the original mesh
+        (*diagJSON)["mod"] = m_pgd->getMod(nifFile);
     }
 
     NifFile nif;
@@ -358,18 +372,47 @@ auto ParallaxGen::processNIF(const std::filesystem::path& nifFile, const vector<
     // Get shapes
     auto shapes = nif.GetShapes();
 
-    // Store plugin records
+    // shadersAppliedMesh stores the shaders that were applied on the current mesh by shape for comparison later
     vector<NIFUtil::ShapeShader> shadersAppliedMesh(shapes.size(), NIFUtil::ShapeShader::UNKNOWN);
+
+    // recordHandleTracker tracks records while patching shapes.
+    // The key is the model record handle
+    // The first of the pair is a vector of shaders applied to each shape based on what is in the plugin
+    // the second of the pair is a vector of plugin results for each shape
     unordered_map<int, pair<vector<NIFUtil::ShapeShader>, vector<ParallaxGenPlugin::TXSTResult>>> recordHandleTracker;
 
-    // Patch each shape in NIF
+    // Stores the block id of the currently processing shape (old block ID before sorting)
     int oldShapeIndex = 0;
+
+    // shapeTracker is responsible for storing before/after block IDs so that they can be fixed if sort blocks changes
+    // it in plugins
     vector<tuple<NiShape*, int, int>> shapeTracker;
+
+    if (diagJSON != nullptr) {
+        // create shapes json array
+        (*diagJSON)["shapes"] = nlohmann::json::object();
+    }
+
+    // Loop through each shape in NIF
     for (NiShape* nifShape : shapes) {
         if (nifShape == nullptr) {
+            // Null nif shape (this shouldn't happen unless there is a corruption)
             spdlog::error(L"NIF {} has a null shape (skipping)", nifFile.wstring());
             nifModified = false;
             return {};
+        }
+
+        // get shape name and blockid
+        const auto shapeBlockID = nif.GetBlockID(nifShape);
+        const auto shapeName = nifShape->name.get();
+        const auto shapeIDStr = to_string(shapeBlockID) + " / " + shapeName;
+        const Logger::Prefix prefixShape(shapeIDStr);
+
+        if (diagJSON != nullptr) {
+            // specify the shape name
+            (*diagJSON)["shapes"][shapeIDStr] = nlohmann::json::object();
+            // TODO add shader type and flags?
+            (*diagJSON)["shapes"][shapeIDStr]["origTextures"] = nlohmann::json::array();
         }
 
         // Check for any non-ascii chars
@@ -378,39 +421,30 @@ auto ParallaxGen::processNIF(const std::filesystem::path& nifFile, const vector<
             nif.GetTextureSlot(nifShape, texture, slot);
 
             if (!containsOnlyAscii(texture)) {
+                // NIFs cannot have non-ascii chars in their texture slots
                 spdlog::error(L"NIF {} has texture slot(s) with invalid non-ASCII chars (skipping)", nifFile.wstring());
                 nifModified = false;
                 return {};
             }
+
+            if (diagJSON != nullptr) {
+                // specify the texture
+                (*diagJSON)["shapes"][shapeIDStr]["origTextures"].push_back(texture);
+            }
         }
 
-        // get shape name and blockid
-        const auto shapeBlockID = nif.GetBlockID(nifShape);
-        const auto shapeName = utf8toUTF16(nifShape->name.get());
-        const auto shapeIDStr = to_wstring(shapeBlockID) + L" / " + shapeName;
-        const Logger::Prefix prefixShape(shapeIDStr);
-
-        bool shapeModified = false;
         NIFUtil::ShapeShader shaderApplied = NIFUtil::ShapeShader::UNKNOWN;
 
-        ParallaxGenTask::PGResult shapeResult = ParallaxGenTask::PGResult::SUCCESS;
         if (forceShaders != nullptr && oldShapeIndex < forceShaders->size()) {
             // Force shaders
             auto shaderForce = (*forceShaders)[oldShapeIndex];
-            shapeResult = processShape(nifFile, nif, nifShape, oldShapeIndex, patcherObjects, shapeModified,
-                shaderApplied, conflictMods, &shaderForce);
+            nifModified |= processShape(
+                nifFile, nif, nifShape, oldShapeIndex, patcherObjects, shaderApplied, conflictMods, &shaderForce);
         } else {
-            shapeResult = processShape(
-                nifFile, nif, nifShape, oldShapeIndex, patcherObjects, shapeModified, shaderApplied, conflictMods);
+            nifModified
+                |= processShape(nifFile, nif, nifShape, oldShapeIndex, patcherObjects, shaderApplied, conflictMods);
         }
 
-        if (shapeResult != ParallaxGenTask::PGResult::SUCCESS) {
-            // Fail on process shape fail
-            nifModified = false;
-            return {};
-        }
-
-        nifModified |= shapeModified;
         shadersAppliedMesh[oldShapeIndex] = shaderApplied;
 
         // Update nifModified if shape was modified
@@ -500,7 +534,7 @@ auto ParallaxGen::processNIF(const std::filesystem::path& nifFile, const vector<
     // Run global patchers
     for (const auto& globalPatcher : patcherObjects.globalPatchers) {
         const Logger::Prefix prefixPatches(utf8toUTF16(globalPatcher->getPatcherName()));
-        globalPatcher->applyPatch(nifModified);
+        nifModified |= globalPatcher->applyPatch();
     }
 
     if (!nifModified && forceShaders == nullptr) {
@@ -537,11 +571,10 @@ auto ParallaxGen::processNIF(const std::filesystem::path& nifFile, const vector<
 }
 
 auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, NiShape* nifShape, const int& shapeIndex,
-    PatcherUtil::PatcherMeshObjectSet& patchers, bool& shapeModified, NIFUtil::ShapeShader& shaderApplied,
-    PatcherUtil::ConflictModResults* conflictMods, const NIFUtil::ShapeShader* forceShader) -> ParallaxGenTask::PGResult
+    PatcherUtil::PatcherMeshObjectSet& patchers, NIFUtil::ShapeShader& shaderApplied,
+    PatcherUtil::ConflictModResults* conflictMods, const NIFUtil::ShapeShader* forceShader) -> bool
 {
-
-    auto result = ParallaxGenTask::PGResult::SUCCESS;
+    bool changed = false;
 
     // Prep
     Logger::trace(L"Starting Processing");
@@ -552,13 +585,13 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
     if (nifShapeName != "NiTriShape" && nifShapeName != "BSTriShape" && nifShapeName != "BSLODTriShape"
         && nifShapeName != "BSMeshLODTriShape") {
         Logger::trace(L"Rejecting: Incorrect shape block type");
-        return result;
+        return false;
     }
 
     // get NIFShader type
     if (!nifShape->HasShaderProperty()) {
         Logger::trace(L"Rejecting: No NIFShader property");
-        return result;
+        return false;
     }
 
     // get NIFShader from shape
@@ -566,20 +599,20 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
     if (nifShader == nullptr) {
         // skip if no NIFShader
         Logger::trace(L"Rejecting: No NIFShader property");
-        return result;
+        return false;
     }
 
     // check that NIFShader is a BSLightingShaderProperty
     const string nifShaderName = nifShader->GetBlockName();
     if (nifShaderName != "BSLightingShaderProperty") {
         Logger::trace(L"Rejecting: Incorrect NIFShader block type");
-        return result;
+        return false;
     }
 
     // apply prepatchers
     for (const auto& prePatcher : patchers.prePatchers) {
         const Logger::Prefix prefixPatches(utf8toUTF16(prePatcher->getPatcherName()));
-        prePatcher->applyPatch(*nifShape, shapeModified);
+        changed |= prePatcher->applyPatch(*nifShape);
     }
 
     shaderApplied = NIFUtil::ShapeShader::NONE;
@@ -587,7 +620,7 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
     // check that NIFShader has a texture set
     if (!nifShader->HasTextureSet()) {
         Logger::trace(L"Rejecting: No texture set");
-        return result;
+        return false;
     }
 
     // Create cache key
@@ -680,7 +713,7 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
             }
         }
 
-        return result;
+        return false;
     }
 
     // if forceshader is set, remove any matches that cannot be applied
@@ -698,7 +731,7 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
         if (forceShader == nullptr) {
             // no shaders to apply
             Logger::trace(L"Rejecting: No shaders to apply");
-            return result;
+            return false;
         }
 
         // Force shader means we can just apply the shader and return
@@ -706,9 +739,7 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
         shaderApplied = *forceShader;
         // Find correct patcher
         const auto& patcher = patchers.shaderPatchers.at(*forceShader);
-        patcher->applyShader(*nifShape, shapeModified);
-
-        return result;
+        return patcher->applyShader(*nifShape);
     }
 
     // Get winning match
@@ -721,19 +752,20 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
     if (shaderApplied == NIFUtil::ShapeShader::NONE || shaderApplied == NIFUtil::ShapeShader::UNKNOWN) {
         // no shader to apply
         Logger::trace(L"Rejecting: No shaders to apply");
-        return result;
+        return false;
     }
 
     // Fix num texture slots
     auto* txstRec = nif.GetHeader().GetBlock(nifShader->TextureSetRef());
     if (txstRec->textures.size() < NUM_TEXTURE_SLOTS) {
         txstRec->textures.resize(NUM_TEXTURE_SLOTS);
-        shapeModified = true;
+        changed = true;
     }
 
     // loop through patchers
-    array<wstring, NUM_TEXTURE_SLOTS> newSlots = patchers.shaderPatchers.at(winningShaderMatch.shader)
-                                                     ->applyPatch(*nifShape, winningShaderMatch.match, shapeModified);
+    NIFUtil::TextureSet newSlots;
+    changed |= patchers.shaderPatchers.at(winningShaderMatch.shader)
+                   ->applyPatch(*nifShape, winningShaderMatch.match, newSlots);
 
     // Post warnings if any
     for (const auto& curMatchedFrom : winningShaderMatch.match.matchedFrom) {
@@ -743,7 +775,7 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
 
     ParallaxGenWarnings::meshWarn(winningShaderMatch.match.matchedPath, nifPath.wstring());
 
-    return result;
+    return changed;
 }
 
 auto ParallaxGen::processDDS(const filesystem::path& ddsFile) -> ParallaxGenTask::PGResult

@@ -62,8 +62,7 @@ public:
      * @return true Found matches
      * @return false No matches found
      */
-    auto shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots, std::vector<PatcherMatch>& matches)
-        -> bool override;
+    auto shouldApply(const NIFUtil::TextureSet& oldSlots, std::vector<PatcherMatch>& matches) -> bool override;
 
     /**
      * @brief Apply a match to a shape for parallax
@@ -72,20 +71,20 @@ public:
      * @param match Match to apply
      * @param[out] nifModified Whether the NIF was modified
      * @param[out] shapeDeleted Whether the shape was deleted (always false)
-     * @return std::array<std::wstring, NUM_TEXTURE_SLOTS> New slots of shape
+     * @return NIFUtil::TextureSet New slots of shape
      */
-    auto applyPatch(nifly::NiShape& nifShape, const PatcherMatch& match, bool& nifModified)
-        -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
+    auto applyPatch(nifly::NiShape& nifShape, const PatcherMatch& match, NIFUtil::TextureSet& newSlots)
+        -> bool override;
 
     /**
      * @brief Apply a match to slots for parallax
      *
      * @param oldSlots Slots to patch
      * @param match Match to apply
-     * @return std::array<std::wstring, NUM_TEXTURE_SLOTS> New slots
+     * @return NIFUtil::TextureSet New slots
      */
-    auto applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots, const PatcherMatch& match)
-        -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
+    auto applyPatchSlots(const NIFUtil::TextureSet& oldSlots, const PatcherMatch& match, NIFUtil::TextureSet& newSlots)
+        -> bool override;
 
     void processNewTXSTRecord(const PatcherMatch& match, const std::string& edid = {}) override;
 
@@ -95,5 +94,5 @@ public:
      * @param nifShape Shape to apply shader to
      * @param nifModified Whether the NIF was modified
      */
-    void applyShader(nifly::NiShape& nifShape, bool& nifModified) override;
+    auto applyShader(nifly::NiShape& nifShape) -> bool override;
 };

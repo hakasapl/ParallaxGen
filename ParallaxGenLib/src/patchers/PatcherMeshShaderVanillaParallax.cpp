@@ -83,7 +83,7 @@ auto PatcherMeshShaderVanillaParallax::shouldApply(nifly::NiShape& nifShape, std
 }
 
 auto PatcherMeshShaderVanillaParallax::shouldApply(
-    const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots, std::vector<PatcherMatch>& matches) -> bool
+    const NIFUtil::TextureSet& oldSlots, std::vector<PatcherMatch>& matches) -> bool
 {
     static const auto heightBaseMap = getPGD()->getTextureMapConst(NIFUtil::TextureSlots::PARALLAX);
 
@@ -135,50 +135,56 @@ auto PatcherMeshShaderVanillaParallax::shouldApply(
     return !matches.empty();
 }
 
-auto PatcherMeshShaderVanillaParallax::applyPatch(nifly::NiShape& nifShape, const PatcherMatch& match,
-    bool& nifModified) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>
+auto PatcherMeshShaderVanillaParallax::applyPatch(
+    nifly::NiShape& nifShape, const PatcherMatch& match, NIFUtil::TextureSet& newSlots) -> bool
 {
+    bool changed = false;
+
     // Apply shader
-    applyShader(nifShape, nifModified);
+    changed |= applyShader(nifShape);
 
     // Apply slots
-    auto newSlots = applyPatchSlots(getTextureSet(nifShape), match);
-    setTextureSet(nifShape, newSlots, nifModified);
+    applyPatchSlots(getTextureSet(nifShape), match, newSlots);
+    changed |= setTextureSet(nifShape, newSlots);
 
-    return newSlots;
+    return changed;
 }
 
-auto PatcherMeshShaderVanillaParallax::applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots,
-    const PatcherMatch& match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>
+auto PatcherMeshShaderVanillaParallax::applyPatchSlots(
+    const NIFUtil::TextureSet& oldSlots, const PatcherMatch& match, NIFUtil::TextureSet& newSlots) -> bool
 {
-    array<wstring, NUM_TEXTURE_SLOTS> newSlots = oldSlots;
+    newSlots = oldSlots;
 
     newSlots[static_cast<size_t>(NIFUtil::TextureSlots::PARALLAX)] = match.matchedPath;
 
-    return newSlots;
+    return newSlots != oldSlots;
 }
 
-void PatcherMeshShaderVanillaParallax::applyShader(nifly::NiShape& nifShape, bool& nifModified)
+auto PatcherMeshShaderVanillaParallax::applyShader(nifly::NiShape& nifShape) -> bool
 {
+    bool changed = false;
+
     auto* nifShader = getNIF()->GetShader(&nifShape);
     auto* const nifShaderBSLSP = dynamic_cast<BSLightingShaderProperty*>(nifShader);
 
     // Set NIFShader type to Parallax
-    NIFUtil::setShaderType(nifShader, BSLSP_PARALLAX, nifModified);
+    changed |= NIFUtil::setShaderType(nifShader, BSLSP_PARALLAX);
     // Set NIFShader flags
-    NIFUtil::clearShaderFlag(nifShaderBSLSP, SLSF1_ENVIRONMENT_MAPPING, nifModified);
-    NIFUtil::clearShaderFlag(nifShaderBSLSP, SLSF2_UNUSED01, nifModified);
-    NIFUtil::setShaderFlag(nifShaderBSLSP, SLSF1_PARALLAX, nifModified);
+    changed |= NIFUtil::clearShaderFlag(nifShaderBSLSP, SLSF1_ENVIRONMENT_MAPPING);
+    changed |= NIFUtil::clearShaderFlag(nifShaderBSLSP, SLSF2_UNUSED01);
+    changed |= NIFUtil::setShaderFlag(nifShaderBSLSP, SLSF1_PARALLAX);
     // Set vertex colors for shape
     if (!nifShape.HasVertexColors()) {
         nifShape.SetVertexColors(true);
-        nifModified = true;
+        changed = true;
     }
     // Set vertex colors for NIFShader
     if (!nifShader->HasVertexColors()) {
         nifShader->SetVertexColors(true);
-        nifModified = true;
+        changed = true;
     }
+
+    return changed;
 }
 
 void PatcherMeshShaderVanillaParallax::processNewTXSTRecord(const PatcherMatch& match, const std::string& edid) { }

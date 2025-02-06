@@ -76,30 +76,27 @@ public:
      * @return true Match found
      * @return false No match found
      */
-    auto shouldApply(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots, std::vector<PatcherMatch>& matches)
-        -> bool override;
+    auto shouldApply(const NIFUtil::TextureSet& oldSlots, std::vector<PatcherMatch>& matches) -> bool override;
 
     /**
      * @brief Apply the CM shader to the shape
      *
      * @param[in] nifShape Shape to apply to
      * @param[in] match Match to apply
-     * @param[out] nifModified If NIF was modified
-     * @param[out] shapeDeleted If shape was deleted
-     * @return std::array<std::wstring, NUM_TEXTURE_SLOTS> New slots after patching
+     * @return NIFUtil::TextureSet New slots after patching
      */
-    auto applyPatch(nifly::NiShape& nifShape, const PatcherMatch& match, bool& nifModified)
-        -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
+    auto applyPatch(nifly::NiShape& nifShape, const PatcherMatch& match, NIFUtil::TextureSet& newSlots)
+        -> bool override;
 
     /**
      * @brief Apply the CM shader to the slots
      *
      * @param oldSlots Slots to apply to
      * @param match Match to apply
-     * @return std::array<std::wstring, NUM_TEXTURE_SLOTS> New slots after patching
+     * @return NIFUtil::TextureSet New slots after patching
      */
-    auto applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots, const PatcherMatch& match)
-        -> std::array<std::wstring, NUM_TEXTURE_SLOTS> override;
+    auto applyPatchSlots(const NIFUtil::TextureSet& oldSlots, const PatcherMatch& match, NIFUtil::TextureSet& newSlots)
+        -> bool override;
 
     void processNewTXSTRecord(const PatcherMatch& match, const std::string& edid = {}) override;
 
@@ -109,5 +106,5 @@ public:
      * @param nifShape Shape to apply shader to
      * @param nifModified Whether the NIF was modified
      */
-    void applyShader(nifly::NiShape& nifShape, bool& nifModified) override;
+    auto applyShader(nifly::NiShape& nifShape) -> bool override;
 };

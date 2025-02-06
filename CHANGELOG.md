@@ -1,5 +1,7 @@
 # Changelog
 
+## [0.8.9] - UNRELEASED
+
 ## [0.8.8] - 2025-02-04
 
 - Added "Fix Mesh Lighting" pre-patcher (Thanks to Catnyss for their article!)

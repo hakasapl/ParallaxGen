@@ -28,8 +28,8 @@ auto PatcherMeshShaderDefault::shouldApply(nifly::NiShape& nifShape, std::vector
     return shouldApply(getTextureSet(nifShape), matches);
 }
 
-auto PatcherMeshShaderDefault::shouldApply(
-    const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots, std::vector<PatcherMatch>& matches) -> bool
+auto PatcherMeshShaderDefault::shouldApply(const NIFUtil::TextureSet& oldSlots, std::vector<PatcherMatch>& matches)
+    -> bool
 {
     matches.clear();
 
@@ -54,18 +54,20 @@ auto PatcherMeshShaderDefault::shouldApply(
     return !matches.empty();
 }
 
-auto PatcherMeshShaderDefault::applyPatch(nifly::NiShape& nifShape, [[maybe_unused]] const PatcherMatch& match,
-    [[maybe_unused]] bool& nifModified) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>
+auto PatcherMeshShaderDefault::applyPatch(
+    nifly::NiShape& nifShape, [[maybe_unused]] const PatcherMatch& match, NIFUtil::TextureSet& newSlots) -> bool
 {
-    return getTextureSet(nifShape);
+    newSlots = getTextureSet(nifShape);
+    return false;
 }
 
-auto PatcherMeshShaderDefault::applyPatchSlots(const std::array<std::wstring, NUM_TEXTURE_SLOTS>& oldSlots,
-    [[maybe_unused]] const PatcherMatch& match) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>
+auto PatcherMeshShaderDefault::applyPatchSlots(const NIFUtil::TextureSet& oldSlots,
+    [[maybe_unused]] const PatcherMatch& match, NIFUtil::TextureSet& newSlots) -> bool
 {
-    return oldSlots;
+    newSlots = oldSlots;
+    return false;
 }
 
 void PatcherMeshShaderDefault::processNewTXSTRecord(const PatcherMatch& match, const std::string& edid) { }
 
-void PatcherMeshShaderDefault::applyShader(nifly::NiShape& nifShape, bool& nifModified) { }
+auto PatcherMeshShaderDefault::applyShader([[maybe_unused]] nifly::NiShape& nifShape) -> bool { return false; }

@@ -28,10 +28,8 @@ public:
      * @brief Apply the patch to the NIFShape if able
      *
      * @param nifShape Shape to apply patch to
-     * @param nifModified Whether the NIF was modified
-     * @param shapeDeleted Whether the shape was deleted
      * @return true Patch was applied
      * @return false Patch was not applied
      */
-    virtual auto applyPatch(bool& nifModified) -> bool = 0;
+    virtual auto applyPatch() -> bool = 0;
 };

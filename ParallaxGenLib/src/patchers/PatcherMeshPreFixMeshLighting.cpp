@@ -17,13 +17,17 @@ PatcherMeshPreFixMeshLighting::PatcherMeshPreFixMeshLighting(std::filesystem::pa
 {
 }
 
-void PatcherMeshPreFixMeshLighting::applyPatch(nifly::NiShape& nifShape, bool& nifModified)
+auto PatcherMeshPreFixMeshLighting::applyPatch(nifly::NiShape& nifShape) -> bool
 {
+    bool changed = false;
+
     auto* nifShader = getNIF()->GetShader(&nifShape);
     auto* const nifShaderBSLSP = dynamic_cast<BSLightingShaderProperty*>(nifShader);
 
     if (nifShaderBSLSP->softlighting > SOFTLIGHTING_MAX) {
         Logger::trace(L"Setting softlighting to 0.6 because it is too high");
-        NIFUtil::setShaderFloat(nifShaderBSLSP->softlighting, SOFTLIGHTING_MAX, nifModified);
+        changed |= NIFUtil::setShaderFloat(nifShaderBSLSP->softlighting, SOFTLIGHTING_MAX);
     }
+
+    return changed;
 }

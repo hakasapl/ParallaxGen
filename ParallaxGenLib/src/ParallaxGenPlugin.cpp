@@ -433,8 +433,9 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
         curResult.shader = winningShaderMatch.shader;
 
         // loop through patchers
-        NIFUtil::TextureSet newSlots = patchers.shaderPatchers.at(winningShaderMatch.shader)
-                                           ->applyPatchSlots(baseSlots, winningShaderMatch.match);
+        NIFUtil::TextureSet newSlots;
+        patchers.shaderPatchers.at(winningShaderMatch.shader)
+            ->applyPatchSlots(baseSlots, winningShaderMatch.match, newSlots);
 
         // Post warnings if any
         for (const auto& curMatchedFrom : winningShaderMatch.match.matchedFrom) {

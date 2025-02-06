@@ -109,16 +109,18 @@ private:
     auto processNIF(const std::filesystem::path& nifFile, nlohmann::json* diffJSON, const bool& patchPlugin = true,
         PatcherUtil::ConflictModResults* conflictMods = nullptr) -> ParallaxGenTask::PGResult;
 
+    // TODO this should return bool
     auto processNIF(const std::filesystem::path& nifFile, const std::vector<std::byte>& nifBytes, bool& nifModified,
         const std::vector<NIFUtil::ShapeShader>* forceShaders = nullptr,
         std::vector<std::pair<std::filesystem::path, nifly::NifFile>>* dupNIFs = nullptr,
-        const bool& patchPlugin = true, PatcherUtil::ConflictModResults* conflictMods = nullptr) -> nifly::NifFile;
+        const bool& patchPlugin = true, PatcherUtil::ConflictModResults* conflictMods = nullptr,
+        nlohmann::json* diagJSON = nullptr) -> nifly::NifFile;
 
     // processes a shape within a NIF file
     auto processShape(const std::filesystem::path& nifPath, nifly::NifFile& nif, nifly::NiShape* nifShape,
-        const int& shapeIndex, PatcherUtil::PatcherMeshObjectSet& patchers, bool& shapeModified,
-        NIFUtil::ShapeShader& shaderApplied, PatcherUtil::ConflictModResults* conflictMods = nullptr,
-        const NIFUtil::ShapeShader* forceShader = nullptr) -> ParallaxGenTask::PGResult;
+        const int& shapeIndex, PatcherUtil::PatcherMeshObjectSet& patchers, NIFUtil::ShapeShader& shaderApplied,
+        PatcherUtil::ConflictModResults* conflictMods = nullptr, const NIFUtil::ShapeShader* forceShader = nullptr)
+        -> bool;
 
     auto processDDS(const std::filesystem::path& ddsFile) -> ParallaxGenTask::PGResult;
 

@@ -43,12 +43,10 @@ public:
      * @brief Apply this patcher to shape
      *
      * @param nifShape Shape to patch
-     * @param nifModified Whether NIF was modified
-     * @param shapeDeleted Whether shape was deleted
      * @return true Shape was patched
      * @return false Shape was not patched
      */
-    auto applyPatch(bool& nifModified) -> bool override;
+    auto applyPatch() -> bool override;
 
     /**
      * @brief Save output JSON

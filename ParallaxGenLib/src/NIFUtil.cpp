@@ -213,29 +213,34 @@ auto NIFUtil::loadNIFFromBytes(const std::vector<std::byte>& nifBytes) -> nifly:
     return nif;
 }
 
-auto NIFUtil::setShaderType(
-    nifly::NiShader* nifShader, const nifly::BSLightingShaderPropertyShaderType& type, bool& changed) -> void
+auto NIFUtil::setShaderType(nifly::NiShader* nifShader, const nifly::BSLightingShaderPropertyShaderType& type) -> bool
 {
     if (nifShader->GetShaderType() != type) {
         nifShader->SetShaderType(type);
-        changed = true;
+        return true;
     }
+
+    return false;
 }
 
-auto NIFUtil::setShaderFloat(float& value, const float& newValue, bool& changed) -> void
+auto NIFUtil::setShaderFloat(float& value, const float& newValue) -> bool
 {
     if (fabs(value - newValue) > MIN_FLOAT_COMPARISON) {
         value = newValue;
-        changed = true;
+        return true;
     }
+
+    return false;
 }
 
-auto NIFUtil::setShaderVec2(nifly::Vector2& value, const nifly::Vector2& newValue, bool& changed) -> void
+auto NIFUtil::setShaderVec2(nifly::Vector2& value, const nifly::Vector2& newValue) -> bool
 {
     if (value != newValue) {
         value = newValue;
-        changed = true;
+        return true;
     }
+
+    return false;
 }
 
 // Shader flag helpers
@@ -251,88 +256,107 @@ auto NIFUtil::hasShaderFlag(nifly::BSShaderProperty* nifShaderBSLSP, const nifly
     return (nifShaderBSLSP->shaderFlags2 & flag) != 0U;
 }
 
-auto NIFUtil::setShaderFlag(
-    nifly::BSShaderProperty* nifShaderBSLSP, const nifly::SkyrimShaderPropertyFlags1& flag, bool& changed) -> void
+auto NIFUtil::setShaderFlag(nifly::BSShaderProperty* nifShaderBSLSP, const nifly::SkyrimShaderPropertyFlags1& flag)
+    -> bool
 {
     if (!hasShaderFlag(nifShaderBSLSP, flag)) {
         nifShaderBSLSP->shaderFlags1 |= flag;
-        changed = true;
+        return true;
     }
+
+    return false;
 }
 
-auto NIFUtil::setShaderFlag(
-    nifly::BSShaderProperty* nifShaderBSLSP, const nifly::SkyrimShaderPropertyFlags2& flag, bool& changed) -> void
+auto NIFUtil::setShaderFlag(nifly::BSShaderProperty* nifShaderBSLSP, const nifly::SkyrimShaderPropertyFlags2& flag)
+    -> bool
 {
     if (!hasShaderFlag(nifShaderBSLSP, flag)) {
         nifShaderBSLSP->shaderFlags2 |= flag;
-        changed = true;
+        return true;
     }
+
+    return false;
 }
 
-auto NIFUtil::clearShaderFlag(
-    nifly::BSShaderProperty* nifShaderBSLSP, const nifly::SkyrimShaderPropertyFlags1& flag, bool& changed) -> void
+auto NIFUtil::clearShaderFlag(nifly::BSShaderProperty* nifShaderBSLSP, const nifly::SkyrimShaderPropertyFlags1& flag)
+    -> bool
 {
     if (hasShaderFlag(nifShaderBSLSP, flag)) {
         nifShaderBSLSP->shaderFlags1 &= ~flag;
-        changed = true;
+        return true;
     }
+
+    return false;
 }
 
-auto NIFUtil::clearShaderFlag(
-    nifly::BSShaderProperty* nifShaderBSLSP, const nifly::SkyrimShaderPropertyFlags2& flag, bool& changed) -> void
+auto NIFUtil::clearShaderFlag(nifly::BSShaderProperty* nifShaderBSLSP, const nifly::SkyrimShaderPropertyFlags2& flag)
+    -> bool
 {
     if (hasShaderFlag(nifShaderBSLSP, flag)) {
         nifShaderBSLSP->shaderFlags2 &= ~flag;
-        changed = true;
+        return true;
     }
+
+    return false;
 }
 
-auto NIFUtil::configureShaderFlag(nifly::BSShaderProperty* nifShaderBSLSP,
-    const nifly::SkyrimShaderPropertyFlags1& flag, const bool& enable, bool& changed) -> void
+auto NIFUtil::configureShaderFlag(
+    nifly::BSShaderProperty* nifShaderBSLSP, const nifly::SkyrimShaderPropertyFlags1& flag, const bool& enable) -> bool
 {
+    bool changed = false;
     if (enable) {
-        setShaderFlag(nifShaderBSLSP, flag, changed);
+        changed |= setShaderFlag(nifShaderBSLSP, flag);
     } else {
-        clearShaderFlag(nifShaderBSLSP, flag, changed);
+        changed |= clearShaderFlag(nifShaderBSLSP, flag);
     }
+
+    return changed;
 }
 
-auto NIFUtil::configureShaderFlag(nifly::BSShaderProperty* nifShaderBSLSP,
-    const nifly::SkyrimShaderPropertyFlags2& flag, const bool& enable, bool& changed) -> void
+auto NIFUtil::configureShaderFlag(
+    nifly::BSShaderProperty* nifShaderBSLSP, const nifly::SkyrimShaderPropertyFlags2& flag, const bool& enable) -> bool
 {
+    bool changed = false;
     if (enable) {
-        setShaderFlag(nifShaderBSLSP, flag, changed);
+        changed |= setShaderFlag(nifShaderBSLSP, flag);
     } else {
-        clearShaderFlag(nifShaderBSLSP, flag, changed);
+        changed |= clearShaderFlag(nifShaderBSLSP, flag);
     }
+
+    return changed;
 }
 
 // Texture slot helpers
-auto NIFUtil::setTextureSlot(nifly::NifFile* nif, nifly::NiShape* nifShape, const TextureSlots& slot,
-    const std::wstring& texturePath, bool& changed) -> void
+auto NIFUtil::setTextureSlot(
+    nifly::NifFile* nif, nifly::NiShape* nifShape, const TextureSlots& slot, const std::wstring& texturePath) -> bool
 {
     auto texturePathStr = ParallaxGenUtil::utf16toASCII(texturePath);
-    setTextureSlot(nif, nifShape, slot, texturePathStr, changed);
+    return setTextureSlot(nif, nifShape, slot, texturePathStr);
 }
 
-auto NIFUtil::setTextureSlot(nifly::NifFile* nif, nifly::NiShape* nifShape, const TextureSlots& slot,
-    const string& texturePath, bool& changed) -> void
+auto NIFUtil::setTextureSlot(
+    nifly::NifFile* nif, nifly::NiShape* nifShape, const TextureSlots& slot, const string& texturePath) -> bool
 {
     string existingTex;
     nif->GetTextureSlot(nifShape, existingTex, static_cast<unsigned int>(slot));
     if (!boost::iequals(existingTex, texturePath)) {
         auto newTex = texturePath;
         nif->SetTextureSlot(nifShape, newTex, static_cast<unsigned int>(slot));
-        changed = true;
+        return true;
     }
+
+    return false;
 }
 
-auto NIFUtil::setTextureSlots(nifly::NifFile* nif, nifly::NiShape* nifShape,
-    const std::array<std::wstring, NUM_TEXTURE_SLOTS>& newSlots, bool& changed) -> void
+auto NIFUtil::setTextureSlots(
+    nifly::NifFile* nif, nifly::NiShape* nifShape, const std::array<std::wstring, NUM_TEXTURE_SLOTS>& newSlots) -> bool
 {
+    bool changed = false;
     for (uint32_t i = 0; i < NUM_TEXTURE_SLOTS; i++) {
-        setTextureSlot(nif, nifShape, static_cast<TextureSlots>(i), newSlots.at(i), changed);
+        changed |= setTextureSlot(nif, nifShape, static_cast<TextureSlots>(i), newSlots.at(i));
     }
+
+    return changed;
 }
 
 auto NIFUtil::getTextureSlot(nifly::NifFile* nif, nifly::NiShape* nifShape, const TextureSlots& slot) -> string

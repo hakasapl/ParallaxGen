@@ -36,7 +36,7 @@ auto PatcherMeshGlobalParticleLightsToLP::getFactory() -> PatcherMeshGlobal::Pat
     };
 }
 
-auto PatcherMeshGlobalParticleLightsToLP::applyPatch(bool& nifModified) -> bool
+auto PatcherMeshGlobalParticleLightsToLP::applyPatch() -> bool
 {
     // Loop through all blocks to find alpha properties
     // Determine if NIF has attached havok animations
@@ -131,7 +131,6 @@ auto PatcherMeshGlobalParticleLightsToLP::applyPatch(bool& nifModified) -> bool
         // Apply patch to this particle light
         if (applySinglePatch(billboardNode, shape, effectShader)) {
             // Delete block if patch was applied
-            nifModified = true;
             appliedPatch = true;
             const auto nifBlockRef = nifly::NiRef(getNIF()->GetBlockID(nifBlock));
             getNIF()->GetHeader().DeleteBlock(nifBlockRef);

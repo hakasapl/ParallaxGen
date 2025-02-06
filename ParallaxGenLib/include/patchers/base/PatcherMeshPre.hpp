@@ -28,9 +28,8 @@ public:
      * @brief Apply the patch to the NIFShape if able
      *
      * @param nifShape Shape to apply patch to
-     * @param nifModified Whether the NIF was modified
      * @return true Patch was applied
      * @return false Patch was not applied
      */
-    virtual void applyPatch(nifly::NiShape& nifShape, bool& nifModified) = 0;
+    virtual auto applyPatch(nifly::NiShape& nifShape) -> bool = 0;
 };
