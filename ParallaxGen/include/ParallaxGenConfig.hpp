@@ -62,11 +62,13 @@ public:
             bool pluginPatching = true;
             bool pluginESMify = false;
             bool mapFromMeshes = true;
+            bool diagnostics = false;
 
             auto operator==(const Processing& other) const -> bool
             {
                 return multithread == other.multithread && highMem == other.highMem && bsa == other.bsa
-                    && pluginPatching == other.pluginPatching && mapFromMeshes == other.mapFromMeshes;
+                    && pluginPatching == other.pluginPatching && mapFromMeshes == other.mapFromMeshes
+                    && diagnostics == other.diagnostics;
             }
         } Processing;
 

@@ -7,6 +7,7 @@
 
 #include "Logger.hpp"
 #include "NIFUtil.hpp"
+#include "PGDiag.hpp"
 #include "ParallaxGenMutagenWrapperNE.h"
 #include "ParallaxGenUtil.hpp"
 #include "ParallaxGenWarnings.hpp"
@@ -411,7 +412,7 @@ auto ParallaxGenPlugin::getKeyFromFormID(const tuple<unsigned int, wstring, wstr
 
 void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nifShape, const int& index3D,
     PatcherUtil::PatcherMeshObjectSet& patchers, vector<TXSTResult>& results, const string& shapeKey,
-    PatcherUtil::ConflictModResults* conflictMods, nlohmann::json* diagJSON)
+    PatcherUtil::ConflictModResults* conflictMods)
 {
     const lock_guard<mutex> lock(s_processShapeMutex);
 
@@ -424,19 +425,12 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
         string altTexJSONKey;
         string txstJSONKey;
 
-        nlohmann::json* curShapeDiagJSON = nullptr;
-        if (diagJSON != nullptr) {
-            altTexJSONKey = getKeyFromFormID(libGetAltTexFormID(altTexIndex)) + " / " + matchType;
-            txstJSONKey = getKeyFromFormID(libGetTXSTFormID(txstIndex));
+        altTexJSONKey = getKeyFromFormID(libGetAltTexFormID(altTexIndex)) + " / " + matchType;
+        txstJSONKey = getKeyFromFormID(libGetTXSTFormID(txstIndex));
 
-            if (!diagJSON->contains(altTexJSONKey)) {
-                (*diagJSON)[altTexJSONKey] = nlohmann::json::object();
-            }
-            (*diagJSON)[altTexJSONKey][shapeKey] = nlohmann::json::object();
-            curShapeDiagJSON = &(*diagJSON)[altTexJSONKey][shapeKey];
-
-            (*curShapeDiagJSON)["origIndex3D"] = index3D;
-        }
+        const PGDiag::Prefix diagAltTexPrefix(altTexJSONKey, nlohmann::json::value_t::object);
+        const PGDiag::Prefix diagShapeKeyPrefix(shapeKey, nlohmann::json::value_t::object);
+        PGDiag::insert("origIndex3D", index3D);
 
         //  Allowed shaders from result of patchers
         vector<PatcherUtil::ShaderPatcherMatch> matches;
@@ -445,23 +439,21 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
         TXSTResult curResult;
 
         // Get TXST slots
-        if (diagJSON != nullptr) {
-            (*curShapeDiagJSON)["origTXST"] = txstJSONKey;
-            (*curShapeDiagJSON)["origTextures"] = nlohmann::json::array();
-        }
+        PGDiag::insert("origTXST", txstJSONKey);
 
         auto oldSlots = libGetTXSTSlots(txstIndex);
         auto baseSlots = oldSlots;
-        for (auto& slot : baseSlots) {
-            if (diagJSON != nullptr) {
-                (*curShapeDiagJSON)["origTextures"].push_back(ParallaxGenUtil::utf16toUTF8(slot));
-            }
+        {
+            const PGDiag::Prefix diagOrigTexPrefix("origTextures", nlohmann::json::value_t::array);
+            for (auto& slot : baseSlots) {
+                PGDiag::pushBack(slot);
 
-            // Remove PBR from beginning if its there so that we can actually process it
-            static constexpr const char* PBR_PREFIX = "textures\\pbr\\";
+                // Remove PBR from beginning if its there so that we can actually process it
+                static constexpr const char* PBR_PREFIX = "textures\\pbr\\";
 
-            if (boost::istarts_with(slot, PBR_PREFIX)) {
-                slot.replace(0, strlen(PBR_PREFIX), L"textures\\");
+                if (boost::istarts_with(slot, PBR_PREFIX)) {
+                    slot.replace(0, strlen(PBR_PREFIX), L"textures\\");
+                }
             }
         }
 
@@ -532,24 +524,22 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
         }
 
         // Populate diag JSON if set with each match
-        if (diagJSON != nullptr) {
-            (*curShapeDiagJSON)["shaderPatcherMatches"] = nlohmann::json::array();
+        {
+            const PGDiag::Prefix diagShaderPatcherPrefix("shaderPatcherMatches", nlohmann::json::value_t::array);
             for (const auto& match : matches) {
-                (*curShapeDiagJSON)["shaderPatcherMatches"].push_back(match.getJSON());
+                PGDiag::pushBack(match.getJSON());
             }
         }
 
         // Get winning match
         auto winningShaderMatch = PatcherUtil::getWinningMatch(matches, s_modPriority);
-        if (diagJSON != nullptr) {
-            (*curShapeDiagJSON)["winningShaderMatch"] = winningShaderMatch.getJSON();
-        }
+        PGDiag::insert("winningShaderMatch", winningShaderMatch.getJSON());
 
         curResult.matchedNIF = matchedNIF;
 
         // Apply transforms
-        if (PatcherUtil::applyTransformIfNeeded(winningShaderMatch, patchers) && diagJSON != nullptr) {
-            (*curShapeDiagJSON)["shaderTransformResult"] = winningShaderMatch.getJSON();
+        if (PatcherUtil::applyTransformIfNeeded(winningShaderMatch, patchers)) {
+            PGDiag::insert("shaderTransformResult", winningShaderMatch.getJSON());
         }
 
         if (winningShaderMatch.shader == NIFUtil::ShapeShader::UNKNOWN) {
@@ -592,12 +582,7 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
             continue;
         }
 
-        if (diagJSON != nullptr) {
-            (*curShapeDiagJSON)["newTextures"] = nlohmann::json::array();
-            for (int i = 0; i < NUM_TEXTURE_SLOTS; ++i) {
-                (*curShapeDiagJSON)["newTextures"].push_back(ParallaxGenUtil::utf16toUTF8(newSlots.at(i)));
-            }
-        }
+        PGDiag::insert("newTextures", NIFUtil::textureSetToStr(newSlots));
 
         {
             const lock_guard<mutex> lock(s_createdTXSTMutex);
@@ -609,9 +594,7 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
                 curResult.txstIndex = s_createdTXSTs[newSlots].first;
                 results.push_back(curResult);
 
-                if (diagJSON != nullptr) {
-                    (*curShapeDiagJSON)["newTXST"] = s_createdTXSTs[newSlots].second;
-                }
+                PGDiag::insert("newTXST", s_createdTXSTs[newSlots].second);
 
                 continue;
             }
@@ -624,9 +607,7 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
                 ->processNewTXSTRecord(winningShaderMatch.match, newEDID);
             s_createdTXSTs[newSlots] = { curResult.txstIndex, newEDID };
 
-            if (diagJSON != nullptr) {
-                (*curShapeDiagJSON)["newTXST"] = newEDID;
-            }
+            PGDiag::insert("newTXST", newEDID);
         }
 
         // add to result
@@ -634,8 +615,7 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
     }
 }
 
-void ParallaxGenPlugin::assignMesh(
-    const wstring& nifPath, const wstring& baseNIFPath, const vector<TXSTResult>& result, nlohmann::json* diagJSON)
+void ParallaxGenPlugin::assignMesh(const wstring& nifPath, const wstring& baseNIFPath, const vector<TXSTResult>& result)
 {
     const lock_guard<mutex> lock(s_processShapeMutex);
 
@@ -643,29 +623,21 @@ void ParallaxGenPlugin::assignMesh(
 
     // Loop through results
     for (const auto& curResult : result) {
+        const auto altTexJSONKey
+            = getKeyFromFormID(libGetAltTexFormID(curResult.altTexIndex)) + " / " + curResult.matchType;
+        const PGDiag::Prefix diagAltTexPrefix(altTexJSONKey, nlohmann::json::value_t::object);
+        PGDiag::insert("origModel", baseNIFPath);
+
         if (!boost::iequals(curResult.matchedNIF, baseNIFPath)) {
             // Skip if not the base NIF
             continue;
-        }
-
-        string altTexJSONKey;
-        if (diagJSON != nullptr) {
-            // create keys for diagnostics
-            altTexJSONKey = getKeyFromFormID(libGetAltTexFormID(curResult.altTexIndex)) + " / " + curResult.matchType;
-
-            if (!diagJSON->contains(altTexJSONKey)) {
-                (*diagJSON)[altTexJSONKey] = nlohmann::json::object();
-            }
-            (*diagJSON)[altTexJSONKey]["origModel"] = ParallaxGenUtil::utf16toUTF8(baseNIFPath);
         }
 
         if (!boost::iequals(curResult.matchedNIF, nifPath)) {
             // Set model rec handle
             libSetModelRecNIF(curResult.altTexIndex, nifPath);
 
-            if (diagJSON != nullptr) {
-                (*diagJSON)[altTexJSONKey]["newModel"] = ParallaxGenUtil::utf16toUTF8(nifPath);
-            }
+            PGDiag::insert("newModel", nifPath);
         }
 
         // Set model alt tex
@@ -673,8 +645,8 @@ void ParallaxGenPlugin::assignMesh(
     }
 }
 
-void ParallaxGenPlugin::set3DIndices(const wstring& nifPath,
-    const vector<tuple<nifly::NiShape*, int, int, string>>& shapeTracker, nlohmann::json* diagJSON)
+void ParallaxGenPlugin::set3DIndices(
+    const wstring& nifPath, const vector<tuple<nifly::NiShape*, int, int, string>>& shapeTracker)
 {
     const lock_guard<mutex> lock(s_processShapeMutex);
 
@@ -699,18 +671,11 @@ void ParallaxGenPlugin::set3DIndices(const wstring& nifPath,
                 continue;
             }
 
-            if (diagJSON != nullptr) {
-                // create keys for diagnostics
-                const auto altTexJSONKey = getKeyFromFormID(libGetAltTexFormID(altTexIndex)) + " / " + matchType;
+            const auto altTexJSONKey = getKeyFromFormID(libGetAltTexFormID(altTexIndex)) + " / " + matchType;
+            const PGDiag::Prefix diagAltTexPrefix(altTexJSONKey, nlohmann::json::value_t::object);
+            const PGDiag::Prefix diagShapeKeyPrefix(shapeLabel, nlohmann::json::value_t::object);
 
-                if (!diagJSON->contains(altTexJSONKey)) {
-                    (*diagJSON)[altTexJSONKey] = nlohmann::json::object();
-                }
-                (*diagJSON)[altTexJSONKey][shapeLabel] = nlohmann::json::object();
-                auto& curShapeDiagJSON = (*diagJSON)[altTexJSONKey][shapeLabel];
-
-                curShapeDiagJSON["newIndex3D"] = newIndex3D;
-            }
+            PGDiag::insert("newIndex3D", newIndex3D);
 
             Logger::trace(L"Setting 3D index for AltTex {} to {}", altTexIndex, newIndex3D);
             libSet3DIndex(altTexIndex, newIndex3D);

@@ -366,7 +366,7 @@ auto NIFUtil::getTextureSlot(nifly::NifFile* nif, nifly::NiShape* nifShape, cons
     return texture;
 }
 
-auto NIFUtil::getTextureSlots(nifly::NifFile* nif, nifly::NiShape* nifShape) -> array<wstring, NUM_TEXTURE_SLOTS>
+auto NIFUtil::getTextureSlots(nifly::NifFile* nif, nifly::NiShape* nifShape) -> TextureSet
 {
     array<wstring, NUM_TEXTURE_SLOTS> outSlots;
 
@@ -383,6 +383,17 @@ auto NIFUtil::getTextureSlots(nifly::NifFile* nif, nifly::NiShape* nifShape) -> 
     }
 
     return outSlots;
+}
+
+auto NIFUtil::textureSetToStr(const TextureSet& set) -> TextureSetStr
+{
+    TextureSetStr outSet;
+
+    for (uint32_t i = 0; i < NUM_TEXTURE_SLOTS; i++) {
+        outSet.at(i) = ParallaxGenUtil::utf16toUTF8(set.at(i));
+    }
+
+    return outSet;
 }
 
 auto NIFUtil::getTexBase(const std::filesystem::path& path) -> std::wstring

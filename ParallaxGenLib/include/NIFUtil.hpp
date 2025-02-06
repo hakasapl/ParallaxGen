@@ -10,6 +10,7 @@ constexpr unsigned NUM_TEXTURE_SLOTS = 9;
 
 namespace NIFUtil {
 using TextureSet = std::array<std::wstring, NUM_TEXTURE_SLOTS>;
+using TextureSetStr = std::array<std::string, NUM_TEXTURE_SLOTS>;
 
 static constexpr float MIN_FLOAT_COMPARISON = 10e-05F;
 
@@ -207,7 +208,9 @@ auto getTextureSlot(nifly::NifFile* nif, nifly::NiShape* nifShape, const Texture
 /// @param nif nif
 /// @param nifShape shape
 /// @return array of textures set in the slots
-auto getTextureSlots(nifly::NifFile* nif, nifly::NiShape* nifShape) -> std::array<std::wstring, NUM_TEXTURE_SLOTS>;
+auto getTextureSlots(nifly::NifFile* nif, nifly::NiShape* nifShape) -> TextureSet;
+
+auto textureSetToStr(const TextureSet& set) -> TextureSetStr;
 
 /// @brief get the texture name without suffix, i.e. without _n.dds
 /// @param[in] texPath the path to get the base for

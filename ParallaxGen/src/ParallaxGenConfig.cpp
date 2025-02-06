@@ -172,6 +172,9 @@ auto ParallaxGenConfig::addConfigJSON(const nlohmann::json& j) -> void
         if (paramJ.contains("processing") && paramJ["processing"].contains("mapfrommeshes")) {
             paramJ["processing"]["mapfrommeshes"].get_to<bool>(m_params.Processing.mapFromMeshes);
         }
+        if (paramJ.contains("processing") && paramJ["processing"].contains("diagnostics")) {
+            paramJ["processing"]["diagnostics"].get_to<bool>(m_params.Processing.diagnostics);
+        }
 
         // "prepatcher"
         if (paramJ.contains("prepatcher") && paramJ["prepatcher"].contains("disablemlp")) {
@@ -454,6 +457,7 @@ void ParallaxGenConfig::saveUserConfig()
     j["params"]["processing"]["pluginpatching"] = m_params.Processing.pluginPatching;
     j["params"]["processing"]["pluginesmify"] = m_params.Processing.pluginESMify;
     j["params"]["processing"]["mapfrommeshes"] = m_params.Processing.mapFromMeshes;
+    j["params"]["processing"]["diagnostics"] = m_params.Processing.diagnostics;
 
     // "prepatcher"
     j["params"]["prepatcher"]["disablemlp"] = m_params.PrePatcher.disableMLP;

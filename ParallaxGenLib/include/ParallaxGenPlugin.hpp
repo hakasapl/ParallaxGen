@@ -134,14 +134,13 @@ public:
 
     static void processShape(const std::wstring& nifPath, nifly::NiShape* nifShape, const int& index3D,
         PatcherUtil::PatcherMeshObjectSet& patchers, std::vector<TXSTResult>& results, const std::string& shapeKey,
-        PatcherUtil::ConflictModResults* conflictMods = nullptr, nlohmann::json* diagJSON = nullptr);
+        PatcherUtil::ConflictModResults* conflictMods = nullptr);
 
-    static void assignMesh(const std::wstring& nifPath, const std::wstring& baseNIFPath,
-        const std::vector<TXSTResult>& result, nlohmann::json* diagJSON = nullptr);
+    static void assignMesh(
+        const std::wstring& nifPath, const std::wstring& baseNIFPath, const std::vector<TXSTResult>& result);
 
     static void set3DIndices(const std::wstring& nifPath,
-        const std::vector<std::tuple<nifly::NiShape*, int, int, std::string>>& shapeTracker,
-        nlohmann::json* diagJSON = nullptr);
+        const std::vector<std::tuple<nifly::NiShape*, int, int, std::string>>& shapeTracker);
 
     static void savePlugin(const std::filesystem::path& outputDir, bool esmify);
 

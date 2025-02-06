@@ -1,6 +1,7 @@
 #include "BethesdaGame.hpp"
 #include "Logger.hpp"
 #include "ModManagerDirectory.hpp"
+#include "PGDiag.hpp"
 #include "ParallaxGen.hpp"
 #include "ParallaxGenConfig.hpp"
 #include "ParallaxGenD3D.hpp"
@@ -100,6 +101,11 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
     ParallaxGenUI::init();
 
     auto params = pgc.getParams();
+
+    // Initialize PGDiag
+    if (params.Processing.diagnostics) {
+        PGDiag::init();
+    }
 
     // Show launcher UI
     if (!args.autostart) {
@@ -285,15 +291,7 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
     auto modPriorityMap = pgc.getModPriorityMap();
     pg.loadModPriorityMap(&modPriorityMap);
     ParallaxGenWarnings::init(&pgd, &modPriorityMap);
-    nlohmann::json patcherDiagJSON;
-    pg.patch(params.Processing.multithread, params.Processing.pluginPatching, &patcherDiagJSON);
-
-    // Save diag JSON
-    spdlog::info("Saving diag JSON file...");
-    const filesystem::path diffJSONPath = params.Output.dir / "ParallaxGen_DIAG.json";
-    ofstream diagJSONFile(diffJSONPath);
-    diagJSONFile << patcherDiagJSON.dump(2) << "\n";
-    diagJSONFile.close();
+    pg.patch(params.Processing.multithread, params.Processing.pluginPatching);
 
     // Release cached files, if any
     pgd.clearCache();
@@ -302,6 +300,15 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
     if (params.Processing.pluginPatching) {
         Logger::info("Saving Plugins...");
         ParallaxGenPlugin::savePlugin(params.Output.dir, params.Processing.pluginESMify);
+    }
+
+    // Save diag JSON
+    if (params.Processing.diagnostics) {
+        spdlog::info("Saving diag JSON file...");
+        const filesystem::path diffJSONPath = params.Output.dir / "ParallaxGen_DIAG.json";
+        ofstream diagJSONFile(diffJSONPath);
+        diagJSONFile << PGDiag::getJSON().dump(2) << "\n";
+        diagJSONFile.close();
     }
 
     deployAssets(params.Output.dir, exePath);
