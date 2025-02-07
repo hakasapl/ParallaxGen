@@ -201,6 +201,14 @@ auto ParallaxGenConfig::addConfigJSON(const nlohmann::json& j) -> void
         if (paramJ.contains("shaderpatcher") && paramJ["shaderpatcher"].contains("truepbr")) {
             paramJ["shaderpatcher"]["truepbr"].get_to<bool>(m_params.ShaderPatcher.truePBR);
         }
+        if (paramJ.contains("shaderpatcher") && paramJ["shaderpatcher"].contains("truepbr_checkpaths")) {
+            paramJ["shaderpatcher"]["truepbr_checkpaths"].get_to<bool>(
+                m_params.ShaderPatcher.ShaderPatcherTruePBR.checkPaths);
+        }
+        if (paramJ.contains("shaderpatcher") && paramJ["shaderpatcher"].contains("truepbr_printnonexistentpaths")) {
+            paramJ["shaderpatcher"]["truepbr_printnonexistentpaths"].get_to<bool>(
+                m_params.ShaderPatcher.ShaderPatcherTruePBR.printNonExistentPaths);
+        }
 
         // "shadertransforms"
         if (paramJ.contains("shadertransforms") && paramJ["shadertransforms"].contains("parallaxtocm")) {
@@ -468,6 +476,9 @@ void ParallaxGenConfig::saveUserConfig()
     j["params"]["shaderpatcher"]["complexmaterial"] = m_params.ShaderPatcher.complexMaterial;
     j["params"]["shaderpatcher"]["complexmaterialdyncubemapblocklist"]
         = utf16VectorToUTF8(m_params.ShaderPatcher.ShaderPatcherComplexMaterial.listsDyncubemapBlocklist);
+    j["params"]["shaderpatcher"]["truepbr_checkpaths"] = m_params.ShaderPatcher.ShaderPatcherTruePBR.checkPaths;
+    j["params"]["shaderpatcher"]["truepbr_printnonexistentpaths"]
+        = m_params.ShaderPatcher.ShaderPatcherTruePBR.printNonExistentPaths;
     j["params"]["shaderpatcher"]["truepbr"] = m_params.ShaderPatcher.truePBR;
 
     // "shadertransforms"

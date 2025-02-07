@@ -2,6 +2,10 @@
 
 ## [0.8.9] - UNRELEASED
 
+- Added a "Enable Diagnostics" advanced option to generate files to help with support
+- Added "Check Paths" toggle for advanced options in the TruePBR patcher
+- Added "Print Nonexistent Paths" toggle for advanced options in the TruePBR patcher
+
 ## [0.8.8] - 2025-02-04
 
 - Added "Fix Mesh Lighting" pre-patcher (Thanks to Catnyss for their article!)

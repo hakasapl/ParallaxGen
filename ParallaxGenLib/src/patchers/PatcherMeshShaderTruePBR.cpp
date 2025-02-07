@@ -58,8 +58,6 @@ auto PatcherMeshShaderTruePBR::getTruePBRConfigFilenameFields() -> vector<string
 }
 
 // Statics
-bool PatcherMeshShaderTruePBR::s_checkPaths = true;
-
 void PatcherMeshShaderTruePBR::loadStatics(const std::vector<std::filesystem::path>& pbrJSONs)
 {
     size_t configOrder = 0;
@@ -241,15 +239,22 @@ auto PatcherMeshShaderTruePBR::shouldApply(const NIFUtil::TextureSet& oldSlots, 
         // check paths
         bool valid = true;
 
-        if (!deleteShape && s_checkPaths) {
+        if (!deleteShape) {
             NIFUtil::TextureSet newSlots;
             applyPatchSlots(oldSlots, match, newSlots);
             for (size_t i = 0; i < NUM_TEXTURE_SLOTS; i++) {
                 if (!newSlots.at(i).empty() && !getPGD()->isFile(newSlots.at(i))) {
                     // Slot does not exist
-                    Logger::warn(L"Result texture \"{}\" does not exist from PBR json {} (Skipping)", newSlots.at(i),
-                        match.matchedPath);
-                    valid = false;
+                    if (s_printNonExistentPaths) {
+                        Logger::warn(
+                            L"Texture \"{}\" does not exist from PBR json \"{}\" when patching mesh \"{}\" (Skipping)",
+                            newSlots.at(i), match.matchedPath, getNIFPath().wstring());
+                    }
+
+                    // only invalidate if checkpaths is false
+                    if (s_checkPaths) {
+                        valid = false;
+                    }
                 }
             }
         }
@@ -592,7 +597,17 @@ void PatcherMeshShaderTruePBR::loadOptions(unordered_map<string, string>& option
         if (option == "no_path_check") {
             s_checkPaths = false;
         }
+
+        if (option == "print_nonexistent_paths") {
+            s_printNonExistentPaths = true;
+        }
     }
+}
+
+void PatcherMeshShaderTruePBR::loadOptions(const bool& checkPaths, const bool& printNonExistentPaths)
+{
+    s_checkPaths = checkPaths;
+    s_printNonExistentPaths = printNonExistentPaths;
 }
 
 void PatcherMeshShaderTruePBR::processNewTXSTRecord(const PatcherMatch& match, const std::string& edid)

@@ -208,7 +208,7 @@ LauncherWindow::LauncherWindow(ParallaxGenConfig& pgc)
 
     m_shaderPatcherComplexMaterialOptionsSizer = new wxStaticBoxSizer(wxVERTICAL, this, "Complex Material Options");
     auto* shaderPatcherComplexMaterialDynCubemapBlocklistLabel
-        = new wxStaticText(this, wxID_ANY, "DynCubemap Blocklist");
+        = new wxStaticText(this, wxID_ANY, "Dynamic Cubemap Blocklist");
     m_shaderPatcherComplexMaterialOptionsSizer->Add(
         shaderPatcherComplexMaterialDynCubemapBlocklistLabel, 0, wxLEFT | wxRIGHT | wxTOP, BORDER_SIZE);
 
@@ -229,6 +229,22 @@ LauncherWindow::LauncherWindow(ParallaxGenConfig& pgc)
     m_shaderPatcherTruePBRCheckbox = new wxCheckBox(this, wxID_ANY, "True PBR");
     m_shaderPatcherTruePBRCheckbox->Bind(wxEVT_CHECKBOX, &LauncherWindow::onShaderPatcherTruePBRChange, this);
     shaderPatcherSizer->Add(m_shaderPatcherTruePBRCheckbox, 0, wxALL, BORDER_SIZE);
+
+    m_shaderPatcherTruePBROptionsSizer = new wxStaticBoxSizer(wxVERTICAL, this, "True PBR Options");
+    m_shaderPatcherTruePBRCheckPathsCheckbox = new wxCheckBox(this, wxID_ANY, "Check Paths");
+    m_shaderPatcherTruePBRCheckPathsCheckbox->SetToolTip("Do not patch JSONs that create paths that do not exist");
+    m_shaderPatcherTruePBRCheckPathsCheckbox->Bind(
+        wxEVT_CHECKBOX, &LauncherWindow::onShaderPatcherTruePBRCheckPathsChange, this);
+    m_shaderPatcherTruePBROptionsSizer->Add(m_shaderPatcherTruePBRCheckPathsCheckbox, 0, wxALL, BORDER_SIZE);
+
+    m_shaderPatcherTruePBRPrintNonExistentPathsCheckbox = new wxCheckBox(this, wxID_ANY, "Print Non-Existent Paths");
+    m_shaderPatcherTruePBRPrintNonExistentPathsCheckbox->SetToolTip(
+        "Print any paths generated from JSONs that do not exist");
+    m_shaderPatcherTruePBRPrintNonExistentPathsCheckbox->Bind(
+        wxEVT_CHECKBOX, &LauncherWindow::onShaderPatcherTruePBRPrintNonExistentPathsChange, this);
+    m_shaderPatcherTruePBROptionsSizer->Add(m_shaderPatcherTruePBRPrintNonExistentPathsCheckbox, 0, wxALL, BORDER_SIZE);
+
+    shaderPatcherSizer->Add(m_shaderPatcherTruePBROptionsSizer, 0, wxEXPAND | wxALL, BORDER_SIZE);
 
     rightSizer->Add(shaderPatcherSizer, 0, wxEXPAND | wxALL, BORDER_SIZE);
 
@@ -434,6 +450,7 @@ LauncherWindow::LauncherWindow(ParallaxGenConfig& pgc)
     //
     m_advancedOptionsSizer->Show(false); // Initially hidden
     m_shaderPatcherComplexMaterialOptionsSizer->Show(false); // Initially hidden
+    m_shaderPatcherTruePBROptionsSizer->Show(false); // Initially hidden
     m_processingOptionsSizer->Show(false); // Initially hidden
     m_processingPluginPatchingOptions->Show(false); // Initially hidden
 
@@ -536,6 +553,9 @@ void LauncherWindow::loadConfig()
         "Wildcards are supported.");
 
     m_shaderPatcherTruePBRCheckbox->SetValue(initParams.ShaderPatcher.truePBR);
+    m_shaderPatcherTruePBRCheckPathsCheckbox->SetValue(initParams.ShaderPatcher.ShaderPatcherTruePBR.checkPaths);
+    m_shaderPatcherTruePBRPrintNonExistentPathsCheckbox->SetValue(
+        initParams.ShaderPatcher.ShaderPatcherTruePBR.printNonExistentPaths);
 
     // Shader Transforms
     m_shaderTransformParallaxToCMCheckbox->SetValue(initParams.ShaderTransforms.parallaxToCM);
@@ -643,6 +663,10 @@ void LauncherWindow::updateAdvanced()
         m_shaderPatcherComplexMaterialOptionsSizer->Show(advancedVisible);
     }
 
+    if (m_shaderPatcherTruePBRCheckbox->GetValue()) {
+        m_shaderPatcherTruePBROptionsSizer->Show(advancedVisible);
+    }
+
     Layout(); // Refresh layout to apply visibility changes
     Fit();
 }
@@ -716,7 +740,26 @@ void LauncherWindow::onShaderPatcherComplexMaterialDynCubemapBlocklistChange([[m
 
 void LauncherWindow::onShaderPatcherTruePBRChange([[maybe_unused]] wxCommandEvent& event)
 {
-    // TODO
+    if (m_shaderPatcherTruePBRCheckbox->GetValue() && m_advancedOptionsCheckbox->GetValue()) {
+        m_shaderPatcherTruePBROptionsSizer->Show(m_shaderPatcherTruePBRCheckbox->GetValue());
+        Layout(); // Refresh layout to apply visibility changes
+        Fit();
+    } else {
+        m_shaderPatcherTruePBROptionsSizer->Show(false);
+        Layout(); // Refresh layout to apply visibility changes
+        Fit();
+    }
+
+    updateDisabledElements();
+}
+
+void LauncherWindow::onShaderPatcherTruePBRCheckPathsChange([[maybe_unused]] wxCommandEvent& event)
+{
+    updateDisabledElements();
+}
+
+void LauncherWindow::onShaderPatcherTruePBRPrintNonExistentPathsChange([[maybe_unused]] wxCommandEvent& event)
+{
     updateDisabledElements();
 }
 
@@ -873,6 +916,9 @@ auto LauncherWindow::getParams() -> ParallaxGenConfig::PGParams
     }
 
     params.ShaderPatcher.truePBR = m_shaderPatcherTruePBRCheckbox->GetValue();
+    params.ShaderPatcher.ShaderPatcherTruePBR.checkPaths = m_shaderPatcherTruePBRCheckPathsCheckbox->GetValue();
+    params.ShaderPatcher.ShaderPatcherTruePBR.printNonExistentPaths
+        = m_shaderPatcherTruePBRPrintNonExistentPathsCheckbox->GetValue();
 
     // Shader Transforms
     params.ShaderTransforms.parallaxToCM = m_shaderTransformParallaxToCMCheckbox->GetValue();

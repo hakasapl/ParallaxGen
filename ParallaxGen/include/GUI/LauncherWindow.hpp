@@ -126,11 +126,19 @@ private:
     wxCheckBox* m_shaderPatcherComplexMaterialCheckbox;
     void onShaderPatcherComplexMaterialChange(wxCommandEvent& event);
 
+    wxStaticBoxSizer* m_shaderPatcherComplexMaterialOptionsSizer; /** Stores the complex material options */
     wxListCtrl* m_shaderPatcherComplexMaterialDynCubemapBlocklist;
     void onShaderPatcherComplexMaterialDynCubemapBlocklistChange(wxListEvent& event);
 
     wxCheckBox* m_shaderPatcherTruePBRCheckbox;
     void onShaderPatcherTruePBRChange(wxCommandEvent& event);
+
+    wxStaticBoxSizer* m_shaderPatcherTruePBROptionsSizer;
+    wxCheckBox* m_shaderPatcherTruePBRCheckPathsCheckbox;
+    void onShaderPatcherTruePBRCheckPathsChange(wxCommandEvent& event);
+
+    wxCheckBox* m_shaderPatcherTruePBRPrintNonExistentPathsCheckbox;
+    void onShaderPatcherTruePBRPrintNonExistentPathsChange(wxCommandEvent& event);
 
     // Shader Transforms
     wxCheckBox* m_shaderTransformParallaxToCMCheckbox;
@@ -160,7 +168,6 @@ private:
     //
     wxStaticBoxSizer* m_mo2OptionsSizer; /** Stores the MO2-specific options since these are only sometimes shown */
     wxStaticBoxSizer* m_processingOptionsSizer; /** Stores the processing options */
-    wxStaticBoxSizer* m_shaderPatcherComplexMaterialOptionsSizer; /** Stores the complex material options */
 
     wxComboBox* m_textureMapTypeCombo; /** Stores the texture map type combo box */
 

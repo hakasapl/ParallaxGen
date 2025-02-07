@@ -245,6 +245,8 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
         Logger::debug("Adding True PBR shader patcher");
         meshPatchers.shaderPatchers.emplace(
             PatcherMeshShaderTruePBR::getShaderType(), PatcherMeshShaderTruePBR::getFactory());
+        PatcherMeshShaderTruePBR::loadOptions(params.ShaderPatcher.ShaderPatcherTruePBR.checkPaths,
+            params.ShaderPatcher.ShaderPatcherTruePBR.printNonExistentPaths);
         PatcherMeshShaderTruePBR::loadStatics(pgd.getPBRJSONs());
     }
     if (params.ShaderTransforms.parallaxToCM) {

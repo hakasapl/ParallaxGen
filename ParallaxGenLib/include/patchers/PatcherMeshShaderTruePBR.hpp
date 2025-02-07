@@ -38,7 +38,8 @@ private:
     };
 
     // Options
-    static bool s_checkPaths;
+    inline static bool s_checkPaths;
+    inline static bool s_printNonExistentPaths;
 
 public:
     /**
@@ -177,6 +178,8 @@ public:
      * @param optionsStr string to load
      */
     static void loadOptions(std::unordered_map<std::string, std::string>& optionsStr);
+
+    static void loadOptions(const bool& checkPaths, const bool& printNonExistentPaths);
 
 private:
     /**

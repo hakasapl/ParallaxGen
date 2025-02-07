@@ -98,11 +98,21 @@ public:
             } ShaderPatcherComplexMaterial;
 
             bool truePBR = true;
+            struct ShaderPatcherTruePBR {
+                bool checkPaths = true;
+                bool printNonExistentPaths = false;
+
+                auto operator==(const ShaderPatcherTruePBR& other) const -> bool
+                {
+                    return checkPaths == other.checkPaths && printNonExistentPaths == other.printNonExistentPaths;
+                }
+            } ShaderPatcherTruePBR;
 
             auto operator==(const ShaderPatcher& other) const -> bool
             {
                 return parallax == other.parallax && complexMaterial == other.complexMaterial
-                    && truePBR == other.truePBR && ShaderPatcherComplexMaterial == other.ShaderPatcherComplexMaterial;
+                    && truePBR == other.truePBR && ShaderPatcherComplexMaterial == other.ShaderPatcherComplexMaterial
+                    && ShaderPatcherTruePBR == other.ShaderPatcherTruePBR;
             }
         } ShaderPatcher;
 
