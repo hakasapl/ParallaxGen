@@ -1,4 +1,4 @@
-﻿namespace ParallaxGenMutagenWrapper;
+﻿namespace PGMutagen;
 
 // Base Imports
 using System;
@@ -186,7 +186,7 @@ public class PGMutagen
             string ExePath = Marshal.PtrToStringUni(exePath) ?? string.Empty;
             PatchBaseDirectory.BaseDirectory = ExePath;
 
-            var harmony = new Harmony("com.github.hakasapl.parallaxgen.parallaxgenmutagenwrapper");
+            var harmony = new Harmony("com.github.hakasapl.pgpatcher.pgmutagen");
             harmony.PatchAll();
 
             // Main method

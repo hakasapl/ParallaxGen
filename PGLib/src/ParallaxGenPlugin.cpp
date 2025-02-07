@@ -8,7 +8,7 @@
 #include "Logger.hpp"
 #include "NIFUtil.hpp"
 #include "PGDiag.hpp"
-#include "ParallaxGenMutagenWrapperNE.h"
+#include "PGMutagenNE.h"
 #include "ParallaxGenUtil.hpp"
 #include "ParallaxGenWarnings.hpp"
 #include "patchers/base/PatcherUtil.hpp"
