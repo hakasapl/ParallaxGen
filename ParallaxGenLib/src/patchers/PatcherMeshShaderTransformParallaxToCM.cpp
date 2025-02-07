@@ -45,11 +45,6 @@ auto PatcherMeshShaderTransformParallaxToCM::transform(
 
     result = fromMatch;
 
-    if (alreadyTried(heightMap)) {
-        // already tried this file
-        return false;
-    }
-
     // Get texture base (remove _p.dds)
     const auto texBase = NIFUtil::getTexBase(heightMap);
 
@@ -84,7 +79,6 @@ auto PatcherMeshShaderTransformParallaxToCM::transform(
         if (FAILED(hr)) {
             Logger::debug(L"Unable to save complex material {}: {}", outputPath.wstring(),
                 ParallaxGenUtil::asciitoUTF16(ParallaxGenD3D::getHRESULTErrorMessage(hr)));
-            postError(heightMap);
             return false;
         }
 
@@ -102,6 +96,5 @@ auto PatcherMeshShaderTransformParallaxToCM::transform(
         return true;
     }
 
-    postError(heightMap);
     return false;
 }

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string>
-#include <unordered_set>
 
 #include "NIFUtil.hpp"
 #include "patchers/base/PatcherMesh.hpp"
@@ -13,26 +12,8 @@
  */
 class PatcherMeshShaderTransform : public PatcherMesh {
 private:
-    struct ErrorTrackerHasher {
-        auto operator()(const std::tuple<std::filesystem::path, NIFUtil::ShapeShader, NIFUtil::ShapeShader>& key) const
-            -> std::size_t
-        {
-            return std::hash<std::filesystem::path> {}(std::get<0>(key))
-                ^ std::hash<NIFUtil::ShapeShader> {}(std::get<1>(key))
-                ^ std::hash<NIFUtil::ShapeShader> {}(std::get<2>(key));
-        }
-    };
-
-    static std::mutex s_errorTrackerMutex; /** Mutex for error tracker */
-    static std::unordered_set<std::tuple<std::filesystem::path, NIFUtil::ShapeShader, NIFUtil::ShapeShader>,
-        ErrorTrackerHasher>
-        s_errorTracker; /** Tracks transforms that failed for error messages */
     NIFUtil::ShapeShader m_fromShader; /** Shader to transform from */
     NIFUtil::ShapeShader m_toShader; /** Shader to transform to */
-
-protected:
-    void postError(const std::filesystem::path& file); /** Post error message for transform */
-    auto alreadyTried(const std::filesystem::path& file) -> bool; /** Check if transform has already been tried */
 
 public:
     // Custom type definitions
