@@ -75,12 +75,12 @@ auto deployAssets(const filesystem::path& outputDir, const filesystem::path& exe
 void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
 {
     // Welcome Message
-    Logger::info("Welcome to ParallaxGen version {}!", PARALLAXGEN_VERSION);
+    Logger::info("Welcome to PG Patcher version {}!", PG_VERSION);
 
     // Test message if required
-    if (PARALLAXGEN_TEST_VERSION > 0) {
-        Logger::warn("This is an EXPERIMENTAL development build of ParallaxGen: {} Test Build {}", PARALLAXGEN_VERSION,
-            PARALLAXGEN_TEST_VERSION);
+    if (PG_TEST_VERSION > 0) {
+        Logger::warn(
+            "This is an EXPERIMENTAL development build of PG Patcher: {} Test Build {}", PG_VERSION, PG_TEST_VERSION);
     }
 
     // Alpha message
@@ -125,8 +125,8 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
         PGDiag::init();
     }
 
-    PGDiag::insert("Version", PARALLAXGEN_VERSION);
-    PGDiag::insert("TestVersion", PARALLAXGEN_TEST_VERSION);
+    PGDiag::insert("Version", PG_VERSION);
+    PGDiag::insert("TestVersion", PG_TEST_VERSION);
     PGDiag::insert("UserConfig", pgc.getUserConfigJSON());
 
     // print output location
@@ -330,7 +330,7 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
     const auto endTime = chrono::high_resolution_clock::now();
     timeTaken += chrono::duration_cast<chrono::seconds>(endTime - startTime).count();
 
-    Logger::info("ParallaxGen took {} seconds to complete (does not include time in user interface)", timeTaken);
+    Logger::info("PG Patcher took {} seconds to complete (does not include time in user interface)", timeTaken);
 }
 
 void addArguments(CLI::App& app, ParallaxGenCLIArgs& args)
@@ -353,7 +353,7 @@ void initLogger(const filesystem::path& logpath, const ParallaxGenCLIArgs& args)
     // Rotating file sink
     auto fileSink = make_shared<spdlog::sinks::rotating_file_sink_mt>(logpath.wstring(), MAX_LOG_SIZE, MAX_LOG_FILES);
     sinks.push_back(fileSink);
-    auto logger = make_shared<spdlog::logger>("ParallaxGen", sinks.begin(), sinks.end());
+    auto logger = make_shared<spdlog::logger>("PG", sinks.begin(), sinks.end());
 
     // register logger parameters
     spdlog::register_logger(logger);
@@ -402,7 +402,7 @@ auto main(int ArgC, char** ArgV) -> int
 
     // CLI Arguments
     ParallaxGenCLIArgs args;
-    CLI::App app { "ParallaxGen: Auto convert meshes to parallax meshes" };
+    CLI::App app { "PG Patcher" };
     addArguments(app, args);
 
     // Parse CLI Arguments (this is what exits on any validation issues)

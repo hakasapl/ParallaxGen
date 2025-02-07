@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.002.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PGMutagen", "PGMutagen.csproj", "{56CDC96D-1FBA-4AAD-8FD2-DC07E91BA200}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+    RelWithDebInfo|x64 = RelWithDebInfo|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{56CDC96D-1FBA-4AAD-8FD2-DC07E91BA200}.Debug|x64.ActiveCfg = Debug|x64
+		{56CDC96D-1FBA-4AAD-8FD2-DC07E91BA200}.Debug|x64.Build.0 = Debug|x64
+		{56CDC96D-1FBA-4AAD-8FD2-DC07E91BA200}.Release|x64.ActiveCfg = Release|x64
+		{56CDC96D-1FBA-4AAD-8FD2-DC07E91BA200}.Release|x64.Build.0 = Release|x64
+    {56CDC96D-1FBA-4AAD-8FD2-DC07E91BA200}.RelWithDebInfo|x64.ActiveCfg = RelWithDebInfo|x64
+		{56CDC96D-1FBA-4AAD-8FD2-DC07E91BA200}.RelWithDebInfo|x64.Build.0 = RelWithDebInfo|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {8A5C68E2-F5DD-4147-8ECB-11CF16F8216A}
+	EndGlobalSection
+EndGlobal

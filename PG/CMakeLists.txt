@@ -16,23 +16,23 @@ set(SOURCES
 )
 
 include_directories("include")
-add_executable(ParallaxGen ${SOURCES} ${HEADERS} icon.rc)
+add_executable(PG ${SOURCES} ${HEADERS} icon.rc)
 
 # Packages
 find_package(CLI11 REQUIRED CONFIG)
 find_package(wxWidgets REQUIRED COMPONENTS core base)
 find_package(cpptrace REQUIRED CONFIG)
 
-target_link_libraries(ParallaxGen PRIVATE
-    ParallaxGenLib
+target_link_libraries(PG PRIVATE
+    PGLib
     CLI11::CLI11
     DbgHelp
     ${wxWidgets_LIBRARIES}
     cpptrace::cpptrace
 )
 
-install(TARGETS ParallaxGen DESTINATION . )
-install(FILES $<TARGET_RUNTIME_DLLS:ParallaxGen> DESTINATION . )
+install(TARGETS PG DESTINATION . )
+install(FILES $<TARGET_RUNTIME_DLLS:PG> DESTINATION . )
 
 # manual copy DLLs not caught by TARGET_RUNTIME_DLLS TODO why do I have to do this manually?
 if (${CMAKE_BUILD_TYPE} STREQUAL "Release" OR ${CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo" OR ${CMAKE_BUILD_TYPE} STREQUAL "MinSizeRel")

@@ -19,15 +19,15 @@ add_compile_definitions(NOSOCKETTYPE)
 add_compile_definitions(_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR)
 
 # Project Vars
-set(PROJECT_NAME "ParallaxGen")
+set(PROJECT_NAME "PGPatcher")
 
 # Initialize Project
-set(PARALLAXGEN_VERSION 0.8.8)
-project(${PROJECT_NAME} VERSION ${PARALLAXGEN_VERSION})
-add_compile_definitions(PARALLAXGEN_VERSION="${PARALLAXGEN_VERSION}")
+set(PG_VERSION 0.8.9)
+project(${PROJECT_NAME} VERSION ${PG_VERSION})
+add_compile_definitions(PG_VERSION="${PG_VERSION}")
 
 # Set test version (set this to 0 for prod releases)
-add_compile_definitions(PARALLAXGEN_TEST_VERSION=0)
+add_compile_definitions(PG_TEST_VERSION=1)
 
 # Setup Folders
 set(EXTRN_BUILD_DIR ${CMAKE_BINARY_DIR}/external/blds)
@@ -38,8 +38,8 @@ file(MAKE_DIRECTORY ${EXTRN_INSTALL_DIR})
 set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${EXTRN_INSTALL_DIR})
 
 
-# ParallaxGenMutagenWrapper is currently built in-source via msbuild
-set(PARALLAXGENMUTAGENWRAPPER_DIR ${CMAKE_SOURCE_DIR}/ParallaxGenMutagenWrapper)
+# PGMutagen is currently built in-source via msbuild
+set(PGMutagen_DIR ${CMAKE_SOURCE_DIR}/PGMutagen)
 
 if (${CMAKE_BUILD_TYPE} STREQUAL "Release" OR ${CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo")
 	set(MSBUILD_CONFIGURATION "Release")
@@ -47,16 +47,16 @@ elseif(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
 	set(MSBUILD_CONFIGURATION "Debug")
 endif()
 
-set(PARALLAXGENMUTAGENWRAPPER_BINARY_DIR ${PARALLAXGENMUTAGENWRAPPER_DIR}/bin/x64/${MSBUILD_CONFIGURATION}/net8.0)
+set(PGMutagen_BINARY_DIR ${PGMutagen_DIR}/bin/x64/${MSBUILD_CONFIGURATION}/net8.0)
 
-add_custom_target( ParallaxGenMutagenWrapper
-				   msbuild -t:restore,build ParallaxGenMutagenWrapper.csproj -p:Configuration=${MSBUILD_CONFIGURATION} -p:Platform=x64
-				   COMMENT "Building ParallaxGenMutagenWrapper ${MSBUILD_CONFIGURATION},x64"
-                   WORKING_DIRECTORY ${PARALLAXGENMUTAGENWRAPPER_DIR}
-				   BYPRODUCTS ${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR}/ParallaxGenMutagenWrapperNE.lib )
+add_custom_target( PGMutagen
+				   msbuild -t:restore,build PGMutagen.csproj -p:Configuration=${MSBUILD_CONFIGURATION} -p:Platform=x64
+				   COMMENT "Building PGMutagen ${MSBUILD_CONFIGURATION},x64"
+                   WORKING_DIRECTORY ${PGMutagen_DIR}
+				   BYPRODUCTS ${PGMutagen_BINARY_DIR}/PGMutagenNE.lib )
 
-set_target_properties( ParallaxGenMutagenWrapper
-					   PROPERTIES ADDITIONAL_CLEAN_FILES ${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR})
+set_target_properties( PGMutagen
+					   PROPERTIES ADDITIONAL_CLEAN_FILES ${PGMutagen_BINARY_DIR})
 
 # NIFLY
 message(STATUS "Install NIFLY external...")
@@ -65,14 +65,14 @@ execute_process(COMMAND ${CMAKE_COMMAND} --build ${EXTRN_BUILD_DIR}/nifly --targ
 
 # Submodules
 enable_testing()
-add_subdirectory(ParallaxGen)
-add_subdirectory(ParallaxGenLib)
+add_subdirectory(PG)
+add_subdirectory(PGLib)
 add_subdirectory(PGTools)
 
 # Install Global Things
 # Copy Folders
-file(COPY ${CMAKE_SOURCE_DIR}/ParallaxGen/assets DESTINATION ${CMAKE_BINARY_DIR}/)
-file(COPY ${CMAKE_SOURCE_DIR}/ParallaxGenLib/shaders DESTINATION ${CMAKE_BINARY_DIR}/)
+file(COPY ${CMAKE_SOURCE_DIR}/PG/assets DESTINATION ${CMAKE_BINARY_DIR}/)
+file(COPY ${CMAKE_SOURCE_DIR}/PGLib/shaders DESTINATION ${CMAKE_BINARY_DIR}/)
 
 # Copy assets to install
 install(DIRECTORY ${CMAKE_BINARY_DIR}/assets DESTINATION . )

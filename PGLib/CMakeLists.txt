@@ -5,7 +5,7 @@ file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS include/*.hpp)
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
 
 # Add the library
-add_library(ParallaxGenLib SHARED ${SOURCES} ${HEADERS})
+add_library(PGLib SHARED ${SOURCES} ${HEADERS})
 
 # Add Packages
 find_package(spdlog REQUIRED CONFIG)
@@ -33,7 +33,7 @@ set(DirectXTK_LIBS
     oleaut32.lib
     D3DCompiler.lib
 )
-target_link_libraries(ParallaxGenLib PUBLIC
+target_link_libraries(PGLib PUBLIC
     spdlog::spdlog
     bsa::bsa
     ${Boost_LIBRARIES}
@@ -47,32 +47,32 @@ target_link_libraries(ParallaxGenLib PUBLIC
     nlohmann_json_schema_validator::validator
     cpptrace::cpptrace
 )
-target_include_directories(ParallaxGenLib PUBLIC include)
+target_include_directories(PGLib PUBLIC include)
 
 # Asset moving
-add_custom_command(TARGET ParallaxGenLib POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E rm -rf $<TARGET_FILE_DIR:ParallaxGenLib>/shaders
-    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:ParallaxGenLib>/shaders
+add_custom_command(TARGET PGLib POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E rm -rf $<TARGET_FILE_DIR:PGLib>/shaders
+    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:PGLib>/shaders
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_CURRENT_SOURCE_DIR}/shaders
-        $<TARGET_FILE_DIR:ParallaxGenLib>/shaders
+        $<TARGET_FILE_DIR:PGLib>/shaders
 )
 
 # include and link mutagen wrapper output
-add_dependencies(ParallaxGenLib ParallaxGenMutagenWrapper)
-include_directories(${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR})
-target_link_libraries(ParallaxGenLib PUBLIC ${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR}/ParallaxGenMutagenWrapperNE.lib)
+add_dependencies(PGLib PGMutagen)
+include_directories(${PGMutagen_BINARY_DIR})
+target_link_libraries(PGLib PUBLIC ${PGMutagen_BINARY_DIR}/PGMutagenNE.lib)
 
 # TODO redo install step
 
 # Install DLLs from mutagenwrapper
-install(DIRECTORY ${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR}/
+install(DIRECTORY ${PGMutagen_BINARY_DIR}/
         DESTINATION .
         FILES_MATCHING PATTERN "*.dll")
 
-install(FILES ${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR}/ParallaxGenMutagenWrapper.runtimeconfig.json DESTINATION . )
+install(FILES ${PGMutagen_BINARY_DIR}/PGMutagen.runtimeconfig.json DESTINATION . )
 
-install(FILES $<TARGET_RUNTIME_DLLS:ParallaxGenLib> DESTINATION . )
+install(FILES $<TARGET_RUNTIME_DLLS:PGLib> DESTINATION . )
 
 # manual copy DLLs not caught by TARGET_RUNTIME_DLLS TODO why do I have to do this manually?
 if (${CMAKE_BUILD_TYPE} STREQUAL "Release" OR ${CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo" OR ${CMAKE_BUILD_TYPE} STREQUAL "MinSizeRel")
@@ -102,7 +102,7 @@ add_executable(
   ${PARALLAXGENLIB_TEST_NAME}
   ${TESTS}
 )
-add_dependencies(${PARALLAXGENLIB_TEST_NAME} ParallaxGenLib)
+add_dependencies(${PARALLAXGENLIB_TEST_NAME} PGLib)
 
 file(WRITE ${CMAKE_BINARY_DIR}/copyDLLs.cmake
   "file(COPY \${CMAKE_ARGV3}
@@ -112,12 +112,12 @@ file(WRITE ${CMAKE_BINARY_DIR}/copyDLLs.cmake
 
 # copy mutagen wrapper DLLS to test file directory
 add_custom_command(TARGET ${PARALLAXGENLIB_TEST_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_BINARY_DIR}/copyDLLs.cmake ${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR}/ $<TARGET_FILE_DIR:${PARALLAXGENLIB_TEST_NAME}>
+    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_BINARY_DIR}/copyDLLs.cmake ${PGMutagen_BINARY_DIR}/ $<TARGET_FILE_DIR:${PARALLAXGENLIB_TEST_NAME}>
 )
 
 add_custom_command(TARGET ${PARALLAXGENLIB_TEST_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${PARALLAXGENMUTAGENWRAPPER_BINARY_DIR}/ParallaxGenMutagenWrapper.runtimeconfig.json
+        ${PGMutagen_BINARY_DIR}/PGMutagen.runtimeconfig.json
         $<TARGET_FILE_DIR:${PARALLAXGENLIB_TEST_NAME}>
 )
 
@@ -131,11 +131,11 @@ add_custom_command(TARGET ${PARALLAXGENLIB_TEST_NAME} POST_BUILD
 
 target_link_libraries(
   ${PARALLAXGENLIB_TEST_NAME}
-  ParallaxGenLib
+  PGLib
   GTest::gtest_main
 )
 
 include(GoogleTest)
 gtest_discover_tests(${PARALLAXGENLIB_TEST_NAME}
-  WORKING_DIRECTORY $<TARGET_FILE_DIR:ParallaxGenLib>
+  WORKING_DIRECTORY $<TARGET_FILE_DIR:PGLib>
 )

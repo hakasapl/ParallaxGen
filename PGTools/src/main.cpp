@@ -65,15 +65,15 @@ struct PGToolsCLIArgs {
 void mainRunner(PGToolsCLIArgs& args)
 {
     // Welcome Message
-    spdlog::info("Welcome to PGTools version {}!", PARALLAXGEN_VERSION);
+    spdlog::info("Welcome to PGTools version {}!", PG_VERSION);
 
     // Get EXE path
     const auto exePath = getExecutablePath().parent_path();
 
     // Test message if required
-    if (PARALLAXGEN_TEST_VERSION > 0) {
-        spdlog::warn("This is an EXPERIMENTAL development build of ParallaxGen: {} Test Build {}", PARALLAXGEN_VERSION,
-            PARALLAXGEN_TEST_VERSION);
+    if (PG_TEST_VERSION > 0) {
+        spdlog::warn(
+            "This is an EXPERIMENTAL development build of ParallaxGen: {} Test Build {}", PG_VERSION, PG_TEST_VERSION);
     }
 
     // Check if patch subcommand was used
