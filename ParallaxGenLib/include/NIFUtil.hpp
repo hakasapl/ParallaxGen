@@ -63,6 +63,11 @@ enum class TextureType : uint8_t {
 
 enum class TextureAttribute : uint8_t { CM_ENVMASK, CM_GLOSSINESS, CM_METALNESS, CM_HEIGHT };
 
+auto getStrFromTexAttribute(const TextureAttribute& attribute) -> std::string;
+
+auto getStrSetFromTexAttributeSet(const std::unordered_set<TextureAttribute>& attributeSet)
+    -> std::unordered_set<std::string>;
+
 auto getStrFromTexType(const TextureType& type) -> std::string;
 
 auto getTexTypeFromStr(const std::string& type) -> TextureType;

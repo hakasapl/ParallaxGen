@@ -431,7 +431,7 @@ auto ParallaxGenConfig::validateParams(const PGParams& params, vector<string>& e
     return errors.empty();
 }
 
-void ParallaxGenConfig::saveUserConfig()
+auto ParallaxGenConfig::getUserConfigJSON() const -> nlohmann::json
 {
     // build output json
     nlohmann::json j = m_userConfig;
@@ -497,6 +497,13 @@ void ParallaxGenConfig::saveUserConfig()
         j["params"]["texturerules"]["texturemaps"][utf16toUTF8(Key)] = NIFUtil::getStrFromTexType(Value);
     }
     j["params"]["texturerules"]["vanillabsalist"] = utf16VectorToUTF8(m_params.TextureRules.vanillaBSAList);
+
+    return j;
+}
+
+void ParallaxGenConfig::saveUserConfig()
+{
+    const auto j = getUserConfigJSON();
 
     // Update UserConfig var
     m_userConfig = j;

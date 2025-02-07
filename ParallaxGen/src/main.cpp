@@ -10,6 +10,7 @@
 #include "ParallaxGenPlugin.hpp"
 #include "ParallaxGenRunner.hpp"
 #include "ParallaxGenUI.hpp"
+#include "ParallaxGenUtil.hpp"
 #include "ParallaxGenWarnings.hpp"
 #include "patchers/PatcherMeshPreFixMeshLighting.hpp"
 #include "patchers/PatcherMeshShaderComplexMaterial.hpp"
@@ -102,11 +103,6 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
 
     auto params = pgc.getParams();
 
-    // Initialize PGDiag
-    if (params.Processing.diagnostics) {
-        PGDiag::init();
-    }
-
     // Show launcher UI
     if (!args.autostart) {
         Logger::info("Showing launcher UI");
@@ -123,11 +119,19 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
         Logger::critical("Validation errors were found. Exiting.");
     }
 
-    // Print configuration parameters
-    Logger::debug(L"Configuration Parameters:\n\n{}\n", params.getString());
+    // Initialize PGDiag
+    if (params.Processing.diagnostics) {
+        // This enables PGDiag so other functions will start using it
+        PGDiag::init();
+    }
+
+    PGDiag::insert("Version", PARALLAXGEN_VERSION);
+    PGDiag::insert("TestVersion", PARALLAXGEN_TEST_VERSION);
+    PGDiag::insert("UserConfig", pgc.getUserConfigJSON());
 
     // print output location
     Logger::info(L"ParallaxGen output directory: {}", params.Output.dir.wstring());
+    PGDiag::insert("OutputDir", params.Output.dir.wstring());
 
     // Create relevant objects
     auto bg = BethesdaGame(params.Game.type, true, params.Game.dir);
@@ -179,6 +183,8 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
             "DynDoLOD and TexGen outputs must be disabled prior to running ParallaxGen. It is recommended to "
             "generate LODs after running ParallaxGen with the ParallaxGen output enabled.");
     }
+
+    PGDiag::insert("ActivePlugins", ParallaxGenUtil::utf16VectorToUTF8(activePlugins));
 
     // Init PGP library
     if (params.Processing.pluginPatching) {

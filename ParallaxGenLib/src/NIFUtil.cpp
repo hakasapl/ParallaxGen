@@ -38,6 +38,29 @@ auto NIFUtil::getStrFromShader(const ShapeShader& shader) -> string
     return strFromShaderMap.at(ShapeShader::NONE);
 }
 
+auto NIFUtil::getStrFromTexAttribute(const TextureAttribute& attribute) -> std::string
+{
+    static unordered_map<TextureAttribute, string> strFromTexAttributeMap
+        = { { TextureAttribute::CM_ENVMASK, "CM_ENVMASK" }, { TextureAttribute::CM_GLOSSINESS, "CM_GLOSSINESS" },
+              { TextureAttribute::CM_METALNESS, "CM_METALNESS" }, { TextureAttribute::CM_HEIGHT, "CM_HEIGHT" } };
+
+    if (strFromTexAttributeMap.find(attribute) != strFromTexAttributeMap.end()) {
+        return strFromTexAttributeMap[attribute];
+    }
+
+    return "";
+}
+
+auto NIFUtil::getStrSetFromTexAttributeSet(const unordered_set<TextureAttribute>& attributeSet) -> unordered_set<string>
+{
+    unordered_set<string> strSet;
+    for (const auto& attr : attributeSet) {
+        strSet.insert(getStrFromTexAttribute(attr));
+    }
+
+    return strSet;
+}
+
 auto NIFUtil::getDefaultTextureType(const TextureSlots& slot) -> TextureType
 {
     switch (slot) {

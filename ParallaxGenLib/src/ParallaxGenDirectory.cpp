@@ -20,6 +20,7 @@
 #include "BethesdaDirectory.hpp"
 #include "ModManagerDirectory.hpp"
 #include "NIFUtil.hpp"
+#include "PGDiag.hpp"
 #include "ParallaxGenRunner.hpp"
 #include "ParallaxGenTask.hpp"
 #include "ParallaxGenUtil.hpp"
@@ -135,6 +136,8 @@ auto ParallaxGenDirectory::mapFiles(const vector<wstring>& nifBlocklist, const v
     // Blocks until all tasks are done
     runner.runTasks();
 
+    const PGDiag::Prefix fileMapPrefix("fileMap", nlohmann::json::value_t::object);
+
     // Loop through unconfirmed textures to confirm them
     for (const auto& [texture, property] : m_unconfirmedTextures) {
         bool foundInstance = false;
@@ -187,6 +190,10 @@ auto ParallaxGenDirectory::mapFiles(const vector<wstring>& nifBlocklist, const v
         if (winningSlot != NIFUtil::TextureSlots::UNKNOWN) {
             // Only add if no unknowns
             addToTextureMaps(texture, winningSlot, winningType, {});
+
+            const PGDiag::Prefix curTexPrefix(texture.wstring(), nlohmann::json::value_t::object);
+            PGDiag::insert("slot", static_cast<size_t>(winningSlot));
+            PGDiag::insert("type", NIFUtil::getStrFromTexType(winningType));
         }
     }
 
@@ -479,6 +486,11 @@ auto ParallaxGenDirectory::addTextureAttribute(const filesystem::path& path, con
         return m_textureTypes.at(path).attributes.insert(attribute).second;
     }
 
+    // add all attributes to pgdiag
+    const PGDiag::Prefix fileMapPrefix("fileMap", nlohmann::json::value_t::object);
+    const PGDiag::Prefix curTexPrefix(path.wstring(), nlohmann::json::value_t::object);
+    PGDiag::insert("attributes", NIFUtil::getStrSetFromTexAttributeSet(m_textureTypes.at(path).attributes));
+
     return false;
 }
 
@@ -490,6 +502,11 @@ auto ParallaxGenDirectory::removeTextureAttribute(
     if (m_textureTypes.find(path) != m_textureTypes.end()) {
         return m_textureTypes.at(path).attributes.erase(attribute) > 0;
     }
+
+    // add all attributes to pgdiag
+    const PGDiag::Prefix fileMapPrefix("fileMap", nlohmann::json::value_t::object);
+    const PGDiag::Prefix curTexPrefix(path.wstring(), nlohmann::json::value_t::object);
+    PGDiag::insert("attributes", NIFUtil::getStrSetFromTexAttributeSet(m_textureTypes.at(path).attributes));
 
     return false;
 }
@@ -521,6 +538,10 @@ auto ParallaxGenDirectory::getTextureAttributes(const filesystem::path& path)
 void ParallaxGenDirectory::setTextureType(const filesystem::path& path, const NIFUtil::TextureType& type)
 {
     const lock_guard<mutex> lock(m_textureTypesMutex);
+
+    const PGDiag::Prefix fileMapPrefix("fileMap", nlohmann::json::value_t::object);
+    const PGDiag::Prefix curTexPrefix(path.wstring(), nlohmann::json::value_t::object);
+    PGDiag::insert("type", NIFUtil::getStrFromTexType(type));
 
     m_textureTypes[path].type = type;
 }

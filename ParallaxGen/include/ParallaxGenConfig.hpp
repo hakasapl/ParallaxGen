@@ -258,6 +258,13 @@ public:
     [[nodiscard]] static auto getDefaultParams() -> PGParams;
 
     /**
+     * @brief Get the User Config JSON object
+     *
+     * @return nlohmann::json User config JSON
+     */
+    [[nodiscard]] auto getUserConfigJSON() const -> nlohmann::json;
+
+    /**
      * @brief Saves user config to the user json file
      */
     void saveUserConfig();

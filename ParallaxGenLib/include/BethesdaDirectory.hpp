@@ -1,6 +1,9 @@
 #pragma once
 #include "BethesdaGame.hpp"
 #include "ModManagerDirectory.hpp"
+#include "ParallaxGenUtil.hpp"
+
+#include <nlohmann/json.hpp>
 
 #include <bsa/tes4.hpp>
 
@@ -47,6 +50,18 @@ private:
         std::shared_ptr<BSAFile> bsaFile;
         std::wstring mod;
         bool generated;
+
+        [[nodiscard]] auto getDiagJSON() const -> nlohmann::json
+        {
+            auto j = nlohmann::json::object();
+            j["mod"] = ParallaxGenUtil::utf16toUTF8(mod);
+
+            if (bsaFile != nullptr) {
+                j["bsa"] = ParallaxGenUtil::utf16toUTF8(bsaFile->path.wstring());
+            }
+
+            return j;
+        }
     };
 
     /**

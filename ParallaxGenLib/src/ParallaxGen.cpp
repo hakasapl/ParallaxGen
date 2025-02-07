@@ -240,6 +240,7 @@ auto ParallaxGen::processNIF(const filesystem::path& nifFile, nlohmann::json* di
         throw runtime_error("Diff JSON mutex must be set if diff JSON is set");
     }
 
+    const PGDiag::Prefix nifPrefix("meshes", nlohmann::json::value_t::object);
     const PGDiag::Prefix diagNIFFilePrefix(nifFile.wstring(), nlohmann::json::value_t::object);
 
     auto result = ParallaxGenTask::PGResult::SUCCESS;
@@ -809,6 +810,8 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
 auto ParallaxGen::processDDS(const filesystem::path& ddsFile) -> ParallaxGenTask::PGResult
 {
     auto result = ParallaxGenTask::PGResult::SUCCESS;
+
+    const PGDiag::Prefix nifPrefix("textures", nlohmann::json::value_t::object);
 
     // Prep
     Logger::trace(L"Starting Processing");

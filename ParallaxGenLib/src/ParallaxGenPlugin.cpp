@@ -425,8 +425,11 @@ void ParallaxGenPlugin::processShape(const wstring& nifPath, nifly::NiShape* nif
         string altTexJSONKey;
         string txstJSONKey;
 
-        altTexJSONKey = getKeyFromFormID(libGetAltTexFormID(altTexIndex)) + " / " + matchType;
-        txstJSONKey = getKeyFromFormID(libGetTXSTFormID(txstIndex));
+        if (PGDiag::isEnabled()) {
+            // this is somewhat costly so we only run it if diagnostics are enabled
+            altTexJSONKey = getKeyFromFormID(libGetAltTexFormID(altTexIndex)) + " / " + matchType;
+            txstJSONKey = getKeyFromFormID(libGetTXSTFormID(txstIndex));
+        }
 
         const PGDiag::Prefix diagAltTexPrefix(altTexJSONKey, nlohmann::json::value_t::object);
         const PGDiag::Prefix diagShapeKeyPrefix(shapeKey, nlohmann::json::value_t::object);
@@ -623,8 +626,13 @@ void ParallaxGenPlugin::assignMesh(const wstring& nifPath, const wstring& baseNI
 
     // Loop through results
     for (const auto& curResult : result) {
-        const auto altTexJSONKey
-            = getKeyFromFormID(libGetAltTexFormID(curResult.altTexIndex)) + " / " + curResult.matchType;
+        string altTexJSONKey;
+
+        if (PGDiag::isEnabled()) {
+            // this is somewhat costly so we only run it if diagnostics are enabled
+            altTexJSONKey = getKeyFromFormID(libGetAltTexFormID(curResult.altTexIndex)) + " / " + curResult.matchType;
+        }
+
         const PGDiag::Prefix diagAltTexPrefix(altTexJSONKey, nlohmann::json::value_t::object);
         PGDiag::insert("origModel", baseNIFPath);
 
@@ -671,7 +679,12 @@ void ParallaxGenPlugin::set3DIndices(
                 continue;
             }
 
-            const auto altTexJSONKey = getKeyFromFormID(libGetAltTexFormID(altTexIndex)) + " / " + matchType;
+            string altTexJSONKey;
+            if (PGDiag::isEnabled()) {
+                // this is somewhat costly so we only run it if diagnostics are enabled
+                altTexJSONKey = getKeyFromFormID(libGetAltTexFormID(altTexIndex)) + " / " + matchType;
+            }
+
             const PGDiag::Prefix diagAltTexPrefix(altTexJSONKey, nlohmann::json::value_t::object);
             const PGDiag::Prefix diagShapeKeyPrefix(shapeLabel, nlohmann::json::value_t::object);
 
