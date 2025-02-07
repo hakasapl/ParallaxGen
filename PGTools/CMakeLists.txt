@@ -14,7 +14,7 @@ find_package(CLI11 REQUIRED CONFIG)
 find_package(cpptrace REQUIRED CONFIG)
 
 target_link_libraries(pgtools PRIVATE
-    ParallaxGenLib
+    PGLib
     CLI11::CLI11
     cpptrace::cpptrace
 )
