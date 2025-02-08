@@ -11,12 +11,14 @@ auto Patcher::loadStatics(ParallaxGenDirectory& pgd, ParallaxGenD3D& pgd3d) -> v
     Patcher::s_pgd3d = &pgd3d;
 }
 
-Patcher::Patcher(string patcherName)
+Patcher::Patcher(string patcherName, const bool& triggerSave)
     : m_patcherName(std::move(patcherName))
+    , m_triggerSave(triggerSave)
 {
 }
 
 auto Patcher::getPatcherName() const -> string { return m_patcherName; }
+auto Patcher::triggerSave() const -> bool { return m_triggerSave; }
 
 auto Patcher::getPGD() -> ParallaxGenDirectory* { return s_pgd; }
 auto Patcher::getPGD3D() -> ParallaxGenD3D* { return s_pgd3d; }

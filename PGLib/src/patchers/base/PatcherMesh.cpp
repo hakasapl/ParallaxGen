@@ -2,8 +2,8 @@
 
 using namespace std;
 
-PatcherMesh::PatcherMesh(filesystem::path nifPath, nifly::NifFile* nif, string patcherName)
-    : Patcher(std::move(patcherName))
+PatcherMesh::PatcherMesh(filesystem::path nifPath, nifly::NifFile* nif, string patcherName, const bool& triggerSave)
+    : Patcher(std::move(patcherName), triggerSave)
     , m_nifPath(std::move(nifPath))
     , m_nif(nif)
 {

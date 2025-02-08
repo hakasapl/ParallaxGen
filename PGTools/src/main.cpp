@@ -17,6 +17,7 @@
 
 #include "patchers/PatcherMeshGlobalParticleLightsToLP.hpp"
 #include "patchers/PatcherMeshPreFixMeshLighting.hpp"
+#include "patchers/PatcherMeshPreFixTextureSlotCount.hpp"
 #include "patchers/PatcherMeshShaderComplexMaterial.hpp"
 #include "patchers/PatcherMeshShaderTransformParallaxToCM.hpp"
 #include "patchers/PatcherMeshShaderTruePBR.hpp"
@@ -160,6 +161,9 @@ void mainRunner(PGToolsCLIArgs& args)
         PatcherUtil::PatcherMeshSet meshPatchers;
         if (patcherDefs.contains("fixmeshlighting")) {
             meshPatchers.prePatchers.emplace_back(PatcherMeshPreFixMeshLighting::getFactory());
+        }
+        if (patcherDefs.contains("fixtextureslotcount")) {
+            meshPatchers.prePatchers.emplace_back(PatcherMeshPreFixTextureSlotCount::getFactory());
         }
         if (patcherDefs.contains("parallax")) {
             meshPatchers.shaderPatchers.emplace(
