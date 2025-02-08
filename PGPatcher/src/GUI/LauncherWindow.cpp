@@ -18,7 +18,7 @@ using namespace std;
 
 // class LauncherWindow
 LauncherWindow::LauncherWindow(ParallaxGenConfig& pgc)
-    : wxDialog(nullptr, wxID_ANY, "ParallaxGen Options", wxDefaultPosition, wxSize(DEFAULT_WIDTH, DEFAULT_HEIGHT),
+    : wxDialog(nullptr, wxID_ANY, "PG Patcher Options", wxDefaultPosition, wxSize(DEFAULT_WIDTH, DEFAULT_HEIGHT),
           wxDEFAULT_DIALOG_STYLE | wxSTAY_ON_TOP)
     , m_pgc(pgc)
     , m_textureMapTypeCombo(nullptr)
