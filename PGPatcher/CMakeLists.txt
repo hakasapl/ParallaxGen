@@ -16,14 +16,14 @@ set(SOURCES
 )
 
 include_directories("include")
-add_executable(PG ${SOURCES} ${HEADERS} icon.rc)
+add_executable(PGPatcher ${SOURCES} ${HEADERS} icon.rc)
 
 # Packages
 find_package(CLI11 REQUIRED CONFIG)
 find_package(wxWidgets REQUIRED COMPONENTS core base)
 find_package(cpptrace REQUIRED CONFIG)
 
-target_link_libraries(PG PRIVATE
+target_link_libraries(PGPatcher PRIVATE
     PGLib
     CLI11::CLI11
     DbgHelp
@@ -31,8 +31,8 @@ target_link_libraries(PG PRIVATE
     cpptrace::cpptrace
 )
 
-install(TARGETS PG DESTINATION . )
-install(FILES $<TARGET_RUNTIME_DLLS:PG> DESTINATION . )
+install(TARGETS PGPatcher DESTINATION . )
+install(FILES $<TARGET_RUNTIME_DLLS:PGPatcher> DESTINATION . )
 
 # manual copy DLLs not caught by TARGET_RUNTIME_DLLS TODO why do I have to do this manually?
 if (${CMAKE_BUILD_TYPE} STREQUAL "Release" OR ${CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo" OR ${CMAKE_BUILD_TYPE} STREQUAL "MinSizeRel")

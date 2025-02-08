@@ -10,7 +10,7 @@ add_library(PGLib SHARED ${SOURCES} ${HEADERS})
 # Add Packages
 find_package(spdlog REQUIRED CONFIG)
 find_package(bsa REQUIRED CONFIG)
-find_package(Boost REQUIRED COMPONENTS thread locale)
+find_package(Boost REQUIRED COMPONENTS locale)
 find_package(directxtk REQUIRED)
 find_package(directxtex REQUIRED CONFIG)
 find_package(miniz REQUIRED CONFIG)

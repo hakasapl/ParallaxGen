@@ -65,13 +65,13 @@ execute_process(COMMAND ${CMAKE_COMMAND} --build ${EXTRN_BUILD_DIR}/nifly --targ
 
 # Submodules
 enable_testing()
-add_subdirectory(PG)
+add_subdirectory(PGPatcher)
 add_subdirectory(PGLib)
 add_subdirectory(PGTools)
 
 # Install Global Things
 # Copy Folders
-file(COPY ${CMAKE_SOURCE_DIR}/PG/assets DESTINATION ${CMAKE_BINARY_DIR}/)
+file(COPY ${CMAKE_SOURCE_DIR}/PGPatcher/assets DESTINATION ${CMAKE_BINARY_DIR}/)
 file(COPY ${CMAKE_SOURCE_DIR}/PGLib/shaders DESTINATION ${CMAKE_BINARY_DIR}/)
 
 # Copy assets to install
