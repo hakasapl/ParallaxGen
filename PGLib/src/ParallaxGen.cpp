@@ -538,7 +538,7 @@ auto ParallaxGen::processNIF(const std::filesystem::path& nifFile, const vector<
 
             PGDiag::insert(globalPatcher->getPatcherName(), globalPatcherChanged);
 
-            nifModified |= globalPatcherChanged;
+            nifModified |= globalPatcherChanged && globalPatcher->triggerSave();
         }
     }
 
@@ -634,7 +634,7 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
 
             PGDiag::insert(prePatcher->getPatcherName(), prePatcherChanged);
 
-            changed |= prePatcherChanged;
+            changed |= prePatcherChanged && prePatcher->triggerSave();
         }
     }
 
@@ -779,14 +779,6 @@ auto ParallaxGen::processShape(const filesystem::path& nifPath, NifFile& nif, Ni
         // no shader to apply
         PGDiag::insert("rejectReason", "No shader to apply");
         return false;
-    }
-
-    // Fix num texture slots
-    // TODO move this into a prepatcher
-    auto* txstRec = nif.GetHeader().GetBlock(nifShader->TextureSetRef());
-    if (txstRec->textures.size() < NUM_TEXTURE_SLOTS) {
-        txstRec->textures.resize(NUM_TEXTURE_SLOTS);
-        changed = true;
     }
 
     // loop through patchers

@@ -27,7 +27,7 @@ project(${PROJECT_NAME} VERSION ${PG_VERSION})
 add_compile_definitions(PG_VERSION="${PG_VERSION}")
 
 # Set test version (set this to 0 for prod releases)
-add_compile_definitions(PG_TEST_VERSION=1)
+add_compile_definitions(PG_TEST_VERSION=2)
 
 # Setup Folders
 set(EXTRN_BUILD_DIR ${CMAKE_BINARY_DIR}/external/blds)
@@ -65,13 +65,13 @@ execute_process(COMMAND ${CMAKE_COMMAND} --build ${EXTRN_BUILD_DIR}/nifly --targ
 
 # Submodules
 enable_testing()
-add_subdirectory(PG)
+add_subdirectory(PGPatcher)
 add_subdirectory(PGLib)
 add_subdirectory(PGTools)
 
 # Install Global Things
 # Copy Folders
-file(COPY ${CMAKE_SOURCE_DIR}/PG/assets DESTINATION ${CMAKE_BINARY_DIR}/)
+file(COPY ${CMAKE_SOURCE_DIR}/PGPatcher/assets DESTINATION ${CMAKE_BINARY_DIR}/)
 file(COPY ${CMAKE_SOURCE_DIR}/PGLib/shaders DESTINATION ${CMAKE_BINARY_DIR}/)
 
 # Copy assets to install
