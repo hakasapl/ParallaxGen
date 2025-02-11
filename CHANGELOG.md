@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.8.9] - UNRELEASED
+## [0.8.9] - 2025-02-10
 
 - Added a "Enable Diagnostics" advanced option to generate files to help with support
 - Added "Check Paths" toggle for advanced options in the TruePBR patcher

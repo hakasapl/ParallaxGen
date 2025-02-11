@@ -1173,13 +1173,20 @@ public class PGMutagen
             var txstObj = TXSTObjs[TXSTHandle];
             var PluginNameStr = txstObj.FormKey.ModKey.FileName;
 
-            if (txstObj.ToLink().TryResolveSimpleContext(Env.LinkCache, out var context))
+            try
             {
-                *WinningPluginName = Marshal.StringToHGlobalUni(context.ModKey.FileName);
+                if (txstObj.ToLink().TryResolveSimpleContext(Env.LinkCache, out var context))
+                {
+                    *WinningPluginName = Marshal.StringToHGlobalUni(context.ModKey.FileName);
+                }
+                else
+                {
+                    *WinningPluginName = Marshal.StringToHGlobalUni(PluginNameStr);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                *WinningPluginName = Marshal.StringToHGlobalUni(PluginNameStr);
+                *WinningPluginName = Marshal.StringToHGlobalUni("UNKNOWN");
             }
 
             *PluginName = Marshal.StringToHGlobalUni(PluginNameStr);
@@ -1205,13 +1212,20 @@ public class PGMutagen
             var modelRecObj = ModelOriginals[ModelRecHandle];
             var PluginNameStr = modelRecObj.FormKey.ModKey.FileName;
 
-            if (modelRecObj.ToLink().TryResolveSimpleContext(Env.LinkCache, out var context))
+            try
             {
-                *WinningPluginName = Marshal.StringToHGlobalUni(context.ModKey.FileName);
+                if (modelRecObj.ToLink().TryResolveSimpleContext(Env.LinkCache, out var context))
+                {
+                    *WinningPluginName = Marshal.StringToHGlobalUni(context.ModKey.FileName);
+                }
+                else
+                {
+                    *WinningPluginName = Marshal.StringToHGlobalUni(PluginNameStr);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                *WinningPluginName = Marshal.StringToHGlobalUni(PluginNameStr);
+                *WinningPluginName = Marshal.StringToHGlobalUni("UNKNOWN");
             }
 
             *PluginName = Marshal.StringToHGlobalUni(PluginNameStr);
@@ -1238,13 +1252,20 @@ public class PGMutagen
             var modelRecObj = ModelOriginals[altTexObj.Item3];
             var PluginNameStr = modelRecObj.FormKey.ModKey.FileName;
 
-            if (modelRecObj.ToLink().TryResolveSimpleContext(Env.LinkCache, out var context))
+            try
             {
-                *WinningPluginName = Marshal.StringToHGlobalUni(context.ModKey.FileName);
+                if (modelRecObj.ToLink().TryResolveSimpleContext(Env.LinkCache, out var context))
+                {
+                    *WinningPluginName = Marshal.StringToHGlobalUni(context.ModKey.FileName);
+                }
+                else
+                {
+                    *WinningPluginName = Marshal.StringToHGlobalUni(PluginNameStr);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                *WinningPluginName = Marshal.StringToHGlobalUni(PluginNameStr);
+                *WinningPluginName = Marshal.StringToHGlobalUni("UNKNOWN");
             }
 
             *PluginName = Marshal.StringToHGlobalUni(PluginNameStr);
