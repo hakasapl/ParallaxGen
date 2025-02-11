@@ -1,6 +1,6 @@
-# ParallaxGen
+# PGPatcher
 
-NIF patcher to patch meshes for various things in your load order.
+Dynamic patcher to patch meshes or textures for various things in your load order.
 
 See the [Nexus Page](https://www.nexusmods.com/skyrimspecialedition/mods/120946) for full description.
 
