@@ -27,7 +27,7 @@ project(${PROJECT_NAME} VERSION ${PG_VERSION})
 add_compile_definitions(PG_VERSION="${PG_VERSION}")
 
 # Set test version (set this to 0 for prod releases)
-add_compile_definitions(PG_TEST_VERSION=2)
+add_compile_definitions(PG_TEST_VERSION=0)
 
 # Setup Folders
 set(EXTRN_BUILD_DIR ${CMAKE_BINARY_DIR}/external/blds)
