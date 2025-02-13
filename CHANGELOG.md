@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.8.10] - UNRELEASED
+
+- Fixed unhandled exception around UTF8 chars when diagnostics were enabled
+- Fixed diagnostics JSON having some data in incorrect places due to stale pointers
+
 ## [0.8.9] - 2025-02-10
 
 - Added a "Enable Diagnostics" advanced option to generate files to help with support

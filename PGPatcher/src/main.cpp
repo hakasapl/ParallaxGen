@@ -321,7 +321,7 @@ void mainRunner(ParallaxGenCLIArgs& args, const filesystem::path& exePath)
         spdlog::info("Saving diag JSON file...");
         const filesystem::path diffJSONPath = params.Output.dir / "ParallaxGen_DIAG.json";
         ofstream diagJSONFile(diffJSONPath);
-        diagJSONFile << PGDiag::getJSON().dump(2) << "\n";
+        diagJSONFile << PGDiag::getJSON().dump(2, ' ', false, nlohmann::detail::error_handler_t::replace) << "\n";
         diagJSONFile.close();
     }
 
